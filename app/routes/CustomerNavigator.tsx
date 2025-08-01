@@ -2,7 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 // Import customer screens
 import HomeScreen from '../../src/screens/customer/HomeScreen';
 import BookingsScreen from '../../src/screens/customer/BookingsScreen';
@@ -20,6 +20,7 @@ import AboutUsScreen from '~/screens/customer/AboutUsScreen';
 import FAQScreen from '../../src/screens/customer/FAQScreen';
 import NotificationsScreen from '../../src/screens/customer/NotificationsScreen';
 import LocationPickerScreen from '../../src/screens/customer/LocationPickerScreen';
+import AllServicesScreen from '~/screens/customer/AllServiceScreen';
 
 // Define the customer stack param list
 export type CustomerStackParamList = {
@@ -40,6 +41,7 @@ export type CustomerStackParamList = {
   PaymentMethods: undefined;
   AboutUs :undefined;
   LocationPicker :undefined;
+  AllServices:undefined;
 };
 
 // Define the customer tab param list
@@ -48,6 +50,7 @@ export type CustomerTabParamList = {
   Bookings: undefined;
   History: undefined;
   Profile: undefined;
+  Support:undefined;
 };
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -67,7 +70,7 @@ const CustomerTabNavigator = () => {
           } else if (route.name === 'Bookings') {
             iconName = focused ? 'calendar' : 'calendar-outline';
           } else if (route.name === 'History') {
-            iconName = focused ? 'time' : 'time-outline';
+              iconName = focused ? 'time' : 'time-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           }
@@ -95,7 +98,7 @@ const CustomerTabNavigator = () => {
       <Tab.Screen 
         name="History" 
         component={OrderHistoryScreen}
-        options={{ tabBarLabel: 'History' }}
+        options={{ tabBarLabel: 'Support' }}
       />
       <Tab.Screen 
         name="Profile" 
@@ -132,6 +135,7 @@ const CustomerNavigator = () => {
       <Stack.Screen name="PaymentMethods" component={require('../../src/screens/customer/PaymentMethodsScreen').default} />
       <Stack.Screen name="AboutUs" component={AboutUsScreen}/>
       <Stack.Screen name="LocationPicker" component={LocationPickerScreen} />
+      <Stack.Screen name="AllServices" component={AllServicesScreen} />
 
     </Stack.Navigator>
   );

@@ -95,38 +95,33 @@ const SupportScreen = () => {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
+            <Ionicons name="arrow-back" size={24} color="#111827" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Customer Support</Text>
         </View>
 
-        <ScrollView style={styles.flex}>
+        <ScrollView style={styles.flex} contentContainerStyle={styles.scrollContent}>
           {/* Support Options */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>How can we help you?</Text>
-            <View style={styles.optionGrid}>
-              {supportOptions.map(option => (
-                <TouchableOpacity 
-                  key={option.id}
-                  style={styles.optionCard}
-                  onPress={() => handleSupportOptionPress(option)}
-                >
-                  <View style={styles.optionInner}>
-                    <View style={styles.optionIconWrapper}>
-                      <Ionicons name={option.icon as any} size={24} color="#2563eb" />
-                    </View>
-                    <Text style={styles.optionTitle}>{option.title}</Text>
-                    <Text style={styles.optionDesc}>{option.description}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
+          <Text style={styles.sectionTitle}>How can we help you?</Text>
+          <View style={styles.optionGrid}>
+            {supportOptions.map(option => (
+              <TouchableOpacity 
+                key={option.id}
+                style={styles.optionCard}
+                onPress={() => handleSupportOptionPress(option)}
+              >
+                <View style={styles.optionIconWrapper}>
+                  <Ionicons name={option.icon as any} size={22} color="#2563eb" />
+                </View>
+                <Text style={styles.optionTitle}>{option.title}</Text>
+                <Text style={styles.optionDesc}>{option.description}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
           {/* Contact Form */}
           <View style={styles.formContainer}>
-            <Text style={styles.sectionTitle}>Send us a message</Text>
-            
+            <Text style={styles.formTitle}>Send us a message</Text>
             {submitted ? (
               <View style={styles.successBox}>
                 <Ionicons name="checkmark-circle" size={48} color="#10b981" />
@@ -134,7 +129,7 @@ const SupportScreen = () => {
                 <Text style={styles.successText}>We'll get back to you as soon as possible.</Text>
               </View>
             ) : (
-              <View>
+              <>
                 <Text style={styles.label}>What issue are you facing?</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.issueRow}>
                   {issueTypes.map(issue => (
@@ -161,17 +156,16 @@ const SupportScreen = () => {
                 <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={submitting}>
                   {submitting ? <ActivityIndicator color="white" /> : <Text style={styles.submitText}>Submit</Text>}
                 </TouchableOpacity>
-              </View>
+              </>
             )}
           </View>
 
           {/* Additional Info */}
           <View style={styles.infoSection}>
             <Text style={styles.infoLabel}>Business Hours</Text>
-            <Text style={styles.infoText}>Monday - Saturday: 8:00 AM - 8:00 PM</Text>
+            <Text style={styles.infoText}>Mon - Sat: 8:00 AM - 8:00 PM</Text>
             <Text style={styles.infoText}>Sunday: 10:00 AM - 6:00 PM</Text>
-            <Text style={styles.infoLabel}>DashStream Car Wash Services</Text>
-            <Text style={styles.infoLabel}>© 2023 All Rights Reserved</Text>
+            <Text style={styles.infoLabel}>© 2023 DashStream Car Wash Services</Text>
           </View>
         </ScrollView>
       </View>
@@ -182,28 +176,86 @@ const SupportScreen = () => {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, backgroundColor: '#fff' },
+  scrollContent: { paddingBottom: 32 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 48, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
-  backBtn: { marginRight: 16 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1f2937' },
-  section: { padding: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: '#1f2937', marginBottom: 16 },
-  optionGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  optionCard: { width: '48%', backgroundColor: '#f9fafb', borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#f3f4f6' },
-  optionInner: { alignItems: 'center' },
+  backBtn: { marginRight: 12 },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#111827' },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#1f2937', paddingHorizontal: 16, marginBottom: 16 },
+  optionGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingHorizontal: 16 },
+  optionCard: {
+  width: '48%',
+  backgroundColor: '#fff',
+  borderRadius: 16,
+  padding: 16,
+  marginBottom: 16,
+  shadowColor: '#000',
+  shadowOpacity: 0.05,
+  shadowOffset: { width: 0, height: 4 },
+  shadowRadius: 8,
+  elevation: 4,
+  alignItems: 'center',
+}
+,
   optionIconWrapper: { backgroundColor: '#dbeafe', padding: 12, borderRadius: 50, marginBottom: 8 },
   optionTitle: { fontWeight: '600', color: '#111827', textAlign: 'center' },
   optionDesc: { fontSize: 12, color: '#6b7280', textAlign: 'center', marginTop: 4 },
-  formContainer: { padding: 16, backgroundColor: '#f9fafb', borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  formContainer: { padding: 16, backgroundColor: '#f3f4f6', borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  formTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12, color: '#111827' },
   label: { fontWeight: '500', color: '#374151', marginBottom: 8 },
   issueRow: { marginBottom: 16 },
-  issueBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 50, backgroundColor: '#e5e7eb', marginRight: 8 },
-  issueBtnActive: { backgroundColor: '#2563eb' },
+issueBtn: {
+  paddingHorizontal: 16,
+  paddingVertical: 10,
+  borderRadius: 20,
+  backgroundColor: '#e5e7eb',
+  marginRight: 8,
+  marginBottom: 8,
+},
+issueBtnActive: {
+  backgroundColor: '#2563eb',
+  shadowColor: '#2563eb',
+  shadowOpacity: 0.2,
+  shadowOffset: { width: 0, height: 2 },
+  shadowRadius: 4,
+},
+
   issueText: { color: '#374151' },
   issueTextActive: { color: '#fff' },
-  textArea: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, padding: 12, minHeight: 120, marginBottom: 16 },
-  submitBtn: { backgroundColor: '#2563eb', paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
-  submitText: { color: '#fff', fontWeight: '600' },
-  successBox: { backgroundColor: '#ecfdf5', padding: 16, borderRadius: 12, alignItems: 'center' },
+  textArea: {
+  backgroundColor: '#fff',
+  borderWidth: 1,
+  borderColor: '#d1d5db',
+  borderRadius: 14,
+  padding: 14,
+  minHeight: 120,
+  fontSize: 14,
+  color: '#111827',
+  marginBottom: 16,
+},
+
+ submitBtn: {
+  backgroundColor: '#2563eb',
+  paddingVertical: 14,
+  borderRadius: 999,
+  alignItems: 'center',
+},
+submitText: {
+  color: '#fff',
+  fontWeight: '600',
+  fontSize: 16,
+},
+
+ successBox: {
+  backgroundColor: '#ecfdf5',
+  padding: 20,
+  borderRadius: 16,
+  alignItems: 'center',
+  shadowColor: '#10b981',
+  shadowOpacity: 0.1,
+  shadowOffset: { width: 0, height: 2 },
+  shadowRadius: 6,
+},
+
   successTitle: { color: '#047857', fontWeight: '600', marginTop: 8, textAlign: 'center' },
   successText: { color: '#10b981', textAlign: 'center', marginTop: 4 },
   infoSection: { padding: 16, alignItems: 'center' },

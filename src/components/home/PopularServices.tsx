@@ -3,9 +3,10 @@ import { View, Text, TouchableOpacity, Image, StyleSheet, FlatList, Dimensions }
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
-const ITEM_WIDTH = width / 3;
+const ITEM_WIDTH = (width - 48) / 3; // Account for horizontal padding
 
 type NavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -16,17 +17,41 @@ const PopularServices = ({ services }: any) => {
     navigation.navigate('ServiceDetails', { serviceId: service.id });
   };
 
+  const handleSeeAll = () => {
+    navigation.navigate('AllServices'); // Assuming you have an 'AllServices' screen
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Doorstep Autocare Services</Text>
+      {/* Header with title and See All */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Doorstep Autocare Services</Text>
+        <TouchableOpacity 
+          style={styles.seeAllButton}
+          onPress={handleSeeAll}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.seeAllText}>See All</Text>
+          <MaterialIcons name="arrow-forward" size={18} color="#2563eb" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Services Grid */}
       <FlatList
-        data={services}
+        data={services.slice(0, 6)} // Show only first 6 items
         keyExtractor={(item) => item.id}
         numColumns={3}
+        scrollEnabled={false}
         columnWrapperStyle={styles.row}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.item} onPress={() => handlePress(item)}>
-            <Image source={item.image} style={styles.icon} resizeMode="contain" />
+          <TouchableOpacity 
+            style={styles.item} 
+            onPress={() => handlePress(item)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.iconContainer}>
+              <Image source={item.image} style={styles.icon} resizeMode="contain" />
+            </View>
             <Text style={styles.label} numberOfLines={2}>{item.title}</Text>
           </TouchableOpacity>
         )}
@@ -42,31 +67,66 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     backgroundColor: '#fff',
     borderRadius: 12,
-    paddingVertical: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#1f2937',
-    marginBottom: 12,
-    paddingHorizontal: 16,
+    flex: 1,
+  },
+  seeAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  seeAllText: {
+    color: '#2563eb',
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: 4,
   },
   row: {
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
   item: {
     width: ITEM_WIDTH,
     alignItems: 'center',
     marginBottom: 16,
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: '#f9fafb',
   },
-  icon: {
-    width: 60,
-    height: 60,
+  iconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#eff6ff',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 8,
   },
+  icon: {
+    width: 40,
+    height: 40,
+  },
   label: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '500',
     textAlign: 'center',
-    color: '#1f2937',
+    color: '#374151',
+    lineHeight: 16,
   },
 });

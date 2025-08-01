@@ -15,6 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { useAuth } from '../../context/AuthContext';
+import FAQList from '~/components/faq/FAQList';
 
 type MembershipScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -33,7 +34,7 @@ const MembershipScreen = () => {
   const [loading, setLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<MembershipPlan | null>(null);
-  
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   // Mock user membership status
   const [userMembership, setUserMembership] = useState({
     active: true,
@@ -419,28 +420,41 @@ const MembershipScreen = () => {
       
       {/* FAQ Section */}
       <View style={{ marginBottom: 32 }}>
-        <Text style={{ fontSize: 18, fontWeight: '700', color: '#1f2937', marginBottom: 12 }}>Frequently Asked Questions</Text>
-        
-        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12 }}>
-          <Text style={{ fontWeight: '600', color: '#1f2937', marginBottom: 4 }}>How does the membership work?</Text>
-          <Text style={{ fontSize: 13, color: '#4b5563' }}>
-            Our membership gives you access to a set number of services at discounted rates. You can book services anytime during your membership period.
-          </Text>
-        </View>
-        
-        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12 }}>
-          <Text style={{ fontWeight: '600', color: '#1f2937', marginBottom: 4 }}>Can I cancel my membership?</Text>
-          <Text style={{ fontSize: 13, color: '#4b5563' }}>
-            Yes, you can cancel your membership anytime. You'll continue to have access until the end of your current billing period.
-          </Text>
-        </View>
-        
-        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12 }}>
-          <Text style={{ fontWeight: '600', color: '#1f2937', marginBottom: 4 }}>Can I upgrade my plan?</Text>
-          <Text style={{ fontSize: 13, color: '#4b5563' }}>
-            Yes, you can upgrade your plan anytime. The remaining value of your current plan will be prorated and applied to your new plan.
-          </Text>
-        </View>
+        <FAQList
+            searchQuery=""
+            setSearchQuery={() => {}}
+            activeCategory="all"
+            setActiveCategory={() => {}}
+            expandedId={expandedId}
+            setExpandedId={setExpandedId}
+            navigation={navigation}
+            initialCategory="membership" 
+          />
+
+        {/* 
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#1f2937', marginBottom: 12 }}>Frequently Asked Questions</Text>
+          
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12 }}>
+            <Text style={{ fontWeight: '600', color: '#1f2937', marginBottom: 4 }}>How does the membership work?</Text>
+            <Text style={{ fontSize: 13, color: '#4b5563' }}>
+              Our membership gives you access to a set number of services at discounted rates. You can book services anytime during your membership period.
+            </Text>
+          </View>
+          
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12 }}>
+            <Text style={{ fontWeight: '600', color: '#1f2937', marginBottom: 4 }}>Can I cancel my membership?</Text>
+            <Text style={{ fontSize: 13, color: '#4b5563' }}>
+              Yes, you can cancel your membership anytime. You'll continue to have access until the end of your current billing period.
+            </Text>
+          </View>
+          
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12 }}>
+            <Text style={{ fontWeight: '600', color: '#1f2937', marginBottom: 4 }}>Can I upgrade my plan?</Text>
+            <Text style={{ fontSize: 13, color: '#4b5563' }}>
+              Yes, you can upgrade your plan anytime. The remaining value of your current plan will be prorated and applied to your new plan.
+            </Text>
+            
+          </View> */}
         
         <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 8 }} onPress={() => navigation.navigate('FAQ')}>
           <Text style={{ color: '#2563eb', fontWeight: '600' }}>View All FAQs</Text>
