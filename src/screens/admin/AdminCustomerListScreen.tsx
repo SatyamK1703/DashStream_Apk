@@ -7,12 +7,13 @@ import {
   Image,
   TextInput,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,StyleSheet
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+
 
 type AdminCustomerListNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 
@@ -179,13 +180,11 @@ const AdminCustomerListScreen = () => {
   ];
 
   useEffect(() => {
-    // Simulate API call
     const timer = setTimeout(() => {
       setCustomers(mockCustomers);
       setFilteredCustomers(mockCustomers);
       setLoading(false);
     }, 1500);
-
     return () => clearTimeout(timer);
   }, []);
 
@@ -195,8 +194,6 @@ const AdminCustomerListScreen = () => {
 
   const handleRefresh = () => {
     setRefreshing(true);
-    
-    // Simulate API call
     setTimeout(() => {
       setCustomers(mockCustomers);
       setFilteredCustomers(mockCustomers);
@@ -207,7 +204,6 @@ const AdminCustomerListScreen = () => {
   const applyFilters = () => {
     let result = [...customers];
     
-    // Apply search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(customer => 
@@ -218,17 +214,14 @@ const AdminCustomerListScreen = () => {
       );
     }
     
-    // Apply status filter
     if (statusFilter !== 'all') {
       result = result.filter(customer => customer.status === statusFilter);
     }
     
-    // Apply membership filter
     if (membershipFilter !== 'all') {
       result = result.filter(customer => customer.membershipStatus === membershipFilter);
     }
     
-    // Apply sorting
     result.sort((a, b) => {
       let comparison = 0;
       
@@ -265,64 +258,95 @@ const AdminCustomerListScreen = () => {
     setShowFilters(false);
   };
 
+  const getStatusDotStyle = (status: string) => {
+    switch (status) {
+      case 'active':
+        return styles.statusDotActive;
+      case 'inactive':
+        return styles.statusDotInactive;
+      case 'blocked':
+        return styles.statusDotBlocked;
+      default:
+        return styles.statusDotInactive;
+    }
+  };
+
+  const getSortLabel = (sortBy: string) => {
+    switch (sortBy) {
+      case 'joinDate':
+        return 'Date Joined';
+      case 'lastActive':
+        return 'Last Active';
+      case 'totalBookings':
+        return 'Bookings';
+      case 'totalSpent':
+        return 'Amount Spent';
+      case 'name':
+        return 'Name';
+      default:
+        return 'Date Joined';
+    }
+  };
+
   const renderCustomerItem = ({ item }: { item: Customer }) => (
     <TouchableOpacity 
-      className="bg-white rounded-lg shadow-sm p-4 mb-3"
+      style={styles.customerCard}
       onPress={() => navigation.navigate('CustomerDetails', { customerId: item.id })}
     >
-      <View className="flex-row items-center">
+      <View style={styles.customerHeader}>
         <Image 
           source={{ uri: item.profileImage }}
-          className="w-12 h-12 rounded-full bg-gray-200"
+          style={styles.profileImage}
         />
         
-        <View className="ml-3 flex-1">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-gray-800 font-bold">{item.name}</Text>
+        <View style={styles.customerInfo}>
+          <View style={styles.customerNameRow}>
+            <Text style={styles.customerName}>{item.name}</Text>
             
-            <View className="flex-row items-center">
-              <View className={`w-2 h-2 rounded-full mr-1.5 ${
-                item.status === 'active' ? 'bg-green-500' : 
-                item.status === 'inactive' ? 'bg-amber-500' : 'bg-red-500'
-              }`} />
-              <Text className="text-gray-500 text-xs capitalize">{item.status}</Text>
+            <View style={styles.statusContainer}>
+              <View style={[styles.statusDot, getStatusDotStyle(item.status)]} />
+              <Text style={styles.statusText}>{item.status}</Text>
             </View>
           </View>
           
-          <Text className="text-gray-500 text-sm">{item.email}</Text>
-          <Text className="text-gray-500 text-sm">{item.phone}</Text>
+          <Text style={styles.customerEmail}>{item.email}</Text>
+          <Text style={styles.customerPhone}>{item.phone}</Text>
         </View>
       </View>
       
-      <View className="flex-row justify-between mt-3 pt-3 border-t border-gray-100">
-        <View className="items-center">
-          <Text className="text-gray-500 text-xs">ID</Text>
-          <Text className="text-gray-800 font-medium">{item.id}</Text>
+      <View style={styles.customerMetrics}>
+        <View style={styles.metricItem}>
+          <Text style={styles.metricLabel}>ID</Text>
+          <Text style={styles.metricValue}>{item.id}</Text>
         </View>
         
-        <View className="items-center">
-          <Text className="text-gray-500 text-xs">Joined</Text>
-          <Text className="text-gray-800 font-medium">
-            {new Date(item.joinDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+        <View style={styles.metricItem}>
+          <Text style={styles.metricLabel}>Joined</Text>
+          <Text style={styles.metricValue}>
+            {new Date(item.joinDate).toLocaleDateString('en-IN', { 
+              day: '2-digit', 
+              month: 'short', 
+              year: 'numeric' 
+            })}
           </Text>
         </View>
         
-        <View className="items-center">
-          <Text className="text-gray-500 text-xs">Bookings</Text>
-          <Text className="text-gray-800 font-medium">{item.totalBookings}</Text>
+        <View style={styles.metricItem}>
+          <Text style={styles.metricLabel}>Bookings</Text>
+          <Text style={styles.metricValue}>{item.totalBookings}</Text>
         </View>
         
-        <View className="items-center">
-          <Text className="text-gray-500 text-xs">Spent</Text>
-          <Text className="text-gray-800 font-medium">₹{item.totalSpent}</Text>
+        <View style={styles.metricItem}>
+          <Text style={styles.metricLabel}>Spent</Text>
+          <Text style={styles.metricValue}>₹{item.totalSpent}</Text>
         </View>
       </View>
       
       {item.membershipStatus !== 'none' && (
-        <View className="absolute top-4 right-4 px-2 py-0.5 rounded-full bg-amber-100">
-          <View className="flex-row items-center">
+        <View style={styles.membershipBadge}>
+          <View style={styles.membershipBadgeContent}>
             <FontAwesome5 name="crown" size={10} color="#F59E0B" />
-            <Text className="text-amber-800 text-xs font-medium ml-1 capitalize">
+            <Text style={styles.membershipBadgeText}>
               {item.membershipStatus}
             </Text>
           </View>
@@ -333,22 +357,22 @@ const AdminCustomerListScreen = () => {
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-50">
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
-        <Text className="mt-4 text-gray-600">Loading customers...</Text>
+        <Text style={styles.loadingText}>Loading customers...</Text>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={styles.container}>
       {/* Header */}
-      <View className="bg-primary pt-12 pb-4 px-4">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-white text-xl font-bold">Customers</Text>
+      <View style={styles.headerContainer}>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Customers</Text>
           
           <TouchableOpacity 
-            className="p-2 rounded-full bg-white/20"
+            style={styles.addButton}
             onPress={() => navigation.navigate('CreateCustomer')}
           >
             <Ionicons name="add" size={24} color="white" />
@@ -357,14 +381,15 @@ const AdminCustomerListScreen = () => {
       </View>
       
       {/* Search Bar */}
-      <View className="px-4 py-3">
-        <View className="flex-row items-center bg-white rounded-lg shadow-sm px-3 py-2">
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={20} color="#9CA3AF" />
           <TextInput
-            className="flex-1 ml-2 text-gray-800"
+            style={styles.searchInput}
             placeholder="Search by name, email, phone or ID"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            placeholderTextColor="#9CA3AF"
           />
           {searchQuery ? (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -375,18 +400,18 @@ const AdminCustomerListScreen = () => {
       </View>
       
       {/* Filter Bar */}
-      <View className="px-4 flex-row justify-between items-center mb-2">
-        <View className="flex-row">
+      <View style={styles.filterBarContainer}>
+        <View style={styles.filterBarLeft}>
           <TouchableOpacity 
-            className="flex-row items-center mr-4"
+            style={styles.filterButton}
             onPress={() => setShowFilters(!showFilters)}
           >
             <Ionicons name="options-outline" size={18} color="#4B5563" />
-            <Text className="text-gray-600 ml-1">Filters</Text>
+            <Text style={styles.filterButtonText}>Filters</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            className="flex-row items-center"
+            style={styles.sortButton}
             onPress={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
           >
             <Ionicons 
@@ -394,34 +419,37 @@ const AdminCustomerListScreen = () => {
               size={18} 
               color="#4B5563" 
             />
-            <Text className="text-gray-600 ml-1">
-              Sort: {sortBy === 'joinDate' ? 'Date Joined' : 
-                     sortBy === 'lastActive' ? 'Last Active' : 
-                     sortBy === 'totalBookings' ? 'Bookings' : 
-                     sortBy === 'totalSpent' ? 'Amount Spent' : 'Name'}
+            <Text style={styles.sortButtonText}>
+              Sort: {getSortLabel(sortBy)}
             </Text>
           </TouchableOpacity>
         </View>
         
-        <Text className="text-gray-500 text-sm">{filteredCustomers.length} customers</Text>
+        <Text style={styles.customerCount}>{filteredCustomers.length} customers</Text>
       </View>
       
       {/* Filters Panel */}
       {showFilters && (
-        <View className="mx-4 mb-3 bg-white rounded-lg shadow-sm p-4">
-          <Text className="text-gray-800 font-bold mb-3">Filter Options</Text>
+        <View style={styles.filtersPanel}>
+          <Text style={styles.filtersPanelTitle}>Filter Options</Text>
           
           {/* Status Filter */}
-          <Text className="text-gray-600 mb-2">Status</Text>
-          <View className="flex-row flex-wrap mb-4">
+          <Text style={styles.filterSectionTitle}>Status</Text>
+          <View style={styles.filterChipsContainer}>
             {['all', 'active', 'inactive', 'blocked'].map((status) => (
               <TouchableOpacity 
                 key={status}
-                className={`mr-2 mb-2 px-3 py-1.5 rounded-full ${statusFilter === status ? 'bg-primary' : 'bg-gray-100'}`}
+                style={[
+                  styles.filterChip,
+                  statusFilter === status ? styles.filterChipActive : styles.filterChipInactive
+                ]}
                 onPress={() => setStatusFilter(status as any)}
               >
                 <Text 
-                  className={`text-sm font-medium capitalize ${statusFilter === status ? 'text-white' : 'text-gray-600'}`}
+                  style={[
+                    styles.filterChipText,
+                    statusFilter === status ? styles.filterChipTextActive : styles.filterChipTextInactive
+                  ]}
                 >
                   {status === 'all' ? 'All Status' : status}
                 </Text>
@@ -430,16 +458,22 @@ const AdminCustomerListScreen = () => {
           </View>
           
           {/* Membership Filter */}
-          <Text className="text-gray-600 mb-2">Membership</Text>
-          <View className="flex-row flex-wrap mb-4">
+          <Text style={styles.filterSectionTitle}>Membership</Text>
+          <View style={styles.filterChipsContainer}>
             {['all', 'none', 'silver', 'gold', 'platinum'].map((membership) => (
               <TouchableOpacity 
                 key={membership}
-                className={`mr-2 mb-2 px-3 py-1.5 rounded-full ${membershipFilter === membership ? 'bg-primary' : 'bg-gray-100'}`}
+                style={[
+                  styles.filterChip,
+                  membershipFilter === membership ? styles.filterChipActive : styles.filterChipInactive
+                ]}
                 onPress={() => setMembershipFilter(membership as any)}
               >
                 <Text 
-                  className={`text-sm font-medium capitalize ${membershipFilter === membership ? 'text-white' : 'text-gray-600'}`}
+                  style={[
+                    styles.filterChipText,
+                    membershipFilter === membership ? styles.filterChipTextActive : styles.filterChipTextInactive
+                  ]}
                 >
                   {membership === 'all' ? 'All Memberships' : 
                    membership === 'none' ? 'No Membership' : membership}
@@ -449,8 +483,8 @@ const AdminCustomerListScreen = () => {
           </View>
           
           {/* Sort By */}
-          <Text className="text-gray-600 mb-2">Sort By</Text>
-          <View className="flex-row flex-wrap mb-4">
+          <Text style={styles.filterSectionTitle}>Sort By</Text>
+          <View style={styles.filterChipsContainer}>
             {[
               { id: 'name', label: 'Name' },
               { id: 'joinDate', label: 'Date Joined' },
@@ -460,11 +494,17 @@ const AdminCustomerListScreen = () => {
             ].map((sort) => (
               <TouchableOpacity 
                 key={sort.id}
-                className={`mr-2 mb-2 px-3 py-1.5 rounded-full ${sortBy === sort.id ? 'bg-primary' : 'bg-gray-100'}`}
+                style={[
+                  styles.filterChip,
+                  sortBy === sort.id ? styles.filterChipActive : styles.filterChipInactive
+                ]}
                 onPress={() => setSortBy(sort.id as any)}
               >
                 <Text 
-                  className={`text-sm font-medium ${sortBy === sort.id ? 'text-white' : 'text-gray-600'}`}
+                  style={[
+                    styles.filterChipText,
+                    sortBy === sort.id ? styles.filterChipTextActive : styles.filterChipTextInactive
+                  ]}
                 >
                   {sort.label}
                 </Text>
@@ -474,10 +514,10 @@ const AdminCustomerListScreen = () => {
           
           {/* Reset Button */}
           <TouchableOpacity 
-            className="self-end bg-gray-100 px-4 py-2 rounded-lg"
+            style={styles.resetButton}
             onPress={resetFilters}
           >
-            <Text className="text-gray-700 font-medium">Reset Filters</Text>
+            <Text style={styles.resetButtonText}>Reset Filters</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -487,7 +527,7 @@ const AdminCustomerListScreen = () => {
         data={filteredCustomers}
         keyExtractor={(item) => item.id}
         renderItem={renderCustomerItem}
-        contentContainerStyle={{ padding: 16, paddingTop: 0 }}
+        contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -498,10 +538,10 @@ const AdminCustomerListScreen = () => {
           />
         }
         ListEmptyComponent={
-          <View className="items-center justify-center py-8">
+          <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={48} color="#D1D5DB" />
-            <Text className="text-gray-500 mt-4 text-center">No customers found</Text>
-            <Text className="text-gray-400 text-center">Try adjusting your filters</Text>
+            <Text style={styles.emptyText}>No customers found</Text>
+            <Text style={styles.emptySubText}>Try adjusting your filters</Text>
           </View>
         }
       />
@@ -510,3 +550,295 @@ const AdminCustomerListScreen = () => {
 };
 
 export default AdminCustomerListScreen;
+
+const styles = StyleSheet.create({
+  // Main Container
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  
+  // Loading State
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  loadingText: {
+    marginTop: 16,
+    color: '#4B5563',
+  },
+
+  // Header
+  headerContainer: {
+    backgroundColor: '#2563EB',
+    paddingTop: 48,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  addButton: {
+    padding: 8,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+
+  // Search Bar
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    color: '#1F2937',
+  },
+
+  // Filter Bar
+  filterBarContainer: {
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  filterBarLeft: {
+    flexDirection: 'row',
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  filterButtonText: {
+    color: '#4B5563',
+    marginLeft: 4,
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sortButtonText: {
+    color: '#4B5563',
+    marginLeft: 4,
+  },
+  customerCount: {
+    color: '#6B7280',
+    fontSize: 14,
+  },
+
+  // Filters Panel
+  filtersPanel: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    padding: 16,
+  },
+  filtersPanelTitle: {
+    color: '#1F2937',
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  filterSectionTitle: {
+    color: '#4B5563',
+    marginBottom: 8,
+  },
+  filterChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 16,
+  },
+  filterChip: {
+    marginRight: 8,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 9999,
+  },
+  filterChipActive: {
+    backgroundColor: '#2563EB',
+  },
+  filterChipInactive: {
+    backgroundColor: '#F3F4F6',
+  },
+  filterChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  filterChipTextActive: {
+    color: 'white',
+  },
+  filterChipTextInactive: {
+    color: '#4B5563',
+  },
+  resetButton: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  resetButtonText: {
+    color: '#374151',
+    fontWeight: '500',
+  },
+
+  // Customer List
+  listContainer: {
+    padding: 16,
+    paddingTop: 0,
+  },
+
+  // Customer Item
+  customerCard: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    padding: 16,
+    marginBottom: 12,
+  },
+  customerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profileImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E5E7EB',
+  },
+  customerInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  customerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  customerName: {
+    color: '#1F2937',
+    fontWeight: 'bold',
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusDotActive: {
+    backgroundColor: '#10B981',
+  },
+  statusDotInactive: {
+    backgroundColor: '#F59E0B',
+  },
+  statusDotBlocked: {
+    backgroundColor: '#EF4444',
+  },
+  statusText: {
+    color: '#6B7280',
+    fontSize: 12,
+    textTransform: 'capitalize',
+  },
+  customerEmail: {
+    color: '#6B7280',
+    fontSize: 14,
+  },
+  customerPhone: {
+    color: '#6B7280',
+    fontSize: 14,
+  },
+  customerMetrics: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  metricItem: {
+    alignItems: 'center',
+  },
+  metricLabel: {
+    color: '#6B7280',
+    fontSize: 12,
+  },
+  metricValue: {
+    color: '#1F2937',
+    fontWeight: '500',
+  },
+  membershipBadge: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 9999,
+    backgroundColor: '#FEF3C7',
+  },
+  membershipBadgeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  membershipBadgeText: {
+    color: '#92400E',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+    textTransform: 'capitalize',
+  },
+
+  // Empty State
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+  },
+  emptyText: {
+    color: '#6B7280',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  emptySubText: {
+    color: '#9CA3AF',
+    textAlign: 'center',
+  },
+});

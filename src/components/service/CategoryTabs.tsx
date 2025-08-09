@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   activeTab: {
-    backgroundColor: '#FACC15', // Yellow
+    backgroundColor: '#2563eb', // Yellow
   },
   inactiveTab: {
     backgroundColor: '#F3F4F6', // Light gray
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   activeTabText: {
-    color: '#111827', // Almost black
+    color: '#fff', // Almost black
     fontWeight: '700',
   },
   inactiveTabText: {

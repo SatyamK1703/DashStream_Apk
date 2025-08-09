@@ -73,13 +73,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   } as ViewStyle,
   tabActive: {
-    backgroundColor: '#facc15',
+    backgroundColor: '#2563eb',
+    
   },
   tabInactive: {
     backgroundColor: '#f3f4f6',
   },
   tabTextActive: {
-    color: '#000000',
+    color: '#fff',
     fontWeight: '700',
     fontSize: 14,
     lineHeight: 18,

@@ -48,7 +48,13 @@ const ProfileScreen = () => {
       id: 'vehicles',
       title: 'My Vehicles',
       icon: 'car-outline',
-      onPress: () => navigation.navigate('Vehicles')
+      onPress: () => navigation.navigate('AddVehicle')
+    },
+    {
+      id:'History',
+      title:'Order History',
+      icon:'time-outline',
+      onPress:()=> navigation.navigate('OrderHistory')
     },
     {
       id: 'payments',
@@ -99,7 +105,7 @@ const ProfileScreen = () => {
       id: 'terms',
       title: 'Terms & Conditions',
       icon: 'document-text-outline',
-      onPress: () => navigation.navigate('TermsConditions')
+      onPress: () => navigation.navigate('TermsAndConditions')
     },
   ];
 
@@ -191,20 +197,15 @@ const ProfileScreen = () => {
         <Text style={styles.sectionTitle}>Support</Text>
         {supportMenuItems.map(renderMenuItem)}
       </View>
-
-      {/* Logout */}
-      <View style={[styles.card, { marginBottom: 32 }]}>
-        <TouchableOpacity 
-          style={styles.logoutRow}
-          onPress={handleLogout}
-        >
-          <View style={[styles.menuIconContainer, { backgroundColor: '#fee2e2' }]}>
-            <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-          </View>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+      <View style={{ alignItems: 'center', marginBottom: 32 }}>
+      <TouchableOpacity 
+      style={styles.logoutButton}
+      onPress={handleLogout}
+      >
+      <Ionicons name="log-out-outline" size={16} color="#b91c1c" style={{ marginRight: 6 }} />
+      <Text style={styles.logoutText}>Log Out</Text>
+      </TouchableOpacity>
       </View>
-
       {/* App Version */}
       <View style={styles.versionRow}>
         <Text style={styles.versionText}>Version 1.0.0</Text>
@@ -227,15 +228,34 @@ const styles = StyleSheet.create({
   profileInfo: { flex: 1 },
   profileName: { fontSize: 20, fontWeight: '700', color: '#1f2937' },
   profileMeta: { color: '#6b7280' },
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#1f2937', marginBottom: 8 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1f2937', marginBottom: 8 },
   settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   settingLabel: { flexDirection: 'row', alignItems: 'center' },
-  settingText: { color: '#1f2937', fontWeight: '500' },
+  settingText: { color: '#1f2937', fontWeight: '700' },
   menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   menuIconContainer: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#eff6ff', alignItems: 'center', justifyContent: 'center', marginRight: 16 },
-  menuText: { flex: 1, color: '#1f2937', fontWeight: '500' },
-  logoutRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16 },
-  logoutText: { flex: 1, color: '#ef4444', fontWeight: '500' },
+  menuText: { flex: 1, color: '#1f2937', fontWeight: '700' },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1.5,
+    elevation: 1,
+  },
+  logoutText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#b91c1c',
+    padding:8,
+  },
   versionRow: { alignItems: 'center', paddingBottom: 32 },
   versionText: { color: '#9ca3af', fontSize: 12 },
 });

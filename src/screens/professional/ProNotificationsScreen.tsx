@@ -6,12 +6,23 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert
+  Alert,
+  StyleSheet,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
-import { ProStackParamList } from '../../../app/routes/ProNavigator';
+
+// Mock types for self-contained component
+type ProStackParamList = {
+  ProNotifications: undefined;
+  JobDetails: { jobId: string };
+  ProEarnings: undefined;
+  ProProfile: undefined;
+  ProDashboard: undefined;
+};
 
 type ProNotificationsScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;
 
@@ -25,7 +36,7 @@ interface Notification {
   data?: {
     jobId?: string;
     paymentId?: string;
-    route?: string;
+    route?: keyof ProStackParamList;
   };
 }
 
@@ -36,382 +47,189 @@ const ProNotificationsScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'job' | 'payment' | 'system' | 'promo'>('all');
 
-  // Mock data for notifications
-  const mockNotifications: Notification[] = [
-    {
-      id: '1',
-      type: 'job',
-      title: 'New Job Assigned',
-      message: 'You have been assigned a new car wash job in Koramangala area.',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-      isRead: false,
-      data: {
-        jobId: 'JOB123456',
-        route: 'JobDetails'
-      }
-    },
-    {
-      id: '2',
-      type: 'payment',
-      title: 'Payment Received',
-      message: 'You have received a payment of ₹450 for job #JOB123123.',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
-      isRead: true,
-      data: {
-        paymentId: 'PAY789012',
-        route: 'ProEarnings'
-      }
-    },
-    {
-      id: '3',
-      type: 'system',
-      title: 'Profile Verification Complete',
-      message: 'Your profile and documents have been verified successfully.',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-      isRead: true,
-      data: {
-        route: 'ProProfile'
-      }
-    },
-    {
-      id: '4',
-      type: 'job',
-      title: 'Job Reminder',
-      message: 'Reminder: You have a scheduled job tomorrow at 10:00 AM in Indiranagar.',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 26), // 26 hours ago
-      isRead: false,
-      data: {
-        jobId: 'JOB123457',
-        route: 'JobDetails'
-      }
-    },
-    {
-      id: '5',
-      type: 'promo',
-      title: 'Performance Bonus',
-      message: 'Complete 10 jobs this week and earn a bonus of ₹500!',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
-      isRead: true
-    },
-    {
-      id: '6',
-      type: 'system',
-      title: 'App Update Available',
-      message: 'A new version of DashStream Pro is available. Update now for improved features.',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72), // 3 days ago
-      isRead: true
-    },
-    {
-      id: '7',
-      type: 'payment',
-      title: 'Weekly Earnings Summary',
-      message: 'Your earnings for last week: ₹3,250. Tap to view detailed breakdown.',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 96), // 4 days ago
-      isRead: true,
-      data: {
-        route: 'ProEarnings'
-      }
-    },
-    {
-      id: '8',
-      type: 'job',
-      title: 'Customer Feedback',
-      message: 'You received a 5-star rating for job #JOB122001. Keep up the good work!',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 120), // 5 days ago
-      isRead: true,
-      data: {
-        jobId: 'JOB122001'
-      }
-    }
-  ];
-
-  useEffect(() => {
-    // Simulate API call to fetch notifications
-    setIsLoading(true);
+  // --- Data Fetching ---
+  const fetchNotifications = useCallback(() => {
+    const mockNotifications: Notification[] = [
+        { id: '1', type: 'job', title: 'New Job Assigned', message: 'New car wash job in Koramangala.', timestamp: new Date(Date.now() - 30 * 60 * 1000), isRead: false, data: { jobId: 'JOB123456', route: 'JobDetails' } },
+        { id: '2', type: 'payment', title: 'Payment Received', message: 'Received ₹450 for job #JOB123123.', timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), isRead: true, data: { route: 'ProEarnings' } },
+        { id: '3', type: 'system', title: 'Profile Verified', message: 'Your profile and documents are verified.', timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), isRead: true, data: { route: 'ProProfile' } },
+        { id: '4', type: 'job', title: 'Job Reminder', message: 'Upcoming job tomorrow at 10:00 AM.', timestamp: new Date(Date.now() - 26 * 60 * 60 * 1000), isRead: false, data: { jobId: 'JOB123457', route: 'JobDetails' } },
+        { id: '5', type: 'promo', title: 'Performance Bonus', message: 'Complete 10 jobs this week for a ₹500 bonus!', timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000), isRead: true },
+    ];
     setTimeout(() => {
       setNotifications(mockNotifications);
       setIsLoading(false);
-    }, 1000);
-  }, []);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    // Simulate refreshing data
-    setTimeout(() => {
-      setNotifications(mockNotifications);
       setRefreshing(false);
     }, 1000);
   }, []);
 
-  const handleMarkAsRead = (notificationId: string) => {
-    setNotifications(prevNotifications =>
-      prevNotifications.map(notification =>
-        notification.id === notificationId
-          ? { ...notification, isRead: true }
-          : notification
-      )
-    );
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchNotifications();
+  };
+
+  // --- Handlers ---
+  const handleMarkAsRead = (id: string) => {
+    setNotifications(prev => prev.map(n => (n.id === id ? { ...n, isRead: true } : n)));
   };
 
   const handleMarkAllAsRead = () => {
-    if (notifications.some(notification => !notification.isRead)) {
-      setNotifications(prevNotifications =>
-        prevNotifications.map(notification => ({ ...notification, isRead: true }))
-      );
-      Alert.alert('Success', 'All notifications marked as read');
-    } else {
-      Alert.alert('Info', 'All notifications are already read');
+    if (notifications.some(n => !n.isRead)) {
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      Alert.alert('Success', 'All notifications marked as read.');
     }
   };
 
   const handleNotificationPress = (notification: Notification) => {
-    // Mark as read when pressed
-    if (!notification.isRead) {
-      handleMarkAsRead(notification.id);
-    }
-
-    // Navigate based on notification type and data
+    if (!notification.isRead) handleMarkAsRead(notification.id);
     if (notification.data?.route) {
-      switch (notification.data.route) {
-        case 'JobDetails':
-          if (notification.data.jobId) {
-            navigation.navigate('JobDetails', { jobId: notification.data.jobId });
-          }
-          break;
-        case 'ProEarnings':
-          navigation.navigate('ProEarnings');
-          break;
-        case 'ProProfile':
-          navigation.navigate('ProProfile');
-          break;
-        default:
-          // Default fallback
-          navigation.navigate('ProDashboard');
-      }
+        const { route, ...params } = notification.data;
+        // This is a type-safe way to navigate
+        navigation.navigate(route, params as any);
     }
   };
 
-  const handleDeleteNotification = (notificationId: string) => {
-    Alert.alert(
-      'Delete Notification',
-      'Are you sure you want to delete this notification?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            setNotifications(prevNotifications =>
-              prevNotifications.filter(notification => notification.id !== notificationId)
-            );
-          }
-        }
-      ]
-    );
+  const handleDeleteNotification = (id: string) => {
+    Alert.alert('Delete Notification', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => setNotifications(prev => prev.filter(n => n.id !== id)) },
+    ]);
   };
 
+  // --- Helpers & Render Functions ---
   const getFilteredNotifications = () => {
-    if (activeFilter === 'all') {
-      return notifications;
-    }
-    return notifications.filter(notification => notification.type === activeFilter);
+    if (activeFilter === 'all') return notifications;
+    return notifications.filter(n => n.type === activeFilter);
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'job':
-        return <FontAwesome5 name="briefcase" size={20} color="#2563EB" />;
-      case 'payment':
-        return <MaterialIcons name="payments" size={22} color="#10B981" />;
-      case 'system':
-        return <Ionicons name="settings" size={22} color="#6B7280" />;
-      case 'promo':
-        return <Ionicons name="megaphone" size={22} color="#F59E0B" />;
-      default:
-        return <Ionicons name="notifications" size={22} color="#2563EB" />;
-    }
+  const getNotificationIcon = (type: Notification['type']) => {
+    const iconMap = {
+      job: { component: FontAwesome5, name: 'briefcase', color: colors.blue800 },
+      payment: { component: MaterialIcons, name: 'payments', color: colors.green800 },
+      system: { component: Ionicons, name: 'settings', color: colors.gray700 },
+      promo: { component: Ionicons, name: 'megaphone', color: colors.amber800 },
+    };
+    const { component: Icon, name, color } = iconMap[type];
+    return <Icon name={name as any} size={20} color={color} />;
   };
 
   const formatTimestamp = (timestamp: Date) => {
     const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - timestamp.getTime()) / 1000);
-    
-    if (diffInSeconds < 60) {
-      return 'Just now';
-    }
-    
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    if (diffInMinutes < 60) {
-      return `${diffInMinutes} ${diffInMinutes === 1 ? 'minute' : 'minutes'} ago`;
-    }
-    
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) {
-      return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
-    }
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) {
-      return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
-    }
-    
-    return timestamp.toLocaleDateString();
+    const diffSeconds = Math.floor((now.getTime() - timestamp.getTime()) / 1000);
+    if (diffSeconds < 60) return 'Just now';
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
   };
 
   const renderNotificationItem = ({ item }: { item: Notification }) => (
-    <TouchableOpacity
-      className={`p-4 border-b border-gray-200 ${!item.isRead ? 'bg-blue-50' : 'bg-white'}`}
-      onPress={() => handleNotificationPress(item)}
-    >
-      <View className="flex-row justify-between">
-        <View className="flex-row flex-1 pr-4">
-          <View className="w-10 h-10 rounded-full bg-blue-100 items-center justify-center mr-3">
-            {getNotificationIcon(item.type)}
-          </View>
-          <View className="flex-1">
-            <View className="flex-row items-center">
-              <Text className={`font-bold ${!item.isRead ? 'text-gray-900' : 'text-gray-800'} flex-1 pr-2`}>
-                {item.title}
-              </Text>
-              {!item.isRead && (
-                <View className="w-2 h-2 rounded-full bg-primary" />
-              )}
-            </View>
-            <Text className="text-gray-600 mt-1">{item.message}</Text>
-            <Text className="text-gray-500 text-xs mt-2">{formatTimestamp(item.timestamp)}</Text>
-          </View>
+    <TouchableOpacity style={[styles.notificationItem, !item.isRead && styles.unreadItem]} onPress={() => handleNotificationPress(item)}>
+      <View style={styles.notificationContent}>
+        <View style={[styles.iconContainer, { backgroundColor: colors[`${item.type}100`] }]}>
+          {getNotificationIcon(item.type)}
         </View>
-        <TouchableOpacity
-          className="p-2"
-          onPress={() => handleDeleteNotification(item.id)}
-        >
-          <Ionicons name="trash-outline" size={18} color="#EF4444" />
-        </TouchableOpacity>
+        <View style={styles.textContainer}>
+          <Text style={styles.notificationTitle} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.notificationMessage} numberOfLines={2}>{item.message}</Text>
+          <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
+        </View>
       </View>
+      <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteNotification(item.id)}>
+        <Ionicons name="trash-outline" size={20} color={colors.red500} />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
   const renderEmptyList = () => (
-    <View className="flex-1 items-center justify-center py-10">
-      <Ionicons name="notifications-off-outline" size={60} color="#D1D5DB" />
-      <Text className="text-gray-500 mt-4 text-center">
-        {activeFilter === 'all'
-          ? 'No notifications yet'
-          : `No ${activeFilter} notifications`}
+    <View style={styles.emptyContainer}>
+      <Ionicons name="notifications-off-outline" size={64} color={colors.gray300} />
+      <Text style={styles.emptyText}>
+        {activeFilter === 'all' ? 'You have no notifications' : `No ${activeFilter} notifications`}
       </Text>
     </View>
   );
 
   if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#2563EB" />
-        <Text className="text-gray-600 mt-4">Loading notifications...</Text>
-      </View>
-    );
+    return <View style={styles.centeredScreen}><ActivityIndicator size="large" color={colors.primary} /></View>;
   }
 
   return (
-    <View className="flex-1 bg-white">
-      {/* Header */}
-      <View className="bg-primary pt-12 pb-4 px-4">
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center">
-            <TouchableOpacity
-              className="w-10 h-10 items-center justify-center rounded-full bg-white/20"
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="arrow-back" size={20} color="white" />
-            </TouchableOpacity>
-            <Text className="text-white text-xl font-bold ml-4">Notifications</Text>
-          </View>
-          
-          <TouchableOpacity
-            className="px-3 py-1 bg-white/20 rounded-full"
-            onPress={handleMarkAllAsRead}
-          >
-            <Text className="text-white text-sm">Mark all as read</Text>
+    <View style={styles.screen}>
+      <View style={styles.header}>
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={20} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Notifications</Text>
+          <TouchableOpacity style={styles.markAllButton} onPress={handleMarkAllAsRead}>
+            <Text style={styles.markAllText}>Mark all as read</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Filter tabs */}
-      <View className="flex-row border-b border-gray-200">
-        <ScrollableTab
-          label="All"
-          isActive={activeFilter === 'all'}
-          onPress={() => setActiveFilter('all')}
-          count={notifications.length}
-        />
-        <ScrollableTab
-          label="Jobs"
-          isActive={activeFilter === 'job'}
-          onPress={() => setActiveFilter('job')}
-          count={notifications.filter(n => n.type === 'job').length}
-        />
-        <ScrollableTab
-          label="Payments"
-          isActive={activeFilter === 'payment'}
-          onPress={() => setActiveFilter('payment')}
-          count={notifications.filter(n => n.type === 'payment').length}
-        />
-        <ScrollableTab
-          label="System"
-          isActive={activeFilter === 'system'}
-          onPress={() => setActiveFilter('system')}
-          count={notifications.filter(n => n.type === 'system').length}
-        />
-        <ScrollableTab
-          label="Promos"
-          isActive={activeFilter === 'promo'}
-          onPress={() => setActiveFilter('promo')}
-          count={notifications.filter(n => n.type === 'promo').length}
-        />
+      <View style={styles.filterBar}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+          {(['all', 'job', 'payment', 'system', 'promo'] as const).map(filter => (
+            <TouchableOpacity key={filter} style={[styles.filterButton, activeFilter === filter && styles.activeFilterButton]} onPress={() => setActiveFilter(filter)}>
+              <Text style={[styles.filterText, activeFilter === filter && styles.activeFilterText]}>{filter.charAt(0).toUpperCase() + filter.slice(1)}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
-      {/* Notification list */}
       <FlatList
         data={getFilteredNotifications()}
         renderItem={renderNotificationItem}
         keyExtractor={item => item.id}
-        contentContainerStyle={{ flexGrow: 1 }}
         ListEmptyComponent={renderEmptyList}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#2563EB']}
-            tintColor="#2563EB"
-          />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+        contentContainerStyle={styles.listContainer}
       />
     </View>
   );
 };
 
-interface ScrollableTabProps {
-  label: string;
-  isActive: boolean;
-  onPress: () => void;
-  count: number;
-}
+const colors = {
+  primary: '#2563EB', white: '#FFFFFF', gray50: '#F9FAFB', gray100: '#F3F4F6', gray200: '#E5E7EB', gray300: '#D1D5DB',
+  gray500: '#6B7280', gray700: '#374151', gray800: '#1F2937', gray900: '#111827',
+  red500: '#EF4444', blue50: '#EFF6FF', blue100: '#DBEAFE', blue800: '#1E40AF',
+  green100: '#D1FAE5', green800: '#065F46', amber100: '#FEF3C7', amber800: '#92400E',
+};
 
-const ScrollableTab = ({ label, isActive, onPress, count }: ScrollableTabProps) => (
-  <TouchableOpacity
-    className={`py-3 px-4 ${isActive ? 'border-b-2 border-primary' : ''}`}
-    onPress={onPress}
-  >
-    <View className="flex-row items-center">
-      <Text className={isActive ? 'text-primary font-medium' : 'text-gray-600'}>
-        {label}
-      </Text>
-      {count > 0 && (
-        <View className="ml-1 px-1.5 py-0.5 bg-gray-200 rounded-full">
-          <Text className="text-gray-700 text-xs">{count}</Text>
-        </View>
-      )}
-    </View>
-  </TouchableOpacity>
-);
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.gray50 },
+  centeredScreen: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.white },
+  header: { backgroundColor: colors.primary, paddingTop: Platform.OS === 'android' ? 24 : 48, paddingBottom: 16, paddingHorizontal: 16 },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)' },
+  headerTitle: { color: colors.white, fontSize: 20, fontWeight: 'bold', position: 'absolute', left: 60, right: 60, textAlign: 'center' },
+  markAllButton: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)' },
+  markAllText: { color: colors.white, fontSize: 12 },
+  filterBar: { backgroundColor: colors.white, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.gray200 },
+  filterScroll: { paddingHorizontal: 12 },
+  filterButton: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginRight: 8, backgroundColor: colors.gray100 },
+  activeFilterButton: { backgroundColor: colors.primary },
+  filterText: { color: colors.gray700, fontWeight: '500' },
+  activeFilterText: { color: colors.white },
+  listContainer: { flexGrow: 1 },
+  notificationItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.white, padding: 16, borderBottomWidth: 1, borderBottomColor: colors.gray100 },
+  unreadItem: { backgroundColor: colors.blue50, borderLeftWidth: 4, borderLeftColor: colors.primary },
+  notificationContent: { flexDirection: 'row', flex: 1 },
+  iconContainer: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  textContainer: { flex: 1, marginRight: 8 },
+  notificationTitle: { fontSize: 16, fontWeight: 'bold', color: colors.gray900 },
+  notificationMessage: { fontSize: 14, color: colors.gray700, marginTop: 2 },
+  timestamp: { fontSize: 12, color: colors.gray500, marginTop: 4 },
+  deleteButton: { padding: 8 },
+  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
+  emptyText: { fontSize: 16, color: colors.gray500, marginTop: 16, textAlign: 'center' },
+});
 
 export default ProNotificationsScreen;

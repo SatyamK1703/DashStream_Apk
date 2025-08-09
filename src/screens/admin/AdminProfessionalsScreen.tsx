@@ -1,21 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
-  RefreshControl,
-  Image,
-  Alert
+  View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator,
+  RefreshControl, Image, Alert, ScrollView,StyleSheet
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons, MaterialIcons, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import { mockProfessionals } from '../../constants/data/AdminProfessionalScreen';
+
 
 type AdminProfessionalsScreenNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
+
 
 interface Professional {
   id: string;
@@ -37,7 +33,7 @@ interface Professional {
 
 const AdminProfessionalsScreen = () => {
   const navigation = useNavigation<AdminProfessionalsScreenNavigationProp>();
-  
+
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [filteredProfessionals, setFilteredProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,410 +43,132 @@ const AdminProfessionalsScreen = () => {
   const [sortBy, setSortBy] = useState<string>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // Mock data
-  const mockProfessionals: Professional[] = [
-    {
-      id: 'PRO-001',
-      name: 'Rajesh Kumar',
-      phone: '+91 9876543210',
-      email: 'rajesh.kumar@example.com',
-      rating: 4.8,
-      totalJobs: 156,
-      completedJobs: 148,
-      cancelledJobs: 8,
-      totalEarnings: '₹78,500',
-      status: 'active',
-      skills: ['Car Wash', 'Detailing', 'Polish'],
-      joinedDate: '2022-05-15',
-      lastActive: '2023-08-15T10:30:00Z',
-      isVerified: true
-    },
-    {
-      id: 'PRO-002',
-      name: 'Amit Singh',
-      phone: '+91 9876543211',
-      email: 'amit.singh@example.com',
-      rating: 4.5,
-      totalJobs: 98,
-      completedJobs: 92,
-      cancelledJobs: 6,
-      totalEarnings: '₹45,200',
-      status: 'active',
-      skills: ['Car Wash', 'Bike Wash'],
-      joinedDate: '2022-07-20',
-      lastActive: '2023-08-14T16:45:00Z',
-      isVerified: true
-    },
-    {
-      id: 'PRO-003',
-      name: 'Vikram Patel',
-      phone: '+91 9876543212',
-      email: 'vikram.patel@example.com',
-      rating: 4.7,
-      totalJobs: 120,
-      completedJobs: 118,
-      cancelledJobs: 2,
-      totalEarnings: '₹62,800',
-      status: 'active',
-      skills: ['Car Wash', 'Detailing', 'Polish', 'Interior Cleaning'],
-      joinedDate: '2022-06-10',
-      lastActive: '2023-08-15T09:15:00Z',
-      isVerified: true
-    },
-    {
-      id: 'PRO-004',
-      name: 'Sunil Verma',
-      phone: '+91 9876543213',
-      email: 'sunil.verma@example.com',
-      rating: 4.9,
-      totalJobs: 210,
-      completedJobs: 205,
-      cancelledJobs: 5,
-      totalEarnings: '₹105,600',
-      status: 'active',
-      skills: ['Car Wash', 'Detailing', 'Polish', 'Interior Cleaning', 'Engine Cleaning'],
-      joinedDate: '2022-04-05',
-      lastActive: '2023-08-15T11:20:00Z',
-      isVerified: true
-    },
-    {
-      id: 'PRO-005',
-      name: 'Deepak Sharma',
-      phone: '+91 9876543214',
-      email: 'deepak.sharma@example.com',
-      rating: 4.6,
-      totalJobs: 85,
-      completedJobs: 80,
-      cancelledJobs: 5,
-      totalEarnings: '₹42,300',
-      status: 'inactive',
-      skills: ['Car Wash', 'Bike Wash'],
-      joinedDate: '2022-08-12',
-      lastActive: '2023-07-30T14:10:00Z',
-      isVerified: true
-    },
-    {
-      id: 'PRO-006',
-      name: 'Priya Patel',
-      phone: '+91 9876543215',
-      email: 'priya.patel@example.com',
-      rating: 0,
-      totalJobs: 0,
-      completedJobs: 0,
-      cancelledJobs: 0,
-      totalEarnings: '₹0',
-      status: 'pending',
-      skills: ['Car Wash', 'Interior Cleaning'],
-      joinedDate: '2023-08-10',
-      lastActive: '2023-08-10T09:30:00Z',
-      isVerified: false
-    },
-    {
-      id: 'PRO-007',
-      name: 'Rahul Gupta',
-      phone: '+91 9876543216',
-      email: 'rahul.gupta@example.com',
-      rating: 0,
-      totalJobs: 0,
-      completedJobs: 0,
-      cancelledJobs: 0,
-      totalEarnings: '₹0',
-      status: 'rejected',
-      skills: ['Car Wash'],
-      joinedDate: '2023-08-05',
-      lastActive: '2023-08-05T16:45:00Z',
-      isVerified: false
-    }
-  ];
-
   useEffect(() => {
-    // Simulate API call
     const timer = setTimeout(() => {
       setProfessionals(mockProfessionals);
-      setFilteredProfessionals(mockProfessionals);
       setLoading(false);
     }, 1500);
-
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    applyFilters();
+    applyFiltersAndSort();
   }, [searchQuery, statusFilter, sortBy, sortOrder, professionals]);
 
-  const applyFilters = () => {
+  const applyFiltersAndSort = () => {
     let filtered = [...professionals];
-
-    // Apply status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(pro => pro.status === statusFilter);
     }
-
-    // Apply search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        pro => 
+        pro =>
           pro.name.toLowerCase().includes(query) ||
           pro.id.toLowerCase().includes(query) ||
           pro.phone.includes(query) ||
           pro.email.toLowerCase().includes(query)
       );
     }
-
-    // Apply sorting
     filtered.sort((a, b) => {
       let comparison = 0;
-      
       switch (sortBy) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case 'rating':
-          comparison = a.rating - b.rating;
-          break;
-        case 'jobs':
-          comparison = a.totalJobs - b.totalJobs;
-          break;
+        case 'name': comparison = a.name.localeCompare(b.name); break;
+        case 'rating': comparison = a.rating - b.rating; break;
+        case 'jobs': comparison = a.totalJobs - b.totalJobs; break;
         case 'earnings':
-          // Remove currency symbol and commas for numeric comparison
           const aEarnings = parseFloat(a.totalEarnings.replace(/[^\d.]/g, ''));
           const bEarnings = parseFloat(b.totalEarnings.replace(/[^\d.]/g, ''));
           comparison = aEarnings - bEarnings;
           break;
-        case 'date':
-          comparison = new Date(a.joinedDate).getTime() - new Date(b.joinedDate).getTime();
-          break;
-        default:
-          comparison = a.name.localeCompare(b.name);
+        case 'date': comparison = new Date(a.joinedDate).getTime() - new Date(b.joinedDate).getTime(); break;
+        default: comparison = a.name.localeCompare(b.name);
       }
-
       return sortOrder === 'asc' ? comparison : -comparison;
     });
-
     setFilteredProfessionals(filtered);
   };
-
+  
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    
-    // Simulate API call
     setTimeout(() => {
       setProfessionals(mockProfessionals);
       setRefreshing(false);
     }, 1500);
   }, []);
 
-  const handleStatusChange = (status: string) => {
-    setStatusFilter(status);
-  };
-
   const handleSortChange = (sortField: string) => {
     if (sortBy === sortField) {
-      // Toggle sort order if clicking the same field
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
-      // Set new sort field and default to ascending
       setSortBy(sortField);
       setSortOrder('asc');
     }
   };
-
-  const getStatusColor = (status: string) => {
+  
+  const getStatusStyles = (status: Professional['status']) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'inactive': return 'bg-gray-100 text-gray-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const handleToggleStatus = (professional: Professional) => {
-    Alert.alert(
-      'Change Status',
-      `Are you sure you want to ${professional.status === 'active' ? 'deactivate' : 'activate'} ${professional.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Confirm', 
-          onPress: () => {
-            // Update professional status in the state
-            const updatedProfessionals = professionals.map(pro => {
-              if (pro.id === professional.id) {
-                return {
-                  ...pro,
-                  status: pro.status === 'active' ? 'inactive' : 'active'
-                };
-              }
-              return pro;
-            });
-            setProfessionals(updatedProfessionals);
-            
-            // Show success message
-            Alert.alert(
-              'Success',
-              `Professional ${professional.status === 'active' ? 'deactivated' : 'activated'} successfully`
-            );
-          }
-        }
-      ]
-    );
-  };
-
-  const handleVerifyProfessional = (professional: Professional) => {
-    if (professional.status === 'pending') {
-      Alert.alert(
-        'Verify Professional',
-        `Do you want to approve or reject ${professional.name}'s application?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Reject', 
-            style: 'destructive',
-            onPress: () => {
-              // Update professional status to rejected
-              const updatedProfessionals = professionals.map(pro => {
-                if (pro.id === professional.id) {
-                  return {
-                    ...pro,
-                    status: 'rejected'
-                  };
-                }
-                return pro;
-              });
-              setProfessionals(updatedProfessionals);
-              
-              // Show success message
-              Alert.alert('Success', 'Professional application rejected');
-            }
-          },
-          { 
-            text: 'Approve', 
-            onPress: () => {
-              // Update professional status to active and set isVerified to true
-              const updatedProfessionals = professionals.map(pro => {
-                if (pro.id === professional.id) {
-                  return {
-                    ...pro,
-                    status: 'active',
-                    isVerified: true
-                  };
-                }
-                return pro;
-              });
-              setProfessionals(updatedProfessionals);
-              
-              // Show success message
-              Alert.alert('Success', 'Professional application approved');
-            }
-          }
-        ]
-      );
+      case 'active': return { badge: styles.statusBadgeActive, text: styles.statusTextActive };
+      case 'inactive': return { badge: styles.statusBadgeInactive, text: styles.statusTextInactive };
+      case 'pending': return { badge: styles.statusBadgePending, text: styles.statusTextPending };
+      case 'rejected': return { badge: styles.statusBadgeRejected, text: styles.statusTextRejected };
+      default: return { badge: styles.statusBadgeInactive, text: styles.statusTextInactive };
     }
   };
 
   const renderProfessionalItem = ({ item }: { item: Professional }) => {
     const lastActiveDate = new Date(item.lastActive);
-    const formattedLastActive = lastActiveDate.toLocaleDateString() + ' ' + lastActiveDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
+    const formattedLastActive = `${lastActiveDate.toLocaleDateString()} ${lastActiveDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    const statusStyles = getStatusStyles(item.status);
+
     return (
-      <TouchableOpacity 
-        className="bg-white rounded-lg shadow-sm mb-4 overflow-hidden"
+      <TouchableOpacity
+        style={styles.cardContainer}
         onPress={() => navigation.navigate('ProfessionalDetails', { professionalId: item.id })}
       >
-        <View className="p-4">
-          <View className="flex-row justify-between items-center">
-            <View className="flex-row items-center flex-1">
+        <View style={styles.cardContent}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderLeft}>
               {item.profileImage ? (
-                <Image 
-                  source={{ uri: item.profileImage }} 
-                  className="w-12 h-12 rounded-full bg-gray-200"
-                />
+                <Image source={{ uri: item.profileImage }} style={styles.cardAvatar} />
               ) : (
-                <View className="w-12 h-12 rounded-full bg-gray-200 items-center justify-center">
-                  <Text className="text-gray-600 font-bold text-lg">{item.name.charAt(0)}</Text>
+                <View style={[styles.cardAvatar, styles.cardAvatarPlaceholder]}>
+                  <Text style={styles.cardAvatarText}>{item.name.charAt(0)}</Text>
                 </View>
               )}
-              
-              <View className="ml-3 flex-1">
-                <View className="flex-row items-center">
-                  <Text className="text-gray-800 font-bold text-base">{item.name}</Text>
-                  {item.isVerified && (
-                    <Ionicons name="checkmark-circle" size={16} color="#2563EB" className="ml-1" />
-                  )}
+              <View style={styles.cardInfo}>
+                <View style={styles.cardNameContainer}>
+                  <Text style={styles.cardName}>{item.name}</Text>
+                  {item.isVerified && <Ionicons name="checkmark-circle" size={16} color="#2563EB" style={styles.cardVerifiedIcon} />}
                 </View>
-                <Text className="text-gray-500 text-sm">{item.id}</Text>
+                <Text style={styles.cardId}>{item.id}</Text>
               </View>
             </View>
-            
-            <View className={`px-2.5 py-1 rounded-full ${getStatusColor(item.status)}`}>
-              <Text className="text-xs font-medium capitalize">{item.status}</Text>
+            <View style={[styles.cardStatusBadge, statusStyles.badge]}>
+              <Text style={[styles.cardStatusText, statusStyles.text]}>{item.status}</Text>
             </View>
           </View>
 
-          <View className="mt-3 flex-row flex-wrap">
-            <View className="flex-row items-center mr-4 mb-2">
-              <Ionicons name="star" size={16} color="#F59E0B" />
-              <Text className="text-gray-700 ml-1">{item.rating.toFixed(1)}</Text>
-            </View>
-            
-            <View className="flex-row items-center mr-4 mb-2">
-              <MaterialIcons name="work" size={16} color="#6B7280" />
-              <Text className="text-gray-700 ml-1">{item.totalJobs} jobs</Text>
-            </View>
-            
-            <View className="flex-row items-center mr-4 mb-2">
-              <MaterialIcons name="attach-money" size={16} color="#6B7280" />
-              <Text className="text-gray-700 ml-1">{item.totalEarnings}</Text>
-            </View>
-            
-            <View className="flex-row items-center mb-2">
-              <Ionicons name="calendar" size={16} color="#6B7280" />
-              <Text className="text-gray-700 ml-1">Joined {new Date(item.joinedDate).toLocaleDateString()}</Text>
-            </View>
+          <View style={styles.cardStatsContainer}>
+            <View style={styles.cardStatItem}><Ionicons name="star" size={16} color="#F59E0B" /><Text style={styles.cardStatText}>{item.rating.toFixed(1)}</Text></View>
+            <View style={styles.cardStatItem}><MaterialIcons name="work" size={16} color="#6B7280" /><Text style={styles.cardStatText}>{item.totalJobs} jobs</Text></View>
+            <View style={styles.cardStatItem}><MaterialIcons name="attach-money" size={16} color="#6B7280" /><Text style={styles.cardStatText}>{item.totalEarnings}</Text></View>
+            <View style={styles.cardStatItem}><Ionicons name="calendar" size={16} color="#6B7280" /><Text style={styles.cardStatText}>Joined {new Date(item.joinedDate).toLocaleDateString()}</Text></View>
           </View>
 
-          <View className="mt-2">
-            <Text className="text-gray-600 text-sm mb-1">Skills:</Text>
-            <View className="flex-row flex-wrap">
+          <View style={styles.cardSkillsContainer}>
+            <Text style={styles.cardSkillsLabel}>Skills:</Text>
+            <View style={styles.cardSkillsWrapper}>
               {item.skills.map((skill, index) => (
-                <View key={index} className="bg-gray-100 rounded-full px-2.5 py-1 mr-2 mb-2">
-                  <Text className="text-gray-700 text-xs">{skill}</Text>
-                </View>
+                <View key={index} style={styles.cardSkillBadge}><Text style={styles.cardSkillText}>{skill}</Text></View>
               ))}
             </View>
           </View>
 
-          <View className="mt-3 pt-3 border-t border-gray-100 flex-row justify-between items-center">
-            <Text className="text-gray-500 text-xs">Last active: {formattedLastActive}</Text>
-            
-            <View className="flex-row">
-              {item.status === 'pending' && (
-                <TouchableOpacity 
-                  className="bg-primary py-1.5 px-3 rounded-lg mr-2 flex-row items-center"
-                  onPress={() => handleVerifyProfessional(item)}
-                >
-                  <MaterialIcons name="verified" size={16} color="white" />
-                  <Text className="text-white text-xs font-medium ml-1">Verify</Text>
-                </TouchableOpacity>
-              )}
-              
-              {(item.status === 'active' || item.status === 'inactive') && (
-                <TouchableOpacity 
-                  className={`py-1.5 px-3 rounded-lg flex-row items-center ${item.status === 'active' ? 'bg-red-500' : 'bg-green-500'}`}
-                  onPress={() => handleToggleStatus(item)}
-                >
-                  <MaterialIcons 
-                    name={item.status === 'active' ? 'block' : 'check-circle'} 
-                    size={16} 
-                    color="white" 
-                  />
-                  <Text className="text-white text-xs font-medium ml-1">
-                    {item.status === 'active' ? 'Deactivate' : 'Activate'}
-                  </Text>
-                </TouchableOpacity>
-              )}
+          <View style={styles.cardFooter}>
+            <Text style={styles.cardLastActive}>Last active: {formattedLastActive}</Text>
+            <View style={styles.cardActionsContainer}>
+              {/* Action buttons would be rendered here */}
             </View>
           </View>
         </View>
@@ -458,196 +176,92 @@ const AdminProfessionalsScreen = () => {
     );
   };
 
+  const renderSortButton = (field: string, label: string) => (
+    <TouchableOpacity style={styles.sortButton} onPress={() => handleSortChange(field)}>
+      <Text style={[styles.sortText, sortBy === field && styles.sortTextActive]}>{label}</Text>
+      {sortBy === field && (
+        <Ionicons name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} size={16} color="#2563EB" style={styles.sortIcon} />
+      )}
+    </TouchableOpacity>
+  );
+
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-50">
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
-        <Text className="mt-4 text-gray-600">Loading professionals...</Text>
+        <Text style={styles.loadingText}>Loading professionals...</Text>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="bg-primary pt-12 pb-4 px-4">
-        <View className="flex-row justify-between items-center">
-          <Text className="text-white text-xl font-bold">Professionals</Text>
-          <TouchableOpacity 
-            className="bg-white bg-opacity-20 p-2 rounded-full"
-            onPress={() => navigation.navigate('Notifications')}
-          >
+    <View style={styles.container}>
+      <View style={styles.headerContainer}>
+        <View style={styles.headerTopRow}>
+          <Text style={styles.headerTitle}>Professionals</Text>
+          <TouchableOpacity style={styles.notificationButton} onPress={() => navigation.navigate('Notifications')}>
             <Ionicons name="notifications" size={24} color="white" />
           </TouchableOpacity>
         </View>
-
-        {/* Search Bar */}
-        <View className="mt-4 bg-white rounded-lg flex-row items-center px-3 py-2">
+        <View style={styles.searchBarContainer}>
           <Ionicons name="search" size={20} color="#9CA3AF" />
           <TextInput
-            className="flex-1 ml-2 text-gray-800"
+            style={styles.searchInput}
             placeholder="Search by name, ID, phone or email"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            placeholderTextColor="#9CA3AF"
           />
           {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity style={styles.clearSearchButton} onPress={() => setSearchQuery('')}>
               <Ionicons name="close-circle" size={20} color="#9CA3AF" />
             </TouchableOpacity>
           ) : null}
         </View>
       </View>
 
-      {/* Status Filter */}
-      <View className="flex-row px-4 py-3 bg-white border-b border-gray-100">
+      <View style={styles.filterBar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <TouchableOpacity 
-            className={`px-4 py-1.5 rounded-full mr-2 ${statusFilter === 'all' ? 'bg-primary' : 'bg-gray-100'}`}
-            onPress={() => handleStatusChange('all')}
-          >
-            <Text className={`font-medium ${statusFilter === 'all' ? 'text-white' : 'text-gray-700'}`}>All</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            className={`px-4 py-1.5 rounded-full mr-2 ${statusFilter === 'active' ? 'bg-primary' : 'bg-gray-100'}`}
-            onPress={() => handleStatusChange('active')}
-          >
-            <Text className={`font-medium ${statusFilter === 'active' ? 'text-white' : 'text-gray-700'}`}>Active</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            className={`px-4 py-1.5 rounded-full mr-2 ${statusFilter === 'inactive' ? 'bg-primary' : 'bg-gray-100'}`}
-            onPress={() => handleStatusChange('inactive')}
-          >
-            <Text className={`font-medium ${statusFilter === 'inactive' ? 'text-white' : 'text-gray-700'}`}>Inactive</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            className={`px-4 py-1.5 rounded-full mr-2 ${statusFilter === 'pending' ? 'bg-primary' : 'bg-gray-100'}`}
-            onPress={() => handleStatusChange('pending')}
-          >
-            <Text className={`font-medium ${statusFilter === 'pending' ? 'text-white' : 'text-gray-700'}`}>Pending</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            className={`px-4 py-1.5 rounded-full mr-2 ${statusFilter === 'rejected' ? 'bg-primary' : 'bg-gray-100'}`}
-            onPress={() => handleStatusChange('rejected')}
-          >
-            <Text className={`font-medium ${statusFilter === 'rejected' ? 'text-white' : 'text-gray-700'}`}>Rejected</Text>
-          </TouchableOpacity>
+          {['all', 'active', 'inactive', 'pending', 'rejected'].map(status => (
+            <TouchableOpacity
+              key={status}
+              style={[styles.filterButton, statusFilter === status ? styles.filterButtonActive : styles.filterButtonInactive]}
+              onPress={() => setStatusFilter(status)}
+            >
+              <Text style={[styles.filterText, statusFilter === status ? styles.filterTextActive : styles.filterTextInactive, {textTransform: 'capitalize'}]}>{status}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+      
+      <View style={styles.sortBar}>
+        <Text style={styles.sortLabel}>Sort by:</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {renderSortButton('name', 'Name')}
+          {renderSortButton('rating', 'Rating')}
+          {renderSortButton('jobs', 'Jobs')}
+          {renderSortButton('earnings', 'Earnings')}
+          {renderSortButton('date', 'Join Date')}
         </ScrollView>
       </View>
 
-      {/* Sort Options */}
-      <View className="flex-row px-4 py-3 bg-white border-b border-gray-100 mb-2">
-        <Text className="text-gray-600 mr-2">Sort by:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <TouchableOpacity 
-            className="flex-row items-center mr-4"
-            onPress={() => handleSortChange('name')}
-          >
-            <Text className={`${sortBy === 'name' ? 'text-primary font-medium' : 'text-gray-700'}`}>Name</Text>
-            {sortBy === 'name' && (
-              <Ionicons 
-                name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} 
-                size={16} 
-                color="#2563EB" 
-                style={{ marginLeft: 2 }}
-              />
-            )}
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            className="flex-row items-center mr-4"
-            onPress={() => handleSortChange('rating')}
-          >
-            <Text className={`${sortBy === 'rating' ? 'text-primary font-medium' : 'text-gray-700'}`}>Rating</Text>
-            {sortBy === 'rating' && (
-              <Ionicons 
-                name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} 
-                size={16} 
-                color="#2563EB" 
-                style={{ marginLeft: 2 }}
-              />
-            )}
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            className="flex-row items-center mr-4"
-            onPress={() => handleSortChange('jobs')}
-          >
-            <Text className={`${sortBy === 'jobs' ? 'text-primary font-medium' : 'text-gray-700'}`}>Jobs</Text>
-            {sortBy === 'jobs' && (
-              <Ionicons 
-                name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} 
-                size={16} 
-                color="#2563EB" 
-                style={{ marginLeft: 2 }}
-              />
-            )}
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            className="flex-row items-center mr-4"
-            onPress={() => handleSortChange('earnings')}
-          >
-            <Text className={`${sortBy === 'earnings' ? 'text-primary font-medium' : 'text-gray-700'}`}>Earnings</Text>
-            {sortBy === 'earnings' && (
-              <Ionicons 
-                name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} 
-                size={16} 
-                color="#2563EB" 
-                style={{ marginLeft: 2 }}
-              />
-            )}
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            className="flex-row items-center"
-            onPress={() => handleSortChange('date')}
-          >
-            <Text className={`${sortBy === 'date' ? 'text-primary font-medium' : 'text-gray-700'}`}>Join Date</Text>
-            {sortBy === 'date' && (
-              <Ionicons 
-                name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} 
-                size={16} 
-                color="#2563EB" 
-                style={{ marginLeft: 2 }}
-              />
-            )}
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-
-      {/* Professionals List */}
       <FlatList
         data={filteredProfessionals}
         renderItem={renderProfessionalItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={styles.listContentContainer}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#2563EB']}
-            tintColor="#2563EB"
-          />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} tintColor="#2563EB" />}
         ListEmptyComponent={
-          <View className="items-center justify-center py-10">
+          <View style={styles.emptyListContainer}>
             <MaterialIcons name="person-search" size={48} color="#9CA3AF" />
-            <Text className="text-gray-500 mt-4 text-center">No professionals found</Text>
-            <Text className="text-gray-400 text-center">Try adjusting your filters</Text>
+            <Text style={styles.emptyListText}>No professionals found</Text>
+            <Text style={styles.emptyListSubText}>Try adjusting your filters</Text>
           </View>
         }
       />
-
-      {/* Add Professional FAB */}
-      <TouchableOpacity 
-        className="absolute bottom-6 right-6 bg-primary w-14 h-14 rounded-full items-center justify-center shadow-lg"
-        onPress={() => navigation.navigate('AddProfessional')}
-      >
+      
+      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('AddProfessional')}>
         <Ionicons name="add" size={28} color="white" />
       </TouchableOpacity>
     </View>
@@ -655,3 +269,318 @@ const AdminProfessionalsScreen = () => {
 };
 
 export default AdminProfessionalsScreen;
+
+
+
+ const styles = StyleSheet.create({
+  // Main Container & Loading
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  loadingText: {
+    marginTop: 16,
+    color: '#4B5563',
+  },
+
+  // Header
+  headerContainer: {
+    backgroundColor: '#2563EB',
+    paddingTop: 48,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  notificationButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 8,
+    borderRadius: 9999,
+  },
+
+  // Search Bar
+  searchBarContainer: {
+    marginTop: 16,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    color: '#1F2937',
+    fontSize: 16
+  },
+  clearSearchButton: {},
+
+  // Filters & Sorting
+  filterBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  filterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 9999,
+    marginRight: 8,
+  },
+  filterButtonActive: {
+    backgroundColor: '#2563EB',
+  },
+  filterButtonInactive: {
+    backgroundColor: '#F3F4F6',
+  },
+  filterText: {
+    fontWeight: '500',
+  },
+  filterTextActive: {
+    color: 'white',
+  },
+  filterTextInactive: {
+    color: '#374151',
+  },
+  sortBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    marginBottom: 8,
+  },
+  sortLabel: {
+    color: '#4B5563',
+    marginRight: 8,
+    alignSelf: 'center'
+  },
+  sortButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  sortText: {
+    color: '#374151',
+  },
+  sortTextActive: {
+    color: '#2563EB',
+    fontWeight: '500',
+  },
+  sortIcon: {
+    marginLeft: 2,
+  },
+
+  // List & List Items
+  listContentContainer: {
+    padding: 16,
+  },
+  emptyListContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyListText: {
+    color: '#6B7280',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  emptyListSubText: {
+    color: '#9CA3AF',
+    textAlign: 'center',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    backgroundColor: '#2563EB',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+
+  // Professional Card
+  cardContainer: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  cardContent: {
+    padding: 16,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  cardAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E5E7EB',
+  },
+  cardAvatarPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    height: '100%'
+  },
+  cardAvatarText: {
+    color: '#4B5563',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  cardInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  cardNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardName: {
+    color: '#1F2937',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  cardVerifiedIcon: {
+    marginLeft: 4,
+  },
+  cardId: {
+    color: '#6B7280',
+    fontSize: 14,
+  },
+  cardStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9999,
+  },
+  statusBadgeActive: { backgroundColor: '#D1FAE5' },
+  statusBadgeInactive: { backgroundColor: '#F3F4F6' },
+  statusBadgePending: { backgroundColor: '#FEF3C7' },
+  statusBadgeRejected: { backgroundColor: '#FEE2E2' },
+  cardStatusText: {
+    fontSize: 12,
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  statusTextActive: { color: '#065F46' },
+  statusTextInactive: { color: '#374151' },
+  statusTextPending: { color: '#92400E' },
+  statusTextRejected: { color: '#991B1B' },
+  cardStatsContainer: {
+    marginTop: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  cardStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+    marginBottom: 8,
+  },
+  cardStatText: {
+    color: '#374151',
+    marginLeft: 4,
+  },
+  cardSkillsContainer: {
+    marginTop: 8,
+  },
+  cardSkillsLabel: {
+    color: '#4B5563',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  cardSkillsWrapper: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  cardSkillBadge: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 9999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  cardSkillText: {
+    color: '#374151',
+    fontSize: 12,
+  },
+  cardFooter: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F9FAFB',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardLastActive: {
+    color: '#6B7280',
+    fontSize: 12,
+  },
+  cardActionsContainer: {
+    flexDirection: 'row',
+  },
+  cardActionButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginRight: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardVerifyButton: {
+    backgroundColor: '#2563EB',
+  },
+  cardDeactivateButton: {
+    backgroundColor: '#EF4444',
+  },
+  cardActivateButton: {
+    backgroundColor: '#10B981',
+  },
+  cardActionButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+});

@@ -10,14 +10,13 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Image
+  Image,StyleSheet
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
-
 type AdminCreateCustomerNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 
 interface FormData {
@@ -69,7 +68,6 @@ const AdminCreateCustomerScreen = () => {
       [key]: value
     }));
     
-    // Clear error when user types
     if (errors[key]) {
       setErrors(prev => ({
         ...prev,
@@ -111,12 +109,10 @@ const AdminCreateCustomerScreen = () => {
   const validateForm = () => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     
-    // Validate name
     if (!formData.name.trim()) {
       newErrors.name = 'Name is required';
     }
     
-    // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
@@ -124,7 +120,6 @@ const AdminCreateCustomerScreen = () => {
       newErrors.email = 'Please enter a valid email';
     }
     
-    // Validate phone
     const phoneRegex = /^[0-9+\s]{10,15}$/;
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
@@ -132,19 +127,16 @@ const AdminCreateCustomerScreen = () => {
       newErrors.phone = 'Please enter a valid phone number';
     }
     
-    // Validate password
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
     }
     
-    // Validate confirm password
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
     
-    // Validate address if shown
     if (showAddressSection) {
       if (!formData.address.line1.trim()) {
         newErrors.address = 'Address line 1 is required';
@@ -170,7 +162,6 @@ const AdminCreateCustomerScreen = () => {
     
     setLoading(true);
     
-    // Simulate API call
     setTimeout(() => {
       setLoading(false);
       Alert.alert(
@@ -203,115 +194,148 @@ const AdminCreateCustomerScreen = () => {
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1"
+      style={styles.container}
     >
-      <View className="flex-1 bg-gray-50">
+      <View style={styles.mainContainer}>
         {/* Header */}
-        <View className="bg-primary pt-12 pb-4 px-4">
-          <View className="flex-row items-center">
+        <View style={styles.headerContainer}>
+          <View style={styles.headerContent}>
             <TouchableOpacity 
               onPress={() => navigation.goBack()}
-              className="p-2 rounded-full bg-white/20"
+              style={styles.backButton}
             >
               <Ionicons name="arrow-back" size={22} color="white" />
             </TouchableOpacity>
-            <Text className="text-white text-xl font-bold ml-4">Create New Customer</Text>
+            <Text style={styles.headerTitle}>Create New Customer</Text>
           </View>
         </View>
         
         <ScrollView 
-          className="flex-1"
+          style={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 30 }}
+          contentContainerStyle={styles.scrollContentContainer}
         >
           {/* Profile Image Section */}
-          <View className="items-center mt-6">
+          <View style={styles.profileImageContainer}>
             <TouchableOpacity 
               onPress={pickImage}
-              className="w-24 h-24 rounded-full bg-gray-200 justify-center items-center overflow-hidden"
+              style={styles.profileImageButton}
             >
               {formData.profileImage ? (
-                <View className="w-full h-full">
+                <View style={styles.profileImageContainer2}>
                   <Image 
                     source={{ uri: formData.profileImage }}
-                    className="w-full h-full"
+                    style={styles.profileImage}
                   />
-                  <View className="absolute bottom-0 right-0 bg-primary p-1 rounded-full">
+                  <View style={styles.cameraIconContainer}>
                     <Ionicons name="camera" size={14} color="white" />
                   </View>
                 </View>
               ) : (
                 <>
                   <Ionicons name="person" size={40} color="#9CA3AF" />
-                  <View className="absolute bottom-0 right-0 bg-primary p-1 rounded-full">
+                  <View style={styles.cameraIconContainer}>
                     <Ionicons name="camera" size={14} color="white" />
                   </View>
                 </>
               )}
             </TouchableOpacity>
-            <Text className="text-gray-500 text-sm mt-2">Upload Profile Picture</Text>
+            <Text style={styles.profileImageText}>Upload Profile Picture</Text>
           </View>
           
           {/* Form */}
-          <View className="px-4 mt-6">
-            <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-              <Text className="text-gray-800 font-bold mb-4">Basic Information</Text>
+          <View style={styles.formContainer}>
+            <View style={styles.formSection}>
+              <Text style={styles.sectionTitle}>Basic Information</Text>
               
               {/* Name */}
-              <View className="mb-4">
-                <Text className="text-gray-600 mb-1">Full Name <Text className="text-red-500">*</Text></Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Full Name <Text style={styles.requiredAsterisk}>*</Text>
+                </Text>
                 <TextInput
-                  className={`border ${errors.name ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 text-gray-800`}
+                  style={[
+                    styles.textInput,
+                    errors.name && styles.textInputError
+                  ]}
                   placeholder="Enter full name"
                   value={formData.name}
                   onChangeText={(value) => updateFormData('name', value)}
+                  placeholderTextColor="#9CA3AF"
                 />
-                {errors.name && <Text className="text-red-500 text-xs mt-1">{errors.name}</Text>}
+                {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
               </View>
               
               {/* Email */}
-              <View className="mb-4">
-                <Text className="text-gray-600 mb-1">Email <Text className="text-red-500">*</Text></Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Email <Text style={styles.requiredAsterisk}>*</Text>
+                </Text>
                 <TextInput
-                  className={`border ${errors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 text-gray-800`}
+                  style={[
+                    styles.textInput,
+                    errors.email && styles.textInputError
+                  ]}
                   placeholder="Enter email address"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   value={formData.email}
                   onChangeText={(value) => updateFormData('email', value)}
+                  placeholderTextColor="#9CA3AF"
                 />
-                {errors.email && <Text className="text-red-500 text-xs mt-1">{errors.email}</Text>}
+                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
               </View>
               
               {/* Phone */}
-              <View className="mb-4">
-                <Text className="text-gray-600 mb-1">Phone Number <Text className="text-red-500">*</Text></Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Phone Number <Text style={styles.requiredAsterisk}>*</Text>
+                </Text>
                 <TextInput
-                  className={`border ${errors.phone ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 text-gray-800`}
+                  style={[
+                    styles.textInput,
+                    errors.phone && styles.textInputError
+                  ]}
                   placeholder="Enter phone number"
                   keyboardType="phone-pad"
                   value={formData.phone}
                   onChangeText={(value) => updateFormData('phone', value)}
+                  placeholderTextColor="#9CA3AF"
                 />
-                {errors.phone && <Text className="text-red-500 text-xs mt-1">{errors.phone}</Text>}
+                {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
               </View>
               
               {/* Status */}
-              <View className="mb-4">
-                <Text className="text-gray-600 mb-1">Account Status</Text>
-                <View className="flex-row mt-2">
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Account Status</Text>
+                <View style={styles.statusContainer}>
                   {['active', 'inactive'].map((status) => (
                     <TouchableOpacity 
                       key={status}
-                      className={`flex-row items-center mr-4 px-3 py-2 rounded-lg ${formData.status === status ? 'bg-primary/10' : 'bg-gray-100'}`}
+                      style={[
+                        styles.statusOption,
+                        formData.status === status 
+                          ? styles.statusOptionActive 
+                          : styles.statusOptionInactive
+                      ]}
                       onPress={() => updateFormData('status', status)}
                     >
-                      <View className={`w-4 h-4 rounded-full border-2 ${formData.status === status ? 'border-primary' : 'border-gray-400'} justify-center items-center`}>
+                      <View style={[
+                        styles.radioButton,
+                        formData.status === status 
+                          ? styles.radioButtonActive 
+                          : styles.radioButtonInactive
+                      ]}>
                         {formData.status === status && (
-                          <View className="w-2 h-2 rounded-full bg-primary" />
+                          <View style={styles.radioButtonInner} />
                         )}
                       </View>
-                      <Text className={`ml-2 ${formData.status === status ? 'text-primary font-medium' : 'text-gray-600'} capitalize`}>
+                      <Text style={[
+                        styles.statusText,
+                        formData.status === status 
+                          ? styles.statusTextActive 
+                          : styles.statusTextInactive
+                      ]}>
                         {status}
                       </Text>
                     </TouchableOpacity>
@@ -321,56 +345,70 @@ const AdminCreateCustomerScreen = () => {
             </View>
             
             {/* Password Section */}
-            <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-              <View className="flex-row justify-between items-center mb-4">
-                <Text className="text-gray-800 font-bold">Account Password</Text>
+            <View style={styles.formSection}>
+              <View style={styles.passwordSectionHeader}>
+                <Text style={styles.sectionTitle}>Account Password</Text>
                 <TouchableOpacity 
-                  className="bg-gray-100 px-3 py-1.5 rounded-lg"
+                  style={styles.generateButton}
                   onPress={generateRandomPassword}
                 >
-                  <Text className="text-gray-700 text-sm">Generate Random</Text>
+                  <Text style={styles.generateButtonText}>Generate Random</Text>
                 </TouchableOpacity>
               </View>
               
               {/* Password */}
-              <View className="mb-4">
-                <Text className="text-gray-600 mb-1">Password <Text className="text-red-500">*</Text></Text>
-                <View className="relative">
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Password <Text style={styles.requiredAsterisk}>*</Text>
+                </Text>
+                <View style={styles.passwordInputContainer}>
                   <TextInput
-                    className={`border ${errors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 text-gray-800 pr-10`}
+                    style={[
+                      styles.textInput,
+                      styles.passwordInput,
+                      errors.password && styles.textInputError
+                    ]}
                     placeholder="Enter password"
                     secureTextEntry
                     value={formData.password}
                     onChangeText={(value) => updateFormData('password', value)}
+                    placeholderTextColor="#9CA3AF"
                   />
-                  <View className="absolute right-3 top-2.5">
+                  <View style={styles.eyeIcon}>
                     <Ionicons name="eye-off" size={20} color="#9CA3AF" />
                   </View>
                 </View>
-                {errors.password && <Text className="text-red-500 text-xs mt-1">{errors.password}</Text>}
+                {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
               </View>
               
               {/* Confirm Password */}
-              <View className="mb-4">
-                <Text className="text-gray-600 mb-1">Confirm Password <Text className="text-red-500">*</Text></Text>
-                <View className="relative">
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Confirm Password <Text style={styles.requiredAsterisk}>*</Text>
+                </Text>
+                <View style={styles.passwordInputContainer}>
                   <TextInput
-                    className={`border ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 text-gray-800 pr-10`}
+                    style={[
+                      styles.textInput,
+                      styles.passwordInput,
+                      errors.confirmPassword && styles.textInputError
+                    ]}
                     placeholder="Confirm password"
                     secureTextEntry
                     value={formData.confirmPassword}
                     onChangeText={(value) => updateFormData('confirmPassword', value)}
+                    placeholderTextColor="#9CA3AF"
                   />
-                  <View className="absolute right-3 top-2.5">
+                  <View style={styles.eyeIcon}>
                     <Ionicons name="eye-off" size={20} color="#9CA3AF" />
                   </View>
                 </View>
-                {errors.confirmPassword && <Text className="text-red-500 text-xs mt-1">{errors.confirmPassword}</Text>}
+                {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
               </View>
               
               {/* Send Credentials */}
-              <View className="flex-row items-center justify-between">
-                <Text className="text-gray-600">Send login credentials to customer</Text>
+              <View style={styles.switchContainer}>
+                <Text style={styles.switchText}>Send login credentials to customer</Text>
                 <Switch
                   value={formData.sendCredentials}
                   onValueChange={(value) => updateFormData('sendCredentials', value)}
@@ -382,12 +420,12 @@ const AdminCreateCustomerScreen = () => {
             
             {/* Address Section Toggle */}
             <TouchableOpacity 
-              className="bg-white rounded-lg shadow-sm p-4 mb-4 flex-row justify-between items-center"
+              style={styles.addressToggle}
               onPress={() => setShowAddressSection(!showAddressSection)}
             >
-              <View className="flex-row items-center">
+              <View style={styles.addressToggleLeft}>
                 <MaterialIcons name="location-on" size={20} color="#4B5563" />
-                <Text className="text-gray-800 font-bold ml-2">Add Address</Text>
+                <Text style={styles.addressToggleText}>Add Address</Text>
               </View>
               <Ionicons 
                 name={showAddressSection ? 'chevron-up' : 'chevron-down'} 
@@ -398,79 +436,95 @@ const AdminCreateCustomerScreen = () => {
             
             {/* Address Form */}
             {showAddressSection && (
-              <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
+              <View style={styles.formSection}>
                 {/* Address Line 1 */}
-                <View className="mb-4">
-                  <Text className="text-gray-600 mb-1">Address Line 1 <Text className="text-red-500">*</Text></Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>
+                    Address Line 1 <Text style={styles.requiredAsterisk}>*</Text>
+                  </Text>
                   <TextInput
-                    className="border border-gray-300 rounded-lg px-3 py-2 text-gray-800"
+                    style={styles.textInput}
                     placeholder="House/Flat No., Building Name"
                     value={formData.address.line1}
                     onChangeText={(value) => updateAddress('line1', value)}
+                    placeholderTextColor="#9CA3AF"
                   />
                 </View>
                 
                 {/* Address Line 2 */}
-                <View className="mb-4">
-                  <Text className="text-gray-600 mb-1">Address Line 2</Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Address Line 2</Text>
                   <TextInput
-                    className="border border-gray-300 rounded-lg px-3 py-2 text-gray-800"
+                    style={styles.textInput}
                     placeholder="Street, Area, Landmark"
                     value={formData.address.line2}
                     onChangeText={(value) => updateAddress('line2', value)}
+                    placeholderTextColor="#9CA3AF"
                   />
                 </View>
                 
                 {/* City & State */}
-                <View className="flex-row mb-4">
-                  <View className="flex-1 mr-2">
-                    <Text className="text-gray-600 mb-1">City <Text className="text-red-500">*</Text></Text>
+                <View style={styles.addressRow}>
+                  <View style={styles.addressInputLeft}>
+                    <Text style={styles.inputLabel}>
+                      City <Text style={styles.requiredAsterisk}>*</Text>
+                    </Text>
                     <TextInput
-                      className="border border-gray-300 rounded-lg px-3 py-2 text-gray-800"
+                      style={styles.textInput}
                       placeholder="City"
                       value={formData.address.city}
                       onChangeText={(value) => updateAddress('city', value)}
+                      placeholderTextColor="#9CA3AF"
                     />
                   </View>
                   
-                  <View className="flex-1 ml-2">
-                    <Text className="text-gray-600 mb-1">State <Text className="text-red-500">*</Text></Text>
+                  <View style={styles.addressInputRight}>
+                    <Text style={styles.inputLabel}>
+                      State <Text style={styles.requiredAsterisk}>*</Text>
+                    </Text>
                     <TextInput
-                      className="border border-gray-300 rounded-lg px-3 py-2 text-gray-800"
+                      style={styles.textInput}
                       placeholder="State"
                       value={formData.address.state}
                       onChangeText={(value) => updateAddress('state', value)}
+                      placeholderTextColor="#9CA3AF"
                     />
                   </View>
                 </View>
                 
                 {/* Pincode */}
-                <View className="mb-2">
-                  <Text className="text-gray-600 mb-1">Pincode <Text className="text-red-500">*</Text></Text>
+                <View style={styles.addressInputGroup}>
+                  <Text style={styles.inputLabel}>
+                    Pincode <Text style={styles.requiredAsterisk}>*</Text>
+                  </Text>
                   <TextInput
-                    className="border border-gray-300 rounded-lg px-3 py-2 text-gray-800"
+                    style={styles.textInput}
                     placeholder="6-digit pincode"
                     keyboardType="number-pad"
                     maxLength={6}
                     value={formData.address.pincode}
                     onChangeText={(value) => updateAddress('pincode', value)}
+                    placeholderTextColor="#9CA3AF"
                   />
                 </View>
                 
-                {errors.address && <Text className="text-red-500 text-xs mt-1">{errors.address}</Text>}
+                {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
               </View>
             )}
             
             {/* Submit Button */}
             <TouchableOpacity
-              className="bg-primary py-3 rounded-lg mt-4"
+              style={[
+                styles.submitButton,
+                loading && styles.submitButtonDisabled
+              ]}
               onPress={handleSubmit}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="white" size="small" />
               ) : (
-                <Text className="text-white font-bold text-center">Create Customer</Text>
+                <Text style={styles.submitButtonText}>Create Customer</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -481,3 +535,280 @@ const AdminCreateCustomerScreen = () => {
 };
 
 export default AdminCreateCustomerScreen;
+
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+
+  // Header
+  headerContainer: {
+    backgroundColor: '#2563EB',
+    paddingTop: 48,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginLeft: 16,
+  },
+
+  // ScrollView
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContentContainer: {
+    paddingBottom: 30,
+  },
+
+  // Profile Image Section
+  profileImageContainer: {
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  profileImageButton: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#E5E7EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  profileImageContainer2: {
+    width: '100%',
+    height: '100%',
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
+  },
+  cameraIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#2563EB',
+    padding: 4,
+    borderRadius: 50,
+  },
+  profileImageText: {
+    color: '#6B7280',
+    fontSize: 14,
+    marginTop: 8,
+  },
+
+  // Form
+  formContainer: {
+    paddingHorizontal: 16,
+    marginTop: 24,
+  },
+  formSection: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    padding: 16,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    color: '#1F2937',
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+
+  // Input Groups
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    color: '#4B5563',
+    marginBottom: 4,
+  },
+  requiredAsterisk: {
+    color: '#EF4444',
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    color: '#1F2937',
+  },
+  textInputError: {
+    borderColor: '#EF4444',
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    marginTop: 4,
+  },
+
+  // Status Radio Buttons
+  statusContainer: {
+    flexDirection: 'row',
+    marginTop: 8,
+  },
+  statusOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  statusOptionActive: {
+    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+  },
+  statusOptionInactive: {
+    backgroundColor: '#F3F4F6',
+  },
+  radioButton: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioButtonActive: {
+    borderColor: '#2563EB',
+  },
+  radioButtonInactive: {
+    borderColor: '#9CA3AF',
+  },
+  radioButtonInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#2563EB',
+  },
+  statusText: {
+    marginLeft: 8,
+    textTransform: 'capitalize',
+  },
+  statusTextActive: {
+    color: '#2563EB',
+    fontWeight: '500',
+  },
+  statusTextInactive: {
+    color: '#4B5563',
+  },
+
+  // Password Section
+  passwordSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  generateButton: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  generateButtonText: {
+    color: '#374151',
+    fontSize: 14,
+  },
+  passwordInputContainer: {
+    position: 'relative',
+  },
+  passwordInput: {
+    paddingRight: 40,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 12,
+    top: 10,
+  },
+
+  // Switch Container
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  switchText: {
+    color: '#4B5563',
+  },
+
+  // Address Toggle
+  addressToggle: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    padding: 16,
+    marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  addressToggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  addressToggleText: {
+    color: '#1F2937',
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+
+  // Address Form
+  addressRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  addressInputLeft: {
+    flex: 1,
+    marginRight: 8,
+  },
+  addressInputRight: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  addressInputGroup: {
+    marginBottom: 8,
+  },
+
+  // Submit Button
+  submitButton: {
+    backgroundColor: '#2563EB',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  submitButtonDisabled: {
+    opacity: 0.7,
+  },
+  submitButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+});
+

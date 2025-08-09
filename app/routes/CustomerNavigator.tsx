@@ -21,6 +21,8 @@ import FAQScreen from '../../src/screens/customer/FAQScreen';
 import NotificationsScreen from '../../src/screens/customer/NotificationsScreen';
 import LocationPickerScreen from '../../src/screens/customer/LocationPickerScreen';
 import AllServicesScreen from '~/screens/customer/AllServiceScreen';
+import TermsAndConditions from '~/screens/customer/TermsAndConditions';
+import MembershipScreen from '~/screens/customer/MembershipScreen';
 
 // Define the customer stack param list
 export type CustomerStackParamList = {
@@ -42,6 +44,8 @@ export type CustomerStackParamList = {
   AboutUs :undefined;
   LocationPicker :undefined;
   AllServices:undefined;
+  OrderHistory:undefined;
+  TermsAndConditions:undefined;
 };
 
 // Define the customer tab param list
@@ -51,6 +55,7 @@ export type CustomerTabParamList = {
   History: undefined;
   Profile: undefined;
   Support:undefined;
+  Membership:undefined;
 };
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -69,9 +74,13 @@ const CustomerTabNavigator = () => {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'Bookings') {
             iconName = focused ? 'calendar' : 'calendar-outline';
-          } else if (route.name === 'History') {
-              iconName = focused ? 'time' : 'time-outline';
-          } else if (route.name === 'Profile') {
+          } 
+          else if (route.name === 'History') {
+              iconName = focused ? 'help-buoy' : 'help-buoy-outline';
+          }else if (route.name ==='Membership'){
+            iconName = focused ? 'card' :'card-outline';
+          }
+           else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           }
 
@@ -95,11 +104,17 @@ const CustomerTabNavigator = () => {
         component={BookingsScreen}
         options={{ tabBarLabel: 'Bookings' }}
       />
-      <Tab.Screen 
+       <Tab.Screen 
         name="History" 
-        component={OrderHistoryScreen}
+        component={SupportScreen}
         options={{ tabBarLabel: 'Support' }}
       />
+      <Tab.Screen name="Membership" 
+        component={MembershipScreen}
+        options={{ tabBarLabel: 'Membership' }}
+      />
+     
+
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}
@@ -136,6 +151,8 @@ const CustomerNavigator = () => {
       <Stack.Screen name="AboutUs" component={AboutUsScreen}/>
       <Stack.Screen name="LocationPicker" component={LocationPickerScreen} />
       <Stack.Screen name="AllServices" component={AllServicesScreen} />
+      <Stack.Screen name='OrderHistory' component={OrderHistoryScreen}/>
+      <Stack.Screen name='TermsAndConditions' component={TermsAndConditions}/>
 
     </Stack.Navigator>
   );

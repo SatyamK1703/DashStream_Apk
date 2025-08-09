@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
     color: '#374151',
     lineHeight: 16,

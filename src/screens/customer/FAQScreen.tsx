@@ -9,6 +9,8 @@ import CategoryTabs from '../../components/faq/CategoryTabs';
 import FAQList from '../../components/faq/FAQList';
 import ContactSupport from '~/components/faq/ContactSupport';
 
+
+
 const FAQScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
   const [searchQuery, setSearchQuery] = useState('');

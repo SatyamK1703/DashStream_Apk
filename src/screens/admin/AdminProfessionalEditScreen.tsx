@@ -9,16 +9,24 @@ import {
   Alert,
   Switch,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  StyleSheet, // Import StyleSheet
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import { Ionicons } from '@expo/vector-icons';
+// Removed MaterialIcons as it was not used
+//import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+
+// Mock types for navigation to make the component self-contained
+type AdminStackParamList = {
+  EditProfessional: { professionalId: string };
+};
 
 type AdminProfessionalEditRouteProp = RouteProp<AdminStackParamList, 'EditProfessional'>;
 type AdminProfessionalEditNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 
+// Interface for the professional's data structure
 interface Professional {
   id: string;
   name: string;
@@ -38,12 +46,13 @@ const AdminProfessionalEditScreen = () => {
   const route = useRoute<AdminProfessionalEditRouteProp>();
   const navigation = useNavigation<AdminProfessionalEditNavigationProp>();
   const { professionalId } = route.params;
-  
+
+  // State for loading and saving indicators
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [professional, setProfessional] = useState<Professional | null>(null);
-  
-  // Form state
+
+  // Form state for all editable fields
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -57,8 +66,8 @@ const AdminProfessionalEditScreen = () => {
   const [skills, setSkills] = useState<string[]>([]);
   const [serviceAreaInput, setServiceAreaInput] = useState('');
   const [serviceAreas, setServiceAreas] = useState<string[]>([]);
-  
-  // Mock data
+
+  // Mock data to simulate fetching from an API
   const mockProfessional: Professional = {
     id: 'PRO-001',
     name: 'Rajesh Kumar',
@@ -74,12 +83,12 @@ const AdminProfessionalEditScreen = () => {
     serviceArea: ['Andheri', 'Bandra', 'Juhu', 'Santacruz'],
   };
 
+  // Effect to fetch and populate professional data on component mount
   useEffect(() => {
-    // Simulate API call
     const timer = setTimeout(() => {
       setProfessional(mockProfessional);
       
-      // Initialize form state
+      // Initialize form state with fetched data
       setName(mockProfessional.name);
       setPhone(mockProfessional.phone);
       setEmail(mockProfessional.email);
@@ -98,9 +107,9 @@ const AdminProfessionalEditScreen = () => {
     return () => clearTimeout(timer);
   }, [professionalId]);
 
+  // Handlers for adding and removing skills
   const handleAddSkill = () => {
     if (skillInput.trim() === '') return;
-    
     setSkills(prev => [...prev, skillInput.trim()]);
     setSkillInput('');
   };
@@ -109,9 +118,9 @@ const AdminProfessionalEditScreen = () => {
     setSkills(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Handlers for adding and removing service areas
   const handleAddServiceArea = () => {
     if (serviceAreaInput.trim() === '') return;
-    
     setServiceAreas(prev => [...prev, serviceAreaInput.trim()]);
     setServiceAreaInput('');
   };
@@ -120,44 +129,25 @@ const AdminProfessionalEditScreen = () => {
     setServiceAreas(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Handler to save changes
   const handleSave = () => {
-    // Validate form
-    if (!name.trim()) {
-      Alert.alert('Error', 'Name is required');
+    if (!name.trim() || !phone.trim() || !email.trim()) {
+      Alert.alert('Error', 'Name, Phone, and Email are required');
       return;
     }
     
-    if (!phone.trim()) {
-      Alert.alert('Error', 'Phone number is required');
-      return;
-    }
-    
-    if (!email.trim()) {
-      Alert.alert('Error', 'Email is required');
-      return;
-    }
-    
-    // Start saving
     setSaving(true);
-    
-    // Simulate API call
     setTimeout(() => {
       setSaving(false);
-      
-      // Show success message
       Alert.alert(
         'Success',
         'Professional details updated successfully',
-        [
-          { 
-            text: 'OK', 
-            onPress: () => navigation.goBack()
-          }
-        ]
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     }, 1500);
   };
 
+  // Handler to cancel editing and show a confirmation dialog
   const handleCancel = () => {
     Alert.alert(
       'Discard Changes',
@@ -169,82 +159,69 @@ const AdminProfessionalEditScreen = () => {
     );
   };
 
+  // Loading state UI
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#2563EB" />
-        <Text className="mt-4 text-gray-600">Loading professional details...</Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading professional details...</Text>
       </View>
     );
   }
 
+  // Main component UI
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1 bg-gray-50"
+      style={styles.flex1}
     >
       {/* Header */}
-      <View className="bg-primary pt-12 pb-4 px-4">
-        <View className="flex-row items-center">
-          <TouchableOpacity 
-            className="p-2"
-            onPress={handleCancel}
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
+            <Ionicons name="arrow-back" size={24} color={colors.white} />
           </TouchableOpacity>
-          <Text className="text-white text-xl font-bold ml-2">Edit Professional</Text>
+          <Text style={styles.headerTitle}>Edit Professional</Text>
         </View>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="p-4">
-          {/* Basic Information */}
-          <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-            <Text className="text-gray-800 font-bold text-base mb-4">Basic Information</Text>
+      <ScrollView style={styles.flex1} showsVerticalScrollIndicator={false}>
+        <View style={styles.contentContainer}>
+          {/* Basic Information Card */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Basic Information</Text>
             
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-1">Name</Text>
-              <TextInput
-                className="bg-gray-100 rounded-lg p-3 text-gray-800"
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter name"
-              />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Name</Text>
+              <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Enter name" />
             </View>
             
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-1">Phone Number</Text>
-              <TextInput
-                className="bg-gray-100 rounded-lg p-3 text-gray-800"
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="Enter phone number"
-                keyboardType="phone-pad"
-              />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Phone Number</Text>
+              <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="Enter phone number" keyboardType="phone-pad" />
             </View>
             
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-1">Email</Text>
-              <TextInput
-                className="bg-gray-100 rounded-lg p-3 text-gray-800"
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Enter email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput style={styles.input} value={email} onChangeText={setEmail} placeholder="Enter email" keyboardType="email-address" autoCapitalize="none" />
             </View>
             
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-1">Status</Text>
-              <View className="flex-row flex-wrap">
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Status</Text>
+              <View style={styles.tagContainer}>
                 {['active', 'inactive', 'pending', 'rejected'].map((statusOption) => (
                   <TouchableOpacity 
                     key={statusOption}
-                    className={`mr-2 mb-2 px-4 py-2 rounded-full ${status === statusOption ? 'bg-primary' : 'bg-gray-200'}`}
+                    style={[
+                      styles.statusButton,
+                      { backgroundColor: status === statusOption ? colors.primary : colors.gray200 }
+                    ]}
                     onPress={() => setStatus(statusOption as any)}
                   >
-                    <Text className={`font-medium capitalize ${status === statusOption ? 'text-white' : 'text-gray-700'}`}>
+                    <Text style={[
+                      styles.statusButtonText,
+                      { color: status === statusOption ? colors.white : colors.gray700 }
+                    ]}>
                       {statusOption}
                     </Text>
                   </TouchableOpacity>
@@ -252,126 +229,74 @@ const AdminProfessionalEditScreen = () => {
               </View>
             </View>
             
-            <View className="flex-row items-center justify-between">
-              <Text className="text-gray-700">Verified Professional</Text>
+            <View style={styles.switchContainer}>
+              <Text style={styles.label}>Verified Professional</Text>
               <Switch
                 value={isVerified}
                 onValueChange={setIsVerified}
-                trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
-                thumbColor={isVerified ? '#2563EB' : '#F3F4F6'}
+                trackColor={{ false: colors.gray300, true: colors.primaryLight }}
+                thumbColor={isVerified ? colors.primary : colors.gray100}
               />
             </View>
           </View>
 
-          {/* Address Information */}
-          <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-            <Text className="text-gray-800 font-bold text-base mb-4">Address Information</Text>
-            
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-1">Address</Text>
-              <TextInput
-                className="bg-gray-100 rounded-lg p-3 text-gray-800"
-                value={address}
-                onChangeText={setAddress}
-                placeholder="Enter address"
-                multiline
-              />
+          {/* Address Information Card */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Address Information</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Address</Text>
+              <TextInput style={[styles.input, styles.multilineInput]} value={address} onChangeText={setAddress} placeholder="Enter address" multiline />
             </View>
-            
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-1">City</Text>
-              <TextInput
-                className="bg-gray-100 rounded-lg p-3 text-gray-800"
-                value={city}
-                onChangeText={setCity}
-                placeholder="Enter city"
-              />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>City</Text>
+              <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="Enter city" />
             </View>
-            
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-1">State</Text>
-              <TextInput
-                className="bg-gray-100 rounded-lg p-3 text-gray-800"
-                value={state}
-                onChangeText={setState}
-                placeholder="Enter state"
-              />
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>State</Text>
+              <TextInput style={styles.input} value={state} onChangeText={setState} placeholder="Enter state" />
             </View>
-            
             <View>
-              <Text className="text-gray-700 mb-1">Pincode</Text>
-              <TextInput
-                className="bg-gray-100 rounded-lg p-3 text-gray-800"
-                value={pincode}
-                onChangeText={setPincode}
-                placeholder="Enter pincode"
-                keyboardType="number-pad"
-              />
+              <Text style={styles.label}>Pincode</Text>
+              <TextInput style={styles.input} value={pincode} onChangeText={setPincode} placeholder="Enter pincode" keyboardType="number-pad" />
             </View>
           </View>
 
-          {/* Skills */}
-          <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-            <Text className="text-gray-800 font-bold text-base mb-4">Skills & Expertise</Text>
-            
-            <View className="flex-row mb-3">
-              <TextInput
-                className="flex-1 bg-gray-100 rounded-lg p-3 text-gray-800 mr-2"
-                value={skillInput}
-                onChangeText={setSkillInput}
-                placeholder="Add a skill"
-              />
-              <TouchableOpacity 
-                className="bg-primary px-4 rounded-lg justify-center"
-                onPress={handleAddSkill}
-              >
-                <Text className="text-white font-medium">Add</Text>
+          {/* Skills & Expertise Card */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Skills & Expertise</Text>
+            <View style={styles.addTagRow}>
+              <TextInput style={styles.tagInput} value={skillInput} onChangeText={setSkillInput} placeholder="Add a skill" />
+              <TouchableOpacity style={styles.addButton} onPress={handleAddSkill}>
+                <Text style={styles.addButtonText}>Add</Text>
               </TouchableOpacity>
             </View>
-            
-            <View className="flex-row flex-wrap">
+            <View style={styles.tagContainer}>
               {skills.map((skill, index) => (
-                <View key={index} className="bg-gray-100 rounded-full px-3 py-1.5 mr-2 mb-2 flex-row items-center">
-                  <Text className="text-gray-700">{skill}</Text>
-                  <TouchableOpacity 
-                    className="ml-1"
-                    onPress={() => handleRemoveSkill(index)}
-                  >
-                    <Ionicons name="close-circle" size={16} color="#6B7280" />
+                <View key={index} style={styles.tag}>
+                  <Text style={styles.tagText}>{skill}</Text>
+                  <TouchableOpacity style={styles.removeTagButton} onPress={() => handleRemoveSkill(index)}>
+                    <Ionicons name="close-circle" size={16} color={colors.gray500} />
                   </TouchableOpacity>
                 </View>
               ))}
             </View>
           </View>
 
-          {/* Service Areas */}
-          <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-            <Text className="text-gray-800 font-bold text-base mb-4">Service Areas</Text>
-            
-            <View className="flex-row mb-3">
-              <TextInput
-                className="flex-1 bg-gray-100 rounded-lg p-3 text-gray-800 mr-2"
-                value={serviceAreaInput}
-                onChangeText={setServiceAreaInput}
-                placeholder="Add a service area"
-              />
-              <TouchableOpacity 
-                className="bg-primary px-4 rounded-lg justify-center"
-                onPress={handleAddServiceArea}
-              >
-                <Text className="text-white font-medium">Add</Text>
+          {/* Service Areas Card */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Service Areas</Text>
+            <View style={styles.addTagRow}>
+              <TextInput style={styles.tagInput} value={serviceAreaInput} onChangeText={setServiceAreaInput} placeholder="Add a service area" />
+              <TouchableOpacity style={styles.addButton} onPress={handleAddServiceArea}>
+                <Text style={styles.addButtonText}>Add</Text>
               </TouchableOpacity>
             </View>
-            
-            <View className="flex-row flex-wrap">
+            <View style={styles.tagContainer}>
               {serviceAreas.map((area, index) => (
-                <View key={index} className="bg-gray-100 rounded-full px-3 py-1.5 mr-2 mb-2 flex-row items-center">
-                  <Text className="text-gray-700">{area}</Text>
-                  <TouchableOpacity 
-                    className="ml-1"
-                    onPress={() => handleRemoveServiceArea(index)}
-                  >
-                    <Ionicons name="close-circle" size={16} color="#6B7280" />
+                <View key={index} style={styles.tag}>
+                  <Text style={styles.tagText}>{area}</Text>
+                  <TouchableOpacity style={styles.removeTagButton} onPress={() => handleRemoveServiceArea(index)}>
+                    <Ionicons name="close-circle" size={16} color={colors.gray500} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -379,23 +304,15 @@ const AdminProfessionalEditScreen = () => {
           </View>
 
           {/* Action Buttons */}
-          <View className="flex-row mb-6">
-            <TouchableOpacity 
-              className="flex-1 bg-gray-200 py-3 rounded-lg mr-2 items-center"
-              onPress={handleCancel}
-            >
-              <Text className="text-gray-800 font-medium">Cancel</Text>
+          <View style={styles.actionButtonsContainer}>
+            <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={handleCancel}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              className="flex-1 bg-primary py-3 rounded-lg items-center"
-              onPress={handleSave}
-              disabled={saving}
-            >
+            <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleSave} disabled={saving}>
               {saving ? (
-                <ActivityIndicator size="small" color="white" />
+                <ActivityIndicator size="small" color={colors.white} />
               ) : (
-                <Text className="text-white font-medium">Save Changes</Text>
+                <Text style={styles.saveButtonText}>Save Changes</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -404,5 +321,179 @@ const AdminProfessionalEditScreen = () => {
     </KeyboardAvoidingView>
   );
 };
+
+// Color palette for consistency
+const colors = {
+  primary: '#2563EB',
+  primaryLight: '#93C5FD',
+  white: '#FFFFFF',
+  gray50: '#F9FAFB',
+  gray100: '#F3F4F6',
+  gray200: '#E5E7EB',
+  gray300: '#D1D5DB',
+  gray500: '#6B7280',
+  gray600: '#4B5563',
+  gray700: '#374151',
+  gray800: '#1F2937',
+};
+
+// StyleSheet for all the component's styles
+const styles = StyleSheet.create({
+  flex1: {
+    flex: 1,
+    backgroundColor: colors.gray50,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.gray50,
+  },
+  loadingText: {
+    marginTop: 16,
+    color: colors.gray600,
+  },
+  header: {
+    backgroundColor: colors.primary,
+    paddingTop: 48, // Adjust for status bar
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  headerTitle: {
+    color: colors.white,
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  contentContainer: {
+    padding: 16,
+  },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.20,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  cardTitle: {
+    color: colors.gray800,
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    color: colors.gray700,
+    marginBottom: 4,
+  },
+  input: {
+    backgroundColor: colors.gray100,
+    borderRadius: 8,
+    padding: 12,
+    color: colors.gray800,
+    fontSize: 16,
+  },
+  multilineInput: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  statusButton: {
+    marginRight: 8,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 9999,
+  },
+  statusButtonText: {
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  addTagRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  tagInput: {
+    flex: 1,
+    backgroundColor: colors.gray100,
+    borderRadius: 8,
+    padding: 12,
+    color: colors.gray800,
+    marginRight: 8,
+  },
+  addButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: colors.white,
+    fontWeight: '500',
+  },
+  tagContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  tag: {
+    backgroundColor: colors.gray100,
+    borderRadius: 9999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tagText: {
+    color: colors.gray700,
+  },
+  removeTagButton: {
+    marginLeft: 4,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    marginBottom: 24,
+  },
+  button: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: colors.gray200,
+    marginRight: 8,
+  },
+  cancelButtonText: {
+    color: colors.gray800,
+    fontWeight: '500',
+  },
+  saveButton: {
+    backgroundColor: colors.primary,
+  },
+  saveButtonText: {
+    color: colors.white,
+    fontWeight: '500',
+  },
+});
 
 export default AdminProfessionalEditScreen;

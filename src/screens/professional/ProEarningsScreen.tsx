@@ -4,18 +4,26 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   RefreshControl,
-  FlatList
+  FlatList,
+  StyleSheet, // Import StyleSheet
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
-import { ProStackParamList } from '../../../app/routes/ProNavigator';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+
+// Mock types and hooks for self-contained component
+type ProStackParamList = {
+  Earnings: undefined;
+  ProNotifications: undefined;
+  ProSettings: undefined;
+};
 
 type ProEarningsScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;
 
+// --- Interfaces ---
 interface EarningsSummary {
   totalEarnings: number;
   pendingPayouts: number;
@@ -41,424 +49,245 @@ const ProEarningsScreen = () => {
   const [earningsSummary, setEarningsSummary] = useState<EarningsSummary | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
   const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'year'>('week');
-  
-  // Mock data for earnings summary
-  const mockEarningsSummary: EarningsSummary = {
-    totalEarnings: 24850,
-    pendingPayouts: 3500,
-    completedJobs: 42,
-    averageRating: 4.8
-  };
-  
-  // Mock data for payment history
-  const mockPaymentHistory: PaymentHistory[] = [
-    {
-      id: 'PAY123456',
-      amount: 3500,
-      date: '2023-06-15',
-      status: 'pending',
-      jobIds: ['JOB789012', 'JOB789013'],
-      paymentMethod: 'Bank Transfer'
-    },
-    {
-      id: 'PAY123455',
-      amount: 4200,
-      date: '2023-06-10',
-      status: 'completed',
-      jobIds: ['JOB789010', 'JOB789011'],
-      paymentMethod: 'Bank Transfer',
-      transactionId: 'TXN987654321'
-    },
-    {
-      id: 'PAY123454',
-      amount: 3850,
-      date: '2023-06-03',
-      status: 'completed',
-      jobIds: ['JOB789008', 'JOB789009'],
-      paymentMethod: 'Bank Transfer',
-      transactionId: 'TXN987654320'
-    },
-    {
-      id: 'PAY123453',
-      amount: 4500,
-      date: '2023-05-27',
-      status: 'completed',
-      jobIds: ['JOB789006', 'JOB789007'],
-      paymentMethod: 'Bank Transfer',
-      transactionId: 'TXN987654319'
-    },
-    {
-      id: 'PAY123452',
-      amount: 5200,
-      date: '2023-05-20',
-      status: 'completed',
-      jobIds: ['JOB789004', 'JOB789005'],
-      paymentMethod: 'Bank Transfer',
-      transactionId: 'TXN987654318'
-    },
-    {
-      id: 'PAY123451',
-      amount: 3600,
-      date: '2023-05-13',
-      status: 'completed',
-      jobIds: ['JOB789002', 'JOB789003'],
-      paymentMethod: 'Bank Transfer',
-      transactionId: 'TXN987654317'
+
+  // --- Mock Data ---
+  const mockData = {
+    summary: { totalEarnings: 24850, pendingPayouts: 3500, completedJobs: 42, averageRating: 4.8 },
+    history: [
+      { id: 'PAY123456', amount: 3500, date: '2023-06-15', status: 'pending', jobIds: ['JOB789012', 'JOB789013'], paymentMethod: 'Bank Transfer' },
+      { id: 'PAY123455', amount: 4200, date: '2023-06-10', status: 'completed', jobIds: ['JOB789010', 'JOB789011'], paymentMethod: 'Bank Transfer', transactionId: 'TXN987654321' },
+      { id: 'PAY123454', amount: 3850, date: '2023-06-03', status: 'completed', jobIds: ['JOB789008', 'JOB789009'], paymentMethod: 'Bank Transfer', transactionId: 'TXN987654320' },
+    ],
+    charts: {
+      week: [{ day: 'Mon', amount: 850 }, { day: 'Tue', amount: 1200 }, { day: 'Wed', amount: 950 }, { day: 'Thu', amount: 1100 }, { day: 'Fri', amount: 1500 }, { day: 'Sat', amount: 1800 }, { day: 'Sun', amount: 1400 }],
+      month: [{ day: 'Week 1', amount: 5500 }, { day: 'Week 2', amount: 6200 }, { day: 'Week 3', amount: 6800 }, { day: 'Week 4', amount: 6350 }],
+      year: [{ day: 'Jan', amount: 18500 }, { day: 'Feb', amount: 19200 }, { day: 'Mar', amount: 21500 }, { day: 'Apr', amount: 22800 }, { day: 'May', amount: 24500 }, { day: 'Jun', amount: 24850 }],
     }
-  ];
-  
-  // Weekly earnings data for chart
-  const weeklyEarnings = [
-    { day: 'Mon', amount: 850 },
-    { day: 'Tue', amount: 1200 },
-    { day: 'Wed', amount: 950 },
-    { day: 'Thu', amount: 1100 },
-    { day: 'Fri', amount: 1500 },
-    { day: 'Sat', amount: 1800 },
-    { day: 'Sun', amount: 1400 }
-  ];
-  
-  // Monthly earnings data for chart
-  const monthlyEarnings = [
-    { day: 'Week 1', amount: 5500 },
-    { day: 'Week 2', amount: 6200 },
-    { day: 'Week 3', amount: 6800 },
-    { day: 'Week 4', amount: 6350 }
-  ];
-  
-  // Yearly earnings data for chart
-  const yearlyEarnings = [
-    { day: 'Jan', amount: 18500 },
-    { day: 'Feb', amount: 19200 },
-    { day: 'Mar', amount: 21500 },
-    { day: 'Apr', amount: 22800 },
-    { day: 'May', amount: 24500 },
-    { day: 'Jun', amount: 24850 }
-  ];
-  
-  useEffect(() => {
-    fetchData();
-  }, []);
-  
+  };
+
+  // --- Data Fetching ---
   const fetchData = () => {
     setLoading(true);
-    // Simulate API call
     setTimeout(() => {
-      setEarningsSummary(mockEarningsSummary);
-      setPaymentHistory(mockPaymentHistory);
+      setEarningsSummary(mockData.summary);
+      setPaymentHistory(mockData.history);
       setLoading(false);
       setRefreshing(false);
     }, 1000);
   };
-  
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchData();
-  };
-  
-  const getChartData = () => {
-    switch (timeFilter) {
-      case 'week':
-        return weeklyEarnings;
-      case 'month':
-        return monthlyEarnings;
-      case 'year':
-        return yearlyEarnings;
-      default:
-        return weeklyEarnings;
-    }
-  };
-  
+
+  useEffect(fetchData, []);
+  const onRefresh = () => { setRefreshing(true); fetchData(); };
+
+  // --- Helper Functions ---
+  const getChartData = () => mockData.charts[timeFilter];
+  const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  // --- Render Functions ---
   const renderChartBars = () => {
     const data = getChartData();
-    const maxAmount = Math.max(...data.map(item => item.amount));
-    
+    const maxAmount = Math.max(...data.map(item => item.amount), 1);
     return (
-      <View className="flex-row justify-between items-end h-40 mt-4">
-        {data.map((item, index) => {
-          const barHeight = (item.amount / maxAmount) * 100;
-          
-          return (
-            <View key={index} className="items-center">
-              <View 
-                className="w-8 bg-primary rounded-t-md"
-                style={{ height: `${barHeight}%` }}
-              />
-              <Text className="text-xs text-gray-500 mt-1">{item.day}</Text>
-              <Text className="text-xs font-medium">₹{item.amount}</Text>
+      <View style={styles.chartContainer}>
+        {data.map((item, index) => (
+          <View key={index} style={styles.chartBarWrapper}>
+            <View style={[styles.chartBar, { height: `${(item.amount / maxAmount) * 100}%` }]} />
+            <Text style={styles.chartLabel}>{item.day}</Text>
+            <Text style={styles.chartAmount}>₹{item.amount}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  const renderSummary = () => {
+    if (!earningsSummary) return null;
+    return (
+      <View style={styles.contentContainer}>
+        <View style={styles.card}>
+          <Text style={styles.summaryLabel}>Total Earnings</Text>
+          <Text style={styles.summaryTotal}>₹{earningsSummary.totalEarnings.toLocaleString('en-IN')}</Text>
+          <View style={styles.summaryMetrics}>
+            {[
+              { label: 'Pending', value: `₹${earningsSummary.pendingPayouts.toLocaleString('en-IN')}`, icon: 'money-bill-wave', color: colors.blue, bgColor: colors.blue100 },
+              { label: 'Jobs', value: earningsSummary.completedJobs, icon: 'checkmark-circle', color: colors.green, bgColor: colors.green100 },
+              { label: 'Rating', value: earningsSummary.averageRating, icon: 'star', color: colors.amber, bgColor: colors.amber100 },
+            ].map(metric => (
+              <View key={metric.label} style={styles.metricItem}>
+                <View style={[styles.metricIconContainer, { backgroundColor: metric.bgColor }]}>
+                  <FontAwesome5 name={metric.icon as any} size={16} color={metric.color} />
+                </View>
+                <Text style={styles.metricLabel}>{metric.label}</Text>
+                <Text style={styles.metricValue}>{metric.value}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Earnings Chart</Text>
+            <View style={styles.filterContainer}>
+              {(['week', 'month', 'year'] as const).map(filter => (
+                <TouchableOpacity key={filter} style={[styles.filterButton, timeFilter === filter && styles.activeFilterButton]} onPress={() => setTimeFilter(filter)}>
+                  <Text style={[styles.filterText, timeFilter === filter && styles.activeFilterText]}>{filter.charAt(0).toUpperCase() + filter.slice(1)}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-          );
-        })}
-      </View>
-    );
-  };
-  
-  const getStatusColor = (status: 'completed' | 'pending' | 'processing') => {
-    switch (status) {
-      case 'completed':
-        return 'text-green-600';
-      case 'pending':
-        return 'text-yellow-600';
-      case 'processing':
-        return 'text-blue-600';
-      default:
-        return 'text-gray-600';
-    }
-  };
-  
-  const getStatusBgColor = (status: 'completed' | 'pending' | 'processing') => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100';
-      case 'pending':
-        return 'bg-yellow-100';
-      case 'processing':
-        return 'bg-blue-100';
-      default:
-        return 'bg-gray-100';
-    }
-  };
-  
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-  
-  if (loading && !refreshing) {
-    return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text className="text-gray-600 mt-4">Loading earnings data...</Text>
-      </View>
-    );
-  }
-  
-  return (
-    <View className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="bg-primary pt-12 pb-4 px-4">
-        <View className="flex-row justify-between items-center">
-          <Text className="text-white text-xl font-bold">My Earnings</Text>
-          <TouchableOpacity 
-            className="w-10 h-10 items-center justify-center rounded-full bg-white/20"
-            onPress={() => navigation.navigate('ProNotifications')}
-          >
-            <Ionicons name="notifications" size={20} color="white" />
+          </View>
+          {renderChartBars()}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Payment Schedule</Text>
+          <Text style={styles.infoText}>Your earnings are processed weekly and transferred to your bank account within 2-3 business days.</Text>
+          <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('ProSettings')}>
+            <Text style={styles.primaryButtonText}>Update Payment Details</Text>
           </TouchableOpacity>
         </View>
       </View>
-      
-      {/* Tabs */}
-      <View className="flex-row bg-white border-b border-gray-200">
-        <TouchableOpacity 
-          className={`flex-1 py-4 items-center ${activeTab === 'summary' ? 'border-b-2 border-primary' : ''}`}
-          onPress={() => setActiveTab('summary')}
-        >
-          <Text className={`font-medium ${activeTab === 'summary' ? 'text-primary' : 'text-gray-500'}`}>
-            Earnings Summary
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          className={`flex-1 py-4 items-center ${activeTab === 'history' ? 'border-b-2 border-primary' : ''}`}
-          onPress={() => setActiveTab('history')}
-        >
-          <Text className={`font-medium ${activeTab === 'history' ? 'text-primary' : 'text-gray-500'}`}>
-            Payment History
-          </Text>
+    );
+  };
+
+  const renderHistoryItem = ({ item }: { item: PaymentHistory }) => {
+    const statusStyle = {
+      completed: { bg: colors.green100, text: colors.green600 },
+      pending: { bg: colors.amber100, text: colors.amber600 },
+      processing: { bg: colors.blue100, text: colors.blue600 },
+    }[item.status];
+
+    return (
+      <View style={styles.card}>
+        <View style={styles.historyHeader}>
+          <View>
+            <Text style={styles.historyAmount}>₹{item.amount.toLocaleString('en-IN')}</Text>
+            <Text style={styles.historyDate}>{formatDate(item.date)}</Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+            <Text style={[styles.statusBadgeText, { color: statusStyle.text }]}>{item.status.charAt(0).toUpperCase() + item.status.slice(1)}</Text>
+          </View>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.historyDetails}>
+          <View style={styles.historyDetailItem}><Text style={styles.historyDetailLabel}>Payment ID</Text><Text style={styles.historyDetailValue}>{item.id}</Text></View>
+          <View style={styles.historyDetailItem}><Text style={styles.historyDetailLabel}>Jobs</Text><Text style={styles.historyDetailValue}>{item.jobIds.length}</Text></View>
+        </View>
+        {item.transactionId && (
+          <View style={styles.historyTransaction}>
+            <Text style={styles.historyDetailLabel}>Transaction ID</Text>
+            <Text style={styles.historyDetailValue}>{item.transactionId}</Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  const renderHistory = () => (
+    <FlatList
+      data={paymentHistory}
+      renderItem={renderHistoryItem}
+      keyExtractor={item => item.id}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+      ListEmptyComponent={
+        <View style={styles.emptyState}>
+          <Ionicons name="cash-outline" size={64} color={colors.gray300} />
+          <Text style={styles.emptyStateText}>No payment history found</Text>
+        </View>
+      }
+    />
+  );
+
+  if (loading && !refreshing) {
+    return (
+      <View style={styles.loadingScreen}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loadingText}>Loading earnings...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.screen}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>My Earnings</Text>
+        <TouchableOpacity style={styles.headerButton} onPress={() => navigation.navigate('ProNotifications')}>
+          <Ionicons name="notifications" size={20} color={colors.white} />
         </TouchableOpacity>
       </View>
-      
-      <ScrollView 
-        className="flex-1"
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {activeTab === 'summary' && earningsSummary && (
-          <View className="p-4">
-            {/* Total Earnings Card */}
-            <View className="bg-white rounded-xl p-4 shadow-sm">
-              <Text className="text-gray-500 text-sm">Total Earnings</Text>
-              <Text className="text-3xl font-bold text-gray-800 mt-1">
-                ₹{earningsSummary.totalEarnings.toLocaleString('en-IN')}
-              </Text>
-              
-              <View className="flex-row mt-4 justify-between">
-                <View className="items-center">
-                  <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mb-1">
-                    <FontAwesome5 name="money-bill-wave" size={16} color="#2563eb" />
-                  </View>
-                  <Text className="text-xs text-gray-500">Pending</Text>
-                  <Text className="text-sm font-bold">₹{earningsSummary.pendingPayouts.toLocaleString('en-IN')}</Text>
-                </View>
-                
-                <View className="items-center">
-                  <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mb-1">
-                    <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-                  </View>
-                  <Text className="text-xs text-gray-500">Jobs</Text>
-                  <Text className="text-sm font-bold">{earningsSummary.completedJobs}</Text>
-                </View>
-                
-                <View className="items-center">
-                  <View className="w-10 h-10 bg-yellow-100 rounded-full items-center justify-center mb-1">
-                    <Ionicons name="star" size={18} color="#F59E0B" />
-                  </View>
-                  <Text className="text-xs text-gray-500">Rating</Text>
-                  <Text className="text-sm font-bold">{earningsSummary.averageRating}</Text>
-                </View>
-              </View>
-            </View>
-            
-            {/* Earnings Chart */}
-            <View className="bg-white rounded-xl p-4 mt-4 shadow-sm">
-              <View className="flex-row justify-between items-center">
-                <Text className="text-gray-800 font-bold text-lg">Earnings Chart</Text>
-                
-                <View className="flex-row bg-gray-100 rounded-lg p-1">
-                  <TouchableOpacity 
-                    className={`px-3 py-1 rounded-md ${timeFilter === 'week' ? 'bg-white shadow-sm' : ''}`}
-                    onPress={() => setTimeFilter('week')}
-                  >
-                    <Text className={timeFilter === 'week' ? 'text-primary font-medium' : 'text-gray-500'}>
-                      Week
-                    </Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    className={`px-3 py-1 rounded-md ${timeFilter === 'month' ? 'bg-white shadow-sm' : ''}`}
-                    onPress={() => setTimeFilter('month')}
-                  >
-                    <Text className={timeFilter === 'month' ? 'text-primary font-medium' : 'text-gray-500'}>
-                      Month
-                    </Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    className={`px-3 py-1 rounded-md ${timeFilter === 'year' ? 'bg-white shadow-sm' : ''}`}
-                    onPress={() => setTimeFilter('year')}
-                  >
-                    <Text className={timeFilter === 'year' ? 'text-primary font-medium' : 'text-gray-500'}>
-                      Year
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-              
-              {renderChartBars()}
-            </View>
-            
-            {/* Payment Schedule */}
-            <View className="bg-white rounded-xl p-4 mt-4 shadow-sm">
-              <Text className="text-gray-800 font-bold text-lg mb-2">Payment Schedule</Text>
-              <Text className="text-gray-500 mb-4">
-                Your earnings are processed every week and transferred to your bank account within 2-3 business days.
-              </Text>
-              
-              <View className="bg-blue-50 p-3 rounded-lg">
-                <View className="flex-row items-center">
-                  <View className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center">
-                    <Ionicons name="calendar" size={16} color="#2563eb" />
-                  </View>
-                  <View className="ml-3">
-                    <Text className="text-gray-800 font-medium">Next Payout</Text>
-                    <Text className="text-gray-500 text-sm">Monday, June 19, 2023</Text>
-                  </View>
-                </View>
-                
-                <View className="h-px bg-blue-200 my-3" />
-                
-                <View className="flex-row items-center">
-                  <View className="w-8 h-8 bg-blue-100 rounded-full items-center justify-center">
-                    <FontAwesome5 name="money-bill-wave" size={14} color="#2563eb" />
-                  </View>
-                  <View className="ml-3">
-                    <Text className="text-gray-800 font-medium">Estimated Amount</Text>
-                    <Text className="text-gray-500 text-sm">₹3,500</Text>
-                  </View>
-                </View>
-              </View>
-              
-              <TouchableOpacity 
-                className="mt-4 py-3 bg-primary rounded-lg items-center"
-                onPress={() => navigation.navigate('ProSettings')}
-              >
-                <Text className="text-white font-medium">Update Payment Details</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        
-        {activeTab === 'history' && (
-          <View className="p-4">
-            {paymentHistory.length > 0 ? (
-              paymentHistory.map((payment, index) => (
-                <View 
-                  key={payment.id} 
-                  className={`bg-white p-4 rounded-xl shadow-sm ${index > 0 ? 'mt-3' : ''}`}
-                >
-                  <View className="flex-row justify-between items-center">
-                    <View>
-                      <Text className="text-gray-800 font-bold">₹{payment.amount.toLocaleString('en-IN')}</Text>
-                      <Text className="text-gray-500 text-sm">{formatDate(payment.date)}</Text>
-                    </View>
-                    
-                    <View className={`px-3 py-1 rounded-full ${getStatusBgColor(payment.status)}`}>
-                      <Text className={`text-xs font-medium ${getStatusColor(payment.status)}`}>
-                        {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  <View className="h-px bg-gray-100 my-3" />
-                  
-                  <View className="flex-row justify-between">
-                    <View>
-                      <Text className="text-xs text-gray-500">Payment ID</Text>
-                      <Text className="text-sm text-gray-700">{payment.id}</Text>
-                    </View>
-                    
-                    <View>
-                      <Text className="text-xs text-gray-500">Method</Text>
-                      <Text className="text-sm text-gray-700">{payment.paymentMethod}</Text>
-                    </View>
-                    
-                    <View>
-                      <Text className="text-xs text-gray-500">Jobs</Text>
-                      <Text className="text-sm text-gray-700">{payment.jobIds.length}</Text>
-                    </View>
-                  </View>
-                  
-                  {payment.transactionId && (
-                    <View className="mt-3 pt-3 border-t border-gray-100">
-                      <Text className="text-xs text-gray-500">Transaction ID</Text>
-                      <Text className="text-sm text-gray-700">{payment.transactionId}</Text>
-                    </View>
-                  )}
-                  
-                  <TouchableOpacity 
-                    className="mt-3 py-2 border border-primary rounded-lg items-center"
-                  >
-                    <Text className="text-primary font-medium">View Details</Text>
-                  </TouchableOpacity>
-                </View>
-              ))
-            ) : (
-              <View className="items-center justify-center py-10">
-                <MaterialCommunityIcons name="cash-remove" size={64} color="#D1D5DB" />
-                <Text className="text-gray-400 mt-4 text-center">No payment history found</Text>
-              </View>
-            )}
-          </View>
-        )}
+
+      <View style={styles.tabContainer}>
+        <TouchableOpacity style={[styles.tab, activeTab === 'summary' && styles.activeTab]} onPress={() => setActiveTab('summary')}>
+          <Text style={[styles.tabText, activeTab === 'summary' && styles.activeTabText]}>Summary</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.tab, activeTab === 'history' && styles.activeTab]} onPress={() => setActiveTab('history')}>
+          <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>History</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.flex1} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}>
+        {activeTab === 'summary' ? renderSummary() : renderHistory()}
       </ScrollView>
     </View>
   );
 };
+
+// --- Styles ---
+const colors = {
+  primary: '#2563EB', white: '#FFFFFF', gray50: '#F9FAFB', gray100: '#F3F4F6', gray200: '#E5E7EB', gray300: '#D1D5DB', gray500: '#6B7280', gray600: '#4B5563', gray800: '#1F2937',
+  blue: '#2563EB', blue100: '#DBEAFE', blue600: '#2563EB', green: '#10B981', green100: '#D1FAE5', green600: '#059669', amber: '#F59E0B', amber100: '#FEF3C7', amber600: '#D97706',
+};
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.gray50 },
+  flex1: { flex: 1 },
+  loadingScreen: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.gray50 },
+  loadingText: { color: colors.gray600, marginTop: 16 },
+  contentContainer: { padding: 16 },
+  header: { backgroundColor: colors.primary, paddingTop: Platform.OS === 'android' ? 24 : 48, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headerTitle: { color: colors.white, fontSize: 20, fontWeight: 'bold' },
+  headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)' },
+  tabContainer: { flexDirection: 'row', backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.gray200 },
+  tab: { flex: 1, paddingVertical: 16, alignItems: 'center' },
+  activeTab: { borderBottomWidth: 2, borderBottomColor: colors.primary },
+  tabText: { fontWeight: '500', color: colors.gray500 },
+  activeTabText: { color: colors.primary },
+  card: { backgroundColor: colors.white, borderRadius: 12, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
+  summaryLabel: { color: colors.gray500, fontSize: 14 },
+  summaryTotal: { fontSize: 32, fontWeight: 'bold', color: colors.gray800, marginTop: 4 },
+  summaryMetrics: { flexDirection: 'row', marginTop: 16, justifyContent: 'space-around' },
+  metricItem: { alignItems: 'center' },
+  metricIconContainer: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  metricLabel: { fontSize: 12, color: colors.gray500 },
+  metricValue: { fontSize: 14, fontWeight: 'bold', color: colors.gray800 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionTitle: { color: colors.gray800, fontWeight: 'bold', fontSize: 18 },
+  filterContainer: { flexDirection: 'row', backgroundColor: colors.gray100, borderRadius: 8, padding: 4 },
+  filterButton: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  activeFilterButton: { backgroundColor: colors.white, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 1, elevation: 2 },
+  filterText: { color: colors.gray500 },
+  activeFilterText: { color: colors.primary, fontWeight: '500' },
+  chartContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', height: 160, marginTop: 16 },
+  chartBarWrapper: { alignItems: 'center', flex: 1 },
+  chartBar: { width: '50%', backgroundColor: colors.primary, borderRadius: 4 },
+  chartLabel: { fontSize: 12, color: colors.gray500, marginTop: 4 },
+  chartAmount: { fontSize: 12, fontWeight: '500', color: colors.gray800 },
+  infoText: { color: colors.gray500, marginVertical: 12, lineHeight: 20 },
+  primaryButton: { backgroundColor: colors.primary, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  primaryButtonText: { color: colors.white, fontWeight: '500' },
+  historyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  historyAmount: { color: colors.gray800, fontWeight: 'bold', fontSize: 16 },
+  historyDate: { color: colors.gray500, fontSize: 14 },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  statusBadgeText: { fontSize: 12, fontWeight: '500' },
+  divider: { height: 1, backgroundColor: colors.gray100, marginVertical: 12 },
+  historyDetails: { flexDirection: 'row', justifyContent: 'space-between' },
+  historyDetailItem: { flex: 1 },
+  historyDetailLabel: { fontSize: 12, color: colors.gray500 },
+  historyDetailValue: { fontSize: 14, color: colors.gray800 },
+  historyTransaction: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.gray100 },
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
+  emptyStateText: { color: colors.gray500, marginTop: 16 },
+});
 
 export default ProEarningsScreen;

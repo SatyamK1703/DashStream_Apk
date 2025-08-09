@@ -23,7 +23,7 @@ const Header = ({ userName }: { userName: string }) => {
   return (
     <View style={styles.header}>
       <View>
-        <Text style={styles.greeting}>Hello, {userName}</Text>
+        <Text style={styles.greeting}>{userName}</Text>
 
         <TouchableOpacity
   style={styles.locationRow}

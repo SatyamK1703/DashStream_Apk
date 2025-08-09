@@ -26,7 +26,9 @@ interface MembershipPlan {
   duration: string;
   features: string[];
   popular: boolean;
+  
 }
+
 
 const MembershipScreen = () => {
   const navigation = useNavigation<MembershipScreenNavigationProp>();

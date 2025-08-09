@@ -62,22 +62,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const verifyOtp = async (phone: string, otp: string): Promise<boolean> => {
+    const verifyOtp = async (phone: string, otp: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-      if (otp !== '1234') {
+
+      let role: UserRole | null = null;
+
+      if (otp === '1234') {
+        role = 'customer';
+      } else if (otp === '1111') {
+        role = 'admin';
+      } else if (otp === '2222') {
+        role = 'professional';
+      } else {
         Alert.alert('Verification Failed', 'The OTP you entered is incorrect. Please try again.');
         return false;
       }
+
       await new Promise(r => setTimeout(r, 1000));
+
       setUser({
         id: '123456',
         name: 'John Doe',
         email: 'john.doe@example.com',
         phone,
-        role: 'customer',
+        role,
         profileImage: 'https://randomuser.me/api/portraits/men/1.jpg',
       });
+
       return true;
     } catch (e) {
       Alert.alert('Error', 'Failed to verify OTP. Please try again.');
@@ -85,7 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  };
+    };
 
   return (
     <AuthContext.Provider

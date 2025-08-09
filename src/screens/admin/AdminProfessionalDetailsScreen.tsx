@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  TextInput
+  TextInput,StyleSheet
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -302,140 +302,143 @@ const AdminProfessionalDetailsScreen = () => {
     setShowNoteModal(false);
   };
 
-  const getStatusColor = (status: string) => {
+   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'inactive': return 'bg-gray-100 text-gray-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active': return styles.statusActive;
+      case 'inactive': return styles.statusInactive;
+      case 'pending': return styles.statusPending;
+      case 'rejected': return styles.statusRejected;
+      default: return styles.statusInactive;
     }
   };
 
-  const getBookingStatusColor = (status: string) => {
+   const getBookingStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'text-green-600';
-      case 'cancelled': return 'text-red-600';
-      case 'ongoing': return 'text-blue-600';
-      default: return 'text-gray-600';
+      case 'completed': return styles.bookingStatusCompleted;
+      case 'cancelled': return styles.bookingStatusCancelled;
+      case 'ongoing': return styles.bookingStatusOngoing;
+      default: return styles.bookingStatusDefault;
     }
   };
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-50">
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
-        <Text className="mt-4 text-gray-600">Loading professional details...</Text>
+        <Text style={styles.loadingText}>Loading professional details...</Text>
       </View>
     );
   }
 
   if (!professional) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-50">
+       <View style={styles.errorContainer}>
         <MaterialIcons name="error-outline" size={48} color="#EF4444" />
-        <Text className="mt-4 text-gray-800 font-medium">Professional Not Found</Text>
-        <Text className="mt-2 text-gray-600 text-center px-6">The professional you're looking for doesn't exist or has been removed.</Text>
+        <Text style={styles.errorTitle}>Professional Not Found</Text>
+        <Text style={styles.errorMessage}>The professional you're looking for doesn't exist or has been removed.</Text>
         <TouchableOpacity 
-          className="mt-6 bg-primary px-6 py-2.5 rounded-lg"
+          style={styles.goBackButton}
           onPress={() => navigation.goBack()}
         >
-          <Text className="text-white font-medium">Go Back</Text>
+          <Text style={styles.goBackButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={styles.container}>
       {/* Header */}
-      <View className="bg-primary pt-12 pb-4 px-4">
-        <View className="flex-row items-center">
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
           <TouchableOpacity 
-            className="p-2"
+            style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
             <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
-          <Text className="text-white text-xl font-bold ml-2">Professional Details</Text>
+          <Text style={styles.headerTitle}>Professional Details</Text>
         </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Professional Profile Card */}
-        <View className="bg-white mx-4 mt-4 rounded-lg shadow-sm overflow-hidden">
-          <View className="p-4">
-            <View className="flex-row">
-              <View className="mr-4">
+        <View style={styles.profileCard}>
+          <View style={styles.profileContent}>
+            <View style={styles.profileHeader}>
+              <View style={styles.profileImageContainer}>
                 {professional.profileImage ? (
                   <Image 
                     source={{ uri: professional.profileImage }} 
-                    className="w-20 h-20 rounded-full bg-gray-200"
+                    style={styles.profileImage}
                   />
                 ) : (
-                  <View className="w-20 h-20 rounded-full bg-gray-200 items-center justify-center">
-                    <Text className="text-gray-600 font-bold text-2xl">{professional.name.charAt(0)}</Text>
+                  <View style={styles.profileImagePlaceholder}>
+                    <Text style={styles.profileImageInitial}>{professional.name.charAt(0)}</Text>
                   </View>
                 )}
               </View>
               
-              <View className="flex-1">
-                <View className="flex-row items-center">
-                  <Text className="text-gray-800 font-bold text-lg">{professional.name}</Text>
+              <View style={styles.profileInfo}>
+                <View style={styles.nameContainer}>
+                  <Text style={styles.profileName}>{professional.name}</Text>
                   {professional.isVerified && (
-                    <Ionicons name="checkmark-circle" size={18} color="#2563EB" style={{ marginLeft: 4 }} />
+                    <Ionicons name="checkmark-circle" size={18} color="#2563EB" style={styles.verifiedIcon} />
                   )}
                 </View>
                 
-                <Text className="text-gray-500">{professional.id}</Text>
+                <Text style={styles.professionalId}>{professional.id}</Text>
                 
-                <View className="flex-row items-center mt-1">
+                <View style={styles.ratingContainer}>
                   <Ionicons name="star" size={16} color="#F59E0B" />
-                  <Text className="text-gray-700 ml-1">{professional.rating.toFixed(1)}</Text>
-                  <Text className="text-gray-500 ml-1">({professional.reviews.length} reviews)</Text>
+                  <Text style={styles.ratingText}>{professional.rating.toFixed(1)}</Text>
+                  <Text style={styles.reviewCount}>({professional.reviews.length} reviews)</Text>
                 </View>
                 
-                <View className={`px-2.5 py-1 rounded-full mt-2 self-start ${getStatusColor(professional.status)}`}>
-                  <Text className="text-xs font-medium capitalize">{professional.status}</Text>
+                <View style={[styles.statusBadge, getStatusColor(professional.status)]}>
+                  <Text style={styles.statusText}>{professional.status}</Text>
                 </View>
               </View>
             </View>
 
-            <View className="mt-4 pt-4 border-t border-gray-100">
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="call" size={18} color="#6B7280" style={{ width: 24 }} />
-                <Text className="text-gray-700 ml-2">{professional.phone}</Text>
+            <View style={styles.contactInfo}>
+              <View style={styles.contactRow}>
+                <Ionicons name="call" size={18} color="#6B7280" style={styles.contactIcon} />
+                <Text style={styles.contactText}>{professional.phone}</Text>
               </View>
               
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="mail" size={18} color="#6B7280" style={{ width: 24 }} />
-                <Text className="text-gray-700 ml-2">{professional.email}</Text>
+              <View style={styles.contactRow}>
+                <Ionicons name="mail" size={18} color="#6B7280" style={styles.contactIcon} />
+                <Text style={styles.contactText}>{professional.email}</Text>
               </View>
               
-              <View className="flex-row items-start mb-2">
-                <Ionicons name="location" size={18} color="#6B7280" style={{ width: 24, marginTop: 2 }} />
-                <Text className="text-gray-700 ml-2 flex-1">
+              <View style={styles.contactRow}>
+                <Ionicons name="location" size={18} color="#6B7280" style={styles.contactIcon} />
+                <Text style={styles.addressText}>
                   {professional.address}, {professional.city}, {professional.state} - {professional.pincode}
                 </Text>
               </View>
               
-              <View className="flex-row items-center">
-                <Ionicons name="calendar" size={18} color="#6B7280" style={{ width: 24 }} />
-                <Text className="text-gray-700 ml-2">Joined on {new Date(professional.joinedDate).toLocaleDateString()}</Text>
+              <View style={styles.contactRow}>
+                <Ionicons name="calendar" size={18} color="#6B7280" style={styles.contactIcon} />
+                <Text style={styles.contactText}>Joined on {new Date(professional.joinedDate).toLocaleDateString()}</Text>
               </View>
             </View>
 
-            <View className="mt-4 flex-row">
+            <View style={styles.actionButtons}>
               <TouchableOpacity 
-                className="flex-1 bg-primary py-2.5 rounded-lg mr-2 flex-row justify-center items-center"
+                style={styles.editButton}
                 onPress={() => navigation.navigate('EditProfessional', { professionalId: professional.id })}
               >
                 <MaterialIcons name="edit" size={18} color="white" />
-                <Text className="text-white font-medium ml-1">Edit</Text>
+                <Text style={styles.buttonText}>Edit</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                className={`flex-1 py-2.5 rounded-lg flex-row justify-center items-center ${professional.status === 'active' ? 'bg-red-500' : 'bg-green-500'}`}
+                style={[
+                  styles.statusButton,
+                  professional.status === 'active' ? styles.deactivateButton : styles.activateButton
+                ]}
                 onPress={handleStatusChange}
               >
                 <MaterialIcons 
@@ -443,7 +446,7 @@ const AdminProfessionalDetailsScreen = () => {
                   size={18} 
                   color="white" 
                 />
-                <Text className="text-white font-medium ml-1">
+                <Text style={styles.buttonText}>
                   {professional.status === 'active' ? 'Deactivate' : 'Activate'}
                 </Text>
               </TouchableOpacity>
@@ -451,118 +454,140 @@ const AdminProfessionalDetailsScreen = () => {
           </View>
         </View>
 
+
         {/* Tab Navigation */}
-        <View className="flex-row bg-white mt-4 border-b border-gray-200">
+       <View style={styles.tabContainer}>
           <TouchableOpacity 
-            className={`flex-1 py-3 ${activeTab === 'overview' ? 'border-b-2 border-primary' : ''}`}
+            style={[
+              styles.tabButton,
+              activeTab === 'overview' && styles.activeTabButton
+            ]}
             onPress={() => setActiveTab('overview')}
           >
-            <Text className={`text-center font-medium ${activeTab === 'overview' ? 'text-primary' : 'text-gray-600'}`}>Overview</Text>
+            <Text style={[
+              styles.tabText,
+              activeTab === 'overview' && styles.activeTabText
+            ]}>Overview</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            className={`flex-1 py-3 ${activeTab === 'documents' ? 'border-b-2 border-primary' : ''}`}
+            style={[
+              styles.tabButton,
+              activeTab === 'documents' && styles.activeTabButton
+            ]}
             onPress={() => setActiveTab('documents')}
           >
-            <Text className={`text-center font-medium ${activeTab === 'documents' ? 'text-primary' : 'text-gray-600'}`}>Documents</Text>
+            <Text style={[
+              styles.tabText,
+              activeTab === 'documents' && styles.activeTabText
+            ]}>Documents</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            className={`flex-1 py-3 ${activeTab === 'bookings' ? 'border-b-2 border-primary' : ''}`}
+            style={[
+              styles.tabButton,
+              activeTab === 'bookings' && styles.activeTabButton
+            ]}
             onPress={() => setActiveTab('bookings')}
           >
-            <Text className={`text-center font-medium ${activeTab === 'bookings' ? 'text-primary' : 'text-gray-600'}`}>Bookings</Text>
+            <Text style={[
+              styles.tabText,
+              activeTab === 'bookings' && styles.activeTabText
+            ]}>Bookings</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            className={`flex-1 py-3 ${activeTab === 'reviews' ? 'border-b-2 border-primary' : ''}`}
+            style={[
+              styles.tabButton,
+              activeTab === 'reviews' && styles.activeTabButton
+            ]}
             onPress={() => setActiveTab('reviews')}
           >
-            <Text className={`text-center font-medium ${activeTab === 'reviews' ? 'text-primary' : 'text-gray-600'}`}>Reviews</Text>
+            <Text style={[
+              styles.tabText,
+              activeTab === 'reviews' && styles.activeTabText
+            ]}>Reviews</Text>
           </TouchableOpacity>
         </View>
 
         {/* Tab Content */}
         {activeTab === 'overview' && (
-          <View className="px-4 py-4">
+          <View style={styles.tabContent}>
             {/* Skills */}
-            <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-              <Text className="text-gray-800 font-bold text-base mb-3">Skills & Expertise</Text>
-              <View className="flex-row flex-wrap">
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Skills & Expertise</Text>
+              <View style={styles.skillsContainer}>
                 {professional.skills.map((skill, index) => (
-                  <View key={index} className="bg-gray-100 rounded-full px-3 py-1.5 mr-2 mb-2">
-                    <Text className="text-gray-700">{skill}</Text>
+                  <View key={index} style={styles.skillTag}>
+                    <Text style={styles.skillText}>{skill}</Text>
                   </View>
                 ))}
               </View>
             </View>
 
             {/* Service Area */}
-            <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-              <Text className="text-gray-800 font-bold text-base mb-3">Service Area</Text>
-              <View className="flex-row flex-wrap">
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Service Area</Text>
+              <View style={styles.serviceAreaContainer}>
                 {professional.serviceArea.map((area, index) => (
-                  <View key={index} className="bg-gray-100 rounded-full px-3 py-1.5 mr-2 mb-2">
-                    <Text className="text-gray-700">{area}</Text>
+                  <View key={index} style={styles.areaTag}>
+                    <Text style={styles.areaText}>{area}</Text>
                   </View>
                 ))}
               </View>
             </View>
 
+
             {/* Performance Metrics */}
-            <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-              <Text className="text-gray-800 font-bold text-base mb-3">Performance Metrics</Text>
+   <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Performance Metrics</Text>
               
-              <View className="flex-row mb-4">
-                <View className="flex-1 items-center">
-                  <Text className="text-2xl font-bold text-primary">{professional.performanceMetrics.acceptanceRate}%</Text>
-                  <Text className="text-gray-600 text-sm">Acceptance Rate</Text>
+              <View style={styles.metricsRow}>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricValue}>{professional.performanceMetrics.acceptanceRate}%</Text>
+                  <Text style={styles.metricLabel}>Acceptance Rate</Text>
                 </View>
                 
-                <View className="flex-1 items-center">
-                  <Text className="text-2xl font-bold text-red-500">{professional.performanceMetrics.cancellationRate}%</Text>
-                  <Text className="text-gray-600 text-sm">Cancellation Rate</Text>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricValue}>{professional.performanceMetrics.cancellationRate}%</Text>
+                  <Text style={styles.metricLabel}>Cancellation Rate</Text>
                 </View>
                 
-                <View className="flex-1 items-center">
-                  <Text className="text-2xl font-bold text-green-500">{professional.performanceMetrics.customerSatisfaction}</Text>
-                  <Text className="text-gray-600 text-sm">Satisfaction</Text>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricValue}>{professional.performanceMetrics.customerSatisfaction}</Text>
+                  <Text style={styles.metricLabel}>Satisfaction</Text>
                 </View>
               </View>
               
-              <View className="flex-row border-t border-gray-100 pt-4">
-                <View className="flex-1">
-                  <View className="flex-row items-center mb-2">
-                    <MaterialIcons name="timer" size={16} color="#6B7280" />
-                    <Text className="text-gray-700 ml-2">Avg. Response: {professional.performanceMetrics.avgResponseTime}</Text>
-                  </View>
-                  
-                  <View className="flex-row items-center">
-                    <MaterialIcons name="schedule" size={16} color="#6B7280" />
-                    <Text className="text-gray-700 ml-2">Avg. Service: {professional.performanceMetrics.avgServiceTime}</Text>
-                  </View>
+              <View style={styles.detailedMetrics}>
+                <View style={styles.metricDetail}>
+                  <MaterialIcons name="timer" size={16} color="#6B7280" />
+                  <Text style={styles.metricDetailText}>Avg. Response: {professional.performanceMetrics.avgResponseTime}</Text>
                 </View>
                 
-                <View className="flex-1">
-                  <View className="flex-row items-center mb-2">
-                    <MaterialIcons name="check-circle" size={16} color="#6B7280" />
-                    <Text className="text-gray-700 ml-2">Completed: {professional.completedJobs}</Text>
-                  </View>
-                  
-                  <View className="flex-row items-center">
-                    <MaterialIcons name="cancel" size={16} color="#6B7280" />
-                    <Text className="text-gray-700 ml-2">Cancelled: {professional.cancelledJobs}</Text>
-                  </View>
+                <View style={styles.metricDetail}>
+                  <MaterialIcons name="schedule" size={16} color="#6B7280" />
+                  <Text style={styles.metricDetailText}>Avg. Service: {professional.performanceMetrics.avgServiceTime}</Text>
+                </View>
+                
+                <View style={styles.metricDetail}>
+                  <MaterialIcons name="check-circle" size={16} color="#6B7280" />
+                  <Text style={styles.metricDetailText}>Completed: {professional.completedJobs}</Text>
+                </View>
+                
+                <View style={styles.metricDetail}>
+                  <MaterialIcons name="cancel" size={16} color="#6B7280" />
+                  <Text style={styles.metricDetailText}>Cancelled: {professional.cancelledJobs}</Text>
                 </View>
               </View>
             </View>
 
             {/* Admin Notes */}
-            <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-              <View className="flex-row justify-between items-center mb-3">
-                <Text className="text-gray-800 font-bold text-base">Admin Notes</Text>
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Admin Notes</Text>
                 <TouchableOpacity 
-                  className="bg-gray-100 p-1.5 rounded-full"
+                  style={styles.addNoteButton}
                   onPress={() => setShowNoteModal(true)}
                 >
                   <Ionicons name="add" size={18} color="#4B5563" />
@@ -570,386 +595,446 @@ const AdminProfessionalDetailsScreen = () => {
               </View>
               
               {adminNote ? (
-                <View className="bg-gray-50 p-3 rounded-lg">
-                  <Text className="text-gray-700">{adminNote}</Text>
+                <View style={styles.noteContent}>
+                  <Text style={styles.noteText}>{adminNote}</Text>
                 </View>
               ) : (
-                <Text className="text-gray-500 italic">No notes added yet</Text>
+                <Text style={styles.emptyNote}>No notes added yet</Text>
               )}
             </View>
           </View>
         )}
 
         {activeTab === 'documents' && (
-          <View className="px-4 py-4">
-            {/* ID Proof */}
-            <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-              <View className="flex-row justify-between items-center mb-3">
-                <Text className="text-gray-800 font-bold text-base">ID Proof</Text>
-                <View className={`px-2.5 py-1 rounded-full ${professional.documents.idProof.verified ? 'bg-green-100' : 'bg-yellow-100'}`}>
-                  <Text className={`text-xs font-medium ${professional.documents.idProof.verified ? 'text-green-800' : 'text-yellow-800'}`}>
-                    {professional.documents.idProof.verified ? 'Verified' : 'Pending'}
-                  </Text>
-                </View>
-              </View>
-              
-              <View className="mb-3">
-                <View className="flex-row justify-between mb-1">
-                  <Text className="text-gray-600">Document Type</Text>
-                  <Text className="text-gray-800 font-medium">{professional.documents.idProof.type}</Text>
-                </View>
-                
-                <View className="flex-row justify-between mb-1">
-                  <Text className="text-gray-600">Document Number</Text>
-                  <Text className="text-gray-800 font-medium">{professional.documents.idProof.number}</Text>
-                </View>
-                
-                <View className="flex-row justify-between">
-                  <Text className="text-gray-600">Upload Date</Text>
-                  <Text className="text-gray-800 font-medium">{new Date(professional.documents.idProof.uploadDate).toLocaleDateString()}</Text>
-                </View>
-              </View>
-              
-              <View className="flex-row">
-                <TouchableOpacity className="flex-1 bg-gray-100 py-2 rounded-lg mr-2 items-center">
-                  <Text className="text-gray-700 font-medium">View Document</Text>
-                </TouchableOpacity>
-                
-                {!professional.documents.idProof.verified && (
-                  <TouchableOpacity 
-                    className="flex-1 bg-primary py-2 rounded-lg items-center"
-                    onPress={() => handleVerifyDocument('ID Proof')}
-                  >
-                    <Text className="text-white font-medium">Verify</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
+  <View style={styles.tabContent}>
+    {/* ID Proof */}
+    <View style={styles.documentCard}>
+      <View style={styles.documentHeader}>
+        <Text style={styles.documentTitle}>ID Proof</Text>
+        <View style={[
+          styles.verificationBadge,
+          professional.documents.idProof.verified ? styles.verifiedBadge : styles.pendingBadge
+        ]}>
+          <Text style={[
+            styles.verificationText,
+            professional.documents.idProof.verified ? styles.verifiedText : styles.pendingText
+          ]}>
+            {professional.documents.idProof.verified ? 'Verified' : 'Pending'}
+          </Text>
+        </View>
+      </View>
+      
+      <View style={styles.documentDetails}>
+        <View style={styles.documentRow}>
+          <Text style={styles.documentLabel}>Document Type</Text>
+          <Text style={styles.documentValue}>{professional.documents.idProof.type}</Text>
+        </View>
+        
+        <View style={styles.documentRow}>
+          <Text style={styles.documentLabel}>Document Number</Text>
+          <Text style={styles.documentValue}>{professional.documents.idProof.number}</Text>
+        </View>
+        
+        <View style={styles.documentRow}>
+          <Text style={styles.documentLabel}>Upload Date</Text>
+          <Text style={styles.documentValue}>
+            {new Date(professional.documents.idProof.uploadDate).toLocaleDateString()}
+          </Text>
+        </View>
+      </View>
+      
+      <View style={styles.documentActions}>
+        <TouchableOpacity style={styles.viewDocumentButton}>
+          <Text style={styles.viewDocumentText}>View Document</Text>
+        </TouchableOpacity>
+        
+        {!professional.documents.idProof.verified && (
+          <TouchableOpacity 
+            style={styles.verifyButton}
+            onPress={() => handleVerifyDocument('ID Proof')}
+          >
+            <Text style={styles.verifyButtonText}>Verify</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
 
-            {/* Address Proof */}
-            <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-              <View className="flex-row justify-between items-center mb-3">
-                <Text className="text-gray-800 font-bold text-base">Address Proof</Text>
-                <View className={`px-2.5 py-1 rounded-full ${professional.documents.addressProof.verified ? 'bg-green-100' : 'bg-yellow-100'}`}>
-                  <Text className={`text-xs font-medium ${professional.documents.addressProof.verified ? 'text-green-800' : 'text-yellow-800'}`}>
-                    {professional.documents.addressProof.verified ? 'Verified' : 'Pending'}
-                  </Text>
-                </View>
-              </View>
-              
-              <View className="mb-3">
-                <View className="flex-row justify-between mb-1">
-                  <Text className="text-gray-600">Document Type</Text>
-                  <Text className="text-gray-800 font-medium">{professional.documents.addressProof.type}</Text>
-                </View>
-                
-                <View className="flex-row justify-between">
-                  <Text className="text-gray-600">Upload Date</Text>
-                  <Text className="text-gray-800 font-medium">{new Date(professional.documents.addressProof.uploadDate).toLocaleDateString()}</Text>
-                </View>
-              </View>
-              
-              <View className="flex-row">
-                <TouchableOpacity className="flex-1 bg-gray-100 py-2 rounded-lg mr-2 items-center">
-                  <Text className="text-gray-700 font-medium">View Document</Text>
-                </TouchableOpacity>
-                
-                {!professional.documents.addressProof.verified && (
-                  <TouchableOpacity 
-                    className="flex-1 bg-primary py-2 rounded-lg items-center"
-                    onPress={() => handleVerifyDocument('Address Proof')}
-                  >
-                    <Text className="text-white font-medium">Verify</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
+    {/* Address Proof */}
+    <View style={styles.documentCard}>
+      <View style={styles.documentHeader}>
+        <Text style={styles.documentTitle}>Address Proof</Text>
+        <View style={[
+          styles.verificationBadge,
+          professional.documents.addressProof.verified ? styles.verifiedBadge : styles.pendingBadge
+        ]}>
+          <Text style={[
+            styles.verificationText,
+            professional.documents.addressProof.verified ? styles.verifiedText : styles.pendingText
+          ]}>
+            {professional.documents.addressProof.verified ? 'Verified' : 'Pending'}
+          </Text>
+        </View>
+      </View>
+      
+      <View style={styles.documentDetails}>
+        <View style={styles.documentRow}>
+          <Text style={styles.documentLabel}>Document Type</Text>
+          <Text style={styles.documentValue}>{professional.documents.addressProof.type}</Text>
+        </View>
+        
+        <View style={styles.documentRow}>
+          <Text style={styles.documentLabel}>Upload Date</Text>
+          <Text style={styles.documentValue}>
+            {new Date(professional.documents.addressProof.uploadDate).toLocaleDateString()}
+          </Text>
+        </View>
+      </View>
+      
+      <View style={styles.documentActions}>
+        <TouchableOpacity style={styles.viewDocumentButton}>
+          <Text style={styles.viewDocumentText}>View Document</Text>
+        </TouchableOpacity>
+        
+        {!professional.documents.addressProof.verified && (
+          <TouchableOpacity 
+            style={styles.verifyButton}
+            onPress={() => handleVerifyDocument('Address Proof')}
+          >
+            <Text style={styles.verifyButtonText}>Verify</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
 
-            {/* Driving License */}
-            {professional.documents.drivingLicense && (
-              <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-                <View className="flex-row justify-between items-center mb-3">
-                  <Text className="text-gray-800 font-bold text-base">Driving License</Text>
-                  <View className={`px-2.5 py-1 rounded-full ${professional.documents.drivingLicense.verified ? 'bg-green-100' : 'bg-yellow-100'}`}>
-                    <Text className={`text-xs font-medium ${professional.documents.drivingLicense.verified ? 'text-green-800' : 'text-yellow-800'}`}>
-                      {professional.documents.drivingLicense.verified ? 'Verified' : 'Pending'}
-                    </Text>
-                  </View>
-                </View>
-                
-                <View className="mb-3">
-                  <View className="flex-row justify-between mb-1">
-                    <Text className="text-gray-600">License Number</Text>
-                    <Text className="text-gray-800 font-medium">{professional.documents.drivingLicense.number}</Text>
-                  </View>
-                  
-                  <View className="flex-row justify-between mb-1">
-                    <Text className="text-gray-600">Expiry Date</Text>
-                    <Text className="text-gray-800 font-medium">{new Date(professional.documents.drivingLicense.expiry).toLocaleDateString()}</Text>
-                  </View>
-                  
-                  <View className="flex-row justify-between">
-                    <Text className="text-gray-600">Upload Date</Text>
-                    <Text className="text-gray-800 font-medium">{new Date(professional.documents.drivingLicense.uploadDate).toLocaleDateString()}</Text>
-                  </View>
-                </View>
-                
-                <View className="flex-row">
-                  <TouchableOpacity className="flex-1 bg-gray-100 py-2 rounded-lg mr-2 items-center">
-                    <Text className="text-gray-700 font-medium">View Document</Text>
-                  </TouchableOpacity>
-                  
-                  {!professional.documents.drivingLicense.verified && (
-                    <TouchableOpacity 
-                      className="flex-1 bg-primary py-2 rounded-lg items-center"
-                      onPress={() => handleVerifyDocument('Driving License')}
-                    >
-                      <Text className="text-white font-medium">Verify</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            )}
+    {/* Driving License */}
+    {professional.documents.drivingLicense && (
+      <View style={styles.documentCard}>
+        <View style={styles.documentHeader}>
+          <Text style={styles.documentTitle}>Driving License</Text>
+          <View style={[
+            styles.verificationBadge,
+            professional.documents.drivingLicense.verified ? styles.verifiedBadge : styles.pendingBadge
+          ]}>
+            <Text style={[
+              styles.verificationText,
+              professional.documents.drivingLicense.verified ? styles.verifiedText : styles.pendingText
+            ]}>
+              {professional.documents.drivingLicense.verified ? 'Verified' : 'Pending'}
+            </Text>
+          </View>
+        </View>
+        
+        <View style={styles.documentDetails}>
+          <View style={styles.documentRow}>
+            <Text style={styles.documentLabel}>License Number</Text>
+            <Text style={styles.documentValue}>{professional.documents.drivingLicense.number}</Text>
+          </View>
+          
+          <View style={styles.documentRow}>
+            <Text style={styles.documentLabel}>Expiry Date</Text>
+            <Text style={styles.documentValue}>
+              {new Date(professional.documents.drivingLicense.expiry).toLocaleDateString()}
+            </Text>
+          </View>
+          
+          <View style={styles.documentRow}>
+            <Text style={styles.documentLabel}>Upload Date</Text>
+            <Text style={styles.documentValue}>
+              {new Date(professional.documents.drivingLicense.uploadDate).toLocaleDateString()}
+            </Text>
+          </View>
+        </View>
+        
+        <View style={styles.documentActions}>
+          <TouchableOpacity style={styles.viewDocumentButton}>
+            <Text style={styles.viewDocumentText}>View Document</Text>
+          </TouchableOpacity>
+          
+          {!professional.documents.drivingLicense.verified && (
+            <TouchableOpacity 
+              style={styles.verifyButton}
+              onPress={() => handleVerifyDocument('Driving License')}
+            >
+              <Text style={styles.verifyButtonText}>Verify</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    )}
 
-            {/* Bank Details */}
-            <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-              <View className="flex-row justify-between items-center mb-3">
-                <Text className="text-gray-800 font-bold text-base">Bank Details</Text>
-                <View className={`px-2.5 py-1 rounded-full ${professional.bankDetails.verified ? 'bg-green-100' : 'bg-yellow-100'}`}>
-                  <Text className={`text-xs font-medium ${professional.bankDetails.verified ? 'text-green-800' : 'text-yellow-800'}`}>
-                    {professional.bankDetails.verified ? 'Verified' : 'Pending'}
-                  </Text>
-                </View>
-              </View>
-              
-              <View className="mb-3">
-                <View className="flex-row justify-between mb-1">
-                  <Text className="text-gray-600">Account Holder</Text>
-                  <Text className="text-gray-800 font-medium">{professional.bankDetails.accountHolderName}</Text>
-                </View>
-                
-                <View className="flex-row justify-between mb-1">
-                  <Text className="text-gray-600">Bank Name</Text>
-                  <Text className="text-gray-800 font-medium">{professional.bankDetails.bankName}</Text>
-                </View>
-                
-                <View className="flex-row justify-between mb-1">
-                  <Text className="text-gray-600">Account Number</Text>
-                  <Text className="text-gray-800 font-medium">{professional.bankDetails.accountNumber}</Text>
-                </View>
-                
-                <View className="flex-row justify-between">
-                  <Text className="text-gray-600">IFSC Code</Text>
-                  <Text className="text-gray-800 font-medium">{professional.bankDetails.ifscCode}</Text>
-                </View>
-              </View>
-              
-              {!professional.bankDetails.verified && (
-                <TouchableOpacity 
-                  className="bg-primary py-2 rounded-lg items-center"
-                  onPress={() => handleVerifyDocument('Bank Details')}
-                >
-                  <Text className="text-white font-medium">Verify</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+    {/* Bank Details */}
+    <View style={styles.documentCard}>
+      <View style={styles.documentHeader}>
+        <Text style={styles.documentTitle}>Bank Details</Text>
+        <View style={[
+          styles.verificationBadge,
+          professional.bankDetails.verified ? styles.verifiedBadge : styles.pendingBadge
+        ]}>
+          <Text style={[
+            styles.verificationText,
+            professional.bankDetails.verified ? styles.verifiedText : styles.pendingText
+          ]}>
+            {professional.bankDetails.verified ? 'Verified' : 'Pending'}
+          </Text>
+        </View>
+      </View>
+      
+      <View style={styles.documentDetails}>
+        <View style={styles.documentRow}>
+          <Text style={styles.documentLabel}>Account Holder</Text>
+          <Text style={styles.documentValue}>{professional.bankDetails.accountHolderName}</Text>
+        </View>
+        
+        <View style={styles.documentRow}>
+          <Text style={styles.documentLabel}>Bank Name</Text>
+          <Text style={styles.documentValue}>{professional.bankDetails.bankName}</Text>
+        </View>
+        
+        <View style={styles.documentRow}>
+          <Text style={styles.documentLabel}>Account Number</Text>
+          <Text style={styles.documentValue}>{professional.bankDetails.accountNumber}</Text>
+        </View>
+        
+        <View style={styles.documentRow}>
+          <Text style={styles.documentLabel}>IFSC Code</Text>
+          <Text style={styles.documentValue}>{professional.bankDetails.ifscCode}</Text>
+        </View>
+      </View>
+      
+      {!professional.bankDetails.verified && (
+        <TouchableOpacity 
+          style={styles.verifyButton}
+          onPress={() => handleVerifyDocument('Bank Details')}
+        >
+          <Text style={styles.verifyButtonText}>Verify</Text>
+        </TouchableOpacity>
+      )}
+    </View>
 
-            {/* Tax Information */}
-            <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-              <Text className="text-gray-800 font-bold text-base mb-3">Tax Information</Text>
-              
-              <View>
-                <View className="flex-row justify-between mb-1">
-                  <Text className="text-gray-600">PAN Number</Text>
-                  <Text className="text-gray-800 font-medium">{professional.taxInfo.panNumber}</Text>
-                </View>
-                
-                {professional.taxInfo.gstNumber && (
-                  <View className="flex-row justify-between">
-                    <Text className="text-gray-600">GST Number</Text>
-                    <Text className="text-gray-800 font-medium">{professional.taxInfo.gstNumber}</Text>
-                  </View>
-                )}
-              </View>
-            </View>
+    {/* Tax Information */}
+    <View style={styles.documentCard}>
+      <Text style={styles.documentTitle}>Tax Information</Text>
+      
+      <View style={styles.documentDetails}>
+        <View style={styles.documentRow}>
+          <Text style={styles.documentLabel}>PAN Number</Text>
+          <Text style={styles.documentValue}>{professional.taxInfo.panNumber}</Text>
+        </View>
+        
+        {professional.taxInfo.gstNumber && (
+          <View style={styles.documentRow}>
+            <Text style={styles.documentLabel}>GST Number</Text>
+            <Text style={styles.documentValue}>{professional.taxInfo.gstNumber}</Text>
           </View>
         )}
+      </View>
+    </View>
+  </View>
+)}
 
         {activeTab === 'bookings' && (
-          <View className="px-4 py-4">
-            <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-              <Text className="text-gray-800 font-bold text-base mb-3">Recent Bookings</Text>
-              
-              {professional.recentBookings.length > 0 ? (
-                professional.recentBookings.map((booking, index) => (
-                  <TouchableOpacity 
-                    key={booking.id}
-                    className={`p-3 border-gray-100 ${index !== professional.recentBookings.length - 1 ? 'border-b' : ''}`}
-                    onPress={() => navigation.navigate('BookingDetails', { bookingId: booking.id })}
-                  >
-                    <View className="flex-row justify-between items-center mb-1">
-                      <Text className="text-gray-800 font-medium">{booking.id}</Text>
-                      <Text className={`font-medium capitalize ${getBookingStatusColor(booking.status)}`}>{booking.status}</Text>
-                    </View>
-                    
-                    <View className="flex-row justify-between items-center mb-1">
-                      <Text className="text-gray-600">{new Date(booking.date).toLocaleDateString()}</Text>
-                      <Text className="text-gray-800 font-medium">{booking.amount}</Text>
-                    </View>
-                    
-                    <Text className="text-gray-600">{booking.services.join(', ')}</Text>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <Text className="text-gray-500 italic">No bookings found</Text>
-              )}
-              
-              <TouchableOpacity 
-                className="mt-3 py-2.5 bg-gray-100 rounded-lg items-center"
-                onPress={() => navigation.navigate('AdminBookings', { professionalId: professional.id })}
-              >
-                <Text className="text-gray-700 font-medium">View All Bookings</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-              <View className="flex-row justify-between items-center mb-3">
-                <Text className="text-gray-800 font-bold text-base">Booking Statistics</Text>
-                <Text className="text-gray-500 text-sm">Last 30 days</Text>
-              </View>
-              
-              <View className="flex-row mb-4">
-                <View className="flex-1 items-center">
-                  <Text className="text-2xl font-bold text-gray-800">{professional.totalJobs}</Text>
-                  <Text className="text-gray-600 text-sm">Total Jobs</Text>
-                </View>
-                
-                <View className="flex-1 items-center">
-                  <Text className="text-2xl font-bold text-green-500">{professional.completedJobs}</Text>
-                  <Text className="text-gray-600 text-sm">Completed</Text>
-                </View>
-                
-                <View className="flex-1 items-center">
-                  <Text className="text-2xl font-bold text-red-500">{professional.cancelledJobs}</Text>
-                  <Text className="text-gray-600 text-sm">Cancelled</Text>
-                </View>
-              </View>
-              
-              <View className="h-4 bg-gray-200 rounded-full overflow-hidden">
-                <View 
-                  className="h-full bg-green-500" 
-                  style={{ width: `${(professional.completedJobs / professional.totalJobs) * 100}%` }}
-                />
-              </View>
-              
-              <Text className="text-gray-500 text-xs mt-2 text-center">
-                {((professional.completedJobs / professional.totalJobs) * 100).toFixed(1)}% completion rate
+  <View style={styles.tabContent}>
+    <View style={styles.sectionCard}>
+      <Text style={styles.sectionTitle}>Recent Bookings</Text>
+      
+      {professional.recentBookings.length > 0 ? (
+        professional.recentBookings.map((booking, index) => (
+          <TouchableOpacity 
+            key={booking.id}
+            style={[
+              styles.bookingItem,
+              index !== professional.recentBookings.length - 1 && styles.bookingItemBorder
+            ]}
+            onPress={() => navigation.navigate('BookingDetails', { bookingId: booking.id })}
+          >
+            <View style={styles.bookingHeader}>
+              <Text style={styles.bookingId}>{booking.id}</Text>
+              <Text style={[
+                styles.bookingStatus,
+                booking.status === 'completed' ? styles.bookingCompleted :
+                booking.status === 'cancelled' ? styles.bookingCancelled :
+                styles.bookingOngoing
+              ]}>
+                {booking.status}
               </Text>
             </View>
-          </View>
-        )}
+            
+            <View style={styles.bookingDetails}>
+              <Text style={styles.bookingDate}>
+                {new Date(booking.date).toLocaleDateString()}
+              </Text>
+              <Text style={styles.bookingAmount}>{booking.amount}</Text>
+            </View>
+            
+            <Text style={styles.bookingServices}>{booking.services.join(', ')}</Text>
+          </TouchableOpacity>
+        ))
+      ) : (
+        <Text style={styles.emptyMessage}>No bookings found</Text>
+      )}
+      
+      <TouchableOpacity 
+        style={styles.viewAllButton}
+        onPress={() => navigation.navigate('AdminBookings', { professionalId: professional.id })}
+      >
+        <Text style={styles.viewAllText}>View All Bookings</Text>
+      </TouchableOpacity>
+    </View>
+
+    <View style={styles.sectionCard}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Booking Statistics</Text>
+        <Text style={styles.sectionSubtitle}>Last 30 days</Text>
+      </View>
+      
+      <View style={styles.statsContainer}>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{professional.totalJobs}</Text>
+          <Text style={styles.statLabel}>Total Jobs</Text>
+        </View>
+        
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, styles.statCompleted]}>
+            {professional.completedJobs}
+          </Text>
+          <Text style={styles.statLabel}>Completed</Text>
+        </View>
+        
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, styles.statCancelled]}>
+            {professional.cancelledJobs}
+          </Text>
+          <Text style={styles.statLabel}>Cancelled</Text>
+        </View>
+      </View>
+      
+      <View style={styles.progressBarContainer}>
+        <View style={styles.progressBarBackground}>
+          <View 
+            style={[
+              styles.progressBarFill,
+              { width: `${(professional.completedJobs / professional.totalJobs) * 100}%` }
+            ]}
+          />
+        </View>
+      </View>
+      
+      <Text style={styles.completionRate}>
+        {((professional.completedJobs / professional.totalJobs) * 100).toFixed(1)}% completion rate
+      </Text>
+    </View>
+  </View>
+)}
 
         {activeTab === 'reviews' && (
-          <View className="px-4 py-4">
-            <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-              <View className="flex-row justify-between items-center mb-3">
-                <Text className="text-gray-800 font-bold text-base">Customer Reviews</Text>
-                <View className="flex-row items-center">
-                  <Ionicons name="star" size={16} color="#F59E0B" />
-                  <Text className="text-gray-800 font-medium ml-1">{professional.rating.toFixed(1)}</Text>
-                  <Text className="text-gray-500 ml-1">({professional.reviews.length})</Text>
-                </View>
+  <View style={styles.tabContent}>
+    <View style={styles.sectionCard}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Customer Reviews</Text>
+        <View style={styles.ratingContainer}>
+          <Ionicons name="star" size={16} color="#F59E0B" />
+          <Text style={styles.ratingText}>{professional.rating.toFixed(1)}</Text>
+          <Text style={styles.reviewCountText}>({professional.reviews.length})</Text>
+        </View>
+      </View>
+      
+      {professional.reviews.length > 0 ? (
+        professional.reviews.map((review, index) => (
+          <View 
+            key={review.id}
+            style={[
+              styles.reviewItem,
+              index !== professional.reviews.length - 1 && styles.reviewItemBorder
+            ]}
+          >
+            <View style={styles.reviewHeader}>
+              <Text style={styles.reviewCustomer}>{review.customerName}</Text>
+              <View style={styles.reviewRating}>
+                <Text style={styles.reviewRatingText}>{review.rating}</Text>
+                <Ionicons name="star" size={14} color="#F59E0B" />
               </View>
-              
-              {professional.reviews.length > 0 ? (
-                professional.reviews.map((review, index) => (
-                  <View 
-                    key={review.id}
-                    className={`p-3 ${index !== professional.reviews.length - 1 ? 'border-b border-gray-100' : ''}`}
-                  >
-                    <View className="flex-row justify-between items-center mb-1">
-                      <Text className="text-gray-800 font-medium">{review.customerName}</Text>
-                      <View className="flex-row items-center">
-                        <Text className="text-gray-700 mr-1">{review.rating}</Text>
-                        <Ionicons name="star" size={14} color="#F59E0B" />
-                      </View>
-                    </View>
-                    
-                    <Text className="text-gray-600 mb-1">{review.comment}</Text>
-                    
-                    <Text className="text-gray-500 text-xs">{new Date(review.date).toLocaleDateString()}</Text>
-                  </View>
-                ))
-              ) : (
-                <Text className="text-gray-500 italic">No reviews yet</Text>
-              )}
             </View>
-
-            <View className="bg-white rounded-lg shadow-sm p-4 mb-4">
-              <Text className="text-gray-800 font-bold text-base mb-3">Rating Breakdown</Text>
-              
-              {[5, 4, 3, 2, 1].map(rating => {
-                // Calculate how many reviews have this rating
-                const count = professional.reviews.filter(r => r.rating === rating).length;
-                const percentage = professional.reviews.length > 0 
-                  ? (count / professional.reviews.length) * 100 
-                  : 0;
-                
-                return (
-                  <View key={rating} className="flex-row items-center mb-2">
-                    <View className="flex-row items-center w-12">
-                      <Text className="text-gray-700">{rating}</Text>
-                      <Ionicons name="star" size={14} color="#F59E0B" style={{ marginLeft: 2 }} />
-                    </View>
-                    
-                    <View className="flex-1 h-2 bg-gray-200 rounded-full mx-2 overflow-hidden">
-                      <View 
-                        className="h-full bg-yellow-500" 
-                        style={{ width: `${percentage}%` }}
-                      />
-                    </View>
-                    
-                    <Text className="text-gray-600 w-8 text-right">{count}</Text>
-                  </View>
-                );
-              })}
-            </View>
+            
+            <Text style={styles.reviewComment}>{review.comment}</Text>
+            
+            <Text style={styles.reviewDate}>
+              {new Date(review.date).toLocaleDateString()}
+            </Text>
           </View>
-        )}
+        ))
+      ) : (
+        <Text style={styles.emptyMessage}>No reviews yet</Text>
+      )}
+    </View>
+
+    <View style={styles.sectionCard}>
+      <Text style={styles.sectionTitle}>Rating Breakdown</Text>
+      
+      {[5, 4, 3, 2, 1].map(rating => {
+        const count = professional.reviews.filter(r => r.rating === rating).length;
+        const percentage = professional.reviews.length > 0 
+          ? (count / professional.reviews.length) * 100 
+          : 0;
+        
+        return (
+          <View key={rating} style={styles.ratingBreakdownRow}>
+            <View style={styles.ratingLabel}>
+              <Text style={styles.ratingNumber}>{rating}</Text>
+              <Ionicons name="star" size={14} color="#F59E0B" style={styles.starIcon} />
+            </View>
+            
+            <View style={styles.ratingBarContainer}>
+              <View style={styles.ratingBarBackground}>
+                <View 
+                  style={[
+                    styles.ratingBarFill,
+                    { width: `${percentage}%` }
+                  ]}
+                />
+              </View>
+            </View>
+            
+            <Text style={styles.ratingCount}>{count}</Text>
+          </View>
+        );
+      })}
+    </View>
+  </View>
+)}
       </ScrollView>
 
       {/* Admin Note Modal */}
-      <Modal
+     <Modal
         visible={showNoteModal}
         transparent={true}
         animationType="fade"
         onRequestClose={() => setShowNoteModal(false)}
       >
-        <View className="flex-1 bg-black bg-opacity-50 justify-center items-center p-4">
-          <View className="bg-white rounded-lg w-full p-4">
-            <Text className="text-gray-800 font-bold text-lg mb-4">Add Admin Note</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Add Admin Note</Text>
             
             <TextInput
-              className="bg-gray-100 rounded-lg p-3 text-gray-800 min-h-[100px]"
+              style={styles.noteInput}
               placeholder="Enter note about this professional..."
               multiline
               value={adminNote}
               onChangeText={setAdminNote}
             />
             
-            <View className="flex-row mt-4">
+            <View style={styles.modalButtons}>
               <TouchableOpacity 
-                className="flex-1 bg-gray-200 py-2.5 rounded-lg mr-2 items-center"
+                style={styles.cancelButton}
                 onPress={() => setShowNoteModal(false)}
               >
-                <Text className="text-gray-800 font-medium">Cancel</Text>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                className="flex-1 bg-primary py-2.5 rounded-lg items-center"
+                style={styles.saveButton}
                 onPress={handleSaveNote}
               >
-                <Text className="text-white font-medium">Save</Text>
+                <Text style={styles.saveButtonText}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -960,3 +1045,416 @@ const AdminProfessionalDetailsScreen = () => {
 };
 
 export default AdminProfessionalDetailsScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  loadingText: {
+    marginTop: 16,
+    color: '#6b7280',
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    padding: 32,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+    marginTop: 16,
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 24,
+    paddingHorizontal: 24,
+  },
+  goBackButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  goBackButtonText: {
+    color: 'white',
+    fontWeight: '500',
+  },
+  header: {
+    backgroundColor: '#2563eb',
+    paddingTop: 48,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  backButton: {
+    padding: 8,
+  },
+  profileCard: {
+    backgroundColor: 'white',
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  profileContent: {
+    padding: 16,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+  },
+  profileImageContainer: {
+    marginRight: 16,
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#e5e7eb',
+  },
+  profileImagePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileImageInitial: {
+    color: '#6b7280',
+    fontWeight: 'bold',
+    fontSize: 24,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profileName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  verifiedIcon: {
+    marginLeft: 4,
+  },
+  professionalId: {
+    color: '#6b7280',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  ratingText: {
+    color: '#111827',
+    marginLeft: 4,
+  },
+  reviewCount: {
+    color: '#6b7280',
+    marginLeft: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  statusActive: {
+    backgroundColor: '#d1fae5',
+  },
+  statusInactive: {
+    backgroundColor: '#e5e7eb',
+  },
+  statusPending: {
+    backgroundColor: '#fef3c7',
+  },
+  statusRejected: {
+    backgroundColor: '#fee2e2',
+  },
+  contactInfo: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  contactIcon: {
+    width: 24,
+  },
+  contactText: {
+    color: '#111827',
+    marginLeft: 8,
+  },
+  addressText: {
+    color: '#111827',
+    marginLeft: 8,
+    flex: 1,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    marginTop: 16,
+  },
+  editButton: {
+    flex: 1,
+    backgroundColor: '#2563eb',
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginRight: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deactivateButton: {
+    backgroundColor: '#ef4444',
+  },
+  activateButton: {
+    backgroundColor: '#10b981',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    marginTop: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+  },
+  activeTabButton: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#2563eb',
+  },
+  tabText: {
+    textAlign: 'center',
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  activeTabText: {
+    color: '#2563eb',
+  },
+  tabContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  sectionCard: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+    padding: 16,
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  addNoteButton: {
+    backgroundColor: '#e5e7eb',
+    padding: 6,
+    borderRadius: 20,
+  },
+  skillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  skillTag: {
+    backgroundColor: '#e5e7eb',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  skillText: {
+    color: '#111827',
+  },
+  serviceAreaContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  areaTag: {
+    backgroundColor: '#e5e7eb',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  areaText: {
+    color: '#111827',
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  metricItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  metricValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  metricLabel: {
+    color: '#6b7280',
+    fontSize: 12,
+  },
+  detailedMetrics: {
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  metricDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  metricDetailText: {
+    color: '#111827',
+    marginLeft: 8,
+  },
+  noteContent: {
+    backgroundColor: '#f3f4f6',
+    padding: 12,
+    borderRadius: 8,
+  },
+  noteText: {
+    color: '#111827',
+  },
+  emptyNote: {
+    color: '#6b7280',
+    fontStyle: 'italic',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    width: '100%',
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  noteInput: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    padding: 12,
+    color: '#111827',
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    marginTop: 16,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#e5e7eb',
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#111827',
+    fontWeight: '500',
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: '#2563eb',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: 'white',
+    fontWeight: '500',
+  },
+  bookingStatusCompleted: {
+    color: '#10b981',
+  },
+  bookingStatusCancelled: {
+    color: '#ef4444',
+  },
+  bookingStatusOngoing: {
+    color: '#3b82f6',
+  },
+  bookingStatusDefault: {
+    color: '#6b7280',
+  },
+});

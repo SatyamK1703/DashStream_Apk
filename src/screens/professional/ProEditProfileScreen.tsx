@@ -9,263 +9,207 @@ import {
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  StyleSheet,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useAuth } from '../../context/AuthContext';
-import { ProStackParamList } from '../../../app/routes/ProNavigator';
+
+// Mock types and hooks for self-contained component
+type ProStackParamList = {
+  EditProfile: undefined;
+  ProSkills: undefined;
+  ProServiceArea: undefined;
+};
+
+const useAuth = () => ({
+  user: {
+    name: 'Rajesh Kumar',
+    email: 'rajesh.kumar@example.com',
+    phone: '+91 9876543210',
+  },
+  updateUserProfile: async (data: any) => {
+    console.log('Updating profile with:', data);
+    return Promise.resolve();
+  },
+});
 
 type ProEditProfileScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;
 
 const ProEditProfileScreen = () => {
   const navigation = useNavigation<ProEditProfileScreenNavigationProp>();
   const { user, updateUserProfile } = useAuth();
-  
-  const [name, setName] = useState(user?.name || 'Rajesh Kumar');
-  const [email, setEmail] = useState(user?.email || 'rajesh.kumar@example.com');
-  const [phone, setPhone] = useState(user?.phone || '+91 9876543210');
+
+  const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [phone, setPhone] = useState(user?.phone || '');
   const [profileImage, setProfileImage] = useState('https://randomuser.me/api/portraits/men/32.jpg');
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{name?: string; email?: string; phone?: string}>({});
-  
+  const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string }>({});
+
   const validateInputs = () => {
-    const newErrors: {name?: string; email?: string; phone?: string} = {};
-    let isValid = true;
-    
-    // Validate name
-    if (!name.trim()) {
-      newErrors.name = 'Name is required';
-      isValid = false;
-    }
-    
-    // Validate email
+    const newErrors: { name?: string; email?: string; phone?: string } = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email.trim()) {
-      newErrors.email = 'Email is required';
-      isValid = false;
-    } else if (!emailRegex.test(email)) {
-      newErrors.email = 'Please enter a valid email';
-      isValid = false;
-    }
-    
-    // Validate phone
-    const phoneRegex = /^\+?[0-9\s]{10,15}$/;
-    if (!phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-      isValid = false;
-    } else if (!phoneRegex.test(phone)) {
-      newErrors.phone = 'Please enter a valid phone number';
-      isValid = false;
-    }
+    let isValid = true;
+
+    if (!name.trim()) { newErrors.name = 'Name is required'; isValid = false; }
+    if (!email.trim()) { newErrors.email = 'Email is required'; isValid = false; }
+    else if (!emailRegex.test(email)) { newErrors.email = 'Please enter a valid email'; isValid = false; }
     
     setErrors(newErrors);
     return isValid;
   };
-  
+
   const handleSaveProfile = async () => {
     if (!validateInputs()) return;
-    
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      await updateUserProfile({
-        name,
-        email,
-        phone,
-        profileImage
-      });
-      
-      Alert.alert(
-        'Success',
-        'Your profile has been updated successfully.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      await updateUserProfile({ name, email, phone, profileImage });
+      Alert.alert('Success', 'Profile updated successfully.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
     } catch (error) {
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
+      Alert.alert('Error', 'Failed to update profile.');
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const pickImage = async (source: 'camera' | 'gallery') => {
-    try {
-      // Request permissions first
-      if (source === 'camera') {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission Denied', 'We need camera permissions to take a photo');
-          return;
-        }
-      } else {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('Permission Denied', 'We need gallery permissions to select a photo');
-          return;
-        }
-      }
-      
-      // Launch camera or image picker
-      const result = source === 'camera'
-        ? await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.7,
-          })
-        : await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.7,
-          });
-      
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setProfileImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    const permission = source === 'camera' ? ImagePicker.requestCameraPermissionsAsync : ImagePicker.requestMediaLibraryPermissionsAsync;
+    const { status } = await permission();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', `We need ${source} permissions to continue.`);
+      return;
+    }
+
+    const result = await (source === 'camera' ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync)({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setProfileImage(result.assets[0].uri);
     }
   };
-  
+
   const showImagePickerOptions = () => {
-    Alert.alert(
-      'Change Profile Picture',
-      'Choose an option',
-      [
-        { text: 'Take Photo', onPress: () => pickImage('camera') },
-        { text: 'Choose from Gallery', onPress: () => pickImage('gallery') },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    Alert.alert('Change Profile Picture', 'Choose an option', [
+      { text: 'Take Photo', onPress: () => pickImage('camera') },
+      { text: 'Choose from Gallery', onPress: () => pickImage('gallery') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
-  
+
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1"
-    >
-      <View className="flex-1 bg-gray-50">
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.screen}>
+      <View style={styles.flex1}>
         {/* Header */}
-        <View className="bg-primary pt-12 pb-4 px-4">
-          <View className="flex-row items-center">
-            <TouchableOpacity 
-              className="w-10 h-10 items-center justify-center rounded-full bg-white/20"
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="arrow-back" size={20} color="white" />
-            </TouchableOpacity>
-            <Text className="text-white text-xl font-bold ml-4">Edit Profile</Text>
-          </View>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={20} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit Profile</Text>
         </View>
-        
-        <ScrollView className="flex-1 p-4">
-          {/* Profile Image */}
-          <View className="items-center mb-6">
-            <View className="relative">
-              <Image 
-                source={{ uri: profileImage }}
-                className="w-24 h-24 rounded-full"
-              />
-              <TouchableOpacity 
-                className="absolute bottom-0 right-0 bg-primary w-8 h-8 rounded-full items-center justify-center border-2 border-white"
-                onPress={showImagePickerOptions}
-              >
-                <MaterialIcons name="edit" size={16} color="white" />
+
+        <ScrollView style={styles.flex1} contentContainerStyle={styles.contentContainer}>
+          {/* Profile Image Section */}
+          <View style={styles.profileImageSection}>
+            <View>
+              <Image source={{ uri: profileImage }} style={styles.profileImage} />
+              <TouchableOpacity style={styles.editIconContainer} onPress={showImagePickerOptions}>
+                <MaterialIcons name="edit" size={16} color={colors.white} />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity 
-              className="mt-2"
-              onPress={showImagePickerOptions}
-            >
-              <Text className="text-primary font-medium">Change Photo</Text>
+            <TouchableOpacity style={styles.changePhotoButton} onPress={showImagePickerOptions}>
+              <Text style={styles.changePhotoText}>Change Photo</Text>
             </TouchableOpacity>
           </View>
-          
-          {/* Form Fields */}
-          <View className="bg-white rounded-xl p-4 shadow-sm">
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-1 font-medium">Full Name</Text>
-              <TextInput
-                className={`border ${errors.name ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-3 text-gray-800`}
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter your full name"
-              />
-              {errors.name && <Text className="text-red-500 text-xs mt-1">{errors.name}</Text>}
+
+          {/* Form Fields Card */}
+          <View style={styles.card}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Full Name</Text>
+              <TextInput style={[styles.input, errors.name && styles.inputError]} value={name} onChangeText={setName} placeholder="Enter your full name" />
+              {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
             </View>
-            
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-1 font-medium">Email Address</Text>
-              <TextInput
-                className={`border ${errors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-3 text-gray-800`}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Enter your email address"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              {errors.email && <Text className="text-red-500 text-xs mt-1">{errors.email}</Text>}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email Address</Text>
+              <TextInput style={[styles.input, errors.email && styles.inputError]} value={email} onChangeText={setEmail} placeholder="Enter your email address" keyboardType="email-address" autoCapitalize="none" />
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
-            
-            <View className="mb-4">
-              <Text className="text-gray-700 mb-1 font-medium">Phone Number</Text>
-              <TextInput
-                className={`border ${errors.phone ? 'border-red-500' : 'border-gray-300'} rounded-lg px-4 py-3 text-gray-800`}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="Enter your phone number"
-                keyboardType="phone-pad"
-                editable={false} // Phone number is typically not editable after registration
-              />
-              {errors.phone && <Text className="text-red-500 text-xs mt-1">{errors.phone}</Text>}
-              <Text className="text-gray-500 text-xs mt-1">Phone number cannot be changed. Contact support for assistance.</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Phone Number</Text>
+              <TextInput style={[styles.input, styles.disabledInput]} value={phone} editable={false} />
+              <Text style={styles.helperText}>Phone number cannot be changed. Contact support for assistance.</Text>
             </View>
           </View>
-          
-          {/* Additional Information */}
-          <View className="bg-white rounded-xl p-4 shadow-sm mt-4">
-            <Text className="text-gray-800 font-bold text-lg mb-2">Professional Information</Text>
-            <Text className="text-gray-500 mb-4">
-              To update your professional details like skills, experience, and service area, please visit the respective sections in your profile.
-            </Text>
-            
-            <TouchableOpacity 
-              className="py-3 border border-primary rounded-lg items-center mb-3"
-              onPress={() => navigation.navigate('ProSkills')}
-            >
-              <Text className="text-primary font-medium">Update Skills & Expertise</Text>
+
+          {/* Additional Info Card */}
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Professional Information</Text>
+            <Text style={styles.infoText}>To update skills or service area, please visit the respective sections in your profile.</Text>
+            <TouchableOpacity style={styles.outlineButton} onPress={() => navigation.navigate('ProSkills')}>
+              <Text style={styles.outlineButtonText}>Update Skills & Expertise</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              className="py-3 border border-primary rounded-lg items-center"
-              onPress={() => navigation.navigate('ProServiceArea')}
-            >
-              <Text className="text-primary font-medium">Update Service Area</Text>
+            <TouchableOpacity style={[styles.outlineButton, { marginTop: 12 }]} onPress={() => navigation.navigate('ProServiceArea')}>
+              <Text style={styles.outlineButtonText}>Update Service Area</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
-        
-        {/* Save Button */}
-        <View className="p-4 border-t border-gray-200 bg-white">
-          <TouchableOpacity 
-            className={`py-3 rounded-lg items-center ${isLoading ? 'bg-primary/70' : 'bg-primary'}`}
-            onPress={handleSaveProfile}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="white" size="small" />
-            ) : (
-              <Text className="text-white font-medium">Save Changes</Text>
-            )}
+
+        {/* Save Button Footer */}
+        <View style={styles.footer}>
+          <TouchableOpacity style={[styles.primaryButton, isLoading && styles.buttonDisabled]} onPress={handleSaveProfile} disabled={isLoading}>
+            {isLoading ? <ActivityIndicator color={colors.white} size="small" /> : <Text style={styles.primaryButtonText}>Save Changes</Text>}
           </TouchableOpacity>
         </View>
       </View>
     </KeyboardAvoidingView>
   );
 };
+
+const colors = {
+  primary: '#2563EB',
+  white: '#FFFFFF',
+  gray50: '#F9FAFB',
+  gray200: '#E5E7EB',
+  gray300: '#D1D5DB',
+  gray500: '#6B7280',
+  gray700: '#374151',
+  gray800: '#1F2937',
+  red500: '#EF4444',
+};
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  flex1: { flex: 1, backgroundColor: colors.gray50 },
+  contentContainer: { padding: 16 },
+  header: { backgroundColor: colors.primary, paddingTop: Platform.OS === 'android' ? 24 : 48, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center' },
+  headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)' },
+  headerTitle: { color: colors.white, fontSize: 20, fontWeight: 'bold', marginLeft: 16 },
+  profileImageSection: { alignItems: 'center', marginBottom: 24 },
+  profileImage: { width: 96, height: 96, borderRadius: 48 },
+  editIconContainer: { position: 'absolute', bottom: 0, right: 0, backgroundColor: colors.primary, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.white },
+  changePhotoButton: { marginTop: 8 },
+  changePhotoText: { color: colors.primary, fontWeight: '500' },
+  card: { backgroundColor: colors.white, borderRadius: 12, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
+  inputGroup: { marginBottom: 16 },
+  label: { color: colors.gray700, marginBottom: 4, fontWeight: '500' },
+  input: { borderWidth: 1, borderColor: colors.gray300, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, color: colors.gray800 },
+  inputError: { borderColor: colors.red500 },
+  disabledInput: { backgroundColor: colors.gray50 },
+  errorText: { color: colors.red500, fontSize: 12, marginTop: 4 },
+  helperText: { color: colors.gray500, fontSize: 12, marginTop: 4 },
+  sectionTitle: { color: colors.gray800, fontWeight: 'bold', fontSize: 18, marginBottom: 8 },
+  infoText: { color: colors.gray500, marginBottom: 16, lineHeight: 20 },
+  outlineButton: { paddingVertical: 12, borderWidth: 1, borderColor: colors.primary, borderRadius: 8, alignItems: 'center' },
+  outlineButtonText: { color: colors.primary, fontWeight: '500' },
+  footer: { padding: 16, borderTopWidth: 1, borderTopColor: colors.gray200, backgroundColor: colors.white },
+  primaryButton: { paddingVertical: 12, borderRadius: 8, alignItems: 'center', backgroundColor: colors.primary },
+  buttonDisabled: { backgroundColor: 'rgba(37, 99, 235, 0.7)' },
+  primaryButtonText: { color: colors.white, fontWeight: '500' },
+});
 
 export default ProEditProfileScreen;
