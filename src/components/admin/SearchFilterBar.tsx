@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, TextInput, TouchableOpacity,StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import styles from'./styles.ts';
+import styles from'./styles';
 
 interface Props {
   searchQuery: string;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TextInput, TouchableOpacity } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { styles } from './BookingsScreen.styles';
 
@@ -43,3 +43,5 @@ const SearchAndFilter: React.FC<SearchAndFilterProps> = ({
 };
 
 export default SearchAndFilter;
+
+

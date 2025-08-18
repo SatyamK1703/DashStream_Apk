@@ -20,7 +20,7 @@ type AdminSettingsScreenNavigationProp = NativeStackNavigationProp<AdminStackPar
 
 const AdminSettingsScreen = () => {
   const navigation = useNavigation<AdminSettingsScreenNavigationProp>();
-  const { signOut } = useAuth();
+  const { logout } = useAuth();
   
   // State variables
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -45,7 +45,7 @@ const AdminSettingsScreen = () => {
   // Handle logout
   const handleLogout = () => {
     setShowLogoutConfirmation(false);
-    signOut();
+    logout();
   };
   
   // Handle feedback submission

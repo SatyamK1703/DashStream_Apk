@@ -22,13 +22,14 @@ type AdminProfileScreenNavigationProp = NativeStackNavigationProp<AdminStackPara
 
 const AdminProfileScreen = () => {
   const navigation = useNavigation<AdminProfileScreenNavigationProp>();
-  const { user } = useAuth();
+  
   
   // State variables
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
+  const { user} = useAuth();
   
   // Profile data
   const [profileData, setProfileData] = useState({
@@ -196,6 +197,7 @@ const AdminProfileScreen = () => {
       return;
     }
     
+
     // Validate verification code
     if (verificationCode.length !== 6 || !/^\d+$/.test(verificationCode)) {
       Alert.alert('Error', 'Please enter a valid 6-digit verification code');

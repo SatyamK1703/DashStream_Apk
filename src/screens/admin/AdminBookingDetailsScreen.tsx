@@ -8,13 +8,16 @@ import {
   Alert,
   Modal,
   TextInput,
-  Image,StyleSheet
+  Image,
+  StyleSheet,
+  SafeAreaView, // 1. Import SafeAreaView
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
 
+// --- Type Definitions ---
 type AdminBookingDetailsScreenNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 type AdminBookingDetailsScreenRouteProp = RouteProp<AdminStackParamList, 'AdminBookingDetails'>;
 
@@ -27,11 +30,7 @@ interface BookingDetails {
   professionalName: string | null;
   professionalPhone: string | null;
   professionalId: string | null;
-  services: Array<{
-    name: string;
-    price: string;
-    duration: string;
-  }>;
+  services: Array<{ name: string; price: string; duration: string }>;
   date: string;
   time: string;
   address: string;
@@ -46,16 +45,15 @@ interface BookingDetails {
   completedAt: string | null;
   cancelledAt: string | null;
   cancelReason: string | null;
-  photos: string[] | null;
-  rating: number | null;
-  review: string | null;
 }
 
+// --- Main Component ---
 const AdminBookingDetailsScreen = () => {
   const navigation = useNavigation<AdminBookingDetailsScreenNavigationProp>();
   const route = useRoute<AdminBookingDetailsScreenRouteProp>();
   const { bookingId } = route.params;
 
+  // --- State Management ---
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -66,57 +64,12 @@ const AdminBookingDetailsScreen = () => {
   const [assignLoading, setAssignLoading] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
 
-  // Mock data
-  const mockBooking: BookingDetails = {
-    id: 'BK-7845',
-    customerName: 'Rahul Sharma',
-    customerPhone: '+91 9876543210',
-    customerEmail: 'rahul.sharma@example.com',
-    customerId: 'CUST-1234',
-    professionalName: 'Rajesh Kumar',
-    professionalPhone: '+91 9876543220',
-    professionalId: 'PRO-001',
-    services: [
-      {
-        name: 'Premium Wash',
-        price: '₹800',
-        duration: '45 mins'
-      },
-      {
-        name: 'Polish',
-        price: '₹400',
-        duration: '30 mins'
-      }
-    ],
-    date: '15 Aug 2023',
-    time: '10:30 AM',
-    address: '123 Main Street, Andheri East, Mumbai, Maharashtra 400069',
-    status: 'ongoing',
-    paymentStatus: 'paid',
-    paymentMethod: 'Credit Card',
-    subtotal: '₹1,200',
-    tax: '₹216',
-    total: '₹1,416',
-    specialInstructions: 'Please be careful with the side mirrors, they are custom made.',
-    createdAt: '2023-08-14T18:30:00Z',
-    completedAt: null,
-    cancelledAt: null,
-    cancelReason: null,
-    photos: null,
-    rating: null,
-    review: null
-  };
+  // --- Mock Data ---
+  const mockBooking: BookingDetails = { id: 'BK-7845', customerName: 'Rahul Sharma', customerPhone: '+91 9876543210', customerEmail: 'rahul.sharma@example.com', customerId: 'CUST-1234', professionalName: 'Rajesh Kumar', professionalPhone: '+91 9876543220', professionalId: 'PRO-001', services: [{ name: 'Premium Wash', price: '₹800', duration: '45 mins' }, { name: 'Polish', price: '₹400', duration: '30 mins' }], date: '15 Aug 2023', time: '10:30 AM', address: '123 Main Street, Andheri East, Mumbai, Maharashtra 400069', status: 'ongoing', paymentStatus: 'paid', paymentMethod: 'Credit Card', subtotal: '₹1,200', tax: '₹216', total: '₹1,416', specialInstructions: 'Please be careful with the side mirrors, they are custom made.', createdAt: '2023-08-14T18:30:00Z', completedAt: null, cancelledAt: null, cancelReason: null };
+  const mockProfessionals = [{ id: 'PRO-001', name: 'Rajesh Kumar', rating: 4.8 }, { id: 'PRO-002', name: 'Amit Singh', rating: 4.5 }, { id: 'PRO-003', name: 'Vikram Patel', rating: 4.7 }];
 
-  const mockProfessionals = [
-    { id: 'PRO-001', name: 'Rajesh Kumar', rating: 4.8 },
-    { id: 'PRO-002', name: 'Amit Singh', rating: 4.5 },
-    { id: 'PRO-003', name: 'Vikram Patel', rating: 4.7 },
-    { id: 'PRO-004', name: 'Sunil Verma', rating: 4.9 },
-    { id: 'PRO-005', name: 'Deepak Sharma', rating: 4.6 }
-  ];
-
+  // --- Effects ---
   useEffect(() => {
-    // Simulate API call
     const timer = setTimeout(() => {
       setBooking(mockBooking);
       setProfessionals(mockProfessionals);
@@ -125,28 +78,17 @@ const AdminBookingDetailsScreen = () => {
         setSelectedProfessionalId(mockBooking.professionalId);
       }
     }, 1500);
-
     return () => clearTimeout(timer);
   }, []);
 
+  // --- Handlers ---
   const handleAssignProfessional = () => {
-    if (!selectedProfessionalId) {
-      Alert.alert('Error', 'Please select a professional to assign');
-      return;
-    }
-
+    if (!selectedProfessionalId) return Alert.alert('Error', 'Please select a professional.');
     setAssignLoading(true);
-
-    // Simulate API call
     setTimeout(() => {
       const selectedPro = professionals.find(pro => pro.id === selectedProfessionalId);
       if (booking && selectedPro) {
-        setBooking({
-          ...booking,
-          professionalId: selectedPro.id,
-          professionalName: selectedPro.name,
-          professionalPhone: '+91 9876543220' // Mock phone number
-        });
+        setBooking({ ...booking, professionalId: selectedPro.id, professionalName: selectedPro.name, professionalPhone: '+91 9876543220' });
       }
       setAssignLoading(false);
       setShowAssignModal(false);
@@ -155,22 +97,11 @@ const AdminBookingDetailsScreen = () => {
   };
 
   const handleCancelBooking = () => {
-    if (!cancelReason.trim()) {
-      Alert.alert('Error', 'Please provide a reason for cancellation');
-      return;
-    }
-
+    if (!cancelReason.trim()) return Alert.alert('Error', 'Please provide a reason for cancellation.');
     setCancelLoading(true);
-
-    // Simulate API call
     setTimeout(() => {
       if (booking) {
-        setBooking({
-          ...booking,
-          status: 'cancelled',
-          cancelledAt: new Date().toISOString(),
-          cancelReason: cancelReason
-        });
+        setBooking({ ...booking, status: 'cancelled', cancelledAt: new Date().toISOString(), cancelReason });
       }
       setCancelLoading(false);
       setShowCancelModal(false);
@@ -178,33 +109,28 @@ const AdminBookingDetailsScreen = () => {
     }, 1500);
   };
 
-  const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'pending':
-      return { container: buttonstyles.statusPendingBg, text: buttonstyles.statusPendingText };
-    case 'ongoing':
-      return { container: buttonstyles.statusOngoingBg, text: buttonstyles.statusOngoingText };
-    case 'completed':
-      return { container: buttonstyles.statusCompletedBg, text: buttonstyles.statusCompletedText };
-    case 'cancelled':
-      return { container: buttonstyles.statusCancelledBg, text: buttonstyles.statusCancelledText };
-    default:
-      return { container: buttonstyles.statusDefaultBg, text: buttonstyles.statusDefaultText };
-  }
-};
-
+  // --- Style Helpers ---
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case 'pending': return { container: styles.statusPendingBg, text: styles.statusPendingText };
+      case 'ongoing': return { container: styles.statusOngoingBg, text: styles.statusOngoingText };
+      case 'completed': return { container: styles.statusCompletedBg, text: styles.statusCompletedText };
+      case 'cancelled': return { container: styles.statusCancelledBg, text: styles.statusCancelledText };
+      default: return { container: styles.statusDefaultBg, text: styles.statusDefaultText };
+    }
+  };
 
   const getPaymentStatusColor = (status: string) => {
-  switch (status) {
-    case 'paid': return buttonstyles.paymentPaid;
-    case 'pending': return buttonstyles.paymentPending;
-    case 'failed': return buttonstyles.paymentFailed;
-    default: return buttonstyles.paymentDefault;
-  }
-};
+    switch (status) {
+      case 'paid': return styles.paymentPaid;
+      case 'pending': return styles.paymentPending;
+      case 'failed': return styles.paymentFailed;
+      default: return styles.paymentDefault;
+    }
+  };
 
-
- const renderActionButtons = () => {
+  // --- Render Functions ---
+const renderActionButtons = () => {
   if (!booking) return null;
 
   switch (booking.status) {
@@ -291,114 +217,54 @@ const AdminBookingDetailsScreen = () => {
   }
 };
 
-
   if (loading) {
     return (
-       <View
-      style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#F9FAFB', // gray-50
-      }}
-    >
-      <ActivityIndicator size="large" color="#2563EB" />
-      <Text
-        style={{
-          marginTop: 16, // mt-4
-          color: '#4B5563', // text-gray-600
-        }}
-      >
-        Loading booking details...
-      </Text>
-    </View>
+      <View style={styles.centeredScreen}>
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={styles.loadingText}>Loading booking details...</Text>
+      </View>
     );
   }
 
   if (!booking) {
     return (
-       <View
-      style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#F9FAFB', // Tailwind's gray-50
-      }}
-    >
-      <MaterialIcons name="error-outline" size={48} color="#EF4444" />
-
-      <Text
-        style={{
-          marginTop: 16, // mt-4
-          color: '#1F2937', // Tailwind's gray-800
-          fontWeight: '500', // font-medium
-          fontSize: 18,
-        }}
-      >
-        Booking Not Found
-      </Text>
-
-      <Text
-        style={{
-          marginTop: 8, // mt-2
-          color: '#4B5563', // Tailwind's gray-600
-          textAlign: 'center',
-          paddingHorizontal: 24, // px-6
-          fontSize: 14,
-        }}
-      >
-        The booking you're looking for doesn't exist or has been removed.
-      </Text>
-
-      <TouchableOpacity
-        style={{
-          marginTop: 24, // mt-6
-          backgroundColor: '#2563EB', // Tailwind's primary (blue-600)
-          paddingHorizontal: 24, // px-6
-          paddingVertical: 12, // py-3
-          borderRadius: 12, // rounded-lg
-        }}
-        onPress={() => navigation.goBack()}
-      >
-        <Text
-          style={{
-            color: '#FFFFFF', // text-white
-            fontWeight: '500', // font-medium
-            fontSize: 16,
-          }}
-        >
-          Go Back
-        </Text>
-      </TouchableOpacity>
-    </View>
+      <View style={styles.centeredScreen}>
+        <MaterialIcons name="error-outline" size={48} color="#EF4444" />
+        <Text style={styles.errorTitle}>Booking Not Found</Text>
+        <Text style={styles.errorSubtitle}>The booking you're looking for doesn't exist.</Text>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.primaryButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
     );
   }
 
+  const statusStyle = getStatusStyle(booking.status);
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.row}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-          <View>
-            <Text style={styles.headerText}>Booking Details</Text>
-            <Text style={styles.headerSubText}>{booking.id}</Text>
-          </View>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <Ionicons name="arrow-back" size={24} color="#1F2937" />
+        </TouchableOpacity>
+        <View>
+          <Text style={styles.headerTitle}>Booking Details</Text>
+          <Text style={styles.headerSubtitle}>{booking.id}</Text>
         </View>
+        <View style={styles.headerButton} />{/* Placeholder */}
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
           <View style={styles.rowBetween}>
-            <View style={[styles.status, getStatusColor(booking.status)]}>
-              <Text style={styles.statusText}>{booking.status}</Text>
+            <View style={[styles.statusBadge, statusStyle.container]}>
+              <Text style={[styles.statusText, statusStyle.text]}>{booking.status}</Text>
             </View>
             <Text style={[styles.paymentStatusText, getPaymentStatusColor(booking.paymentStatus)]}>
-              {booking.paymentStatus === 'paid' ? 'Paid' : booking.paymentStatus === 'pending' ? 'Payment Pending' : 'Payment Failed'}
+              {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
             </Text>
           </View>
-
+          {/* Other details... */}
           <View style={styles.rowBetweenMarginTop}>
             <View style={styles.row}>
               <Ionicons name="calendar-outline" size={16} color="#6B7280" />
@@ -422,7 +288,7 @@ const AdminBookingDetailsScreen = () => {
             </View>
           ) : null}
         </View>
-
+        {/* Other sections... */}
         {/* Customer Details */}
         <View style={Customerstyles.card}>
         <View style={Customerstyles.headerRow}>
@@ -642,7 +508,8 @@ const AdminBookingDetailsScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Assign Professional Modal */}
+      {/* Modals... */}
+          {/* Assign Professional Modal */}
       <Modal
       visible={showAssignModal}
       transparent={true}
@@ -764,11 +631,11 @@ const AdminBookingDetailsScreen = () => {
       </View>
       </View>
       </Modal>
-
-    </View>
+      </SafeAreaView>
   );
 };
 
+// --- Sub-components ---
 interface TimelineItemProps {
   title: string;
   time: string;
@@ -812,9 +679,137 @@ const TimelineItem = ({ title, time, isActive, isLast, isCancelled, reason }: Ti
     </View>
   );
 };
-
 export default AdminBookingDetailsScreen;
 
+// --- Consolidated Stylesheet ---
+const styles = StyleSheet.create({
+  // Screen & Layout
+  container: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  scrollContainer: {
+    backgroundColor: '#F9FAFB',
+    paddingBottom: 32,
+  },
+  centeredScreen: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 24,
+  },
+  card: {
+    backgroundColor: 'white',
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 12,
+    padding: 16,
+    elevation: 2,
+    shadowColor: '#4B5563',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  headerButton: {
+    width: 34,
+    height: 34,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    textAlign: 'center',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+
+  // Loading & Error States
+  loadingText: {
+    marginTop: 16,
+    color: '#4B5563',
+  },
+  errorTitle: {
+    marginTop: 16,
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#1F2937',
+  },
+  errorSubtitle: {
+    marginTop: 8,
+    color: '#4B5563',
+    textAlign: 'center',
+  },
+  primaryButton: {
+    marginTop: 24,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  primaryButtonText: {
+    color: 'white',
+    fontWeight: '500',
+    fontSize: 16,
+  },
+
+  // Status & Payment Badges
+  statusBadge: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+  },
+  statusText: {
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  statusPendingBg: { backgroundColor: '#FEF3C7' },
+  statusPendingText: { color: '#92400E' },
+  statusOngoingBg: { backgroundColor: '#DBEAFE' },
+  statusOngoingText: { color: '#1E40AF' },
+  statusCompletedBg: { backgroundColor: '#D1FAE5' },
+  statusCompletedText: { color: '#065F46' },
+  statusCancelledBg: { backgroundColor: '#FEE2E2' },
+  statusCancelledText: { color: '#991B1B' },
+  statusDefaultBg: { backgroundColor: '#F3F4F6' },
+  statusDefaultText: { color: '#1F2937' },
+  
+  paymentStatusText: {
+    fontWeight: '500',
+  },
+  paymentPaid: { color: '#16A34A' },
+  paymentPending: { color: '#D97706' },
+  paymentFailed: { color: '#DC2626' },
+  paymentDefault: { color: '#4B5563' },
+  
+  // Other styles from your original file would go here...
+});
 const timeLineItemstyles = StyleSheet.create({
   container: {
     flexDirection: 'row'
@@ -922,34 +917,6 @@ const buttonstyles = StyleSheet.create({
   paymentFailed: { color: '#DC2626', fontWeight: '500' },
   paymentDefault: { color: '#4B5563', fontWeight: '500' }
 })
-
-const styles =StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { backgroundColor: '#2563EB', paddingTop: 48, paddingBottom: 16, paddingHorizontal: 16 },
-  backButton: { marginRight: 12 },
-  headerText: { color: 'white', fontSize: 20, fontWeight: 'bold' },
-  headerSubText: { color: 'white', opacity: 0.8 },
-  scrollView: { flex: 1 },
-  card: { backgroundColor: 'white', margin: 16, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.1, padding: 16 },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  rowBetweenMarginTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 },
-  rowMarginTop: { flexDirection: 'row', alignItems: 'center', marginTop: 12 },
-  timeText: { color: '#374151', marginLeft: 8 },
-  addressText: { color: '#374151', marginLeft: 8, flex: 1 },
-  status: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
-  statusText: { fontSize: 14, fontWeight: '500', textTransform: 'capitalize' },
-  statusCompleted: { backgroundColor: '#D1FAE5' },
-  statusPending: { backgroundColor: '#FDE68A' },
-  paid: { color: '#10B981' },
-  pending: { color: '#F59E0B' },
-  failed: { color: '#EF4444' },
-  instructions: { marginTop: 12, backgroundColor: '#F3F4F6', padding: 12, borderRadius: 8 },
-  instructionsLabel: { color: '#6B7280', fontSize: 14 },
-  instructionsText: { color: '#374151', marginTop: 4 },
-  actionContainer: { marginHorizontal: 16, marginBottom: 32 },
-})
-
 const Customerstyles = StyleSheet.create({
   card: {
     backgroundColor: 'white',

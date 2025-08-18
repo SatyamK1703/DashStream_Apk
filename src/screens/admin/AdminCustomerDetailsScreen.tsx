@@ -14,79 +14,15 @@ import {
   RefreshControl,
   TextInput,StyleSheet
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import {Customer , Address , Vehicle ,Booking ,Note} from '../../types/AdminType';
 
 type AdminCustomerDetailsRouteProp = RouteProp<AdminStackParamList, 'CustomerDetails'>;
 type AdminCustomerDetailsNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
-
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  profileImage: string;
-  status: 'active' | 'inactive' | 'blocked';
-  totalBookings: number;
-  totalSpent: number;
-  membershipStatus: 'none' | 'silver' | 'gold' | 'platinum';
-  membershipExpiry?: string;
-  joinDate: string;
-  lastActive: string;
-  addresses: Address[];
-  vehicles: Vehicle[];
-  bookings: Booking[];
-  notes: Note[];
-}
-
-interface Address {
-  id: string;
-  type: 'home' | 'work' | 'other';
-  name: string;
-  address: string;
-  city: string;
-  state: string;
-  pincode: string;
-  isDefault: boolean;
-}
-
-interface Vehicle {
-  id: string;
-  type: 'car' | 'motorcycle' | 'bicycle';
-  brand: string;
-  model: string;
-  year: string;
-  color: string;
-  licensePlate?: string;
-  image?: string;
-}
-
-interface Booking {
-  id: string;
-  date: string;
-  time: string;
-  services: {
-    name: string;
-    price: number;
-  }[];
-  totalAmount: number;
-  status: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'refunded';
-  paymentStatus: 'pending' | 'paid' | 'refunded';
-  paymentMethod: string;
-  professionalName?: string;
-  professionalId?: string;
-  rating?: number;
-  address: string;
-}
-
-interface Note {
-  id: string;
-  text: string;
-  createdBy: string;
-  createdAt: string;
-}
 
 const AdminCustomerDetailsScreen = () => {
   const navigation = useNavigation<AdminCustomerDetailsNavigationProp>();
@@ -899,7 +835,7 @@ const AdminCustomerDetailsScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.headerContainer}>
         <View style={styles.headerContent}>
@@ -956,7 +892,7 @@ const AdminCustomerDetailsScreen = () => {
         {activeTab === 'vehicles' && renderVehiclesTab()}
         {activeTab === 'notes' && renderNotesTab()}
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
