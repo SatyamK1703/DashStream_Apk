@@ -18,7 +18,7 @@ const SplashScreen = ({ navigation }: any) => {
           style={styles.logo}
           resizeMode="contain"
         />
-        <Text style={styles.title}>DashStream</Text>
+        <Text style={styles.title}>DashSteam</Text>
         <Text style={styles.subtitle}>Premium Car Wash & Detailing</Text>
         <ActivityIndicator size="large" color="#fff" style={styles.loader} />
       </View>

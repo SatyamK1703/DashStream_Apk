@@ -2,22 +2,26 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const TermsAndConditions = () => {
   const navigation = useNavigation();
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <MaterialIcons name="arrow-back" size={24} color="#1f2937" />
         </TouchableOpacity>
-        <Text style={styles.title}>Terms & Conditions</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.title}>Terms & Conditions</Text>
+        </View>
+        <View style={styles.headerRight} />
       </View>
 
       {/* Content */}
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.heading}>1. Acceptance of Terms</Text>
         <Text style={styles.paragraph}>
           By accessing or using this application, you agree to be bound by these Terms and Conditions.
@@ -47,48 +51,64 @@ const TermsAndConditions = () => {
         <Text style={styles.paragraph}>
           For any questions regarding these terms, contact us at support@example.com.
         </Text>
+
+        {/* Additional spacing at the bottom */}
+        <View style={styles.bottomSpacing} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 48,
-    paddingBottom: 16,
+    justifyContent: 'space-between',
+    paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
     backgroundColor: '#f9fafb',
   },
   backButton: {
-    marginRight: 12,
+    padding: 4,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerRight: {
+    width: 40,
   },
   title: {
     fontSize: 20,
     fontWeight: '600',
     color: '#1f2937',
+    textAlign: 'center',
   },
   content: {
+    flex: 1,
     padding: 16,
   },
   heading: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#111827',
     marginTop: 16,
     marginBottom: 8,
   },
   paragraph: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#4b5563',
-    lineHeight: 20,
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  bottomSpacing: {
+    height: 20,
   },
 });
 

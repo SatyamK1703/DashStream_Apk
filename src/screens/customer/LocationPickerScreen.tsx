@@ -7,16 +7,22 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
+  Platform,
+  KeyboardAvoidingView,
+  FlatList,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import * as Location from "expo-location";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const LocationPickerScreen = () => {
   const [region, setRegion] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   const navigation = useNavigation();
   const route = useRoute();
@@ -26,23 +32,41 @@ const LocationPickerScreen = () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
-          Alert.alert("Permission Denied", "Please enable location services.");
-          navigation.goBack();
+          Alert.alert(
+            "Location Permission Required",
+            "Please enable location services to use this feature.",
+            [
+              {
+                text: "Cancel",
+                style: "cancel",
+                onPress: () => navigation.goBack(),
+              },
+              {
+                text: "Open Settings",
+                onPress: () => Location.getForegroundPermissionsAsync(),
+              },
+            ]
+          );
           return;
         }
 
-        const loc = await Location.getCurrentPositionAsync({});
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
         setRegion({
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
         });
         setLoading(false);
       } catch (error) {
         console.log("Error:", error);
-        Alert.alert("Error", "Could not fetch location.");
-        navigation.goBack();
+        Alert.alert(
+          "Location Error",
+          "Could not fetch your current location. Please try again.",
+          [{ text: "OK", onPress: () => navigation.goBack() }]
+        );
       }
     };
 
@@ -50,148 +74,329 @@ const LocationPickerScreen = () => {
   }, []);
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
 
+    setIsSearching(true);
     try {
       const geo = await Location.geocodeAsync(searchQuery);
-      if (geo.length > 0) {
-        setRegion({
-          latitude: geo[0].latitude,
-          longitude: geo[0].longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        });
-      } else {
-        Alert.alert("Not Found", "No location found for this query.");
-      }
+      setSearchResults(geo);
     } catch (error) {
       console.log(error);
+      Alert.alert("Search Error", "Could not search for locations. Please try again.");
+    } finally {
+      setIsSearching(false);
     }
   };
 
+  const handleSelectSearchResult = (result: any) => {
+    setRegion({
+      latitude: result.latitude,
+      longitude: result.longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    });
+    setSearchQuery(result.name || result.formattedAddress || searchQuery);
+    setSearchResults([]);
+  };
+
   const handleConfirm = async () => {
-    if (region) {
+    if (!region) {
+      Alert.alert("Error", "Please select a location first.");
+      return;
+    }
+
+    try {
       const [address] = await Location.reverseGeocodeAsync({
         latitude: region.latitude,
         longitude: region.longitude,
       });
 
-      const selectedLocation = address.city || address.region || "Unknown";
+      const locationName = address.street || address.city || address.region || "Selected Location";
 
       // ✅ Pass location back to previous screen
       if (route.params?.onLocationSelected) {
-        route.params.onLocationSelected(selectedLocation);
+        route.params.onLocationSelected(locationName);
       }
 
       navigation.goBack();
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Error", "Could not get address details. Please try again.");
     }
   };
 
+  const handleUseCurrentLocation = async () => {
+    setLoading(true);
+    try {
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      setRegion({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Error", "Could not get current location.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderSearchResult = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      style={styles.searchResultItem}
+      onPress={() => handleSelectSearchResult(item)}
+    >
+      <Ionicons name="location-outline" size={20} color="#2563eb" />
+      <View style={styles.searchResultText}>
+        <Text style={styles.searchResultTitle}>
+          {item.name || item.street || "Unknown location"}
+        </Text>
+        <Text style={styles.searchResultSubtitle}>
+          {item.city && item.region ? `${item.city}, ${item.region}` : item.formattedAddress}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
   if (loading) {
     return (
-      <View style={styles.center}>
+      <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color="#2563eb" />
-      </View>
+        <Text style={styles.loadingText}>Getting your location...</Text>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Back Button */}
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.flex}
       >
-        <Ionicons name="chevron-back" size={24} color="#111827" />
-      </TouchableOpacity>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="chevron-back" size={24} color="#111827" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Select Location</Text>
+          <View style={styles.headerRight} />
+        </View>
 
-      {/* Search Box */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search for a location"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onSubmitEditing={handleSearch}
-        />
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Ionicons name="search" size={18} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      <MapView
-        style={StyleSheet.absoluteFill}
-        initialRegion={region}
-        region={region}
-        onRegionChangeComplete={(r) => setRegion(r)}
-      >
-        {region && (
-          <Marker
-            coordinate={region}
-            draggable
-            onDragEnd={(e) => setRegion(e.nativeEvent.coordinate)}
+        {/* Search Box */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#6b7280" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for an address or place"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
           />
-        )}
-      </MapView>
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Ionicons name="close-circle" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+          )}
+        </View>
 
-      <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-        <Text style={styles.confirmText}>Confirm Location</Text>
-      </TouchableOpacity>
-    </View>
+        {/* Search Results */}
+        {searchResults.length > 0 && (
+          <View style={styles.searchResultsContainer}>
+            <FlatList
+              data={searchResults}
+              renderItem={renderSearchResult}
+              keyExtractor={(item, index) => index.toString()}
+              style={styles.searchResultsList}
+            />
+          </View>
+        )}
+
+        {/* Map View */}
+        <View style={styles.mapContainer}>
+          <MapView
+            style={styles.map}
+            provider={PROVIDER_GOOGLE}
+            initialRegion={region}
+            region={region}
+            onRegionChangeComplete={(r) => setRegion(r)}
+            showsUserLocation={true}
+            showsMyLocationButton={false}
+            showsCompass={true}
+            showsScale={true}
+          >
+            {region && (
+              <Marker
+                coordinate={region}
+                draggable
+                onDragEnd={(e) => setRegion(e.nativeEvent.coordinate)}
+                pinColor="#2563eb"
+              />
+            )}
+          </MapView>
+
+          {/* Current Location Button */}
+          <TouchableOpacity
+            style={styles.currentLocationButton}
+            onPress={handleUseCurrentLocation}
+          >
+            <Ionicons name="locate" size={24} color="#2563eb" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Confirm Button */}
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
+            <Text style={styles.confirmText}>Confirm Location</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 export default LocationPickerScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: "#fff" },
+  flex: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingText: { marginTop: 16, color: "#6b7280" },
 
-  backButton: {
-    position: "absolute",
-    top: 50,
-    left: 20,
-    zIndex: 2,
+  // Header
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 6,
-    elevation: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1f2937",
+  },
+  headerRight: {
+    width: 40,
+  },
+  backButton: {
+    padding: 4,
   },
 
+  // Search
   searchContainer: {
-    position: "absolute",
-    top: 100,
-    left: 20,
-    right: 20,
     flexDirection: "row",
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 4,
-    zIndex: 2,
-    elevation: 3,
+    alignItems: "center",
+    margin: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#f9fafb",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  searchIcon: {
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    paddingHorizontal: 10,
-    fontSize: 14,
-    color: "#333",
-  },
-  searchButton: {
-    backgroundColor: "#2563eb",
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    justifyContent: "center",
-    alignItems: "center",
+    fontSize: 16,
+    color: "#1f2937",
+    paddingVertical: 4,
   },
 
-  confirmButton: {
+  // Search Results
+  searchResultsContainer: {
     position: "absolute",
-    bottom: 40,
-    alignSelf: "center",
-    backgroundColor: "#2563eb",
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 30,
+    top: 120,
+    left: 16,
+    right: 16,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    maxHeight: 200,
+    zIndex: 10,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  confirmText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  searchResultsList: {
+    borderRadius: 12,
+  },
+  searchResultItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
+  },
+  searchResultText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  searchResultTitle: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#1f2937",
+    marginBottom: 2,
+  },
+  searchResultSubtitle: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+
+  // Map
+  mapContainer: {
+    flex: 1,
+    overflow: "hidden",
+  },
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  currentLocationButton: {
+    position: "absolute",
+    bottom: 16,
+    right: 16,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 8,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+
+  // Footer
+  footer: {
+    padding: 16,
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+  },
+  confirmButton: {
+    backgroundColor: "#2563eb",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  confirmText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
 });

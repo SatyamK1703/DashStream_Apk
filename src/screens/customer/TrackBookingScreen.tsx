@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type TrackBookingScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 type TrackBookingScreenRouteProp = RouteProp<CustomerStackParamList, 'TrackBooking'>;
@@ -139,12 +140,14 @@ const TrackBookingScreen = () => {
 
   if (isLoading) {
     return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loaderText}>Loading booking details...</Text>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loaderText}>Loading booking details...</Text>
+        </View>
+      </SafeAreaView>
     );
-    }
+  }
 
   const isOnWayOrAssigned =
     currentStatus === BOOKING_STATUSES.ON_THE_WAY ||
@@ -160,19 +163,20 @@ const TrackBookingScreen = () => {
   });
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIconBtn}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color="#1f2937" />
         </TouchableOpacity>
-        <View>
+        <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>{getStatusText()}</Text>
           <Text style={styles.headerSub}>Booking ID: {bookingId}</Text>
         </View>
+        <View style={styles.headerRight} />
       </View>
 
-      <ScrollView style={styles.flex}>
+      <ScrollView style={styles.flex} showsVerticalScrollIndicator={false}>
         {/* Map View */}
         <View style={styles.mapWrap}>
           <MapView
@@ -409,32 +413,64 @@ const TrackBookingScreen = () => {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
 export default TrackBookingScreen;
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff'
+  },
   flex: { flex: 1 },
   container: { flex: 1, backgroundColor: '#fff' },
 
   // Loader
-  loaderContainer: { flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
-  loaderText: { marginTop: 12, color: '#4b5563' },
+  loaderContainer: { 
+    flex: 1, 
+    backgroundColor: '#fff', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  loaderText: { 
+    marginTop: 12, 
+    color: '#4b5563' 
+  },
 
   // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 16,
-    backgroundColor: '#2563eb',
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb'
   },
-  headerIconBtn: { marginRight: 16 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
-  headerSub: { color: 'rgba(255,255,255,0.85)' },
+  headerIconBtn: { 
+    padding: 4 
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center'
+  },
+  headerTitle: { 
+    fontSize: 18, 
+    fontWeight: '700', 
+    color: '#1f2937',
+    textAlign: 'center'
+  },
+  headerSub: { 
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 2
+  },
+  headerRight: {
+    width: 40
+  },
 
   // Map
   mapWrap: { width: '100%', height: 256 },
@@ -508,7 +544,7 @@ const styles = StyleSheet.create({
   semibold: { color: '#111827', fontWeight: '600' },
 
   // Footer
-  footer: { padding: 16, borderTopWidth: 1, borderTopColor: '#e5e7eb' },
+  footer: { padding: 16, borderTopWidth: 1, borderTopColor: '#e5e7eb', backgroundColor: '#fff' },
   cancelBtn: {
     borderWidth: 1,
     borderColor: '#ef4444',

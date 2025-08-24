@@ -23,6 +23,8 @@ import LocationPickerScreen from '../../src/screens/customer/LocationPickerScree
 import AllServicesScreen from '~/screens/customer/AllServiceScreen';
 import TermsAndConditions from '~/screens/customer/TermsAndConditions';
 import MembershipScreen from '~/screens/customer/MembershipScreen';
+import VehicleListScreen from '~/screens/customer/VehicleListScreen';
+import AddressListScreen from '~/screens/customer/AddressListScreen';
 
 // Define the customer stack param list
 export type CustomerStackParamList = {
@@ -46,6 +48,8 @@ export type CustomerStackParamList = {
   AllServices:undefined;
   OrderHistory:undefined;
   TermsAndConditions:undefined;
+  VehicleList:undefined;
+  AddressList:undefined;
 };
 
 // Define the customer tab param list
@@ -153,6 +157,9 @@ const CustomerNavigator = () => {
       <Stack.Screen name="AllServices" component={AllServicesScreen} />
       <Stack.Screen name='OrderHistory' component={OrderHistoryScreen}/>
       <Stack.Screen name='TermsAndConditions' component={TermsAndConditions}/>
+      <Stack.Screen name='VehicleList' component={VehicleListScreen}/>
+      <Stack.Screen name='AddressList' component={AddressListScreen}/>
+
 
     </Stack.Navigator>
   );

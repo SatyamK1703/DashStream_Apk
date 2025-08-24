@@ -5,12 +5,14 @@ import {
   FlatList, 
   TouchableOpacity, 
   ActivityIndicator,
-  RefreshControl,StyleSheet
+  RefreshControl,
+  StyleSheet
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type NotificationsScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -182,117 +184,187 @@ const NotificationsScreen = () => {
   };
 
   const renderNotificationItem = ({ item }: { item: Notification }) => (
-  <TouchableOpacity
-    style={[styles.notificationItem, !item.isRead ? styles.unread : styles.read]}
-    onPress={() => handleNotificationPress(item)}
-  >
-    <View style={styles.row}>
-      <View style={styles.iconContainer}>{getNotificationIcon(item.type)}</View>
-      <View style={styles.flex}>
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, !item.isRead ? styles.boldTitle : styles.normalTitle]}>{item.title}</Text>
-          <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
+    <TouchableOpacity
+      style={[styles.notificationItem, !item.isRead ? styles.unread : styles.read]}
+      onPress={() => handleNotificationPress(item)}
+    >
+      <View style={styles.row}>
+        <View style={styles.iconContainer}>{getNotificationIcon(item.type)}</View>
+        <View style={styles.flex}>
+          <View style={styles.headerRow}>
+            <Text style={[styles.title, !item.isRead ? styles.boldTitle : styles.normalTitle]}>{item.title}</Text>
+            <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
+          </View>
+          <Text style={[styles.message, !item.isRead ? styles.unreadMessage : styles.readMessage]}>{item.message}</Text>
         </View>
-        <Text style={[styles.message, !item.isRead ? styles.unreadMessage : styles.readMessage]}>{item.message}</Text>
       </View>
-    </View>
-  </TouchableOpacity>
-);
+    </TouchableOpacity>
+  );
 
-const renderEmptyComponent = () => (
-  <View style={styles.emptyContainer}>
-    <Ionicons name="notifications-off-outline" size={60} color="#d1d5db" />
-    <Text style={styles.emptyText}>No notifications yet</Text>
-  </View>
-);
-
-if (loading && !refreshing) {
-  return (
-    <View style={styles.loaderContainer}>
-      <ActivityIndicator size="large" color="#2563eb" />
-      <Text style={styles.loadingText}>Loading notifications...</Text>
+  const renderEmptyComponent = () => (
+    <View style={styles.emptyContainer}>
+      <Ionicons name="notifications-off-outline" size={60} color="#d1d5db" />
+      <Text style={styles.emptyText}>No notifications yet</Text>
     </View>
   );
-}
 
-return (
-  <View style={styles.container}>
-    <View style={styles.header}>
-      <View style={styles.row}>
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>Loading notifications...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* Header */}
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Notifications</Text>
+        </View>
+        {notifications.length > 0 && (
+          <TouchableOpacity
+            onPress={() => {
+              setNotifications(prevNotifications =>
+                prevNotifications.map(notification => ({ ...notification, isRead: true }))
+              );
+            }}
+          >
+            <Text style={styles.markAll}>Mark all as read</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      {notifications.length > 0 && (
-        <TouchableOpacity
-          onPress={() => {
-            setNotifications(prevNotifications =>
-              prevNotifications.map(notification => ({ ...notification, isRead: true }))
-            );
-          }}
-        >
-          <Text style={styles.markAll}>Mark all as read</Text>
-        </TouchableOpacity>
-      )}
-    </View>
 
-    <FlatList
-      data={notifications}
-      renderItem={renderNotificationItem}
-      keyExtractor={item => item.id}
-      contentContainerStyle={{ flexGrow: 1 }}
-      ListEmptyComponent={renderEmptyComponent}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          colors={['#2563eb']}
-          tintColor="#2563eb"
-        />
-      }
-    />
-  </View>
-);}
+      <FlatList
+        data={notifications}
+        renderItem={renderNotificationItem}
+        keyExtractor={item => item.id}
+        contentContainerStyle={{ flexGrow: 1 }}
+        ListEmptyComponent={renderEmptyComponent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#2563eb']}
+            tintColor="#2563eb"
+          />
+        }
+      />
+    </SafeAreaView>
+  );
+};
+
 export default NotificationsScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff'
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 16,
+    paddingVertical: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#1f2937' },
-  backButton: { marginRight: 16 },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  flex: { flex: 1 },
+  backButton: {
+    padding: 4
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center'
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937'
+  },
+  markAll: {
+    color: '#2563eb',
+    fontWeight: '600'
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  flex: {
+    flex: 1
+  },
   notificationItem: {
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
   },
-  unread: { backgroundColor: '#eff6ff' },
-  read: { backgroundColor: '#fff' },
-  iconContainer: { marginRight: 12, marginTop: 4 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  title: { fontSize: 16 },
-  boldTitle: { fontWeight: '700', color: '#111827' },
-  normalTitle: { fontWeight: '500', color: '#1f2937' },
-  timestamp: { fontSize: 12, color: '#6b7280', marginLeft: 8 },
-  message: { marginTop: 4 },
-  unreadMessage: { color: '#374151' },
-  readMessage: { color: '#4b5563' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 80 },
-  emptyText: { color: '#9ca3af', fontSize: 18, marginTop: 16 },
-  loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
-  loadingText: { marginTop: 16, color: '#4b5563' },
-  markAll: { color: '#2563eb', fontWeight: '600' },
+  unread: {
+    backgroundColor: '#eff6ff'
+  },
+  read: {
+    backgroundColor: '#fff'
+  },
+  iconContainer: {
+    marginRight: 12,
+    marginTop: 4
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start'
+  },
+  title: {
+    fontSize: 16
+  },
+  boldTitle: {
+    fontWeight: '700',
+    color: '#111827'
+  },
+  normalTitle: {
+    fontWeight: '500',
+    color: '#1f2937'
+  },
+  timestamp: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginLeft: 8
+  },
+  message: {
+    marginTop: 4
+  },
+  unreadMessage: {
+    color: '#374151'
+  },
+  readMessage: {
+    color: '#4b5563'
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 80
+  },
+  emptyText: {
+    color: '#9ca3af',
+    fontSize: 18,
+    marginTop: 16
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff'
+  },
+  loadingText: {
+    marginTop: 16,
+    color: '#4b5563'
+  }
 });
-

@@ -13,7 +13,7 @@ export const mockProfessionals= [
       skills: ['Car Wash', 'Detailing', 'Polish'],
       joinedDate: '2022-05-15',
       lastActive: '2023-08-15T10:30:00Z',
-      isVerified: true
+      isVerified: true,
     },
     {
       id: 'PRO-002',

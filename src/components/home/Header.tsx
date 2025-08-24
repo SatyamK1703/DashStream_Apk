@@ -7,11 +7,13 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Header = ({ userName }: { userName: string }) => {
   const navigation = useNavigation();
   const route = useRoute();
   const [locationName, setLocationName] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
 
   // Update location name when user selects a location
   useEffect(() => {
@@ -21,27 +23,26 @@ const Header = ({ userName }: { userName: string }) => {
   }, [route.params?.selectedLocation]);
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: insets.top }]}>
       <View>
         <Text style={styles.greeting}>{userName}</Text>
 
         <TouchableOpacity
-  style={styles.locationRow}
-  onPress={() =>
-    navigation.navigate("LocationPicker", {
-      onLocationSelected: (location: string) => {
-        setLocationName(location); // update state when user confirms
-      },
-    })
-  }
->
-  <Ionicons name="location-outline" size={16} color="#2563eb" />
-  <Text style={styles.locationText}>
-    {locationName || "Select Location"}
-  </Text>
-  <Ionicons name="chevron-down" size={16} color="#2563eb" />
-</TouchableOpacity>
-
+          style={styles.locationRow}
+          onPress={() =>
+            navigation.navigate("LocationPicker", {
+              onLocationSelected: (location: string) => {
+                setLocationName(location); // update state when user confirms
+              },
+            })
+          }
+        >
+          <Ionicons name="location-outline" size={16} color="#2563eb" />
+          <Text style={styles.locationText}>
+            {locationName || "Select Location"}
+          </Text>
+          <Ionicons name="chevron-down" size={16} color="#2563eb" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.iconGroup}>
@@ -70,8 +71,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 48,
     paddingBottom: 16,
+    backgroundColor: '#fff',
   },
   greeting: { fontSize: 18, fontWeight: "bold", color: "#1f2937" },
   locationRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },

@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { useAuth } from '../../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type EditProfileScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -118,104 +119,198 @@ const EditProfileScreen = () => {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>Updating profile...</Text>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>Updating profile...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flexContainer}>
-      <View style={styles.flexContainer}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Profile</Text>
-        </View>
-
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.imageWrapper}>
-            <TouchableOpacity onPress={showImageOptions}>
-              <View>
-                <Image
-                  source={formData.profileImage ? { uri: formData.profileImage } : require('../../assets/images/image.png')}
-                  style={styles.profileImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.cameraIconWrapper}>
-                  <Ionicons name="camera" size={16} color="#fff" />
-                </View>
-              </View>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+        style={styles.flexContainer}
+      >
+        <View style={styles.flexContainer}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#000" />
             </TouchableOpacity>
-            <Text style={styles.changePicText}>Change Profile Picture</Text>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>Edit Profile</Text>
+            </View>
+            <View style={styles.backButton} /> {/* Empty view for balance */}
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Full Name</Text>
-            <TextInput
-              style={[styles.input, errors.name && styles.errorBorder]}
-              placeholder="Enter your full name"
-              value={formData.name}
-              onChangeText={text => setFormData({ ...formData, name: text })}
-            />
-            {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
-          </View>
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            <View style={styles.imageWrapper}>
+              <TouchableOpacity onPress={showImageOptions}>
+                <View>
+                  <Image
+                    source={formData.profileImage ? { uri: formData.profileImage } : require('../../assets/images/image.png')}
+                    style={styles.profileImage}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.cameraIconWrapper}>
+                    <Ionicons name="camera" size={16} color="#fff" />
+                  </View>
+                </View>
+              </TouchableOpacity>
+              <Text style={styles.changePicText}>Change Profile Picture</Text>
+            </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={[styles.input, errors.email && styles.errorBorder]}
-              placeholder="Enter your email"
-              value={formData.email}
-              onChangeText={text => setFormData({ ...formData, email: text })}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
-          </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Full Name</Text>
+              <TextInput
+                style={[styles.input, errors.name && styles.errorBorder]}
+                placeholder="Enter your full name"
+                value={formData.name}
+                onChangeText={text => setFormData({ ...formData, name: text })}
+              />
+              {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
+            </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Phone Number</Text>
-            <TextInput
-              style={[styles.input, errors.phone && styles.errorBorder]}
-              placeholder="Enter your phone number"
-              value={formData.phone}
-              onChangeText={text => setFormData({ ...formData, phone: text })}
-              keyboardType="phone-pad"
-            />
-            {errors.phone ? <Text style={styles.errorText}>{errors.phone}</Text> : null}
-          </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={[styles.input, errors.email && styles.errorBorder]}
+                placeholder="Enter your email"
+                value={formData.email}
+                onChangeText={text => setFormData({ ...formData, email: text })}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+            </View>
 
-          <TouchableOpacity style={styles.saveButton} onPress={handleUpdateProfile}>
-            <Text style={styles.saveButtonText}>Save Changes</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-    </KeyboardAvoidingView>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Phone Number</Text>
+              <TextInput
+                style={[styles.input, errors.phone && styles.errorBorder]}
+                placeholder="Enter your phone number"
+                value={formData.phone}
+                onChangeText={text => setFormData({ ...formData, phone: text })}
+                keyboardType="phone-pad"
+              />
+              {errors.phone ? <Text style={styles.errorText}>{errors.phone}</Text> : null}
+            </View>
+
+            <TouchableOpacity style={styles.saveButton} onPress={handleUpdateProfile}>
+              <Text style={styles.saveButtonText}>Save Changes</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  flexContainer: { flex: 1 },
-  loadingContainer: { flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 16, color: '#4b5563' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 48, paddingBottom: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#e5e7eb' },
-  backButton: { marginRight: 16 },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#1f2937' },
-  scrollContent: { padding: 16 },
-  imageWrapper: { alignItems: 'center', marginBottom: 24 },
-  profileImage: { width: 96, height: 96, borderRadius: 48 },
-  cameraIconWrapper: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#2563eb', borderRadius: 9999, padding: 4 },
-  changePicText: { color: '#2563eb', fontWeight: '500', marginTop: 8 },
-  inputGroup: { marginBottom: 16 },
-  label: { color: '#374151', marginBottom: 4, fontWeight: '500' },
-  input: { backgroundColor: '#f9fafb', padding: 16, borderRadius: 12, color: '#1f2937' },
-  errorBorder: { borderColor: '#ef4444', borderWidth: 1 },
-  errorText: { color: '#ef4444', marginTop: 4 },
-  saveButton: { backgroundColor: '#2563eb', paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 24 },
-  saveButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff'
+  },
+  flexContainer: { 
+    flex: 1 
+  },
+  loadingContainer: { 
+    flex: 1, 
+    backgroundColor: '#fff', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  loadingText: { 
+    marginTop: 16, 
+    color: '#4b5563' 
+  },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    paddingHorizontal: 16, 
+    paddingTop: 16, 
+    paddingBottom: 16, 
+    backgroundColor: '#fff', 
+    borderBottomWidth: 1, 
+    borderColor: '#e5e7eb' 
+  },
+  backButton: { 
+    width: 40, // Fixed width for balance
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: { 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    color: '#1f2937',
+    textAlign: 'center',
+  },
+  scrollContent: { 
+    padding: 16 
+  },
+  imageWrapper: { 
+    alignItems: 'center', 
+    marginBottom: 24 
+  },
+  profileImage: { 
+    width: 96, 
+    height: 96, 
+    borderRadius: 48 
+  },
+  cameraIconWrapper: { 
+    position: 'absolute', 
+    bottom: 0, 
+    right: 0, 
+    backgroundColor: '#2563eb', 
+    borderRadius: 9999, 
+    padding: 4 
+  },
+  changePicText: { 
+    color: '#2563eb', 
+    fontWeight: '500', 
+    marginTop: 8 
+  },
+  inputGroup: { 
+    marginBottom: 16 
+  },
+  label: { 
+    color: '#374151', 
+    marginBottom: 4, 
+    fontWeight: '500' 
+  },
+  input: { 
+    backgroundColor: '#f9fafb', 
+    padding: 16, 
+    borderRadius: 12, 
+    color: '#1f2937' 
+  },
+  errorBorder: { 
+    borderColor: '#ef4444', 
+    borderWidth: 1 
+  },
+  errorText: { 
+    color: '#ef4444', 
+    marginTop: 4 
+  },
+  saveButton: { 
+    backgroundColor: '#2563eb', 
+    paddingVertical: 16, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    marginTop: 24 
+  },
+  saveButtonText: { 
+    color: '#fff', 
+    fontWeight: 'bold', 
+    fontSize: 18 
+  },
 });
 
 export default EditProfileScreen;

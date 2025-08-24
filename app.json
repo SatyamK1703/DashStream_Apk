@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "DashStream",
-    "slug": "DashStream",
+    "name": "DashSteam",
+    "slug": "DashSream",
     "version": "1.0.0",
     "web": {
       "favicon": "./assets/favicon.png"
@@ -29,7 +29,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.satyamk1078.DashStream"
+      "package": "com.satyamk1078.DashSteam"
     },
     "extra": {
       "eas": {
