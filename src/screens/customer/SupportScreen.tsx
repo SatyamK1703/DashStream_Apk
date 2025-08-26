@@ -10,9 +10,9 @@ import {
   Platform,
   KeyboardAvoidingView,
   StyleSheet,
-  SafeAreaView,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context'; // Changed import
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -123,7 +123,7 @@ const SupportScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}> {/* Added edges prop for better control */}
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -388,4 +388,3 @@ const styles = StyleSheet.create({
 });
 
 export default SupportScreen;
-

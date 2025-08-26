@@ -10,12 +10,14 @@ import {
   TextInput,
   Image,
   StyleSheet,
-  SafeAreaView, // 1. Import SafeAreaView
+  Platform
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // --- Type Definitions ---
 type AdminBookingDetailsScreenNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
@@ -242,7 +244,7 @@ const renderActionButtons = () => {
   const statusStyle = getStatusStyle(booking.status);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color="#1F2937" />
@@ -582,54 +584,56 @@ const renderActionButtons = () => {
 
       {/* Cancel Booking Modal */}
       <Modal
-      visible={showCancelModal}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={() => setShowCancelModal(false)}
+        visible={showCancelModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowCancelModal(false)}
       >
-      <View style={Cancelstyles.modalBackdrop}>
-      <View style={Cancelstyles.modalContainer}>
+        <SafeAreaView style={Cancelstyles.modalBackdrop}>
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={Cancelstyles.modalContainer}
+          >
+            {/* Header */}
+            <View style={Cancelstyles.modalHeader}>
+              <Text style={Cancelstyles.modalTitle}>Cancel Booking</Text>
+              <TouchableOpacity onPress={() => setShowCancelModal(false)}>
+                <Ionicons name="close" size={24} color="#4B5563" />
+              </TouchableOpacity>
+            </View>
 
-      {/* Header */}
-      <View style={Cancelstyles.modalHeader}>
-        <Text style={Cancelstyles.modalTitle}>Cancel Booking</Text>
-        <TouchableOpacity onPress={() => setShowCancelModal(false)}>
-          <Ionicons name="close" size={24} color="#4B5563" />
-        </TouchableOpacity>
-      </View>
+            {/* Description */}
+            <Text style={Cancelstyles.modalDescription}>Please provide a reason for cancellation:</Text>
 
-      {/* Description */}
-      <Text style={Cancelstyles.modalDescription}>Please provide a reason for cancellation:</Text>
+            {/* Text Input */}
+            <TextInput
+              style={Cancelstyles.textInput}
+              placeholder="Enter cancellation reason"
+              multiline
+              value={cancelReason}
+              onChangeText={setCancelReason}
+            />
 
-      {/* Text Input */}
-      <TextInput
-        style={Cancelstyles.textInput}
-        placeholder="Enter cancellation reason"
-        multiline
-        value={cancelReason}
-        onChangeText={setCancelReason}
-      />
-
-      {/* Confirm Button */}
-      <TouchableOpacity
-        style={[
-          Cancelstyles.cancelButton,
-          (!cancelReason.trim() || cancelLoading) && Cancelstyles.cancelButtonDisabled,
-        ]}
-        onPress={handleCancelBooking}
-        disabled={cancelLoading || !cancelReason.trim()}
-      >
-        {cancelLoading ? (
-          <ActivityIndicator size="small" color="white" />
-        ) : (
-          <>
-            <MaterialIcons name="cancel" size={20} color="white" />
-            <Text style={Cancelstyles.cancelButtonText}>Confirm Cancellation</Text>
-          </>
-        )}
-      </TouchableOpacity>
-      </View>
-      </View>
+            {/* Confirm Button */}
+            <TouchableOpacity
+              style={[
+                Cancelstyles.cancelButton,
+                (!cancelReason.trim() || cancelLoading) && Cancelstyles.cancelButtonDisabled,
+              ]}
+              onPress={handleCancelBooking}
+              disabled={cancelLoading || !cancelReason.trim()}
+            >
+              {cancelLoading ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <>
+                  <MaterialIcons name="cancel" size={20} color="white" />
+                  <Text style={Cancelstyles.cancelButtonText}>Confirm Cancellation</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </Modal>
       </SafeAreaView>
   );

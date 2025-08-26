@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import { SafeAreaView } from 'react-native-safe-area-context';
 type AdminCreateCustomerNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 
 interface FormData {
@@ -195,7 +196,7 @@ const AdminCreateCustomerScreen = () => {
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
-    >
+    ><SafeAreaView style={styles.safeArea}>
       <View style={styles.mainContainer}>
         {/* Header */}
         <View style={styles.headerContainer}>
@@ -530,6 +531,7 @@ const AdminCreateCustomerScreen = () => {
           </View>
         </ScrollView>
       </View>
+    </SafeAreaView>
     </KeyboardAvoidingView>
   );
 };
@@ -541,6 +543,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  safeArea:{
+    flex:1,
+  },
   mainContainer: {
     flex: 1,
     backgroundColor: '#F9FAFB',
@@ -549,7 +554,6 @@ const styles = StyleSheet.create({
   // Header
   headerContainer: {
     backgroundColor: '#2563EB',
-    paddingTop: 48,
     paddingBottom: 16,
     paddingHorizontal: 16,
   },

@@ -3,7 +3,6 @@ import { View, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-nati
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import Header from '../../components/faq/Header';
 import SearchBar from '../../components/faq/SearchBar';
 import CategoryTabs from '../../components/faq/CategoryTabs';
 import FAQList from '../../components/faq/FAQList';
@@ -18,20 +17,20 @@ const FAQScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.container}>
-        {/* Custom Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>FAQ & Support</Text>
-          </View>
-          <View style={styles.backButton} /> {/* Empty view for balance */}
+      {/* Custom Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Text style={styles.backButtonText}>←</Text>
+        </TouchableOpacity>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>FAQ & Support</Text>
         </View>
-        
+        <View style={styles.headerRight} /> {/* Empty view for balance */}
+      </View>
+      
+      <View style={styles.container}>
         <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-        <ScrollView style={styles.wrapper} contentContainerStyle={{ paddingBottom: 32 }}>
+        <ScrollView style={styles.wrapper} contentContainerStyle={styles.scrollContent}>
           <CategoryTabs activeCategory={activeCategory} setActiveCategory={setActiveCategory} />
           <FAQList
             searchQuery={searchQuery}
@@ -66,16 +65,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingVertical: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderColor: '#e5e7eb'
+    borderBottomColor: '#e5e7eb'
   },
   backButton: {
-    width: 40,
-    alignItems: 'flex-start',
-    justifyContent: 'center'
+    padding: 4
   },
   backButtonText: {
     fontSize: 24,
@@ -83,8 +79,7 @@ const styles = StyleSheet.create({
   },
   headerTitleContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center'
+    alignItems: 'center'
   },
   headerTitle: {
     fontSize: 20,
@@ -92,8 +87,15 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     textAlign: 'center'
   },
+  headerRight: {
+    width: 40
+  },
   wrapper: {
-    padding: 16
+    flex: 1
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 32
   },
   supportWrapper: {
     marginTop: 32,

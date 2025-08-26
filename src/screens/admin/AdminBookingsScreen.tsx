@@ -158,13 +158,6 @@ const AdminBookingsScreen = () => {
         }
         ListEmptyComponent={<EmptyState />}
       />
-
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('CreateBooking')}
-      >
-        <Ionicons name="add" size={28} color="white" />
-      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -215,23 +208,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 80, // For FAB
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    backgroundColor: '#2563EB',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
+  }
 });
 
 export default AdminBookingsScreen;

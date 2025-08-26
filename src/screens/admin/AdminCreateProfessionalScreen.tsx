@@ -93,9 +93,9 @@ const AdminCreateProfessionalScreen = () => {
   ];
   
   const availableServiceAreas = [
-    { id: '1', name: 'Andheri East', city: 'Mumbai' },
-    { id: '2', name: 'Andheri West', city: 'Mumbai' },
-    { id: '3', name: 'Bandra', city: 'Mumbai' },
+    { id: '1', name: 'Ara', city: 'Bihar' },
+    { id: '2', name: 'Gaya', city: 'Bihar' },
+    { id: '3', name: 'Buxar', city: 'Bihar' },
   ];
   
   const updateFormData = (key: keyof FormData, value: any) => {
@@ -313,25 +313,6 @@ const AdminCreateProfessionalScreen = () => {
                 {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
               </View>
               
-              {/* Experience */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>
-                  Experience (Years) <Text style={styles.requiredAsterisk}>*</Text>
-                </Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    errors.experience && styles.textInputError
-                  ]}
-                  placeholder="Enter years of experience"
-                  keyboardType="number-pad"
-                  value={formData.experience}
-                  onChangeText={(value) => updateFormData('experience', value)}
-                  placeholderTextColor="#9CA3AF"
-                />
-                {errors.experience && <Text style={styles.errorText}>{errors.experience}</Text>}
-              </View>
-              
               {/* Status */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Account Status</Text>
@@ -372,135 +353,7 @@ const AdminCreateProfessionalScreen = () => {
               {/* Other input fields... */}
 
             </View>
-            <View style={styles.vehicleInfoContainer}>
-                <Text style={styles.vehicleInfoLabel}>Vehicle Information</Text>
-                
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Vehicle Type</Text>
-                  <View style={styles.vehicleTypeContainer}>
-                    {['bike', 'car', 'scooter'].map((type) => (
-                      <TouchableOpacity 
-                        key={type}
-                        style={[
-                          styles.vehicleTypeOption,
-                          formData.vehicleInfo.type === type 
-                            ? styles.vehicleTypeOptionActive 
-                            : styles.vehicleTypeOptionInactive
-                        ]}
-                        onPress={() => updateVehicleInfo('type', type)}
-                      >
-                        <FontAwesome5 
-                          name={type === 'bike' ? 'motorcycle' : type === 'car' ? 'car' : 'scooter'} 
-                          size={14} 
-                          color={formData.vehicleInfo.type === type ? '#2563EB' : '#4B5563'} 
-                        />
-                        <Text style={[
-                          styles.vehicleTypeText,
-                          formData.vehicleInfo.type === type 
-                            ? styles.vehicleTypeTextActive 
-                            : styles.vehicleTypeTextInactive
-                        ]}>
-                          {type}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-                
-                <View>
-                  <Text style={styles.inputLabel}>
-                    Vehicle Number <Text style={styles.requiredAsterisk}>*</Text>
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.textInput,
-                      errors.vehicleInfo && styles.textInputError
-                    ]}
-                    placeholder="Enter vehicle number"
-                    autoCapitalize="characters"
-                    value={formData.vehicleInfo.number}
-                    onChangeText={(value) => updateVehicleInfo('number', value)}
-                    placeholderTextColor="#9CA3AF"
-                  />
-                  {errors.vehicleInfo && <Text style={styles.errorText}>{errors.vehicleInfo}</Text>}
-                </View>
-              </View>
             </View>
-            
-            {/* Password Section */}
-            <View style={styles.formSection}>
-              <View style={styles.passwordSectionHeader}>
-                <Text style={styles.sectionTitle}>Account Password</Text>
-                <TouchableOpacity 
-                  style={styles.generateButton}
-                  onPress={generateRandomPassword}
-                >
-                  <Text style={styles.generateButtonText}>Generate Random</Text>
-                </TouchableOpacity>
-              </View>
-              
-              {/* Password */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>
-                  Password <Text style={styles.requiredAsterisk}>*</Text>
-                </Text>
-                <View style={styles.passwordInputContainer}>
-                  <TextInput
-                    style={[
-                      styles.textInput,
-                      styles.passwordInput,
-                      errors.password && styles.textInputError
-                    ]}
-                    placeholder="Enter password"
-                    secureTextEntry
-                    value={formData.password}
-                    onChangeText={(value) => updateFormData('password', value)}
-                    placeholderTextColor="#9CA3AF"
-                  />
-                  <View style={styles.eyeIcon}>
-                    <Ionicons name="eye-off" size={20} color="#9CA3AF" />
-                  </View>
-                </View>
-                {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-              </View>
-              
-              {/* Confirm Password */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>
-                  Confirm Password <Text style={styles.requiredAsterisk}>*</Text>
-                </Text>
-                <View style={styles.passwordInputContainer}>
-                  <TextInput
-                    style={[
-                      styles.textInput,
-                      styles.passwordInput,
-                      errors.confirmPassword && styles.textInputError
-                    ]}
-                    placeholder="Confirm password"
-                    secureTextEntry
-                    value={formData.confirmPassword}
-                    onChangeText={(value) => updateFormData('confirmPassword', value)}
-                    placeholderTextColor="#9CA3AF"
-                  />
-                  <View style={styles.eyeIcon}>
-                    <Ionicons name="eye-off" size={20} color="#9CA3AF" />
-                  </View>
-                </View>
-                {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
-              </View>
-              
-              {/* Send Credentials */}
-              <View style={styles.switchContainer}>
-                <Text style={styles.switchText}>Send login credentials to professional</Text>
-                <Switch
-                  value={formData.sendCredentials}
-                  onValueChange={(value) => updateFormData('sendCredentials', value)}
-                  trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
-                  thumbColor={formData.sendCredentials ? '#2563EB' : '#F3F4F6'}
-                />
-              </View>
-            </View>
-            
             {/* Skills Section Toggle */}
             <TouchableOpacity 
               style={styles.sectionToggle}

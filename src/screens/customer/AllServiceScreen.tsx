@@ -10,7 +10,6 @@ import {
   Dimensions,
   ActivityIndicator,
   ScrollView,
-  SafeAreaView,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
@@ -18,7 +17,7 @@ import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { services } from '../../constants/data/serviceDetails';
 import CategoryTabs from '../../components/service/CategoryTabs';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type NavigationProp = NativeStackNavigationProp<CustomerStackParamList, 'AllServices'>;
 
@@ -85,62 +84,84 @@ const AllServicesScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <MaterialIcons name="arrow-back" size={28} color="#1f2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>All Services</Text>
-        <View style={{ width: 28 }} />
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>All Services</Text>
+        </View>
+        <View style={styles.headerRight} />
       </View>
-      <ScrollView showsVerticalScrollIndicator={false}>
 
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
         <CategoryTabs
-        tabs={CATEGORY_TABS}
-        selected={selectedTab}
-        onSelect={(tab) => setSelectedTab(tab)}
+          tabs={CATEGORY_TABS}
+          selected={selectedTab}
+          onSelect={(tab) => setSelectedTab(tab)}
         />
         
 
-      {/* Service List */}
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Loading Services...</Text>
-        </View>
-      ) : (
-        <FlatList
-        data={filteredServices}
-        keyExtractor={item => item.id}
-        renderItem={renderServiceItem}
-        contentContainerStyle={{ paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
-        />
-      )}
+        {/* Service List */}
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#2563eb" />
+            <Text style={styles.loadingText}>Loading Services...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredServices}
+            keyExtractor={item => item.id}
+            renderItem={renderServiceItem}
+            contentContainerStyle={styles.flatListContent}
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={false}
+          />
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff'
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
   },
   header: {
-    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: '#fff',
     borderBottomColor: '#eee',
     borderBottomWidth: 1,
+  },
+  backButton: {
+    padding: 4
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center'
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#111827',
+    textAlign: 'center'
+  },
+  headerRight: {
+    width: 40
+  },
+  scrollView: {
+    flex: 1
   },
   filterRow: {
     flexDirection: 'row',
@@ -238,12 +259,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 40
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
     color: '#6b7280',
   },
+  flatListContent: {
+    paddingBottom: 100
+  }
 });
 
 export default AllServicesScreen;

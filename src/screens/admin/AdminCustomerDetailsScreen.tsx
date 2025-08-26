@@ -12,7 +12,7 @@ import {
   Alert,
   FlatList,
   RefreshControl,
-  TextInput,StyleSheet
+  TextInput,StyleSheet,KeyboardAvoidingView,Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -320,14 +320,7 @@ const AdminCustomerDetailsScreen = () => {
             </View>
           </View>
           
-          <View style={styles.customerActions}>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => navigation.navigate('EditCustomer', { customerId: customer.id })}
-            >
-              <Ionicons name="pencil" size={18} color="#4B5563" />
-            </TouchableOpacity>
-            
+          <View style={styles.customerActions}> 
             <TouchableOpacity 
               style={styles.actionButton}
               onPress={() => {
@@ -343,7 +336,7 @@ const AdminCustomerDetailsScreen = () => {
                 );
               }}
             >
-              <Ionicons name="call" size={18} color="#4B5563" />
+              <Ionicons name="call" size={24} color="#4B5563" />
             </TouchableOpacity>
           </View>
         </View>
@@ -430,10 +423,10 @@ const AdminCustomerDetailsScreen = () => {
           
           <TouchableOpacity 
             style={styles.manageButton}
-            onPress={() => navigation.navigate('EditCustomer', { 
-              customerId: customer.id,
-              initialTab: 'membership'
-            })}
+            // onPress={() => navigation.navigate('EditCustomer', { 
+            //   customerId: customer.id,
+            //   initialTab: 'membership'
+            // })}
           >
             <Text style={styles.manageButtonText}>Manage</Text>
           </TouchableOpacity>
@@ -484,7 +477,7 @@ const AdminCustomerDetailsScreen = () => {
             <TouchableOpacity 
               key={booking.id}
               style={[styles.bookingItem, index === 1 && styles.lastBookingItem]}
-              onPress={() => navigation.navigate('BookingDetails', { bookingId: booking.id })}
+              onPress={() => navigation.navigate('AdminBookingDetails', { bookingId: booking.id })}
             >
               <View style={styles.bookingHeader}>
                 <Text style={styles.bookingId}>{booking.id}</Text>
@@ -547,7 +540,7 @@ const AdminCustomerDetailsScreen = () => {
             </TouchableOpacity>
           )}
           
-          <TouchableOpacity 
+          {/* <TouchableOpacity 
             style={[styles.adminActionButton, styles.adminActionButtonBlue]}
             onPress={() => navigation.navigate('CreateBooking', { customerId: customer.id })}
           >
@@ -561,7 +554,7 @@ const AdminCustomerDetailsScreen = () => {
           >
             <Ionicons name="create-outline" size={18} color="#8B5CF6" />
             <Text style={[styles.adminActionText, styles.adminActionTextPurple]}>Edit Details</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
     </ScrollView>
@@ -576,7 +569,7 @@ const AdminCustomerDetailsScreen = () => {
         return (
           <TouchableOpacity 
             style={styles.card}
-            onPress={() => navigation.navigate('BookingDetails', { bookingId: item.id })}
+            onPress={() => navigation.navigate('AdminBookingDetails', { bookingId: item.id })}
           >
             <View style={styles.bookingHeader}>
               <Text style={styles.bookingId}>{item.id}</Text>
@@ -835,64 +828,71 @@ const AdminCustomerDetailsScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.headerContainer}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={22} color="white" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Customer Details</Text>
-        </View>
-      </View>
-      
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        {[
-          { id: 'overview', label: 'Overview', icon: 'information-circle-outline' },
-          { id: 'bookings', label: 'Bookings', icon: 'calendar-outline' },
-          { id: 'addresses', label: 'Addresses', icon: 'location-outline' },
-          { id: 'vehicles', label: 'Vehicles', icon: 'car-outline' },
-          { id: 'notes', label: 'Notes', icon: 'document-text-outline' }
-        ].map((tab) => (
-          <TouchableOpacity 
-            key={tab.id}
-            style={[
-              styles.tabButton,
-              activeTab === tab.id && styles.tabButtonActive
-            ]}
-            onPress={() => setActiveTab(tab.id as any)}
-          >
-            <Ionicons 
-              name={tab.icon as any} 
-              size={20} 
-              color={activeTab === tab.id ? '#2563EB' : '#6B7280'} 
-            />
-            <Text 
-              style={[
-                styles.tabText,
-                activeTab === tab.id ? styles.tabTextActive : styles.tabTextInactive
-              ]}
-              numberOfLines={1}
-            >
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      
-      {/* Tab Content */}
-      <View style={styles.tabContent}>
-        {activeTab === 'overview' && renderOverviewTab()}
-        {activeTab === 'bookings' && renderBookingsTab()}
-        {activeTab === 'addresses' && renderAddressesTab()}
-        {activeTab === 'vehicles' && renderVehiclesTab()}
-        {activeTab === 'notes' && renderNotesTab()}
-      </View>
-    </SafeAreaView>
+<SafeAreaView style={styles.container} edges={['top']}>
+        <KeyboardAvoidingView 
+          style={{ flex: 1 }} 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          {/* Header */}
+          <View style={styles.headerContainer}>
+            <View style={styles.headerContent}>
+              <TouchableOpacity 
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Ionicons name="arrow-back" size={24} color="black" />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>Customer Details</Text>
+              <View style={styles.headerSpacer} />
+            </View>
+          </View>
+          
+          {/* Tabs */}
+          <View style={styles.tabsContainer}>
+            {[
+              { id: 'overview', label: 'Overview', icon: 'information-circle-outline' },
+              { id: 'bookings', label: 'Bookings', icon: 'calendar-outline' },
+              { id: 'addresses', label: 'Addresses', icon: 'location-outline' },
+              { id: 'vehicles', label: 'Vehicles', icon: 'car-outline' },
+              { id: 'notes', label: 'Notes', icon: 'document-text-outline' }
+            ].map((tab) => (
+              <TouchableOpacity 
+                key={tab.id}
+                style={[
+                  styles.tabButton,
+                  activeTab === tab.id && styles.tabButtonActive
+                ]}
+                onPress={() => setActiveTab(tab.id as any)}
+              >
+                <Ionicons 
+                  name={tab.icon as any} 
+                  size={20} 
+                  color={activeTab === tab.id ? '#2563EB' : '#6B7280'} 
+                />
+                <Text 
+                  style={[
+                    styles.tabText,
+                    activeTab === tab.id ? styles.tabTextActive : styles.tabTextInactive
+                  ]}
+                  numberOfLines={1}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          
+          {/* Tab Content */}
+          <View style={styles.tabContent}>
+            {activeTab === 'overview' && renderOverviewTab()}
+            {activeTab === 'bookings' && renderBookingsTab()}
+            {activeTab === 'addresses' && renderAddressesTab()}
+            {activeTab === 'vehicles' && renderVehiclesTab()}
+            {activeTab === 'notes' && renderNotesTab()}
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
   );
 };
 
@@ -948,26 +948,34 @@ const styles = StyleSheet.create({
   },
 
   // Header
-  headerContainer: {
-    backgroundColor: '#2563EB',
-    paddingTop: 48,
-    paddingBottom: 16,
+    headerContainer: {
+    backgroundColor: 'white', // Changed to white
+    paddingVertical: 16,
     paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center', // Center the content
   },
   backButton: {
-    padding: 8,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    marginRight: 12,
+    position: 'absolute', // Position absolutely to keep title centered
+    left: 0,
+    padding: 8, // Blue background for contrast
   },
   headerTitle: {
-    color: 'white',
+    color: '#1F2937', // Dark text color for white background
     fontSize: 20,
     fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 40, // Same width as back button to balance layout
   },
 
   // Tabs
