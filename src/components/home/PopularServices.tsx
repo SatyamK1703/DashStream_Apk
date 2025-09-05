@@ -4,21 +4,36 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useAuth } from '../../contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
-const ITEM_WIDTH = (width - 48) / 3; // Account for horizontal padding
+const ITEM_WIDTH = (width - 48)
+ / 3; // Account for horizontal padding
 
 type NavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
 const PopularServices = ({ services }: any) => {
   const navigation = useNavigation<NavigationProp>();
+  const { user } = useAuth();
 
   const handlePress = (service: any) => {
-    navigation.navigate('ServiceDetails', { serviceId: service.id });
+    // Check if user is not authenticated or is a guest user
+    if (!user || user.name === 'Guest User') {
+      // Redirect to login screen
+      navigation.navigate('Login' as never);
+    } else {
+      navigation.navigate('ServiceDetails', { serviceId: service.id });
+    }
   };
 
   const handleSeeAll = () => {
-    navigation.navigate('AllServices'); // Assuming you have an 'AllServices' screen
+    // Check if user is not authenticated or is a guest user
+    if (!user || user.name === 'Guest User') {
+      // Redirect to login screen
+      navigation.navigate('Login' as never);
+    } else {
+      navigation.navigate('AllServices'); // Assuming you have an 'AllServices' screen
+    }
   };
 
   return (

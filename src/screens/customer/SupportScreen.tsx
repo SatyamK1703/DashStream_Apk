@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Assuming these are defined elsewhere in your project
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 type SupportScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 type SupportOption = {
   id: string;

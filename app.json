@@ -3,13 +3,7 @@
     "name": "DashSteam",
     "slug": "DashSteam",
     "version": "1.0.0",
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
-    "experiments": {
-      "tsconfigPaths": true
-    },
-    "plugins": [],
+    "owner": "satyamk1078",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -18,24 +12,23 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.satyamk1078.dashsteam",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "package": "com.satyamk1078.DashSteam"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "0e570d38-47d8-4f55-9485-54ebf1831748"
       }
     },
-    "owner": "satyamk1078"
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "experiments": {
+      "tsconfigPaths": true
+    },
+    "plugins": []
   }
 }

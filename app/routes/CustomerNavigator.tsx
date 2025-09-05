@@ -50,6 +50,7 @@ export type CustomerStackParamList = {
   TermsAndConditions:undefined;
   VehicleList:undefined;
   AddressList:undefined;
+  TestNotification:undefined;
 };
 
 // Define the customer tab param list

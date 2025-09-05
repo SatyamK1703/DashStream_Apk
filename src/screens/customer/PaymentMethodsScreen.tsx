@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   FlatList
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../contexts/AuthContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
@@ -24,6 +25,14 @@ type PaymentMethodsScreenNavigationProp = NativeStackNavigationProp<CustomerStac
 
 const PaymentMethodsScreen: React.FC = () => {
   const navigation = useNavigation<PaymentMethodsScreenNavigationProp>();
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    // Check if user is not authenticated or is a guest user
+    if (!user || user.email === 'skip-user') {
+      navigation.navigate('Login');
+    }
+  }, [user, navigation]);
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
     {

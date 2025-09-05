@@ -6,7 +6,8 @@ import {
   TouchableOpacity, 
   ActivityIndicator,
   RefreshControl,
-  StyleSheet
+  StyleSheet,
+  Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -229,17 +230,12 @@ const NotificationsScreen = () => {
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>Notifications</Text>
         </View>
-        {notifications.length > 0 && (
-          <TouchableOpacity
-            onPress={() => {
-              setNotifications(prevNotifications =>
-                prevNotifications.map(notification => ({ ...notification, isRead: true }))
-              );
-            }}
-          >
-            <Text style={styles.markAll}>Mark all as read</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('TestNotification')} 
+          style={styles.testButton}
+        >
+          <Ionicons name="notifications" size={24} color="#4e73df" />
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -279,7 +275,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e5e7eb',
   },
   backButton: {
-    padding: 4
+    padding: 8,
+  },
+  testButton: {
+    padding: 8,
   },
   headerTitleContainer: {
     flex: 1,

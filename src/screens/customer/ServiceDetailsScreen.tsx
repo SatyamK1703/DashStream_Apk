@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { services } from '~/constants/data/serviceDetails';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../../contexts/AuthContext';
 
 type ServiceDetailsRouteProp = RouteProp<CustomerStackParamList, 'ServiceDetails'>;
 type ServiceDetailsNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
@@ -15,6 +16,14 @@ const ServiceDetailsScreen = () => {
   const navigation = useNavigation<ServiceDetailsNavigationProp>();
   const route = useRoute<ServiceDetailsRouteProp>();
   const { serviceId } = route.params;
+  const { user } = useAuth();
+  
+  // Check if user is authenticated or a guest user
+  useEffect(() => {
+    if (!user || user.name === 'Guest User') {
+      navigation.navigate('Login');
+    }
+  }, [user, navigation]);
   
   const service = services[serviceId as keyof typeof services];
   
@@ -29,10 +38,18 @@ const ServiceDetailsScreen = () => {
   }
 
   const handleAddToCart = () => {
+    if (!user || user.name === 'Guest User') {
+      navigation.navigate('Login');
+      return;
+    }
     navigation.navigate('Cart');
   };
 
   const handleBookNow = () => {
+    if (!user || user.name === 'Guest User') {
+      navigation.navigate('Login');
+      return;
+    }
     navigation.navigate('Checkout');
   };
 

@@ -14,7 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
 import {bookingsData,revenueData,topProfessionals,recentBookings,dashboardStats} from '../../constants/data/AdminScreenData';
 import StatCard from '~/components/admin/StatCard';

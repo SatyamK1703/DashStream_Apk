@@ -14,6 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import {mockOrders} from '../../constants/data/data'
 
 type OrderHistoryScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -49,95 +50,7 @@ const OrderHistoryScreen = () => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'completed' | 'cancelled' | 'refunded'>('all');
 
   // Mock data for orders
-  const mockOrders: Order[] = [
-    {
-      id: 'ORD123456',
-      date: '15 May 2023',
-      time: '10:30 AM',
-      status: 'completed',
-      services: [
-        { name: 'Premium Wash', price: 599 },
-        { name: 'Interior Cleaning', price: 399 }
-      ],
-      totalAmount: 998,
-      paymentMethod: 'Credit Card',
-      address: '123 Main St, Bangalore',
-      professional: {
-        name: 'Rahul Singh',
-        rating: 4.8,
-        image: 'https://randomuser.me/api/portraits/men/32.jpg'
-      },
-      rating: 5,
-      reviewSubmitted: true
-    },
-    {
-      id: 'ORD123457',
-      date: '28 Apr 2023',
-      time: '02:00 PM',
-      status: 'completed',
-      services: [
-        { name: 'Basic Wash', price: 399 }
-      ],
-      totalAmount: 399,
-      paymentMethod: 'UPI',
-      address: '123 Main St, Bangalore',
-      professional: {
-        name: 'Amit Kumar',
-        rating: 4.6,
-        image: 'https://randomuser.me/api/portraits/men/45.jpg'
-      },
-      rating: 4,
-      reviewSubmitted: true
-    },
-    {
-      id: 'ORD123458',
-      date: '10 Apr 2023',
-      time: '11:15 AM',
-      status: 'cancelled',
-      services: [
-        { name: 'Premium Wash', price: 599 },
-        { name: 'Wax Polish', price: 799 }
-      ],
-      totalAmount: 1398,
-      paymentMethod: 'Credit Card',
-      address: '456 Park Ave, Bangalore',
-      cancellationReason: 'Professional unavailable'
-    },
-    {
-      id: 'ORD123459',
-      date: '02 Apr 2023',
-      time: '09:00 AM',
-      status: 'refunded',
-      services: [
-        { name: 'Full Detailing', price: 1999 }
-      ],
-      totalAmount: 1999,
-      paymentMethod: 'Debit Card',
-      address: '789 Lake View, Bangalore',
-      refundAmount: 1999,
-      refundDate: '04 Apr 2023'
-    },
-    {
-      id: 'ORD123460',
-      date: '15 Mar 2023',
-      time: '04:30 PM',
-      status: 'completed',
-      services: [
-        { name: 'Basic Wash', price: 399 },
-        { name: 'Interior Cleaning', price: 399 }
-      ],
-      totalAmount: 798,
-      paymentMethod: 'UPI',
-      address: '123 Main St, Bangalore',
-      professional: {
-        name: 'Vikram Patel',
-        rating: 4.9,
-        image: 'https://randomuser.me/api/portraits/men/67.jpg'
-      },
-      rating: 5,
-      reviewSubmitted: true
-    },
-  ];
+ 
 
   useEffect(() => {
     // Simulate API call

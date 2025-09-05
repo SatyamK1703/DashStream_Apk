@@ -17,40 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-
-type VehicleListScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
-
-// Mock data - replace with your actual data source
-const mockVehicles = [
-  {
-    id: '1',
-    type: 'car',
-    brand: 'Toyota',
-    model: 'Camry',
-    year: '2020',
-    licensePlate: 'ABC123',
-    image: 'https://example.com/car1.jpg'
-  },
-  {
-    id: '2',
-    type: 'motorcycle',
-    brand: 'Honda',
-    model: 'CBR500R',
-    year: '2019',
-    licensePlate: 'XYZ789',
-    image: 'https://example.com/bike1.jpg'
-  },
-  {
-    id: '3',
-    type: 'bicycle',
-    brand: 'Trek',
-    model: 'FX 2',
-    year: '2021',
-    licensePlate: null,
-    image: null
-  },
-];
-
+import {mockVehicles} from '../../constants/data/data';
+import { useAuth } from '../../contexts/AuthContext';
 type Vehicle = {
   id: string;
   type: 'car' | 'motorcycle' | 'bicycle';
@@ -61,10 +29,12 @@ type Vehicle = {
   image: string | null;
 };
 
+type VehicleListScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 type FilterOption = 'all' | 'car' | 'motorcycle' | 'bicycle';
 
 const VehicleListScreen = () => {
   const navigation = useNavigation<VehicleListScreenNavigationProp>();
+  const { user } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>(mockVehicles);
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,6 +43,13 @@ const VehicleListScreen = () => {
   const [loading, setLoading] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [vehicleToDelete, setVehicleToDelete] = useState<string | null>(null);
+  
+  // Check if user is authenticated or a guest user
+  useEffect(() => {
+    if (!user || user.name === 'Guest User') {
+      navigation.navigate('Login');
+    }
+  }, [user, navigation]);
 
   // In a real app, you would fetch vehicles from your API/DB
   useEffect(() => {

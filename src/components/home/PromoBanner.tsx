@@ -1,10 +1,27 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../contexts/AuthContext';
 
-const PromoBanner = ({ onPress }) => (
+export const PromoBanner = ({ onPress }) => {
+  const navigation = useNavigation();
+  const { user } = useAuth();
+  
+  const handlePress = () => {
+    // Check if user is not authenticated or is a guest user
+    if (!user || user.name === 'Guest User') {
+      // Redirect to login screen
+      navigation.navigate('Login' as never);
+    } else {
+      // If authenticated, proceed with the original onPress action
+      onPress();
+    }
+  };
+  
+  return (
   <View style={styles.wrapper}>
-    <TouchableOpacity style={styles.card} onPress={onPress}>
+    <TouchableOpacity style={styles.card} onPress={handlePress}>
       <Image source={require('../../assets/images/image.png')} style={styles.image} />
       <View style={styles.textWrapper}>
         <Text style={styles.title}>Become a Member</Text>
@@ -13,10 +30,7 @@ const PromoBanner = ({ onPress }) => (
       <Ionicons name="chevron-forward" size={24} color="#2563eb" />
     </TouchableOpacity>
   </View>
-);
-
-export default PromoBanner;
-
+);};
 const styles = StyleSheet.create({
   wrapper: {
     paddingHorizontal: 16,

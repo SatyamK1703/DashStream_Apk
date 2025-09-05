@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../contexts/AuthContext';
 
 const vehicleOptions = [
   { label: 'Car', icon: 'car-outline' },
@@ -8,7 +10,19 @@ const vehicleOptions = [
   { label: 'Bicycle', icon: 'trail-sign-outline' },
 ];
 
-const VehicleTypeSelector = ({ selectedType, onSelectType }) => (
+const VehicleTypeSelector = ({ selectedType, onSelectType }) => {
+  const navigation = useNavigation();
+  const { user } = useAuth();
+  
+  const handleSelectType = (type) => {
+    if (!user || user.name === 'Guest User') {
+      navigation.navigate('Login');
+      return;
+    }
+    onSelectType(type);
+  };
+  
+  return (
   <View style={styles.container}>
     {vehicleOptions.map((vehicle) => {
       const isActive = selectedType === vehicle.label;
@@ -16,7 +30,7 @@ const VehicleTypeSelector = ({ selectedType, onSelectType }) => (
         <TouchableOpacity
           key={vehicle.label}
           style={[styles.button, isActive && styles.activeButton]}
-          onPress={() => onSelectType(vehicle.label)}
+          onPress={() => handleSelectType(vehicle.label)}
           activeOpacity={0.85}
         >
           <Ionicons

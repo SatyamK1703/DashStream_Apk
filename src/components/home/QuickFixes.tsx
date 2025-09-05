@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../contexts/AuthContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import {
@@ -27,7 +28,14 @@ const CARD_WIDTH = (SCREEN_WIDTH - CARD_SPACING * 4 - 32) / 3; // 3 columns + pa
 type NavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 const QuickFixes = () => {
   const navigation = useNavigation<NavigationProp>();
+  const { user } = useAuth();
+  
   const handleSeeAll = () => {
+    // Check if user is not authenticated or is a guest user
+    if (!user || user.email === 'skip-user') {
+      navigation.navigate('Login');
+      return;
+    }
     navigation.navigate('AllServices'); // Assuming you have an 'AllServices' screen
   };
   return (

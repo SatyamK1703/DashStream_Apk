@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import * as ImagePicker from 'expo-image-picker';
+import { useAuth } from '../../contexts/AuthContext';
 
 type AddVehicleScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 type AddVehicleScreenRouteProp = RouteProp<CustomerStackParamList, 'AddVehicle'>;
@@ -59,8 +60,16 @@ const AddVehicleScreen = () => {
   const navigation = useNavigation<AddVehicleScreenNavigationProp>();
   const route = useRoute<AddVehicleScreenRouteProp>();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const editMode = route.params?.vehicleId !== undefined;
   const vehicleToEdit = route.params?.vehicleData;
+  
+  // Check if user is authenticated or a guest user
+  useEffect(() => {
+    if (!user || user.name === 'Guest User') {
+      navigation.navigate('Login');
+    }
+  }, [user, navigation]);
 
   const [vehicleType, setVehicleType] = useState<VehicleType>(vehicleToEdit?.type || 'car');
   const [brand, setBrand] = useState(vehicleToEdit?.brand || '');

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Text,
   TouchableOpacity,
@@ -9,38 +9,25 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useAuth } from '../../contexts/AuthContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
+import {MOCK_ADDRESSES} from '../../constants/data/data';
 
-// Mock Data - Replace this with your actual data fetching logic
-const MOCK_ADDRESSES = [
-  {
-    id: '1',
-    type: 'home',
-    name: 'Ananya Sharma',
-    address: 'Flat 501, Sunshine Apartments, MG Road',
-    city: 'Pune',
-    state: 'Maharashtra',
-    pincode: '411001',
-    isDefault: true,
-  },
-  {
-    id: '2',
-    type: 'work',
-    name: 'Ananya Sharma',
-    address: '8th Floor, Tech Park One, Hinjewadi Phase 2',
-    city: 'Pune',
-    state: 'Maharashtra',
-    pincode: '411057',
-    isDefault: false,
-  },
-];
 
 const AddressListScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
   const [addresses, setAddresses] = useState(MOCK_ADDRESSES);
   const isFocused = useIsFocused();
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    // Check if user is not authenticated or is a guest user
+    if (!user || user.email === 'skip-user') {
+      navigation.navigate('Login');
+    }
+  }, [user, navigation]);
 
   // In a real app, you would fetch addresses when the screen is focused
   // useEffect(() => {
@@ -133,7 +120,7 @@ const AddressListScreen = () => {
       {/* Add New Address Button */}
       <TouchableOpacity 
         style={styles.fab} 
-        onPress={() => navigation.navigate('AddAddress', {})}
+        onPress={() => navigation.navigate('AddAddress')}
       >
         <Ionicons name="add" size={32} color="#FFFFFF" />
       </TouchableOpacity>

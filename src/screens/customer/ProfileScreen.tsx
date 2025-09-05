@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -13,14 +13,16 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRequireAuth } from '../../hooks/useRequireAuth';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
 const ProfileScreen = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const { user, logout } = useAuth();
+  const { isFullyAuthenticated } = useRequireAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
 
@@ -71,6 +73,12 @@ const ProfileScreen = () => {
       title: 'Payment Methods',
       icon: 'card-outline',
       onPress: () => navigation.navigate('PaymentMethods')
+    },
+    {
+      id: 'paymentHistory',
+      title: 'Payment History',
+      icon: 'receipt-outline',
+      onPress: () => navigation.navigate('PaymentHistory')
     },
     {
       id: 'membership',

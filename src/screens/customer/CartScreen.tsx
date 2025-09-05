@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, Alert, TextInput, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../contexts/AuthContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
@@ -31,6 +32,14 @@ const CartScreen = () => {
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const navigation = useNavigation<CartScreenNavigationProp>();
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    // Check if user is not authenticated or is a guest user
+    if (!user || user.email === 'skip-user') {
+      navigation.navigate('Login');
+    }
+  }, [user, navigation]);
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const deliveryFee = 49;
@@ -66,9 +75,8 @@ const CartScreen = () => {
   };
 
   const handleApplyPromoCode = () => {
-    // Mock promo code logic - in a real app, this would validate against an API
     if (promoCode.toUpperCase() === 'WELCOME50') {
-      const discountAmount = subtotal * 0.5; // 50% off
+      const discountAmount = subtotal * 0.5;
       setDiscount(discountAmount);
       Alert.alert('Success', 'Promo code applied successfully!');
     } else {
@@ -87,7 +95,6 @@ const CartScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#000" />
@@ -112,7 +119,6 @@ const CartScreen = () => {
         ) : (
           <>
             <ScrollView style={styles.scrollView}>
-              {/* Cart Items */}
               <View style={styles.cartList}>
                 {cartItems.map(item => (
                   <View key={item.id} style={styles.cartItem}>
@@ -147,8 +153,7 @@ const CartScreen = () => {
                   </View>
                 ))}
               </View>
-
-              {/* Promo Code */}
+              {/* Promo*/}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Promo Code</Text>
                 <View style={styles.promoRow}>

@@ -12,7 +12,7 @@ import LoginScreen from '../../src/screens/LoginScreen';
 import OtpVerificationScreen from '../../src/screens/customer/OtpVerificationScreen';
 
 // Import auth context
-import { useAuth } from '../../src/context/AuthContext';
+import { useAuth } from '../../src/contexts/AuthContext';
 
 // Define the root stack param list
 export type RootStackParamList = {

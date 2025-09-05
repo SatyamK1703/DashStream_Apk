@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../contexts/AuthContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import {savedAddresses,timeSlots,paymentMethods} from '../../constants/data/data'
 
 type CheckoutScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -28,39 +30,6 @@ interface PaymentMethod {
 }
 
 // Mock data
-const savedAddresses: AddressOption[] = [
-  {
-    id: '1',
-    title: 'Home',
-    address: '123 Main Street, Apartment 4B, Mumbai, 400001',
-    isDefault: true,
-  },
-  {
-    id: '2',
-    title: 'Office',
-    address: 'Tech Park, Building C, Floor 5, Bengaluru, 560001',
-    isDefault: false,
-  },
-];
-
-const timeSlots: TimeSlot[] = [
-  { id: '1', time: '09:00 AM', available: true },
-  { id: '2', time: '10:00 AM', available: true },
-  { id: '3', time: '11:00 AM', available: false },
-  { id: '4', time: '12:00 PM', available: true },
-  { id: '5', time: '01:00 PM', available: true },
-  { id: '6', time: '02:00 PM', available: false },
-  { id: '7', time: '03:00 PM', available: true },
-  { id: '8', time: '04:00 PM', available: true },
-  { id: '9', time: '05:00 PM', available: true },
-];
-
-const paymentMethods: PaymentMethod[] = [
-  { id: '1', name: 'Credit/Debit Card', icon: 'card-outline' },
-  { id: '2', name: 'UPI', icon: 'wallet-outline' },
-  { id: '3', name: 'Cash on Delivery', icon: 'cash-outline' },
-];
-
 const CheckoutScreen = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
@@ -70,6 +39,14 @@ const CheckoutScreen = () => {
   const [specialInstructions, setSpecialInstructions] = useState('');
   
   const navigation = useNavigation<CheckoutScreenNavigationProp>();
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    // Check if user is not authenticated or is a guest user
+    if (!user || user.email === 'skip-user') {
+      navigation.navigate('Login');
+    }
+  }, [user, navigation]);
 
   // Generate dates for the next 7 days
   const dates = Array.from({ length: 7 }, (_, i) => {

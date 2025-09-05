@@ -56,16 +56,8 @@ const AddAddressScreen = () => {
     'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
     'Delhi', 'Chandigarh', 'Puducherry'
   ];
-
-  // useEffect(() => {
-  //   setTimeout(() => {
-  //     setCurrentLocation('123 Main Street, Mumbai, Maharashtra, 400001');
-  //   }, 1000);
-  // }, []);
     useEffect(() => {
     const fetchCurrentLocation = async () => {
-      // In a real app, you would use Geolocation API or Expo Location
-      // For demo purposes, we'll simulate a delay and return a mock location
       setTimeout(() => {
         setCurrentLocation('123 Main Street, Mumbai, Maharashtra, 400001');
       }, 1000);

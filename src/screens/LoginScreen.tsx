@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityInd
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../app/routes/RootNavigator';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -11,7 +11,7 @@ const LoginScreen = () => {
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { login, setUser } = useAuth() as any;
+  const { login, setUser } = useAuth();
 
   const handleLogin = async () => {
     if (!/^\d{10}$/.test(phone)) {
@@ -30,14 +30,18 @@ const LoginScreen = () => {
   };
 
   const handleSkip = () => {
-    setUser({
-      id: 'skip-user',
-      name: 'Guest User',
-      email: 'guest@example.com',
-      phone: '0000000000',
-      role: 'customer',
-      profileImage: undefined,
-    });
+    if (setUser) {
+      setUser({
+        id: 'skip-user',
+        name: 'Guest User',
+        email: 'guest@example.com',
+        phone: '0000000000',
+        role: 'customer',
+        profileImage: undefined,
+      });
+    } else {
+      console.error('setUser function is not available in AuthContext');
+    }
   };
 
   return (

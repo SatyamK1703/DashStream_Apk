@@ -15,9 +15,11 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import FAQList from '~/components/faq/FAQList';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import {membershipPlans} from '../../constants/data/data'
+import { useRequireAuth } from '../../hooks/useRequireAuth';
 
 type MembershipScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -33,6 +35,7 @@ interface MembershipPlan {
 const MembershipScreen = () => {
   const navigation = useNavigation<MembershipScreenNavigationProp>();
   const { user } = useAuth();
+  const { isFullyAuthenticated } = useRequireAuth();
   const [loading, setLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<MembershipPlan | null>(null);
@@ -48,67 +51,6 @@ const MembershipScreen = () => {
     totalServices: 5,
     savings: 1250
   });
-
-  const membershipPlans: MembershipPlan[] = [
-    {
-      id: 'basic',
-      name: 'Basic',
-      price: 499,
-      duration: '1 month',
-      features: [
-        '5 car washes',
-        'Basic interior cleaning',
-        '10% off on additional services',
-        'Priority booking'
-      ],
-      popular: false
-    },
-    {
-      id: 'silver',
-      name: 'Silver',
-      price: 999,
-      duration: '3 months',
-      features: [
-        '12 car washes',
-        'Full interior cleaning',
-        '15% off on additional services',
-        'Priority booking',
-        'Free car inspection'
-      ],
-      popular: true
-    },
-    {
-      id: 'gold',
-      name: 'Gold',
-      price: 1999,
-      duration: '6 months',
-      features: [
-        '24 car washes',
-        'Premium detailing',
-        '20% off on additional services',
-        'VIP priority booking',
-        'Free car inspection',
-        'Free pickup and drop'
-      ],
-      popular: false
-    },
-    {
-      id: 'platinum',
-      name: 'Platinum',
-      price: 3499,
-      duration: '12 months',
-      features: [
-        'Unlimited car washes',
-        'Premium detailing',
-        '25% off on additional services',
-        'VIP priority booking',
-        'Quarterly car inspection',
-        'Free pickup and drop',
-        'Dedicated relationship manager'
-      ],
-      popular: false
-    }
-  ];
 
   const handleSelectPlan = (plan: MembershipPlan) => {
     setSelectedPlan(plan);
