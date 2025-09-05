@@ -14,6 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import apiService from '../../services/apiService';
 
 // Mock types for self-contained component
 type ProStackParamList = {
@@ -40,20 +41,21 @@ const ProServiceAreaScreen = () => {
   const [availableAreas, setAvailableAreas] = useState<AreaItem[]>([]);
 
   useEffect(() => {
-    const mockAreas: AreaItem[] = [
-      { id: '1', name: 'Koramangala', isSelected: true, distance: 0, estimatedJobs: 12 },
-      { id: '2', name: 'HSR Layout', isSelected: true, distance: 3.5, estimatedJobs: 10 },
-      { id: '3', name: 'Indiranagar', isSelected: true, distance: 5.2, estimatedJobs: 8 },
-      { id: '4', name: 'Jayanagar', isSelected: false, distance: 7.8, estimatedJobs: 7 },
-      { id: '5', name: 'JP Nagar', isSelected: false, distance: 8.5, estimatedJobs: 6 },
-      { id: '6', name: 'Whitefield', isSelected: false, distance: 12.3, estimatedJobs: 9 },
-      { id: '7', name: 'Electronic City', isSelected: false, distance: 14.1, estimatedJobs: 5 },
-    ];
-    setTimeout(() => {
-      setAvailableAreas(mockAreas);
-      setIsLoading(false);
-    }, 1000);
+    fetchServiceAreas();
   }, []);
+  
+  const fetchServiceAreas = async () => {
+    setIsLoading(true);
+    try {
+      const response = await apiService.get('/professional/service-areas');
+      setAvailableAreas(response.data);
+    } catch (error) {
+      console.error('Error fetching service areas:', error);
+      Alert.alert('Error', 'Failed to load service areas. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredAreas = availableAreas
     .filter(area => area.name.toLowerCase().includes(searchQuery.toLowerCase()) && area.distance <= maxDistance)
@@ -66,16 +68,26 @@ const ProServiceAreaScreen = () => {
     setAvailableAreas(prev => prev.map(area => (area.id === id ? { ...area, isSelected: !area.isSelected } : area)));
   };
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     if (selectedAreas.length === 0) {
       Alert.alert('Error', 'Please select at least one service area.');
       return;
     }
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      const selectedAreaIds = selectedAreas.map(area => area.id);
+      await apiService.put('/professional/service-areas', {
+        areaIds: selectedAreaIds,
+        maxDistance,
+        autoAcceptJobs
+      });
       Alert.alert('Success', 'Service areas updated.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
-    }, 1500);
+    } catch (error) {
+      console.error('Error saving service areas:', error);
+      Alert.alert('Error', 'Failed to update service areas. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (isLoading) {

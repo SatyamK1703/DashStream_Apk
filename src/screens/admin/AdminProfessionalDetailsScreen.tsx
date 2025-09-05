@@ -10,6 +10,7 @@ import {
   Modal,
   TextInput,StyleSheet
 } from 'react-native';
+import apiService from '../../services/apiService';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
@@ -103,129 +104,24 @@ const AdminProfessionalDetailsScreen = () => {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [adminNote, setAdminNote] = useState('');
   
-  // Mock data
-  const mockProfessional: Professional = {
-    id: 'PRO-001',
-    name: 'Rajesh Kumar',
-    phone: '+91 9876543210',
-    email: 'rajesh.kumar@example.com',
-    rating: 4.8,
-    totalJobs: 156,
-    completedJobs: 148,
-    cancelledJobs: 8,
-    totalEarnings: '₹78,500',
-    status: 'active',
-    skills: ['Car Wash', 'Detailing', 'Polish', 'Interior Cleaning'],
-    joinedDate: '2022-05-15',
-    lastActive: '2023-08-15T10:30:00Z',
-    profileImage: undefined,
-    isVerified: true,
-    address: '123 Main Street, Apartment 4B',
-    city: 'Mumbai',
-    state: 'Maharashtra',
-    pincode: '400001',
-    serviceArea: ['Andheri', 'Bandra', 'Juhu', 'Santacruz'],
-    documents: {
-      idProof: {
-        type: 'Aadhaar Card',
-        number: 'XXXX-XXXX-1234',
-        verified: true,
-        uploadDate: '2022-05-10'
-      },
-      addressProof: {
-        type: 'Electricity Bill',
-        verified: true,
-        uploadDate: '2022-05-10'
-      },
-      drivingLicense: {
-        number: 'DL-1234567890',
-        expiry: '2027-04-30',
-        verified: true,
-        uploadDate: '2022-05-10'
+  useEffect(() => {
+    fetchProfessionalDetails();
+  }, [professionalId]);
+  
+  const fetchProfessionalDetails = async () => {
+    setLoading(true);
+    try {
+      const response = await apiService.get(`/admin/professionals/${professionalId}`);
+      if (response.data && response.data.professional) {
+        setProfessional(response.data.professional);
       }
-    },
-    bankDetails: {
-      accountNumber: 'XXXXXXXXXXXX4567',
-      ifscCode: 'SBIN0001234',
-      accountHolderName: 'Rajesh Kumar',
-      bankName: 'State Bank of India',
-      verified: true
-    },
-    taxInfo: {
-      panNumber: 'ABCDE1234F',
-      gstNumber: '27AADCB2230M1Z3'
-    },
-    reviews: [
-      {
-        id: 'REV-001',
-        customerName: 'Amit Patel',
-        rating: 5,
-        comment: 'Excellent service! My car looks brand new. Very professional and punctual.',
-        date: '2023-08-10'
-      },
-      {
-        id: 'REV-002',
-        customerName: 'Priya Sharma',
-        rating: 4,
-        comment: 'Good service overall. Could have been more thorough with the interior cleaning.',
-        date: '2023-08-05'
-      },
-      {
-        id: 'REV-003',
-        customerName: 'Rahul Verma',
-        rating: 5,
-        comment: 'Very satisfied with the detailing service. Will definitely book again!',
-        date: '2023-07-28'
-      }
-    ],
-    recentBookings: [
-      {
-        id: 'BK-1234',
-        date: '2023-08-15',
-        services: ['Premium Car Wash', 'Interior Detailing'],
-        amount: '₹1,200',
-        status: 'completed'
-      },
-      {
-        id: 'BK-1235',
-        date: '2023-08-14',
-        services: ['Basic Car Wash'],
-        amount: '₹500',
-        status: 'completed'
-      },
-      {
-        id: 'BK-1236',
-        date: '2023-08-13',
-        services: ['Full Detailing Package'],
-        amount: '₹2,500',
-        status: 'completed'
-      },
-      {
-        id: 'BK-1237',
-        date: '2023-08-12',
-        services: ['Premium Car Wash', 'Waxing'],
-        amount: '₹1,500',
-        status: 'cancelled'
-      }
-    ],
-    performanceMetrics: {
-      acceptanceRate: 95,
-      cancellationRate: 3,
-      avgResponseTime: '2 mins',
-      avgServiceTime: '1.5 hours',
-      customerSatisfaction: 4.8
+    } catch (error) {
+      console.error('Error fetching professional details:', error);
+      Alert.alert('Error', 'Failed to load professional details');
+    } finally {
+      setLoading(false);
     }
   };
-
-  useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setProfessional(mockProfessional);
-      setLoading(false);
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [professionalId]);
 
   const handleStatusChange = () => {
     if (!professional) return;
@@ -237,21 +133,31 @@ const AdminProfessionalDetailsScreen = () => {
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Confirm', 
-          onPress: () => {
-            // Update professional status
-            setProfessional(prev => {
-              if (!prev) return prev;
-              return {
-                ...prev,
-                status: prev.status === 'active' ? 'inactive' : 'active'
-              };
-            });
-            
-            // Show success message
-            Alert.alert(
-              'Success',
-              `Professional ${professional.status === 'active' ? 'deactivated' : 'activated'} successfully`
-            );
+          onPress: async () => {
+            try {
+              const newStatus = professional.status === 'active' ? 'inactive' : 'active';
+              await apiService.put(`/admin/professionals/${professionalId}/status`, {
+                status: newStatus
+              });
+              
+              // Update professional status locally
+              setProfessional(prev => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  status: newStatus
+                };
+              });
+              
+              // Show success message
+              Alert.alert(
+                'Success',
+                `Professional ${professional.status === 'active' ? 'deactivated' : 'activated'} successfully`
+              );
+            } catch (error) {
+              console.error('Error updating professional status:', error);
+              Alert.alert('Error', 'Failed to update professional status');
+            }
           }
         }
       ]
@@ -268,38 +174,70 @@ const AdminProfessionalDetailsScreen = () => {
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Confirm', 
-          onPress: () => {
-            // Update document verification status
-            setProfessional(prev => {
-              if (!prev) return prev;
-              
-              const updatedProfessional = { ...prev };
+          onPress: async () => {
+            try {
+              let documentId = '';
+              let endpoint = '';
               
               if (documentType === 'ID Proof') {
-                updatedProfessional.documents.idProof.verified = true;
+                documentId = 'idProof';
               } else if (documentType === 'Address Proof') {
-                updatedProfessional.documents.addressProof.verified = true;
-              } else if (documentType === 'Driving License' && updatedProfessional.documents.drivingLicense) {
-                updatedProfessional.documents.drivingLicense.verified = true;
+                documentId = 'addressProof';
+              } else if (documentType === 'Driving License') {
+                documentId = 'drivingLicense';
               } else if (documentType === 'Bank Details') {
-                updatedProfessional.bankDetails.verified = true;
+                endpoint = `/admin/professionals/${professionalId}/bank-details/verify`;
               }
               
-              return updatedProfessional;
-            });
-            
-            // Show success message
-            Alert.alert('Success', `${documentType} verified successfully`);
+              if (documentType !== 'Bank Details') {
+                endpoint = `/admin/professionals/${professionalId}/documents/${documentId}/verify`;
+              }
+              
+              await apiService.put(endpoint, { verified: true });
+              
+              // Update document verification status locally
+              setProfessional(prev => {
+                if (!prev) return prev;
+                
+                const updatedProfessional = { ...prev };
+                
+                if (documentType === 'ID Proof') {
+                  updatedProfessional.documents.idProof.verified = true;
+                } else if (documentType === 'Address Proof') {
+                  updatedProfessional.documents.addressProof.verified = true;
+                } else if (documentType === 'Driving License' && updatedProfessional.documents.drivingLicense) {
+                  updatedProfessional.documents.drivingLicense.verified = true;
+                } else if (documentType === 'Bank Details') {
+                  updatedProfessional.bankDetails.verified = true;
+                }
+                
+                return updatedProfessional;
+              });
+              
+              // Show success message
+              Alert.alert('Success', `${documentType} verified successfully`);
+            } catch (error) {
+              console.error(`Error verifying ${documentType}:`, error);
+              Alert.alert('Error', `Failed to verify ${documentType}`);
+            }
           }
         }
       ]
     );
   };
 
-  const handleSaveNote = () => {
-    // Save admin note logic would go here
-    Alert.alert('Success', 'Note saved successfully');
-    setShowNoteModal(false);
+  const handleSaveNote = async () => {
+    try {
+      await apiService.post(`/admin/professionals/${professionalId}/notes`, {
+        note: adminNote
+      });
+      Alert.alert('Success', 'Note saved successfully');
+      setShowNoteModal(false);
+      setAdminNote('');
+    } catch (error) {
+      console.error('Error saving note:', error);
+      Alert.alert('Error', 'Failed to save note');
+    }
   };
 
    const getStatusColor = (status: string) => {

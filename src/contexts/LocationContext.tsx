@@ -1,8 +1,7 @@
 // src/contexts/LocationContext.tsx
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { FirebaseLocationService, LocationData, Geofence } from '../services/FirebaseLocationService';
+import { LocationApiService, LocationData, Geofence } from '../services/LocationApiService';
 import { useAuth } from './AuthContext';
-import { useFirebaseAuth } from './FirebaseAuthContext';
 import * as Location from 'expo-location';
 
 // Define location context state
@@ -18,7 +17,7 @@ type LocationContextType = {
   getLocationHistory: (limit?: number) => Promise<LocationData[]>;
   addGeofence: (geofence: Omit<Geofence, 'id'>) => Promise<string>;
   removeGeofence: (geofenceId: string) => Promise<boolean>;
-  configureTracking: (options: {
+  updateTrackingSettings: (options: {
     updateInterval?: number;
     significantChangeThreshold?: number;
     batteryOptimizationEnabled?: boolean;
@@ -38,75 +37,73 @@ const LocationContext = createContext<LocationContextType>({
   getLocationHistory: async () => [],
   addGeofence: async () => '',
   removeGeofence: async () => false,
-  configureTracking: async () => {},
+  updateTrackingSettings: async () => {},
 });
 
 // Location provider component
 export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const { firebaseUser } = useFirebaseAuth();
-  const [locationService, setLocationService] = useState<FirebaseLocationService | null>(null);
+  const [locationService, setLocationService] = useState<LocationApiService | null>(null);
   const [currentLocation, setCurrentLocation] = useState<LocationData | null>(null);
   const [locationHistory, setLocationHistory] = useState<LocationData[]>([]);
   const [isTracking, setIsTracking] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize location service when user and Firebase user are available
+  // Initialize location service when user is available
   useEffect(() => {
-    const initializeLocationService = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+   const initializeLocationService = async () => {
+  try {
+    setIsLoading(true);
+    setError(null);
 
-        // Check if user is authenticated and is a professional
-        if (!user || !firebaseUser || user.role !== 'professional') {
-          setIsLoading(false);
-          return;
-        }
+    // Check if user is authenticated and is a professional
+    if (!user || user.role !== 'professional') {
+      setIsLoading(false);
+      return;
+    }
 
-        // Create location service
-        const service = new FirebaseLocationService(user.id, user.role);
-        
-        // Initialize service
-        const initialized = await service.initialize();
-        
-        if (initialized) {
-          setLocationService(service);
-          
-          // Get current location
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          
-          if (status === 'granted') {
-            const location = await Location.getCurrentPositionAsync({});
-            
-            const locationData: LocationData = {
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-              accuracy: location.coords.accuracy,
-              altitude: location.coords.altitude,
-              speed: location.coords.speed,
-              heading: location.coords.heading,
-              timestamp: location.timestamp,
-              status: 'available',
-            };
-            
-            setCurrentLocation(locationData);
-          }
-          
-          // Get location history
-          const history = await service.getLocationHistory();
-          setLocationHistory(history);
-        } else {
-          setError('Failed to initialize location service');
-        }
-      } catch (error: any) {
-        console.error('Error initializing location service:', error);
-        setError(error.message || 'Failed to initialize location service');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    // Create location service
+    const service = new LocationApiService(user.id);
+    
+    // Initialize service
+    await service.initialize();
+    
+    // Service is initialized if no errors were thrown
+    setLocationService(service);
+    
+    // Get current location
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    
+    if (status === 'granted') {
+      const location = await Location.getCurrentPositionAsync({});
+      
+      const locationData: LocationData = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        accuracy: location.coords.accuracy,
+        altitude: location.coords.altitude,
+        speed: location.coords.speed,
+        heading: location.coords.heading,
+        timestamp: location.timestamp,
+        status: 'available',
+      };
+      
+      setCurrentLocation(locationData);
+    }
+    
+    // Get location history
+    const history = await service.getLocationHistory();
+    setLocationHistory(history);
+
+  } catch (error: any) {
+    console.error('Error initializing location service:', error);
+    setError(error.message || 'Failed to initialize location service');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
     initializeLocationService();
 
@@ -116,7 +113,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         locationService.stopTracking();
       }
     };
-  }, [user, firebaseUser]);
+  }, [user]);
 
   // Start tracking location
   const startTracking = async (): Promise<boolean> => {
@@ -204,7 +201,11 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return '';
       }
 
-      return await locationService.addGeofence(geofence);
+      // Add the geofence using the service
+      await locationService.addGeofence(geofence);
+      
+      // Return a placeholder ID (actual ID is managed by the API service)
+      return `geofence_${Date.now()}`;
     } catch (error: any) {
       console.error('Error adding geofence:', error);
       setError(error.message || 'Failed to add geofence');
@@ -228,8 +229,8 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  // Configure tracking settings
-  const configureTracking = async (options: {
+  // Update tracking settings
+  const updateTrackingSettings = async (options: {
     updateInterval?: number;
     significantChangeThreshold?: number;
     batteryOptimizationEnabled?: boolean;
@@ -240,7 +241,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return;
       }
 
-      await locationService.configureTracking(options);
+      await locationService.updateTrackingSettings(options);
     } catch (error: any) {
       console.error('Error configuring tracking:', error);
       setError(error.message || 'Failed to configure tracking');
@@ -260,7 +261,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     getLocationHistory,
     addGeofence,
     removeGeofence,
-    configureTracking,
+    updateTrackingSettings,
   };
 
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>;

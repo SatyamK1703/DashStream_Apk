@@ -19,6 +19,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import apiService from '../../services/apiService';
 import {Customer , Address , Vehicle ,Booking ,Note} from '../../types/AdminType';
 
 type AdminCustomerDetailsRouteProp = RouteProp<AdminStackParamList, 'CustomerDetails'>;
@@ -35,135 +36,32 @@ const AdminCustomerDetailsScreen = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'addresses' | 'vehicles' | 'notes'>('overview');
   const [newNote, setNewNote] = useState('');
   
-  // Mock customer data
-  const mockCustomer: Customer = {
-    id: 'CUST-001',
-    name: 'Priya Sharma',
-    email: 'priya.sharma@example.com',
-    phone: '+91 9876543210',
-    profileImage: 'https://randomuser.me/api/portraits/women/1.jpg',
-    status: 'active',
-    totalBookings: 15,
-    totalSpent: 12500,
-    membershipStatus: 'gold',
-    membershipExpiry: '2023-12-31',
-    joinDate: '2023-01-15',
-    lastActive: '2023-06-10',
-    addresses: [
-      {
-        id: 'ADDR-001',
-        type: 'home',
-        name: 'Home',
-        address: '123, Green Park Colony, Sector 15',
-        city: 'Mumbai',
-        state: 'Maharashtra',
-        pincode: '400001',
-        isDefault: true
-      },
-      {
-        id: 'ADDR-002',
-        type: 'work',
-        name: 'Office',
-        address: 'Tech Park, Building B, Floor 5',
-        city: 'Mumbai',
-        state: 'Maharashtra',
-        pincode: '400002',
-        isDefault: false
+  
+  
+  // Fetch customer data from API
+  const fetchCustomerData = async () => {
+    try {
+      setLoading(true);
+      const response = await apiService.get(`/admin/customers/${customerId}`);
+      if (response.data && response.data.customer) {
+        setCustomer(response.data.customer);
       }
-    ],
-    vehicles: [
-      {
-        id: 'VEH-001',
-        type: 'car',
-        brand: 'Honda',
-        model: 'City',
-        year: '2020',
-        color: 'White',
-        licensePlate: 'MH 01 AB 1234',
-        image: 'https://example.com/car-image.jpg'
-      }
-    ],
-    bookings: [
-      {
-        id: 'BOOK-001',
-        date: '2023-06-10',
-        time: '10:00 AM',
-        services: [
-          { name: 'Premium Car Wash', price: 999 },
-          { name: 'Interior Cleaning', price: 799 }
-        ],
-        totalAmount: 1798,
-        status: 'completed',
-        paymentStatus: 'paid',
-        paymentMethod: 'Credit Card',
-        professionalName: 'Rajesh Kumar',
-        professionalId: 'PRO-001',
-        rating: 4.5,
-        address: 'Home - 123, Green Park Colony, Sector 15, Mumbai'
-      },
-      {
-        id: 'BOOK-002',
-        date: '2023-05-25',
-        time: '02:30 PM',
-        services: [
-          { name: 'Basic Car Wash', price: 499 }
-        ],
-        totalAmount: 499,
-        status: 'completed',
-        paymentStatus: 'paid',
-        paymentMethod: 'UPI',
-        professionalName: 'Amit Singh',
-        professionalId: 'PRO-003',
-        rating: 5,
-        address: 'Home - 123, Green Park Colony, Sector 15, Mumbai'
-      },
-      {
-        id: 'BOOK-003',
-        date: '2023-06-20',
-        time: '11:00 AM',
-        services: [
-          { name: 'Premium Car Wash', price: 999 },
-          { name: 'Waxing & Polishing', price: 1299 }
-        ],
-        totalAmount: 2298,
-        status: 'confirmed',
-        paymentStatus: 'paid',
-        paymentMethod: 'Credit Card',
-        address: 'Office - Tech Park, Building B, Floor 5, Mumbai'
-      },
-    ],
-    notes: [
-      {
-        id: 'NOTE-001',
-        text: 'Customer prefers weekend appointments only.',
-        createdBy: 'Admin',
-        createdAt: '2023-02-10T10:30:00Z'
-      },
-      {
-        id: 'NOTE-002',
-        text: 'Upgraded to Gold membership after 10th booking.',
-        createdBy: 'System',
-        createdAt: '2023-05-15T14:45:00Z'
-      }
-    ]
+    } catch (error) {
+      console.error('Error fetching customer details:', error);
+      Alert.alert('Error', 'Failed to load customer details');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
   useEffect(() => {
-    //simulate API call
-    const timer = setTimeout(() => {
-      setCustomer(mockCustomer);
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
+    fetchCustomerData();
   }, [customerId]);
 
   const handleRefresh = () => {
     setRefreshing(true);
-    //simulate API call 
-    setTimeout(() => {
-      setCustomer(mockCustomer);
-      setRefreshing(false);
-    }, 1500);
+    fetchCustomerData();
   };
 
   const handleToggleStatus = (newStatus: 'active' | 'inactive' | 'blocked') => {

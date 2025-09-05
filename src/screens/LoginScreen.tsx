@@ -56,7 +56,7 @@ const LoginScreen = () => {
         {/* Logo Section */}
         <View style={styles.logoContainer}>
           <Image
-            source={require('../assets/images/image.png')} // Replace with your logo
+            source={require('../../assets/icon.png')} // Replace with your logo
             style={styles.logo}
           />
           <Text style={styles.title}>Welcome to DashStream</Text>

@@ -16,8 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useAuth } from '../../contexts/AuthContext';
-import { firebase } from '../../config/firebase';
-import { LocationData } from '../../services/FirebaseLocationService';
+import { LocationData } from '../../services/LocationApiService';
+import * as locationApi from '../../services/locationApi';
 
 interface Professional {
   id: string;
@@ -62,19 +62,18 @@ const LocationManagementScreen = ({ navigation }: any) => {
   useEffect(() => {
     fetchProfessionals();
     
-    // Set up real-time listener for location updates
-    const locationRef = firebase.database().ref('locations');
-    const unsubscribe = locationRef.on('value', (snapshot) => {
-      if (snapshot.exists()) {
-        updateProfessionalsWithLocation(snapshot.val());
+    // Set up polling for location updates every 30 seconds
+    const intervalId = setInterval(() => {
+      if (professionals.length > 0) {
+        updateProfessionalsWithLocation();
       }
-    });
+    }, 30000);
 
     return () => {
-      // Clean up listener
-      locationRef.off('value', unsubscribe);
+      // Clean up interval
+      clearInterval(intervalId);
     };
-  }, []);
+  }, [professionals.length]);
 
   // Filter professionals when search query or status filter changes
   useEffect(() => {
@@ -87,54 +86,19 @@ const LocationManagementScreen = ({ navigation }: any) => {
       setLoading(true);
       setError(null);
       
-      // Fetch professionals from your API
-      // This is a placeholder - replace with your actual API call
-      const response = await fetch('YOUR_API_ENDPOINT/professionals');
+      // Fetch professionals from the API
+      const response = await locationApi.getProfessionals();
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch professionals');
+      if (response.success && response.data) {
+        setProfessionals(response.data);
+        setFilteredProfessionals(response.data);
+      } else {
+        throw new Error(response.message || 'Failed to fetch professionals');
       }
-      
-      const data = await response.json();
-      setProfessionals(data);
-      setFilteredProfessionals(data);
     } catch (err: any) {
       console.error('Error fetching professionals:', err);
       setError(err.message || 'Failed to fetch professionals');
-      
-      // For demo purposes, create mock data
-      const mockProfessionals: Professional[] = [
-        {
-          id: '1',
-          name: 'John Smith',
-          phone: '+1234567890',
-          email: 'john.smith@example.com',
-          specialization: 'Plumbing',
-          status: 'available',
-          lastActive: Date.now() - 5 * 60 * 1000, // 5 minutes ago
-        },
-        {
-          id: '2',
-          name: 'Sarah Johnson',
-          phone: '+1987654321',
-          email: 'sarah.j@example.com',
-          specialization: 'Electrical',
-          status: 'busy',
-          lastActive: Date.now() - 15 * 60 * 1000, // 15 minutes ago
-        },
-        {
-          id: '3',
-          name: 'Michael Brown',
-          phone: '+1122334455',
-          email: 'michael.b@example.com',
-          specialization: 'Carpentry',
-          status: 'offline',
-          lastActive: Date.now() - 120 * 60 * 1000, // 2 hours ago
-        },
-      ];
-      
-      setProfessionals(mockProfessionals);
-      setFilteredProfessionals(mockProfessionals);
+      Alert.alert('Error', 'Failed to load professionals. Please try again.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -142,21 +106,31 @@ const LocationManagementScreen = ({ navigation }: any) => {
   };
 
   // Update professionals with location data
-  const updateProfessionalsWithLocation = (locationData: Record<string, LocationData>) => {
-    setProfessionals(prevProfessionals => {
-      return prevProfessionals.map(professional => {
-        const userLocation = locationData[professional.id];
-        if (userLocation && userLocation.current) {
-          return {
-            ...professional,
-            currentLocation: userLocation.current,
-            status: userLocation.current.status || professional.status,
-            lastActive: userLocation.current.timestamp || professional.lastActive,
-          };
-        }
-        return professional;
-      });
-    });
+  const updateProfessionalsWithLocation = async () => {
+    try {
+      const updatedProfessionals = await Promise.all(
+        professionals.map(async (professional) => {
+          try {
+            const response = await locationApi.getProfessionalLocation(professional.id);
+            if (response.success && response.data) {
+              return {
+                ...professional,
+                currentLocation: response.data.location,
+                status: response.data.status || professional.status,
+                lastActive: response.data.timestamp || professional.lastActive,
+              };
+            }
+          } catch (error) {
+            console.error(`Error fetching location for ${professional.id}:`, error);
+          }
+          return professional;
+        })
+      );
+      
+      setProfessionals(updatedProfessionals);
+    } catch (error) {
+      console.error('Error updating professionals with location:', error);
+    }
   };
 
   // Filter professionals based on search query and status filter
@@ -187,15 +161,11 @@ const LocationManagementScreen = ({ navigation }: any) => {
     try {
       setLoadingHistory(true);
       
-      // Fetch location history from Firebase
-      const historyRef = firebase.database().ref(`locations/${professionalId}/history`);
-      const snapshot = await historyRef.orderByChild('timestamp').limitToLast(50).once('value');
+      // Fetch location history from API
+      const response = await locationApi.getProfessionalLocationHistory(professionalId, 50);
       
-      if (snapshot.exists()) {
-        const historyData: LocationData[] = [];
-        snapshot.forEach((childSnapshot) => {
-          historyData.push(childSnapshot.val() as LocationData);
-        });
+      if (response.success && response.data?.data) {
+        const historyData = response.data.data;
         
         // Sort by timestamp (newest first)
         historyData.sort((a, b) => b.timestamp - a.timestamp);

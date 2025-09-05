@@ -11,7 +11,7 @@ import {
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import { API_URL } from '../../config/constants';
+import { API_CONFIG } from '../../constants/config';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Location from 'expo-location';
@@ -85,7 +85,7 @@ const ProfessionalLocationScreen = () => {
       setError(null);
 
       const response = await axios.get(
-        `${API_URL}/api/location/professional/${professionalId}`,
+        `${API_CONFIG.BASE_URL}/location/professional/${professionalId}`,
         {
           headers: {
             Authorization: `Bearer ${authState.token}`,
@@ -94,19 +94,28 @@ const ProfessionalLocationScreen = () => {
       );
 
       if (response.data.success && response.data.data) {
+        // Extract location data from response
+        const locationData = response.data.data.current || {};
+        
+        // Create professional object with properly formatted location
         setProfessional({
           _id: professionalId,
           name: professionalName,
           phone: response.data.data.phone || '',
           status: response.data.data.status || 'offline',
-          location: response.data.data.currentLocation,
+          location: {
+            latitude: locationData.latitude,
+            longitude: locationData.longitude,
+            accuracy: locationData.accuracy || 0,
+            timestamp: locationData.timestamp || new Date().toISOString()
+          },
         });
 
         // Center map on professional's location if available
-        if (response.data.data.currentLocation && mapRef.current) {
+        if (locationData.latitude && locationData.longitude && mapRef.current) {
           mapRef.current.animateToRegion({
-            latitude: response.data.data.currentLocation.latitude,
-            longitude: response.data.data.currentLocation.longitude,
+            latitude: locationData.latitude,
+            longitude: locationData.longitude,
             latitudeDelta: 0.01,
             longitudeDelta: 0.01,
           });
@@ -126,7 +135,7 @@ const ProfessionalLocationScreen = () => {
   const subscribeToLocationUpdates = async () => {
     try {
       const response = await axios.post(
-        `${API_URL}/api/location/subscribe/${professionalId}`,
+        `${API_CONFIG.BASE_URL}/location/subscribe/${professionalId}`,
         {},
         {
           headers: {
@@ -153,7 +162,7 @@ const ProfessionalLocationScreen = () => {
   const unsubscribeFromLocationUpdates = async () => {
     try {
       const response = await axios.post(
-        `${API_URL}/api/location/unsubscribe/${professionalId}`,
+        `${API_CONFIG.BASE_URL}/location/unsubscribe/${professionalId}`,
         {},
         {
           headers: {

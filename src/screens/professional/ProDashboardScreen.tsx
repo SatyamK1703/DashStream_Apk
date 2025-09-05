@@ -14,20 +14,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 
-// Mock types and hooks to make the component self-contained
-type ProStackParamList = {
-  Dashboard: undefined;
-  Jobs: undefined;
-  JobDetails: { jobId: string };
-  Earnings: undefined;
-  ProNotifications: undefined;
-  ProSettings: undefined;
-  ProProfile: undefined;
-};
-
-const useAuth = () => ({
-  user: { name: 'Rahul' }
-});
+import { ProStackParamList } from '../../../app/routes/ProfessionalNavigator';
+import { useAuth } from '../../contexts/AuthContext';
+import apiService from '../../services/apiService';
 
 type ProDashboardScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;
 
@@ -72,23 +61,23 @@ const ProDashboardScreen = () => {
   const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
 
   // --- Data Fetching ---
-  const fetchDashboardData = () => {
-    // In a real app, this would be an API call
-    const mockUpcomingJobs: Job[] = [
-        { id: 'JOB123456', customerName: 'Priya Sharma', customerImage: 'https://randomuser.me/api/portraits/women/44.jpg', date: 'Today', time: '11:30 AM', address: '123 Main St, Koramangala, Bangalore', services: [{ name: 'Premium Wash', price: 599 }, { name: 'Interior Cleaning', price: 399 }], totalAmount: 998, status: 'upcoming', distance: '3.2 km', estimatedArrival: '25 mins' },
-        { id: 'JOB123457', customerName: 'Arjun Mehta', customerImage: 'https://randomuser.me/api/portraits/men/32.jpg', date: 'Today', time: '02:00 PM', address: '456 Park Ave, Indiranagar, Bangalore', services: [{ name: 'Basic Wash', price: 399 }], totalAmount: 399, status: 'upcoming', distance: '5.7 km', estimatedArrival: '35 mins' },
-        { id: 'JOB123458', customerName: 'Neha Patel', customerImage: 'https://randomuser.me/api/portraits/women/68.jpg', date: 'Tomorrow', time: '10:15 AM', address: '789 Lake View, HSR Layout, Bangalore', services: [{ name: 'Premium Wash', price: 599 }, { name: 'Wax Polish', price: 799 }], totalAmount: 1398, status: 'upcoming' },
-    ];
-    const mockEarningsSummary: EarningsSummary = { today: 1397, thisWeek: 6785, thisMonth: 24650, pendingPayout: 12325, lastPayout: { amount: 12325, date: '15 May 2023' } };
-    const mockPerformanceMetrics: PerformanceMetrics = { rating: 4.8, totalJobs: 127, completionRate: 98, onTimeRate: 95, customerSatisfaction: 92 };
-
-    setTimeout(() => {
-      setUpcomingJobs(mockUpcomingJobs);
-      setEarningsSummary(mockEarningsSummary);
-      setPerformanceMetrics(mockPerformanceMetrics);
+  const fetchDashboardData = async () => {
+    try {
+      // Real API calls
+      const jobsResponse = await apiService.get('/professional/jobs/upcoming');
+      setUpcomingJobs(jobsResponse.data);
+      
+      const earningsResponse = await apiService.get('/professional/earnings/summary');
+      setEarningsSummary(earningsResponse.data);
+      
+      const performanceResponse = await apiService.get('/professional/performance');
+      setPerformanceMetrics(performanceResponse.data);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
       setLoading(false);
       setRefreshing(false);
-    }, 1500);
+    }
   };
 
   useEffect(() => {

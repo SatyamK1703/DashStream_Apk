@@ -1,15 +1,9 @@
-// src/constants/config.ts
 
-/**
- * Application configuration constants
- */
 
 // API Configuration
 export const API_CONFIG = {
   // Base URL for API requests
-  BASE_URL: __DEV__ 
-    ? 'http://10.0.2.2:5000/api' // Android emulator localhost
-    : 'https://api.dashstream.com/api', // Production API URL
+  BASE_URL: 'https://dash-stream-apk-backend.vercel.app/api', // Production API URL
   
   // API Timeout in milliseconds
   TIMEOUT: 30000,
@@ -48,6 +42,11 @@ export const API_CONFIG = {
     NOTIFICATIONS: {
       LIST: '/notifications',
       MARK_READ: '/notifications/:id/read',
+      MARK_ALL_READ: '/notifications/mark-all-read',
+      REGISTER_DEVICE: '/notifications/register-device',
+      DEREGISTER_DEVICE: '/notifications/deregister-device',
+      SEND_NOTIFICATION: '/notifications/send',
+      MY_DEVICES: '/notifications/my-devices',
     },
     
     // Payments
@@ -60,6 +59,19 @@ export const API_CONFIG = {
       REGISTER_DEVICE: '/notifications/register-device',
       DEREGISTER_DEVICE: '/notifications/deregister-device',
       MY_DEVICES: '/notifications/my-devices',
+    },
+    
+    // Location
+    LOCATION: {
+      UPDATE: '/location/update',
+      STATUS: '/location/status',
+      TRACKING: '/location/tracking',
+      SETTINGS: '/location/settings',
+      PROFESSIONAL: '/location/professional/:id',
+      HISTORY: '/location/professional/:id/history',
+      NEARBY: '/location/nearby',
+      SUBSCRIBE: '/location/subscribe/:professionalId',
+      UNSUBSCRIBE: '/location/unsubscribe/:professionalId',
     },
   },
 };

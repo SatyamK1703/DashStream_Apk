@@ -16,7 +16,8 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 // Removed MaterialIcons as it was not used
-//import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import apiService from '../../services/apiService';
 
 // Mock types for navigation to make the component self-contained
 type AdminStackParamList = {
@@ -67,45 +68,43 @@ const AdminProfessionalEditScreen = () => {
   const [serviceAreaInput, setServiceAreaInput] = useState('');
   const [serviceAreas, setServiceAreas] = useState<string[]>([]);
 
-  // Mock data to simulate fetching from an API
-  const mockProfessional: Professional = {
-    id: 'PRO-001',
-    name: 'Rajesh Kumar',
-    phone: '+91 9876543210',
-    email: 'rajesh.kumar@example.com',
-    status: 'active',
-    skills: ['Car Wash', 'Detailing', 'Polish', 'Interior Cleaning'],
-    isVerified: true,
-    address: '123 Main Street, Apartment 4B',
-    city: 'Mumbai',
-    state: 'Maharashtra',
-    pincode: '400001',
-    serviceArea: ['Andheri', 'Bandra', 'Juhu', 'Santacruz'],
-  };
+  // Function to fetch professional data from API
 
   // Effect to fetch and populate professional data on component mount
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setProfessional(mockProfessional);
-      
-      // Initialize form state with fetched data
-      setName(mockProfessional.name);
-      setPhone(mockProfessional.phone);
-      setEmail(mockProfessional.email);
-      setStatus(mockProfessional.status);
-      setIsVerified(mockProfessional.isVerified);
-      setAddress(mockProfessional.address);
-      setCity(mockProfessional.city);
-      setState(mockProfessional.state);
-      setPincode(mockProfessional.pincode);
-      setSkills(mockProfessional.skills);
-      setServiceAreas(mockProfessional.serviceArea);
-      
-      setLoading(false);
-    }, 1500);
-
-    return () => clearTimeout(timer);
+    fetchProfessionalData();
   }, [professionalId]);
+  
+  // Function to fetch professional data from API
+  const fetchProfessionalData = async () => {
+    setLoading(true);
+    try {
+      const response = await apiService.get(`/admin/professionals/${professionalId}`);
+      
+      if (response.data && response.data.professional) {
+        const fetchedProfessional = response.data.professional;
+        setProfessional(fetchedProfessional);
+        
+        // Initialize form state with fetched data
+        setName(fetchedProfessional.name);
+        setPhone(fetchedProfessional.phone);
+        setEmail(fetchedProfessional.email);
+        setStatus(fetchedProfessional.status);
+        setIsVerified(fetchedProfessional.isVerified);
+        setAddress(fetchedProfessional.address);
+        setCity(fetchedProfessional.city);
+        setState(fetchedProfessional.state);
+        setPincode(fetchedProfessional.pincode);
+        setSkills(fetchedProfessional.skills);
+        setServiceAreas(fetchedProfessional.serviceArea);
+      }
+    } catch (error) {
+      console.error('Error fetching professional details:', error);
+      Alert.alert('Error', 'Failed to load professional details');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handlers for adding and removing skills
   const handleAddSkill = () => {
@@ -130,21 +129,41 @@ const AdminProfessionalEditScreen = () => {
   };
 
   // Handler to save changes
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim() || !phone.trim() || !email.trim()) {
       Alert.alert('Error', 'Name, Phone, and Email are required');
       return;
     }
     
     setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      const updatedProfessional = {
+        name,
+        phone,
+        email,
+        status,
+        isVerified,
+        address,
+        city,
+        state,
+        pincode,
+        skills,
+        serviceArea: serviceAreas
+      };
+      
+      await apiService.put(`/admin/professionals/${professionalId}`, updatedProfessional);
+      
       Alert.alert(
         'Success',
         'Professional details updated successfully',
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
-    }, 1500);
+    } catch (error) {
+      console.error('Error updating professional:', error);
+      Alert.alert('Error', 'Failed to update professional details');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Handler to cancel editing and show a confirmation dialog

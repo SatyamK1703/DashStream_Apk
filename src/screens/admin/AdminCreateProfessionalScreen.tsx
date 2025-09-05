@@ -20,6 +20,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import apiService from '../../services/apiService';
 
 
 type AdminCreateProfessionalNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
@@ -83,20 +84,44 @@ const AdminCreateProfessionalScreen = () => {
   const [showSkillsSection, setShowSkillsSection] = useState(false);
   const [showServiceAreasSection, setShowServiceAreasSection] = useState(false);
   
-  // Mock data for skills and service areas
-  const availableSkills = [
+  // State for available skills and service areas
+  const [availableSkills, setAvailableSkills] = useState([
     { id: '1', name: 'Basic Car Wash' },
     { id: '2', name: 'Premium Car Wash' },
     { id: '3', name: 'Interior Cleaning' },
     { id: '4', name: 'Exterior Detailing' },
     { id: '5', name: 'Full Detailing' },
-  ];
+  ]);
   
-  const availableServiceAreas = [
+  const [availableServiceAreas, setAvailableServiceAreas] = useState([
     { id: '1', name: 'Ara', city: 'Bihar' },
     { id: '2', name: 'Gaya', city: 'Bihar' },
     { id: '3', name: 'Buxar', city: 'Bihar' },
-  ];
+  ]);
+  
+  // Effect to fetch skills and service areas
+  React.useEffect(() => {
+    fetchSkillsAndServiceAreas();
+  }, []);
+  
+  const fetchSkillsAndServiceAreas = async () => {
+    try {
+      // Fetch skills
+      const skillsResponse = await apiService.get('/admin/skills');
+      if (skillsResponse.data && skillsResponse.data.skills) {
+        setAvailableSkills(skillsResponse.data.skills);
+      }
+      
+      // Fetch service areas
+      const areasResponse = await apiService.get('/admin/service-areas');
+      if (areasResponse.data && areasResponse.data.areas) {
+        setAvailableServiceAreas(areasResponse.data.areas);
+      }
+    } catch (error) {
+      console.error('Error fetching skills and service areas:', error);
+      // Keep the default mock data if API fails
+    }
+  };
   
   const updateFormData = (key: keyof FormData, value: any) => {
     setFormData(prev => ({
@@ -196,17 +221,41 @@ const AdminCreateProfessionalScreen = () => {
     return Object.keys(newErrors).length === 0;
   };
   
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return;
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    
+    try {
+      // Prepare data for API
+      const professionalData = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        profileImage: formData.profileImage,
+        status: formData.status,
+        sendCredentials: formData.sendCredentials,
+        address: formData.address,
+        skills: formData.skills,
+        serviceAreas: formData.serviceAreas,
+        experience: formData.experience,
+        vehicleInfo: formData.vehicleInfo
+      };
+      
+      // Make API call
+      const response = await apiService.post('/admin/professionals', professionalData);
+      
       Alert.alert(
         'Success',
-        `Professional ${formData.name} created.`,
+        `Professional ${formData.name} created successfully.`,
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
-    }, 2000);
+    } catch (error) {
+      console.error('Error creating professional:', error);
+      Alert.alert('Error', 'Failed to create professional. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
   
   const generateRandomPassword = () => {

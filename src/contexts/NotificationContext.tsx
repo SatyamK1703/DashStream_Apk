@@ -1,7 +1,8 @@
 // src/contexts/NotificationContext.tsx
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import * as api from '../services/api';
 import { useAuth } from './AuthContext';
+import * as notificationService from '../services/notificationService';
+import * as notificationApi from '../services/notificationApi';
 
 // Define notification type
 type Notification = {
@@ -63,7 +64,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     
     setIsLoading(true);
     try {
-      const result = await api.getNotifications();
+      const result = await notificationApi.getNotifications();
       if (result.success && result.notifications) {
         setNotifications(result.notifications);
       }
@@ -77,7 +78,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Mark notification as read
   const markAsRead = async (notificationId: string) => {
     try {
-      const result = await api.markNotificationAsRead(notificationId);
+      const result = await notificationApi.markNotificationAsRead(notificationId);
       if (result.success) {
         // Update local state
         setNotifications(prevNotifications =>
@@ -96,7 +97,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
-      const result = await api.markAllNotificationsAsRead();
+      const result = await notificationApi.markAllNotificationsAsRead();
       if (result.success) {
         // Update local state
         setNotifications(prevNotifications =>
@@ -115,7 +116,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const token = await notificationService.registerForPushNotificationsAsync();
       if (token) {
         // Pass the token and device info to the API
-        await api.registerDeviceForPushNotifications(token, deviceInfo);
+        await notificationApi.registerDeviceForPushNotifications(token, deviceInfo);
         console.log('Device registered for push notifications with token:', token);
       } else {
         console.log('Failed to get push notification token');
@@ -131,7 +132,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const deregisterDeviceFromPushNotifications = async (deviceToken?: string) => {
     try {
       setIsLoading(true);
-      await api.deregisterDeviceFromPushNotifications(deviceToken);
+      await notificationApi.deregisterDeviceFromPushNotifications(deviceToken);
       console.log('Device deregistered from push notifications');
     } catch (error) {
       console.error('Error deregistering device from push notifications:', error);

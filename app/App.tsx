@@ -7,7 +7,6 @@ import { View, Platform } from 'react-native';
 
 // Import contexts
 import { AuthProvider } from '../src/contexts/AuthContext';
-import { FirebaseAuthProvider } from '../src/contexts/FirebaseAuthContext';
 import { LocationProvider } from '../src/contexts/LocationContext';
 import { NotificationProvider } from '../src/contexts/NotificationContext';
 import { BookingProvider } from '../src/contexts/BookingContext';
@@ -20,20 +19,18 @@ const App = () => {
       <View style={{ flex: 1 }}>
         <StatusBar style="auto" />
         <AuthProvider>
-          <FirebaseAuthProvider>
-            <LocationProvider>
-              <ServiceProvider>
-                <BookingProvider>
-                  <NotificationProvider>
-                    <NavigationContainer>
-                      <RootNavigator />
-                      <NotificationHandler />
-                    </NavigationContainer>
-                  </NotificationProvider>
-                </BookingProvider>
-              </ServiceProvider>
-            </LocationProvider>
-          </FirebaseAuthProvider>
+          <LocationProvider>
+            <ServiceProvider>
+              <BookingProvider>
+                <NotificationProvider>
+                  <NavigationContainer>
+                    <RootNavigator />
+                    <NotificationHandler />
+                  </NavigationContainer>
+                </NotificationProvider>
+              </BookingProvider>
+            </ServiceProvider>
+          </LocationProvider>
         </AuthProvider>
       </View>
     </SafeAreaProvider>

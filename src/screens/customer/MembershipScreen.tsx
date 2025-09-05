@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,8 +18,8 @@ import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { useAuth } from '../../contexts/AuthContext';
 import FAQList from '~/components/faq/FAQList';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {membershipPlans} from '../../constants/data/data'
 import { useRequireAuth } from '../../hooks/useRequireAuth';
+import apiService from '../../services/apiService';
 
 type MembershipScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -41,57 +41,71 @@ const MembershipScreen = () => {
   const [selectedPlan, setSelectedPlan] = useState<MembershipPlan | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   
-  // Mock user membership status
+  // User membership status
   const [userMembership, setUserMembership] = useState({
-    active: true,
-    plan: 'Silver',
-    validUntil: '2023-12-31',
-    autoRenew: true,
-    usedServices: 3,
-    totalServices: 5,
-    savings: 1250
+    active: false,
+    plan: '',
+    validUntil: '',
+    autoRenew: false,
+    usedServices: 0,
+    totalServices: 0,
+    savings: 0
   });
+  
+  // Fetch user membership data
+  const fetchMembershipData = async () => {
+    try {
+      const response = await apiService.get('/membership/status');
+      setUserMembership(response.data);
+    } catch (error) {
+      console.error('Error fetching membership data:', error);
+      Alert.alert('Error', 'Failed to load membership information');
+    }
+  };
+  
+  useEffect(() => {
+    if (isFullyAuthenticated) {
+      fetchMembershipData();
+    }
+  }, [isFullyAuthenticated]);
 
   const handleSelectPlan = (plan: MembershipPlan) => {
     setSelectedPlan(plan);
     setShowConfirmModal(true);
   };
 
-  const handlePurchasePlan = () => {
+  const handlePurchasePlan = async () => {
     if (!selectedPlan) return;
     
     setShowConfirmModal(false);
     setLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setUserMembership({
-        active: true,
-        plan: selectedPlan.name,
-        validUntil: '2024-06-30', // 6 months from now
-        autoRenew: true,
-        usedServices: 0,
-        totalServices: selectedPlan.name === 'Platinum' ? Infinity : (selectedPlan.name === 'Gold' ? 24 : (selectedPlan.name === 'Silver' ? 12 : 5)),
-        savings: 0
+    try {
+      const response = await apiService.post('/membership/purchase', {
+        planId: selectedPlan.id
       });
-      setLoading(false);
+      
+      setUserMembership(response.data);
       Alert.alert(
         'Membership Activated',
         `Your ${selectedPlan.name} membership has been successfully activated!`,
         [{ text: 'OK' }]
       );
-    }, 2000);
+    } catch (error) {
+      console.error('Error purchasing membership:', error);
+      Alert.alert('Error', 'Failed to purchase membership. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const toggleAutoRenew = () => {
+  const toggleAutoRenew = async () => {
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setUserMembership(prev => ({
-        ...prev,
-        autoRenew: !prev.autoRenew
-      }));
-      setLoading(false);
+    try {
+      const response = await apiService.put('/membership/auto-renew', {
+        autoRenew: !userMembership.autoRenew
+      });
+      setUserMembership(response.data);
       Alert.alert(
         userMembership.autoRenew ? 'Auto-Renewal Disabled' : 'Auto-Renewal Enabled',
         userMembership.autoRenew 
@@ -99,7 +113,12 @@ const MembershipScreen = () => {
           : 'Your membership will renew automatically when it expires.',
         [{ text: 'OK' }]
       );
-    }, 1000);
+    } catch (error) {
+      console.error('Error toggling auto-renewal:', error);
+      Alert.alert('Error', 'Failed to update auto-renewal settings');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const cancelMembership = () => {
@@ -111,21 +130,22 @@ const MembershipScreen = () => {
         { 
           text: 'Yes, Cancel', 
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             setLoading(true);
-            // Simulate API call
-            setTimeout(() => {
-              setUserMembership(prev => ({
-                ...prev,
-                active: false
-              }));
-              setLoading(false);
+            try {
+              const response = await apiService.post('/membership/cancel');
+              setUserMembership(response.data);
               Alert.alert(
                 'Membership Cancelled',
                 'Your membership has been cancelled. You will have access until the end of your current billing period.',
                 [{ text: 'OK' }]
               );
-            }, 1500);
+            } catch (error) {
+              console.error('Error cancelling membership:', error);
+              Alert.alert('Error', 'Failed to cancel membership. Please try again.');
+            } finally {
+              setLoading(false);
+            }
           }
         }
       ]

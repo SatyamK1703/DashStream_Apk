@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import apiService from '../../services/apiService';
 
 // --- Type Definitions ---
 type AdminCustomerListNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
@@ -43,20 +44,26 @@ const AdminCustomerListScreen = () => {
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Mock customer data
-  const mockCustomers: Customer[] = [
-    { id: 'CUST-001', name: 'Priya Sharma', email: 'priya.sharma@example.com', phone: '+91 9876543210', profileImage: 'https://randomuser.me/api/portraits/women/1.jpg', status: 'active', totalBookings: 15, totalSpent: 12500, membershipStatus: 'gold', joinDate: '2023-01-15', lastActive: '2023-06-10' },
-    { id: 'CUST-002', name: 'Rahul Verma', email: 'rahul.verma@example.com', phone: '+91 9876543211', profileImage: 'https://randomuser.me/api/portraits/men/1.jpg', status: 'active', totalBookings: 8, totalSpent: 7800, membershipStatus: 'silver', joinDate: '2023-02-20', lastActive: '2023-06-05' },
-    { id: 'CUST-003', name: 'Ananya Patel', email: 'ananya.patel@example.com', phone: '+91 9876543212', profileImage: 'https://randomuser.me/api/portraits/women/2.jpg', status: 'inactive', totalBookings: 3, totalSpent: 2500, membershipStatus: 'none', joinDate: '2023-03-10', lastActive: '2023-04-15' },
-  ];
+  // Import API service
+  
+
+  // Fetch customers from API
+  const fetchCustomers = async () => {
+    try {
+      const response = await apiService.get('/admin/customers');
+      if (response.data && response.data.customers) {
+        setCustomers(response.data.customers);
+        setFilteredCustomers(response.data.customers);
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setCustomers(mockCustomers);
-      setFilteredCustomers(mockCustomers);
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
+    fetchCustomers();
   }, []);
 
   useEffect(() => {
@@ -65,10 +72,8 @@ const AdminCustomerListScreen = () => {
 
   const handleRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setCustomers(mockCustomers);
-      setRefreshing(false);
-    }, 1500);
+    fetchCustomers()
+      .finally(() => setRefreshing(false));
   };
 
   const applyFilters = () => {

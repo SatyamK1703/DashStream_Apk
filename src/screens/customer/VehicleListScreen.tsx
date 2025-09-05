@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import {mockVehicles} from '../../constants/data/data';
+import apiService from '../../services/apiService';
 import { useAuth } from '../../contexts/AuthContext';
 type Vehicle = {
   id: string;
@@ -63,12 +63,12 @@ const VehicleListScreen = () => {
   const fetchVehicles = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      setTimeout(() => {
-        setVehicles(mockVehicles);
-        setLoading(false);
-      }, 1000);
+      // Real API call
+      const response = await apiService.get('/vehicles');
+      setVehicles(response.data);
+      setLoading(false);
     } catch (error) {
+      console.error('Error fetching vehicles:', error);
       Alert.alert('Error', 'Failed to load vehicles');
       setLoading(false);
     }
@@ -95,10 +95,13 @@ const VehicleListScreen = () => {
     setFilteredVehicles(result);
   };
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    fetchVehicles();
-    setTimeout(() => setRefreshing(false), 1000);
+    try {
+      await fetchVehicles();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const confirmDelete = (id: string) => {
@@ -106,11 +109,19 @@ const VehicleListScreen = () => {
     setDeleteModalVisible(true);
   };
 
-  const deleteVehicle = () => {
+  const deleteVehicle = async () => {
     if (vehicleToDelete) {
-      setVehicles(vehicles.filter(v => v.id !== vehicleToDelete));
-      setDeleteModalVisible(false);
-      setVehicleToDelete(null);
+      try {
+        await apiService.delete(`/vehicles/${vehicleToDelete}`);
+        setVehicles(vehicles.filter(v => v.id !== vehicleToDelete));
+        Alert.alert('Success', 'Vehicle deleted successfully');
+      } catch (error) {
+        console.error('Error deleting vehicle:', error);
+        Alert.alert('Error', 'Failed to delete vehicle');
+      } finally {
+        setDeleteModalVisible(false);
+        setVehicleToDelete(null);
+      }
     }
   };
 

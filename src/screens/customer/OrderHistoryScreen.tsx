@@ -14,7 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {mockOrders} from '../../constants/data/data'
+import apiService from '../../services/apiService';
 
 type OrderHistoryScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -49,29 +49,32 @@ const OrderHistoryScreen = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeFilter, setActiveFilter] = useState<'all' | 'completed' | 'cancelled' | 'refunded'>('all');
 
-  // Mock data for orders
- 
-
   useEffect(() => {
-    // Simulate API call
-    const fetchOrders = () => {
-      setLoading(true);
-      setTimeout(() => {
-        setOrders(mockOrders);
-        setLoading(false);
-      }, 1500);
-    };
-
     fetchOrders();
   }, []);
 
-  const onRefresh = () => {
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const response = await apiService.get('/bookings');
+      setOrders(response.data);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setOrders(mockOrders);
+    try {
+      const response = await apiService.get('/bookings');
+      setOrders(response.data);
+    } catch (error) {
+      console.error('Error refreshing orders:', error);
+    } finally {
       setRefreshing(false);
-    }, 1500);
+    }
   };
 
   const filteredOrders = activeFilter === 'all' 

@@ -11,10 +11,12 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import apiService from '../../services/apiService';
 
 // Mock types for self-contained component
 type ProStackParamList = {
@@ -49,19 +51,21 @@ const ProJobsScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // --- Data Fetching and Filtering ---
-  useEffect(() => {
-    const mockJobs: Job[] = [
-        { id: 'JOB123456', customerName: 'Priya Sharma', customerImage: 'https://randomuser.me/api/portraits/women/44.jpg', date: 'Today', time: '11:30 AM', address: '123 Main St, Koramangala', totalAmount: 998, status: 'upcoming', paymentStatus: 'paid' },
-        { id: 'JOB123457', customerName: 'Arjun Mehta', customerImage: 'https://randomuser.me/api/portraits/men/32.jpg', date: 'Today', time: '02:00 PM', address: '456 Park Ave, Indiranagar', totalAmount: 399, status: 'upcoming', paymentStatus: 'paid' },
-        { id: 'JOB123459', customerName: 'Rahul Singh', customerImage: 'https://randomuser.me/api/portraits/men/75.jpg', date: 'Yesterday', time: '03:30 PM', address: '101 Green Park, Whitefield', totalAmount: 998, status: 'completed', paymentStatus: 'paid' },
-        { id: 'JOB123461', customerName: 'Vikram Malhotra', customerImage: 'https://randomuser.me/api/portraits/men/45.jpg', date: '10 May 2023', time: '09:30 AM', address: '303 Royal Enclave, MG Road', totalAmount: 599, status: 'cancelled', paymentStatus: 'pending' },
-        { id: 'JOB123462', customerName: 'Meera Kapoor', customerImage: 'https://randomuser.me/api/portraits/women/33.jpg', date: 'Today', time: '09:00 AM', address: '404 Sunshine Apts, Jayanagar', totalAmount: 1797, status: 'ongoing', paymentStatus: 'paid' },
-    ];
-    setTimeout(() => {
-      setJobs(mockJobs);
+  const fetchJobs = async () => {
+    try {
+      const response = await apiService.get('/professional/jobs');
+      setJobs(response.data);
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+      Alert.alert('Error', 'Failed to load jobs');
+    } finally {
       setLoading(false);
       setRefreshing(false);
-    }, 1000);
+    }
+  };
+
+  useEffect(() => {
+    fetchJobs();
   }, [refreshing]);
 
   useEffect(() => {
@@ -80,7 +84,10 @@ const ProJobsScreen = () => {
     setFilteredJobs(result);
   }, [activeFilter, searchQuery, jobs]);
   
-  const onRefresh = () => setRefreshing(true);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchJobs();
+  };
 
   // --- Render Functions ---
   const renderFilterButton = (label: string, value: FilterStatus) => (

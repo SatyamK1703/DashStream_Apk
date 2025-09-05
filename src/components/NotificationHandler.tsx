@@ -22,7 +22,7 @@ const NotificationHandler: React.FC = () => {
         Notifications.removeNotificationSubscription(notificationListener.current);
       }
       if (responseListener.current) {
-        Notifications.removeNotificationResponseSubscription(responseListener.current);
+        Notifications.removeNotificationSubscription(responseListener.current);
       }
     };
   }, []);

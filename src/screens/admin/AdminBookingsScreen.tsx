@@ -7,13 +7,14 @@ import {
   RefreshControl,
   Text,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context'; // 1. Import from react-native-safe-area-context
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
-import { mockBookings } from '../../constants/data/AdminProfessionalScreen';
+import apiService from '../../services/apiService';
 
 // Assuming these are your custom components, no changes needed here
 import SearchAndFilter from '~/components/admin/SearchAndFilter';
@@ -47,13 +48,23 @@ const AdminBookingsScreen = () => {
   ];
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setBookings(mockBookings);
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
+    fetchBookings();
   }, []);
+  
+  const fetchBookings = async () => {
+    setLoading(true);
+    try {
+      const response = await apiService.get('/admin/bookings');
+      if (response.data && response.data.bookings) {
+        setBookings(response.data.bookings);
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      Alert.alert('Error', 'Failed to load bookings');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     applyFilters();
@@ -91,9 +102,10 @@ const AdminBookingsScreen = () => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
+    fetchBookings()
+      .finally(() => {
+        setRefreshing(false);
+      });
   };
 
   const handleBookingPress = (bookingId: string) => {

@@ -6,7 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {savedAddresses,timeSlots,paymentMethods} from '../../constants/data/data'
+import apiService from '../../services/apiService';
 
 type CheckoutScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -29,14 +29,17 @@ interface PaymentMethod {
   icon: string;
 }
 
-// Mock data
 const CheckoutScreen = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
-  const [selectedAddress, setSelectedAddress] = useState(savedAddresses[0].id);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(paymentMethods[0].id);
+  const [selectedAddress, setSelectedAddress] = useState('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [specialInstructions, setSpecialInstructions] = useState('');
+  const [savedAddresses, setSavedAddresses] = useState<AddressOption[]>([]);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [fetchingData, setFetchingData] = useState(true);
   
   const navigation = useNavigation<CheckoutScreenNavigationProp>();
   const { user } = useAuth();
@@ -45,7 +48,39 @@ const CheckoutScreen = () => {
     // Check if user is not authenticated or is a guest user
     if (!user || user.email === 'skip-user') {
       navigation.navigate('Login');
+      return;
     }
+    
+    // Fetch data from API
+    const fetchData = async () => {
+      setFetchingData(true);
+      try {
+        // Fetch addresses
+        const addressesResponse = await apiService.get('/user/addresses');
+        setSavedAddresses(addressesResponse.data);
+        if (addressesResponse.data.length > 0) {
+          setSelectedAddress(addressesResponse.data[0].id);
+        }
+        
+        // Fetch time slots
+        const timeSlotsResponse = await apiService.get('/bookings/time-slots');
+        setTimeSlots(timeSlotsResponse.data);
+        
+        // Fetch payment methods
+        const paymentMethodsResponse = await apiService.get('/payments/methods');
+        setPaymentMethods(paymentMethodsResponse.data);
+        if (paymentMethodsResponse.data.length > 0) {
+          setSelectedPaymentMethod(paymentMethodsResponse.data[0].id);
+        }
+      } catch (error) {
+        console.error('Error fetching checkout data:', error);
+        Alert.alert('Error', 'Failed to load checkout data. Please try again.');
+      } finally {
+        setFetchingData(false);
+      }
+    };
+    
+    fetchData();
   }, [user, navigation]);
 
   // Generate dates for the next 7 days
@@ -64,7 +99,7 @@ const CheckoutScreen = () => {
     setSelectedTimeSlot(null); // Reset time slot when date changes
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!selectedTimeSlot) {
       Alert.alert('Select Time', 'Please select a time slot for your service.');
       return;
@@ -72,16 +107,30 @@ const CheckoutScreen = () => {
 
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Real API call to create booking
+      const bookingData = {
+        date: selectedDate.toISOString(),
+        timeSlotId: selectedTimeSlot,
+        addressId: selectedAddress,
+        paymentMethodId: selectedPaymentMethod,
+        specialInstructions: specialInstructions
+      };
+      
+      const response = await apiService.post('/bookings', bookingData);
+      
       setIsLoading(false);
       navigation.navigate('BookingConfirmation', { 
-        bookingId: 'BK' + Math.floor(Math.random() * 10000000),
+        bookingId: response.data.bookingId,
         date: selectedDate,
         timeSlot: timeSlots.find(slot => slot.id === selectedTimeSlot)?.time || '',
         address: savedAddresses.find(addr => addr.id === selectedAddress)?.address || ''
       });
-    }, 1500);
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      setIsLoading(false);
+      Alert.alert('Error', 'Failed to create booking. Please try again.');
+    }
   };
 
   const handleAddNewAddress = () => {
@@ -98,7 +147,14 @@ const CheckoutScreen = () => {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Checkout</Text>
         </View>
-
+        
+        {fetchingData ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#2563eb" />
+            <Text style={styles.loadingText}>Loading checkout data...</Text>
+          </View>
+        ) : (
+        <>
         <ScrollView style={styles.flex1}>
           {/* Date Selection */}
           <View style={styles.section}>
@@ -232,6 +288,8 @@ const CheckoutScreen = () => {
             )}
           </TouchableOpacity>
         </View>
+        </>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -247,6 +305,17 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: '#fff' 
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#6b7280'
   },
   flex1: { 
     flex: 1 

@@ -4,17 +4,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { APP_CONFIG } from '../constants/config';
 import * as api from '../services/api';
 import apiService from '../services/apiService';
+import authService, { AuthUser } from '../services/AuthService';
 
-// Define user type
-type User = {
-  id: string;
-  name?: string;
-  phone: string;
-  email?: string;
-  role: string;
-  profileImage?: string;
-  // Add other user properties as needed
-};
+// Use AuthUser type from AuthService
+type User = AuthUser;
 
 // Define auth context state
 type AuthContextType = {
@@ -49,39 +42,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const loadUserFromStorage = async () => {
       try {
-        // Check for auth token
-        const token = await AsyncStorage.getItem(APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
-        
-        if (token) {
-          // Set token in API service
-          apiService.setToken(token);
-          
-          // Get user data from storage
-          const userData = await AsyncStorage.getItem(APP_CONFIG.STORAGE_KEYS.USER_DATA);
-          
-          if (userData) {
-            setUser(JSON.parse(userData));
-          } else {
-            // If we have token but no user data, fetch from API
-            const { success, user: fetchedUser } = await api.getUserProfile();
-            if (success && fetchedUser) {
-              setUser(fetchedUser);
-              await AsyncStorage.setItem(APP_CONFIG.STORAGE_KEYS.USER_DATA, JSON.stringify(fetchedUser));
-            } else {
-              // If we can't get user data, clear token
-              await AsyncStorage.removeItem(APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN);
-              apiService.clearToken();
-            }
-          }
+        // Get current user from AuthService
+        const currentUser = authService.getCurrentUser();
+        if (currentUser) {
+          setUser(currentUser);
         }
       } catch (error) {
         console.error('Error loading user data:', error);
-        // Clear potentially corrupted data
-        await AsyncStorage.multiRemove([
-          APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN,
-          APP_CONFIG.STORAGE_KEYS.USER_DATA,
-        ]);
-        apiService.clearToken();
       } finally {
         setIsLoading(false);
       }
@@ -120,23 +87,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Logout user
   const logout = async () => {
     try {
-      await api.logout();
+      await authService.logout();
+      setUser(null);
     } catch (error) {
       console.error('Error in logout:', error);
-    } finally {
-      // Clear user data regardless of API success
-      setUser(null);
-      await AsyncStorage.multiRemove([
-        APP_CONFIG.STORAGE_KEYS.AUTH_TOKEN,
-        APP_CONFIG.STORAGE_KEYS.USER_DATA,
-      ]);
-      apiService.clearToken();
     }
   };
   
   // Update user profile
   const updateUserProfile = async (userData: Partial<User>) => {
     try {
+      if (userData.displayName) {
+        const result = await authService.updateProfile(userData.displayName);
+        
+        if (result.success && result.user) {
+          setUser(result.user);
+        }
+        
+        return result;
+      } else if (userData.email) {
+        const result = await authService.updateEmail(userData.email);
+        
+        if (result.success && result.user) {
+          setUser(result.user);
+        }
+        
+        return result;
+      }
+      
+      // Fall back to the original API if other fields need to be updated
       const result = await api.updateUserProfile({ ...user, ...userData });
       
       if (result.success && result.user) {

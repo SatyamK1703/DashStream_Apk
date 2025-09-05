@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   StyleSheet,
   Dimensions,
-  SafeAreaView // 1. Import SafeAreaView
+  SafeAreaView,
+  Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,7 +17,7 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-ico
 import { LineChart } from 'react-native-chart-kit';
 import { useAuth } from '../../contexts/AuthContext';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
-import {bookingsData,revenueData,topProfessionals,recentBookings,dashboardStats} from '../../constants/data/AdminScreenData';
+import apiService from '../../services/apiService';
 import StatCard from '~/components/admin/StatCard';
 import BookingCard from '~/components/admin/BookingCard';
 import ProfessionalCard from '~/components/admin/ProfessionalCard';
@@ -33,21 +34,57 @@ const AdminDashboardScreen = () => {
   const [timeFilter, setTimeFilter] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const [statsFilter, setStatsFilter] = useState<'revenue' | 'bookings'>('revenue');
   
-  useEffect(() => {
-    // Simulate data loading
-    const timer = setTimeout(() => {
+  // State for dashboard data
+  const [dashboardStats, setDashboardStats] = useState({
+    totalRevenue: '₹0',
+    totalBookings: '0',
+    activeCustomers: '0',
+    activeProfessionals: '0',
+    revenueChange: '0%',
+    bookingsChange: '0%',
+    customersChange: '0%',
+    professionalsChange: '0%'
+  });
+  const [recentBookings, setRecentBookings] = useState([]);
+  const [topProfessionals, setTopProfessionals] = useState([]);
+  const [chartData, setChartData] = useState({
+    daily: { labels: [], datasets: [{ data: [], color: () => '#2563EB', strokeWidth: 2 }] },
+    weekly: { labels: [], datasets: [{ data: [], color: () => '#2563EB', strokeWidth: 2 }] },
+    monthly: { labels: [], datasets: [{ data: [], color: () => '#2563EB', strokeWidth: 2 }] }
+  });
+  
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      const response = await apiService.get('/admin/dashboard');
+      if (response.data) {
+        setDashboardStats(response.data.stats);
+        setRecentBookings(response.data.recentBookings);
+        setTopProfessionals(response.data.topProfessionals);
+        setChartData({
+          daily: response.data.revenueData.daily,
+          weekly: response.data.revenueData.weekly,
+          monthly: response.data.revenueData.monthly
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      Alert.alert('Error', 'Failed to load dashboard data');
+    } finally {
       setLoading(false);
-    }, 1500);
-    
-    return () => clearTimeout(timer);
+    }
+  };
+  
+  useEffect(() => {
+    fetchDashboardData();
   }, []);
   
   const onRefresh = () => {
     setRefreshing(true);
-    // Simulate refresh
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
+    fetchDashboardData()
+      .finally(() => {
+        setRefreshing(false);
+      });
   };
   
   const chartConfig = {
@@ -66,7 +103,7 @@ const AdminDashboardScreen = () => {
     },
   };
   
-  const chartData = statsFilter === 'revenue' ? revenueData[timeFilter] : bookingsData[timeFilter];
+  const currentChartData = statsFilter === 'revenue' ? chartData[timeFilter] : chartData[timeFilter];
   
   if (loading) {
     return (
@@ -159,7 +196,7 @@ const AdminDashboardScreen = () => {
           </View>
           
           <LineChart
-            data={chartData}
+            data={currentChartData}
             width={Dimensions.get('window').width - 32} // Adjusted for padding
             height={220}
             chartConfig={chartConfig}

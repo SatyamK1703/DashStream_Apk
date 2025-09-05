@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
-import { API_URL } from '../../config/constants';
+import { API_CONFIG } from '../../constants/config';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
@@ -82,7 +82,7 @@ const NearbyProfessionalsScreen = () => {
       }
 
       const response = await axios.get(
-        `${API_URL}/api/location/nearby`,
+        `${API_CONFIG.BASE_URL}/location/nearby`,
         {
           params: {
             latitude: location.latitude,
@@ -190,7 +190,7 @@ const NearbyProfessionalsScreen = () => {
             <Text style={styles.statusText}>{item.status.charAt(0).toUpperCase() + item.status.slice(1)}</Text>
           </View>
           {item.distance !== undefined && (
-            <Text style={styles.distanceText}>{(item.distance / 1000).toFixed(1)} km away</Text>
+            <Text style={styles.distanceText}>{item.distance.toFixed(1)} km away</Text>
           )}
         </View>
         <View style={styles.actionContainer}>

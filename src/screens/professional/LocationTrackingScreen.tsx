@@ -17,12 +17,10 @@ import MapView, { Marker, Circle } from 'react-native-maps';
 import Slider from '@react-native-community/slider';
 import { useLocation } from '../../contexts/LocationContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext';
-import { LocationData } from '../../services/FirebaseLocationService';
+import { LocationData } from '../../services/LocationApiService';
 
 const LocationTrackingScreen = ({ navigation }: any) => {
   const { user } = useAuth();
-  const { firebaseUser } = useFirebaseAuth();
   const {
     currentLocation,
     locationHistory,

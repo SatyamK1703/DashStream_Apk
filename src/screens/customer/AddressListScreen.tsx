@@ -6,6 +6,8 @@ import {
   View,
   FlatList,
   Alert,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
@@ -13,12 +15,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import {MOCK_ADDRESSES} from '../../constants/data/data';
+import apiService from '../../services/apiService';
 
 
 const AddressListScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
-  const [addresses, setAddresses] = useState(MOCK_ADDRESSES);
+  const [addresses, setAddresses] = useState([]);
+  const [loading, setLoading] = useState(true);
   const isFocused = useIsFocused();
   const { user } = useAuth();
   
@@ -29,12 +32,25 @@ const AddressListScreen = () => {
     }
   }, [user, navigation]);
 
-  // In a real app, you would fetch addresses when the screen is focused
-  // useEffect(() => {
-  //   if (isFocused) {
-  //     // fetchAddressesFromApi();
-  //   }
-  // }, [isFocused]);
+  const fetchAddresses = async () => {
+    setLoading(true);
+    try {
+      const response = await apiService.get('/addresses');
+      setAddresses(response.data);
+    } catch (error) {
+      console.error('Error fetching addresses:', error);
+      Alert.alert('Error', 'Failed to load addresses');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch addresses when the screen is focused
+  useEffect(() => {
+    if (isFocused) {
+      fetchAddresses();
+    }
+  }, [isFocused]);
 
   const handleEdit = (addressData) => {
     navigation.navigate('AddAddress', {
@@ -51,9 +67,15 @@ const AddressListScreen = () => {
         { text: "Cancel", style: "cancel" },
         { 
           text: "Delete", 
-          onPress: () => {
-            setAddresses(prev => prev.filter(addr => addr.id !== addressId));
-            // In a real app, call your API to delete the address here
+          onPress: async () => {
+            try {
+              await apiService.delete(`/addresses/${addressId}`);
+              setAddresses(prev => prev.filter(addr => addr.id !== addressId));
+              Alert.alert('Success', 'Address deleted successfully');
+            } catch (error) {
+              console.error('Error deleting address:', error);
+              Alert.alert('Error', 'Failed to delete address');
+            }
           },
           style: "destructive" 
         },
@@ -104,18 +126,28 @@ const AddressListScreen = () => {
         <Text style={styles.headerTitle}>My Addresses</Text>
       </View>
 
-      <FlatList
-        data={addresses}
-        renderItem={renderAddress}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-        ListEmptyComponent={() => (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No addresses found.</Text>
-            <Text style={styles.emptySubText}>Add a new address to get started.</Text>
-          </View>
-        )}
-      />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text style={styles.loadingText}>Loading addresses...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={addresses}
+          renderItem={renderAddress}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No addresses found.</Text>
+              <Text style={styles.emptySubText}>Add a new address to get started.</Text>
+            </View>
+          )}
+          refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={fetchAddresses} />
+          }
+        />
+      )}
 
       {/* Add New Address Button */}
       <TouchableOpacity 
@@ -134,6 +166,16 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
   header: {
     backgroundColor: '#FFFFFF',

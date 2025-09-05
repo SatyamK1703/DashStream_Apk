@@ -17,6 +17,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import apiService from '../../services/apiService';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // --- Type Definitions ---
@@ -66,49 +67,99 @@ const AdminBookingDetailsScreen = () => {
   const [assignLoading, setAssignLoading] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
 
-  // --- Mock Data ---
-  const mockBooking: BookingDetails = { id: 'BK-7845', customerName: 'Rahul Sharma', customerPhone: '+91 9876543210', customerEmail: 'rahul.sharma@example.com', customerId: 'CUST-1234', professionalName: 'Rajesh Kumar', professionalPhone: '+91 9876543220', professionalId: 'PRO-001', services: [{ name: 'Premium Wash', price: '₹800', duration: '45 mins' }, { name: 'Polish', price: '₹400', duration: '30 mins' }], date: '15 Aug 2023', time: '10:30 AM', address: '123 Main Street, Andheri East, Mumbai, Maharashtra 400069', status: 'ongoing', paymentStatus: 'paid', paymentMethod: 'Credit Card', subtotal: '₹1,200', tax: '₹216', total: '₹1,416', specialInstructions: 'Please be careful with the side mirrors, they are custom made.', createdAt: '2023-08-14T18:30:00Z', completedAt: null, cancelledAt: null, cancelReason: null };
-  const mockProfessionals = [{ id: 'PRO-001', name: 'Rajesh Kumar', rating: 4.8 }, { id: 'PRO-002', name: 'Amit Singh', rating: 4.5 }, { id: 'PRO-003', name: 'Vikram Patel', rating: 4.7 }];
+  
 
   // --- Effects ---
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setBooking(mockBooking);
-      setProfessionals(mockProfessionals);
+    fetchBookingDetails();
+    fetchAvailableProfessionals();
+  }, [bookingId]);
+  
+  const fetchBookingDetails = async () => {
+    setLoading(true);
+    try {
+      const response = await apiService.get(`/admin/bookings/${bookingId}`);
+      if (response.data && response.data.booking) {
+        setBooking(response.data.booking);
+        if (response.data.booking.professionalId) {
+          setSelectedProfessionalId(response.data.booking.professionalId);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching booking details:', error);
+      Alert.alert('Error', 'Failed to load booking details');
+    } finally {
       setLoading(false);
-      if (mockBooking.professionalId) {
-        setSelectedProfessionalId(mockBooking.professionalId);
+    }
+  };
+  
+  const fetchAvailableProfessionals = async () => {
+    try {
+      const response = await apiService.get('/admin/professionals/available');
+      if (response.data && response.data.professionals) {
+        setProfessionals(response.data.professionals);
       }
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // --- Handlers ---
-  const handleAssignProfessional = () => {
-    if (!selectedProfessionalId) return Alert.alert('Error', 'Please select a professional.');
-    setAssignLoading(true);
-    setTimeout(() => {
-      const selectedPro = professionals.find(pro => pro.id === selectedProfessionalId);
-      if (booking && selectedPro) {
-        setBooking({ ...booking, professionalId: selectedPro.id, professionalName: selectedPro.name, professionalPhone: '+91 9876543220' });
-      }
-      setAssignLoading(false);
-      setShowAssignModal(false);
-      Alert.alert('Success', 'Professional assigned successfully');
-    }, 1500);
+    } catch (error) {
+      console.error('Error fetching professionals:', error);
+    }
   };
 
-  const handleCancelBooking = () => {
+  // --- Handlers ---
+  const handleAssignProfessional = async () => {
+    if (!selectedProfessionalId) return Alert.alert('Error', 'Please select a professional.');
+    setAssignLoading(true);
+    try {
+      await apiService.put(`/admin/bookings/${bookingId}/assign`, {
+        professionalId: selectedProfessionalId
+      });
+      
+      // Update local state with the selected professional
+      const selectedPro = professionals.find(pro => pro.id === selectedProfessionalId);
+      if (booking && selectedPro) {
+        setBooking({ 
+          ...booking, 
+          professionalId: selectedPro.id, 
+          professionalName: selectedPro.name, 
+          professionalPhone: selectedPro.phone || '+91 9876543220' 
+        });
+      }
+      
+      Alert.alert('Success', 'Professional assigned successfully');
+      setShowAssignModal(false);
+    } catch (error) {
+      console.error('Error assigning professional:', error);
+      Alert.alert('Error', 'Failed to assign professional');
+    } finally {
+      setAssignLoading(false);
+    }
+  };
+
+  const handleCancelBooking = async () => {
     if (!cancelReason.trim()) return Alert.alert('Error', 'Please provide a reason for cancellation.');
     setCancelLoading(true);
-    setTimeout(() => {
+    try {
+      await apiService.put(`/admin/bookings/${bookingId}/cancel`, {
+        reason: cancelReason
+      });
+      
+      // Update local state
       if (booking) {
-        setBooking({ ...booking, status: 'cancelled', cancelledAt: new Date().toISOString(), cancelReason });
+        setBooking({ 
+          ...booking, 
+          status: 'cancelled', 
+          cancelledAt: new Date().toISOString(), 
+          cancelReason 
+        });
       }
-      setCancelLoading(false);
-      setShowCancelModal(false);
+      
       Alert.alert('Success', 'Booking cancelled successfully');
-    }, 1500);
+      setShowCancelModal(false);
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      Alert.alert('Error', 'Failed to cancel booking');
+    } finally {
+      setCancelLoading(false);
+    }
   };
 
   // --- Style Helpers ---

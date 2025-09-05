@@ -16,7 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
-import { mockProfessionals } from '../../constants/data/AdminProfessionalScreen';
+import apiService from '../../services/apiService';
 
 // --- Helper Hook for Debouncing ---
 const useDebounce = (value, delay) => {
@@ -114,13 +114,19 @@ const AdminProfessionalsScreen = () => {
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  const fetchData = useCallback(() => {
+  const fetchData = useCallback(async () => {
+    try {
       setLoading(true);
-      setTimeout(() => {
-        setProfessionals(mockProfessionals);
-        setLoading(false);
-        setRefreshing(false);
-      }, 1500);
+      const response = await apiService.get('/admin/professionals');
+      if (response.data && response.data.professionals) {
+        setProfessionals(response.data.professionals);
+      }
+    } catch (error) {
+      console.error('Error fetching professionals:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
   useEffect(() => {

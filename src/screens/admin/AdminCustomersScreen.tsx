@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import apiService from '../../services/apiService';
 
 type AdminCustomersNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 
@@ -54,124 +55,22 @@ const resetFilters = () => {
   const [sortBy, setSortBy] = useState<'name' | 'bookings' | 'spent' | 'date'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
-  // Mock data
-  const mockCustomers: Customer[] = [
-    {
-      id: 'CUST-001',
-      name: 'Priya Sharma',
-      email: 'priya.sharma@example.com',
-      phone: '+91 9876543210',
-      profileImage: 'https://randomuser.me/api/portraits/women/1.jpg',
-      status: 'active',
-      totalBookings: 15,
-      totalSpent: 12500,
-      membershipStatus: 'gold',
-      joinDate: '2023-01-15',
-      lastActive: '2023-06-10',
-      addresses: 2,
-      vehicles: 1
-    },
-    {
-      id: 'CUST-002',
-      name: 'Rahul Verma',
-      email: 'rahul.verma@example.com',
-      phone: '+91 9876543211',
-      profileImage: 'https://randomuser.me/api/portraits/men/2.jpg',
-      status: 'active',
-      totalBookings: 8,
-      totalSpent: 6800,
-      membershipStatus: 'silver',
-      joinDate: '2023-02-20',
-      lastActive: '2023-06-08',
-      addresses: 1,
-      vehicles: 2
-    },
-    {
-      id: 'CUST-003',
-      name: 'Ananya Patel',
-      email: 'ananya.patel@example.com',
-      phone: '+91 9876543212',
-      profileImage: 'https://randomuser.me/api/portraits/women/3.jpg',
-      status: 'inactive',
-      totalBookings: 3,
-      totalSpent: 2200,
-      membershipStatus: 'none',
-      joinDate: '2023-03-10',
-      lastActive: '2023-04-15',
-      addresses: 1,
-      vehicles: 1
-    },
-    {
-      id: 'CUST-004',
-      name: 'Vikram Singh',
-      email: 'vikram.singh@example.com',
-      phone: '+91 9876543213',
-      profileImage: 'https://randomuser.me/api/portraits/men/4.jpg',
-      status: 'blocked',
-      totalBookings: 1,
-      totalSpent: 800,
-      membershipStatus: 'none',
-      joinDate: '2023-03-25',
-      lastActive: '2023-03-28',
-      addresses: 1,
-      vehicles: 1
-    },
-    {
-      id: 'CUST-005',
-      name: 'Neha Gupta',
-      email: 'neha.gupta@example.com',
-      phone: '+91 9876543214',
-      profileImage: 'https://randomuser.me/api/portraits/women/5.jpg',
-      status: 'active',
-      totalBookings: 22,
-      totalSpent: 18500,
-      membershipStatus: 'platinum',
-      joinDate: '2022-11-05',
-      lastActive: '2023-06-12',
-      addresses: 3,
-      vehicles: 2
-    },
-    {
-      id: 'CUST-006',
-      name: 'Arjun Reddy',
-      email: 'arjun.reddy@example.com',
-      phone: '+91 9876543215',
-      profileImage: 'https://randomuser.me/api/portraits/men/6.jpg',
-      status: 'active',
-      totalBookings: 12,
-      totalSpent: 9800,
-      membershipStatus: 'silver',
-      joinDate: '2023-01-30',
-      lastActive: '2023-06-05',
-      addresses: 2,
-      vehicles: 1
-    },
-    {
-      id: 'CUST-007',
-      name: 'Kavita Joshi',
-      email: 'kavita.joshi@example.com',
-      phone: '+91 9876543216',
-      profileImage: 'https://randomuser.me/api/portraits/women/7.jpg',
-      status: 'inactive',
-      totalBookings: 5,
-      totalSpent: 4200,
-      membershipStatus: 'none',
-      joinDate: '2023-02-15',
-      lastActive: '2023-05-01',
-      addresses: 1,
-      vehicles: 1
-    },
-  ];
+
+
+  const fetchCustomers = async () => {
+    try {
+      const response = await apiService.get('/admin/customers');
+      setCustomers(response.data);
+      setFilteredCustomers(response.data);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setCustomers(mockCustomers);
-      setFilteredCustomers(mockCustomers);
-      setLoading(false);
-    }, 1500);
-
-    return () => clearTimeout(timer);
+    fetchCustomers();
   }, []);
 
   useEffect(() => {
@@ -222,15 +121,18 @@ const resetFilters = () => {
     setFilteredCustomers(filtered);
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setCustomers(mockCustomers);
-      setFilteredCustomers(mockCustomers);
+    try {
+      const response = await apiService.get('/admin/customers');
+      setCustomers(response.data);
+      setFilteredCustomers(response.data);
+    } catch (error) {
+      console.error('Error refreshing customers:', error);
+    } finally {
       setRefreshing(false);
-    }, 1500);
+    }
   };
 
   const handleToggleSort = (newSortBy: 'name' | 'bookings' | 'spent' | 'date') => {

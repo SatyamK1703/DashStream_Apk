@@ -28,7 +28,6 @@
     "expo-location": "~18.1.6",
     "expo-notifications": "^0.31.4",
     "expo-status-bar": "~2.2.3",
-    "firebase": "^12.2.1",
     "lodash": "^4.17.21",
     "lucide-react-native": "^0.536.0",
     "nativewind": "latest",
