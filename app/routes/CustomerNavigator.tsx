@@ -25,6 +25,11 @@ import TermsAndConditions from '~/screens/customer/TermsAndConditions';
 import MembershipScreen from '~/screens/customer/MembershipScreen';
 import VehicleListScreen from '~/screens/customer/VehicleListScreen';
 import AddressListScreen from '~/screens/customer/AddressListScreen';
+import NearbyProfessionalsScreen from '../../src/screens/customer/NearbyProfessionalsScreen';
+import ProfessionalLocationScreen from '../../src/screens/customer/ProfessionalLocationScreen';
+import PaymentScreen from '../../src/screens/customer/PaymentScreen';
+import PaymentHistoryScreen from '../../src/screens/customer/PaymentHistoryScreen';
+import PaymentDetailsScreen from '../../src/screens/customer/PaymentDetailsScreen';
 
 // Define the customer stack param list
 export type CustomerStackParamList = {
@@ -51,16 +56,21 @@ export type CustomerStackParamList = {
   VehicleList:undefined;
   AddressList:undefined;
   TestNotification:undefined;
+  NearbyProfessionals: undefined;
+  ProfessionalLocation: { professionalId: string };
+  Payment: { bookingId: string };
+  PaymentHistory: undefined;
+  PaymentDetails: { paymentId: string };
 };
 
 // Define the customer tab param list
 export type CustomerTabParamList = {
   Home: undefined;
   Bookings: undefined;
-  History: undefined;
+  Nearby: undefined;
+  Support: undefined;
+  Membership: undefined;
   Profile: undefined;
-  Support:undefined;
-  Membership:undefined;
 };
 
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -75,18 +85,27 @@ const CustomerTabNavigator = () => {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap = 'home';
 
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Bookings') {
-            iconName = focused ? 'calendar' : 'calendar-outline';
-          } 
-          else if (route.name === 'History') {
+          switch (route.name) {
+            case 'Home':
+              iconName = focused ? 'home' : 'home-outline';
+              break;
+            case 'Bookings':
+              iconName = focused ? 'calendar' : 'calendar-outline';
+              break;
+            case 'Nearby':
+              iconName = focused ? 'location' : 'location-outline';
+              break;
+            case 'Support':
               iconName = focused ? 'help-buoy' : 'help-buoy-outline';
-          }else if (route.name ==='Membership'){
-            iconName = focused ? 'card' :'card-outline';
-          }
-           else if (route.name === 'Profile') {
-            iconName = focused ? 'person' : 'person-outline';
+              break;
+            case 'Membership':
+              iconName = focused ? 'card' : 'card-outline';
+              break;
+            case 'Profile':
+              iconName = focused ? 'person' : 'person-outline';
+              break;
+            default:
+              iconName = 'home-outline';
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -104,22 +123,31 @@ const CustomerTabNavigator = () => {
         },
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Bookings" 
+      <Tab.Screen 
+        name="Home" 
+        component={HomeScreen}
+        options={{ tabBarLabel: 'Home' }}
+      />
+      <Tab.Screen 
+        name="Bookings" 
         component={BookingsScreen}
         options={{ tabBarLabel: 'Bookings' }}
       />
-       <Tab.Screen 
-        name="History" 
+      <Tab.Screen 
+        name="Nearby" 
+        component={NearbyProfessionalsScreen}
+        options={{ tabBarLabel: 'Nearby' }}
+      />
+      <Tab.Screen 
+        name="Support" 
         component={SupportScreen}
         options={{ tabBarLabel: 'Support' }}
       />
-      <Tab.Screen name="Membership" 
+      <Tab.Screen 
+        name="Membership" 
         component={MembershipScreen}
         options={{ tabBarLabel: 'Membership' }}
       />
-     
-
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}
@@ -151,7 +179,6 @@ const CustomerNavigator = () => {
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="AddAddress" component={require('../../src/screens/customer/AddAddressScreen').default} />
       <Stack.Screen name="AddVehicle" component={require('../../src/screens/customer/AddVehicleScreen').default} />
-      <Stack.Screen name="Membership" component={require('../../src/screens/customer/MembershipScreen').default} />
       <Stack.Screen name="PaymentMethods" component={require('../../src/screens/customer/PaymentMethodsScreen').default} />
       <Stack.Screen name="AboutUs" component={AboutUsScreen}/>
       <Stack.Screen name="LocationPicker" component={LocationPickerScreen} />
@@ -160,7 +187,11 @@ const CustomerNavigator = () => {
       <Stack.Screen name='TermsAndConditions' component={TermsAndConditions}/>
       <Stack.Screen name='VehicleList' component={VehicleListScreen}/>
       <Stack.Screen name='AddressList' component={AddressListScreen}/>
-
+      <Stack.Screen name='NearbyProfessionals' component={NearbyProfessionalsScreen}/>
+      <Stack.Screen name='ProfessionalLocation' component={ProfessionalLocationScreen}/>
+      <Stack.Screen name='Payment' component={PaymentScreen}/>
+      <Stack.Screen name='PaymentHistory' component={PaymentHistoryScreen}/>
+      <Stack.Screen name='PaymentDetails' component={PaymentDetailsScreen}/>
 
     </Stack.Navigator>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,106 +14,112 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import apiService from '../../services/apiService';
+import { RootStackParamList } from '../../../app/routes/RootNavigator';   
 import { useAuth } from '../../contexts/AuthContext';
-type Vehicle = {
-  id: string;
-  type: 'car' | 'motorcycle' | 'bicycle';
-  brand: string;
-  model: string;
-  year: string;
-  licensePlate: string | null;
-  image: string | null;
-};
+import { VehicleService, Vehicle } from '../../services/vehicleService';
 
 type VehicleListScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 type FilterOption = 'all' | 'car' | 'motorcycle' | 'bicycle';
 
 const VehicleListScreen = () => {
-  const navigation = useNavigation<VehicleListScreenNavigationProp>();
+  const navigation = useNavigation<VehicleListScreenNavigationProp | RootStackParamList>();
   const { user } = useAuth();
-  const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
-  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>(mockVehicles);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterOption>('all');
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [vehicleToDelete, setVehicleToDelete] = useState<string | null>(null);
   
   // Check if user is authenticated or a guest user
   useEffect(() => {
     if (!user || user.name === 'Guest User') {
-      navigation.navigate('Login');
+      navigation.navigate('Login' as never );
     }
   }, [user, navigation]);
 
-  // In a real app, you would fetch vehicles from your API/DB
-  useEffect(() => {
-    fetchVehicles();
-  }, []);
-
-  useEffect(() => {
-    filterAndSearchVehicles();
-  }, [vehicles, searchQuery, filter]);
-
-  const fetchVehicles = async () => {
-    setLoading(true);
+  // Fetch vehicles data
+  const fetchVehicles = useCallback(async (isRefresh = false) => {
     try {
-      // Real API call
-      const response = await apiService.get('/vehicles');
-      setVehicles(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching vehicles:', error);
-      Alert.alert('Error', 'Failed to load vehicles');
-      setLoading(false);
-    }
-  };
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
 
-  const filterAndSearchVehicles = () => {
-    let result = vehicles;
-    
-    // Apply type filter
-    if (filter !== 'all') {
-      result = result.filter(vehicle => vehicle.type === filter);
-    }
-    
-    // Apply search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(vehicle => 
-        vehicle.brand.toLowerCase().includes(query) ||
-        vehicle.model.toLowerCase().includes(query) ||
-        (vehicle.licensePlate && vehicle.licensePlate.toLowerCase().includes(query))
-      );
-    }
-    
-    setFilteredVehicles(result);
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await fetchVehicles();
+      const response = await VehicleService.getMyVehicles();
+      setVehicles(response.data.vehicles || []);
+    } catch (err: any) {
+      console.error('Error fetching vehicles:', err);
+      setError(err.response?.data?.message || 'Failed to load vehicles');
+      
+      // Set fallback data
+      setVehicles([]);
     } finally {
+      setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
+
+  // Load data on mount and when screen comes into focus
+  useEffect(() => {
+    if (user && user.name !== 'Guest User') {
+      fetchVehicles();
+    }
+  }, [user, fetchVehicles]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user && user.name !== 'Guest User') {
+        fetchVehicles(true);
+      }
+    }, [user, fetchVehicles])
+  );
+
+  // Handle refresh
+  const onRefresh = useCallback(() => {
+    fetchVehicles(true);
+  }, [fetchVehicles]);
+
+  // Filter vehicles based on search query and filter
+  useEffect(() => {
+    let filtered = vehicles;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(vehicle =>
+        vehicle.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        vehicle.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (vehicle.licensePlate && vehicle.licensePlate.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
+    // Apply type filter
+    if (filter !== 'all') {
+      filtered = filtered.filter(vehicle => vehicle.type === filter);
+    }
+
+    setFilteredVehicles(filtered);
+  }, [vehicles, searchQuery, filter]);
 
   const confirmDelete = (id: string) => {
     setVehicleToDelete(id);
     setDeleteModalVisible(true);
   };
 
-  const deleteVehicle = async () => {
+  const deleteVehicle = useCallback(async () => {
     if (vehicleToDelete) {
       try {
-        await apiService.delete(`/vehicles/${vehicleToDelete}`);
-        setVehicles(vehicles.filter(v => v.id !== vehicleToDelete));
+        await VehicleService.deleteVehicle(vehicleToDelete);
+        setVehicles(prev => prev.filter(v => v._id !== vehicleToDelete));
+        setFilteredVehicles(prev => prev.filter(v => v._id !== vehicleToDelete));
         Alert.alert('Success', 'Vehicle deleted successfully');
       } catch (error) {
         console.error('Error deleting vehicle:', error);
@@ -123,7 +129,7 @@ const VehicleListScreen = () => {
         setVehicleToDelete(null);
       }
     }
-  };
+  }, [vehicleToDelete]);
 
   const getVehicleIcon = (type: Vehicle['type']) => {
     switch (type) {
@@ -137,11 +143,11 @@ const VehicleListScreen = () => {
   const renderVehicleItem = ({ item }: { item: Vehicle }) => (
     <TouchableOpacity 
       style={styles.vehicleCard}
-      onPress={() => navigation.navigate('VehicleDetails', { vehicleId: item.id, vehicleData: item })}
+      onPress={() => navigation.navigate('VehicleDetails', { vehicleId: item._id, vehicleData: item })}
     >
       <View style={styles.vehicleImageContainer}>
-        {item.image ? (
-          <Image source={{ uri: item.image }} style={styles.vehicleImage} />
+        {item.image?.url ? (
+          <Image source={{ uri: item.image.url }} style={styles.vehicleImage} />
         ) : (
           <View style={styles.vehiclePlaceholder}>
             <Ionicons name={getVehicleIcon(item.type)} size={32} color="#9CA3AF" />
@@ -165,13 +171,18 @@ const VehicleListScreen = () => {
             {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
           </Text>
         </View>
+        {item.isDefault && (
+          <View style={styles.defaultBadge}>
+            <Text style={styles.defaultText}>Default</Text>
+          </View>
+        )}
       </View>
       
       <View style={styles.vehicleActions}>
         <TouchableOpacity 
           style={styles.actionButton}
           onPress={() => navigation.navigate('AddVehicle', { 
-            vehicleId: item.id, 
+            vehicleId: item._id, 
             vehicleData: item 
           })}
         >
@@ -179,7 +190,7 @@ const VehicleListScreen = () => {
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.actionButton}
-          onPress={() => confirmDelete(item.id)}
+          onPress={() => confirmDelete(item._id)}
         >
           <Ionicons name="trash" size={20} color="#EF4444" />
         </TouchableOpacity>
@@ -258,7 +269,15 @@ const VehicleListScreen = () => {
         </View>
       </View>
 
-      {loading ? (
+      {error ? (
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => fetchVehicles()}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#4F46E5" />
           <Text style={styles.loadingText}>Loading your vehicles...</Text>
@@ -267,7 +286,7 @@ const VehicleListScreen = () => {
         <FlatList
           data={filteredVehicles}
           renderItem={renderVehicleItem}
-          keyExtractor={item => item.id}
+          keyExtractor={item => item._id}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={renderEmptyState}
           refreshControl={
@@ -577,6 +596,43 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  defaultBadge: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  defaultText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#ef4444',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

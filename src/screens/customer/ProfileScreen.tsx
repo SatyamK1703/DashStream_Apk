@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -7,15 +7,19 @@ import {
   Image, 
   Switch, 
   Alert, 
-  StyleSheet 
+  StyleSheet,
+  ActivityIndicator,
+  RefreshControl
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { useAuth } from '../../contexts/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRequireAuth } from '../../hooks/useRequireAuth';
+import { UserService } from '../../services/userService';
+import { Customer, Address, Vehicle } from '../../types/UserType';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -25,6 +29,55 @@ const ProfileScreen = () => {
   const { isFullyAuthenticated } = useRequireAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
+  const [customerData, setCustomerData] = useState<Customer | null>(null);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch user data
+  const fetchUserData = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+
+      // Fetch addresses and vehicles in parallel
+      const [addressesResponse, vehiclesResponse] = await Promise.all([
+        UserService.getMyAddresses(),
+        UserService.getMyVehicles()
+      ]);
+
+      setAddresses(addressesResponse.data.addresses || []);
+      setVehicles(vehiclesResponse.data.vehicles || []);
+      
+      // Set customer data from auth context
+      if (user) {
+        setCustomerData(user as Customer);
+      }
+    } catch (err: any) {
+      console.error('Error fetching user data:', err);
+      setError(err.response?.data?.message || 'Failed to load profile data');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
+
+  // Auto-refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchUserData(false);
+    }, [fetchUserData])
+  );
 
   const handleLogout = () => {
     Alert.alert(
@@ -141,6 +194,22 @@ const ProfileScreen = () => {
     </TouchableOpacity>
   );
 
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.header}>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Profile</Text>
+          </View>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header */}
@@ -150,26 +219,74 @@ const ProfileScreen = () => {
         </View>
       </View>
 
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scroll} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchUserData(true)}
+            colors={['#2563eb']}
+            tintColor="#2563eb"
+          />
+        }
+      >
         {/* Profile Card */}
         <View style={styles.card}>
           <TouchableOpacity 
             style={styles.profileRow}
             onPress={() => navigation.navigate('EditProfile')}
           >
-            <Image 
-              source={user?.profileImage || require('../../assets/images/image.png')} 
-              style={styles.profileImage} 
-              resizeMode="cover"
-            />
+            {customerData?.profileImage ? (
+              <Image 
+                source={{ uri: customerData.profileImage }} 
+                style={styles.profileImage} 
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={[styles.profileImage, styles.profileImagePlaceholder]}>
+                <Ionicons name="person" size={32} color="#6b7280" />
+              </View>
+            )}
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user?.name || 'User Name'}</Text>
-              <Text style={styles.profileMeta}>{user?.phone || '+91 98765 43210'}</Text>
-              <Text style={styles.profileMeta}>{user?.email || 'user@example.com'}</Text>
+              <Text style={styles.profileName}>{customerData?.name || user?.name || 'User Name'}</Text>
+              <Text style={styles.profileMeta}>{customerData?.phone || user?.phone || '+91 98765 43210'}</Text>
+              <Text style={styles.profileMeta}>{customerData?.email || user?.email || 'user@example.com'}</Text>
+              {customerData?.membershipStatus && customerData.membershipStatus !== 'none' && (
+                <View style={styles.membershipBadge}>
+                  <Ionicons name="star" size={12} color="#f59e0b" />
+                  <Text style={styles.membershipText}>{customerData.membershipStatus.toUpperCase()}</Text>
+                </View>
+              )}
             </View>
             <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
           </TouchableOpacity>
         </View>
+
+        {/* Stats Card */}
+        {customerData && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Your Stats</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{customerData.totalBookings || 0}</Text>
+                <Text style={styles.statLabel}>Total Bookings</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>₹{customerData.totalSpent || 0}</Text>
+                <Text style={styles.statLabel}>Total Spent</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{addresses.length}</Text>
+                <Text style={styles.statLabel}>Addresses</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{vehicles.length}</Text>
+                <Text style={styles.statLabel}>Vehicles</Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Settings */}
         <View style={styles.card}>
@@ -356,5 +473,56 @@ const styles = StyleSheet.create({
   versionText: {
     color: '#9ca3af',
     fontSize: 12
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6b7280'
+  },
+  profileImagePlaceholder: {
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  membershipBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 4,
+    alignSelf: 'flex-start'
+  },
+  membershipText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#92400e',
+    marginLeft: 4
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 16
+  },
+  statItem: {
+    alignItems: 'center'
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2563eb',
+    marginBottom: 4
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center'
   }
 });

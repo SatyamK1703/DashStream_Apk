@@ -16,8 +16,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
 import { useAuth } from '../../contexts/AuthContext';
+import { useData } from '../../contexts/DataContext';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
-import apiService from '../../services/apiService';
 import StatCard from '~/components/admin/StatCard';
 import BookingCard from '~/components/admin/BookingCard';
 import ProfessionalCard from '~/components/admin/ProfessionalCard';
@@ -29,51 +29,35 @@ type AdminDashboardScreenNavigationProp = NativeStackNavigationProp<AdminStackPa
 const AdminDashboardScreen = () => {
   const navigation = useNavigation<AdminDashboardScreenNavigationProp>();
   const { user } = useAuth();
+  const { 
+    dashboardStats, 
+    recentBookings, 
+    topProfessionals, 
+    isLoadingDashboard, 
+    fetchDashboardData,
+    error,
+    clearError
+  } = useData();
+  
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const [statsFilter, setStatsFilter] = useState<'revenue' | 'bookings'>('revenue');
   
-  // State for dashboard data
-  const [dashboardStats, setDashboardStats] = useState({
-    totalRevenue: '₹0',
-    totalBookings: '0',
-    activeCustomers: '0',
-    activeProfessionals: '0',
-    revenueChange: '0%',
-    bookingsChange: '0%',
-    customersChange: '0%',
-    professionalsChange: '0%'
-  });
-  const [recentBookings, setRecentBookings] = useState([]);
-  const [topProfessionals, setTopProfessionals] = useState([]);
+  // Mock chart data since we're not using real analytics yet
   const [chartData, setChartData] = useState({
-    daily: { labels: [], datasets: [{ data: [], color: () => '#2563EB', strokeWidth: 2 }] },
-    weekly: { labels: [], datasets: [{ data: [], color: () => '#2563EB', strokeWidth: 2 }] },
-    monthly: { labels: [], datasets: [{ data: [], color: () => '#2563EB', strokeWidth: 2 }] }
-  });
-  
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      const response = await apiService.get('/admin/dashboard');
-      if (response.data) {
-        setDashboardStats(response.data.stats);
-        setRecentBookings(response.data.recentBookings);
-        setTopProfessionals(response.data.topProfessionals);
-        setChartData({
-          daily: response.data.revenueData.daily,
-          weekly: response.data.revenueData.weekly,
-          monthly: response.data.revenueData.monthly
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      Alert.alert('Error', 'Failed to load dashboard data');
-    } finally {
-      setLoading(false);
+    daily: { 
+      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], 
+      datasets: [{ data: [1200, 1500, 1800, 2000, 1600, 2200, 1900], color: () => '#2563EB', strokeWidth: 2 }] 
+    },
+    weekly: { 
+      labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'], 
+      datasets: [{ data: [8000, 9500, 12000, 11000], color: () => '#2563EB', strokeWidth: 2 }] 
+    },
+    monthly: { 
+      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], 
+      datasets: [{ data: [35000, 42000, 38000, 45000, 48000, 52000], color: () => '#2563EB', strokeWidth: 2 }] 
     }
-  };
+  });
   
   useEffect(() => {
     fetchDashboardData();
@@ -105,7 +89,7 @@ const AdminDashboardScreen = () => {
   
   const currentChartData = statsFilter === 'revenue' ? chartData[timeFilter] : chartData[timeFilter];
   
-  if (loading) {
+  if (isLoadingDashboard) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
@@ -140,34 +124,34 @@ const AdminDashboardScreen = () => {
           <View style={styles.statsContainer}>
             <StatCard
               title="Total Revenue"
-              value={dashboardStats.totalRevenue}
+              value={dashboardStats?.totalRevenue || '₹0'}
               icon={<MaterialCommunityIcons name="currency-inr" size={20} color="white" />}
               color="#2563EB"
-              change={dashboardStats.revenueChange}
+              change={dashboardStats?.revenueChange || '0%'}
               isPositive={true}
             />
             <StatCard
               title="Total Bookings"
-              value={dashboardStats.totalBookings}
+              value={dashboardStats?.totalBookings || '0'}
               icon={<MaterialCommunityIcons name="calendar-check" size={20} color="white" />}
               color="#8B5CF6"
-              change={dashboardStats.bookingsChange}
+              change={dashboardStats?.bookingsChange || '0%'}
               isPositive={true}
             />
             <StatCard
               title="Active Customers"
-              value={dashboardStats.activeCustomers}
+              value={dashboardStats?.activeCustomers || '0'}
               icon={<Ionicons name="people" size={20} color="white" />}
               color="#10B981"
-              change={dashboardStats.customersChange}
+              change={dashboardStats?.customersChange || '0%'}
               isPositive={true}
             />
             <StatCard
               title="Active Pros"
-              value={dashboardStats.activeProfessionals}
+              value={dashboardStats?.activeProfessionals || '0'}
               icon={<FontAwesome5 name="user-tie" size={18} color="white" />}
               color="#F59E0B"
-              change={dashboardStats.professionalsChange}
+              change={dashboardStats?.professionalsChange || '0%'}
               isPositive={false}
             />
           </View>
@@ -225,13 +209,13 @@ const AdminDashboardScreen = () => {
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
-          {recentBookings.map((booking) => (
+          {recentBookings?.map((booking) => (
             <BookingCard
               key={booking.id}
               {...booking}
               onPress={() => navigation.navigate('AdminBookingDetails', { bookingId: booking.id })}
             />
-          ))}
+          )) || []}
         </View>
         
         {/* Top Professionals */}
@@ -242,13 +226,13 @@ const AdminDashboardScreen = () => {
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
-          {topProfessionals.map((professional) => (
+          {topProfessionals?.map((professional) => (
             <ProfessionalCard
               key={professional.id}
               {...professional}
-              onPress={() => navigation.navigate('ProfessionalDetails', { professionalId: professional.id })}
+              onPress={() => navigation.navigate('AdminProfessionalDetails', { professionalId: professional.id })}
             />
-          ))}
+          )) || []}
         </View>
         
         {/* Quick Actions */}

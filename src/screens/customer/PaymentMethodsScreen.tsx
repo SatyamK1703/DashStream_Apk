@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   StyleSheet,
   Platform,
   KeyboardAvoidingView,
-  FlatList
+  FlatList,
+  RefreshControl
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,91 +27,166 @@ type PaymentMethodsScreenNavigationProp = NativeStackNavigationProp<CustomerStac
 const PaymentMethodsScreen: React.FC = () => {
   const navigation = useNavigation<PaymentMethodsScreenNavigationProp>();
   const { user } = useAuth();
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
     // Check if user is not authenticated or is a guest user
     if (!user || user.email === 'skip-user') {
-      navigation.navigate('Login');
+      navigation.navigate('Login' as never);
     }
   }, [user, navigation]);
 
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
-    {
-      id: '1',
-      type: 'card',
-      name: 'HDFC Bank Credit Card',
-      details: '•••• •••• •••• 4567',
-      icon: 'card-outline',
-      isDefault: true
-    },
-    {
-      id: '2',
-      type: 'upi',
-      name: 'Google Pay',
-      details: 'user@okicici',
-      icon: 'phone-portrait-outline',
-      isDefault: false
-    },
-    {
-      id: '3',
-      type: 'wallet',
-      name: 'Paytm Wallet',
-      details: '+91 98765 43210',
-      icon: 'wallet-outline',
-      isDefault: false
-    }
-  ]);
+  // Fetch payment methods
+  const fetchPaymentMethods = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
 
-  const [loading, setLoading] = useState(false);
+      const response = await PaymentService.getPaymentMethods();
+      setPaymentMethods(response.data.paymentMethods || []);
+    } catch (err: any) {
+      console.error('Error fetching payment methods:', err);
+      setError(err.response?.data?.message || 'Failed to load payment methods');
+      
+      // Set fallback data
+      setPaymentMethods([
+        {
+          _id: '1',
+          type: 'card',
+          name: 'HDFC Bank Credit Card',
+          details: {
+            last4: '4567',
+            brand: 'Visa'
+          },
+          isDefault: true,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        {
+          _id: '2',
+          type: 'upi',
+          name: 'Google Pay',
+          details: {
+            upiId: 'user@okicici'
+          },
+          isDefault: false,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  // Load data on mount and when screen comes into focus
+  useEffect(() => {
+    if (user && user.email !== 'skip-user') {
+      fetchPaymentMethods();
+    }
+  }, [user, fetchPaymentMethods]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user && user.email !== 'skip-user') {
+        fetchPaymentMethods(true);
+      }
+    }, [user, fetchPaymentMethods])
+  );
+
+  // Handle refresh
+  const onRefresh = useCallback(() => {
+    fetchPaymentMethods(true);
+  }, [fetchPaymentMethods]);
+
+  // Handle delete payment method
+  const handleDeletePaymentMethod = useCallback(async (paymentMethodId: string) => {
+    try {
+      await PaymentService.deletePaymentMethod(paymentMethodId);
+      setPaymentMethods(prev => prev.filter(method => method._id !== paymentMethodId));
+      Alert.alert('Success', 'Payment method deleted successfully');
+    } catch (err: any) {
+      console.error('Error deleting payment method:', err);
+      Alert.alert('Error', err.response?.data?.message || 'Failed to delete payment method');
+    }
+  }, []);
+
+  // Handle set default payment method
+  const handleSetDefault = useCallback(async (paymentMethodId: string) => {
+    try {
+      await PaymentService.setDefaultPaymentMethod(paymentMethodId);
+      setPaymentMethods(prev => 
+        prev.map(method => ({
+          ...method,
+          isDefault: method._id === paymentMethodId
+        }))
+      );
+      Alert.alert('Success', 'Default payment method updated');
+    } catch (err: any) {
+      console.error('Error setting default payment method:', err);
+      Alert.alert('Error', err.response?.data?.message || 'Failed to update default payment method');
+    }
+  }, []);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>Loading payment methods...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => fetchPaymentMethods()}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const [showAddCardModal, setShowAddCardModal] = useState(false);
   const [showAddUpiModal, setShowAddUpiModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Handlers
-  const handleSetDefault = (id: string) => {
-    setPaymentMethods((methods) =>
-      methods.map((method) => ({ ...method, isDefault: method.id === id }))
-    );
-  };
-
-  const handleDeleteMethod = (id: string) => {
-    Alert.alert('Delete Payment Method', 'Are you sure you want to delete this payment method?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          setDeletingId(id);
-          setLoading(true);
-          setTimeout(() => {
-            setPaymentMethods((methods) => methods.filter((method) => method.id !== id));
-            setLoading(false);
-            setDeletingId(null);
-            Alert.alert('Success', 'Payment method deleted successfully');
-          }, 1000);
-        }
-      }
-    ]);
-  };
-
-  const handleAddCardSuccess = (newCard: PaymentMethod) => {
+  // Handle add card success
+  const handleAddCardSuccess = useCallback((newCard: PaymentMethod) => {
     setPaymentMethods((methods) => [...methods, newCard]);
     setShowAddCardModal(false);
     Alert.alert('Success', 'Card added successfully');
-  };
+  }, []);
 
-  const handleAddUpiSuccess = (newUpi: PaymentMethod) => {
+  // Handle add UPI success
+  const handleAddUpiSuccess = useCallback((newUpi: PaymentMethod) => {
     setPaymentMethods((methods) => [...methods, newUpi]);
     setShowAddUpiModal(false);
     Alert.alert('Success', 'UPI ID added successfully');
-  };
+  });
 
   const renderPaymentMethodItem = ({ item }: { item: PaymentMethod }) => (
     <PaymentMethodItem
       method={item}
-      onSetDefault={handleSetDefault}
-      onDelete={handleDeleteMethod}
-      isDeleting={deletingId === item.id}
+      onSetDefault={() => handleSetDefault(item._id)}
+      onDelete={() => handleDeletePaymentMethod(item._id)}
+      isDeleting={deletingId === item._id}
     />
   );
 
@@ -221,8 +297,16 @@ const PaymentMethodsScreen: React.FC = () => {
         <FlatList
           data={paymentMethods}
           renderItem={renderPaymentMethodItem}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item._id}
           contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#2563eb']}
+              tintColor="#2563eb"
+            />
+          }
           ListHeaderComponent={
             paymentMethods.length > 0 ? null : renderEmptyState()
           }
@@ -381,5 +465,41 @@ const styles = StyleSheet.create({
     color: '#374151', 
     fontSize: 14,
     lineHeight: 20
-  }
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#ef4444',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });

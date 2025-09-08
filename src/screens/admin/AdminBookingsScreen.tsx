@@ -14,7 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
-import apiService from '../../services/apiService';
+import { useData } from '../../contexts/DataContext';
 
 // Assuming these are your custom components, no changes needed here
 import SearchAndFilter from '~/components/admin/SearchAndFilter';
@@ -30,13 +30,12 @@ type AdminBookingsScreenNavigationProp = NativeStackNavigationProp<AdminStackPar
 
 const AdminBookingsScreen = () => {
   const navigation = useNavigation<AdminBookingsScreenNavigationProp>();
-  const [loading, setLoading] = useState(true);
+  const { bookings, isLoadingBookings, fetchBookings, error } = useData();
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<BookingStatus>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const [showFilters, setShowFilters] = useState(false);
-  const [bookings, setBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
 
   const filterOptions: FilterOption[] = [
@@ -50,28 +49,13 @@ const AdminBookingsScreen = () => {
   useEffect(() => {
     fetchBookings();
   }, []);
-  
-  const fetchBookings = async () => {
-    setLoading(true);
-    try {
-      const response = await apiService.get('/admin/bookings');
-      if (response.data && response.data.bookings) {
-        setBookings(response.data.bookings);
-      }
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
-      Alert.alert('Error', 'Failed to load bookings');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     applyFilters();
   }, [bookings, searchQuery, statusFilter, sortBy]);
 
   const applyFilters = () => {
-    let filtered = [...bookings];
+    let filtered = [...(bookings || [])];
 
     if (statusFilter !== 'all') {
       filtered = filtered.filter((booking) => booking.status === statusFilter);
@@ -82,12 +66,12 @@ const AdminBookingsScreen = () => {
       filtered = filtered.filter(
         (booking) =>
           booking.id.toLowerCase().includes(query) ||
-          booking.customerName.toLowerCase().includes(query) ||
-          booking.customerPhone.includes(query) ||
+          (booking.customerName && booking.customerName.toLowerCase().includes(query)) ||
+          (booking.customerPhone && booking.customerPhone.includes(query)) ||
           (booking.professionalName &&
             booking.professionalName.toLowerCase().includes(query)) ||
-          booking.service.toLowerCase().includes(query) ||
-          booking.address.toLowerCase().includes(query)
+          (booking.service && booking.service.toLowerCase().includes(query)) ||
+          (booking.address && booking.address.toLowerCase().includes(query))
       );
     }
 
@@ -112,7 +96,7 @@ const AdminBookingsScreen = () => {
     navigation.navigate('AdminBookingDetails', { bookingId });
   };
 
-  if (loading) {
+  if (isLoadingBookings) {
     return (
       <View style={styles.centeredScreen}>
         <ActivityIndicator size="large" color="#2563EB" />

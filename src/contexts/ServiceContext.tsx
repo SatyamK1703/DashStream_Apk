@@ -1,6 +1,6 @@
 // src/contexts/ServiceContext.tsx
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import * as api from '../services/api';
+import dataService from '../services/dataService';
 
 // Define service type
 type Service = {
@@ -12,7 +12,6 @@ type Service = {
   category: string;
   image?: string;
   isAvailable: boolean;
-  // Add other service properties as needed
 };
 
 // Define service context state
@@ -35,54 +34,53 @@ const ServiceContext = createContext<ServiceContextType>({
 
 // Service provider component
 export const ServiceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Initialize with empty array instead of undefined
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   
-  // Extract unique categories from services
-  const categories = [...new Set(services.map(service => service.category))];
+  // Guard against undefined services when extracting categories
+  const categories = Array.isArray(services) 
+    ? [...new Set(services.map(service => service.category))]
+    : [];
   
   // Fetch services on component mount
   useEffect(() => {
     fetchServices();
   }, []);
   
-  // Fetch services from API
+  // Fetch services from data service
   const fetchServices = async (filters?: any) => {
     setIsLoading(true);
     try {
-      const result = await api.getServices(filters);
-      if (result.success && result.services) {
-        setServices(result.services);
-      }
+      const servicesData = await dataService.getServices(filters);
+      setServices(servicesData);
     } catch (error) {
       console.error('Error fetching services:', error);
+      setServices([]); // Ensure array even on error
     } finally {
       setIsLoading(false);
     }
   };
-  
-  // Get service details
+
+
   const getServiceDetails = async (serviceId: string): Promise<Service | null> => {
     try {
       // First check if we already have the service in state
       const cachedService = services.find(service => service.id === serviceId);
       if (cachedService) return cachedService;
       
-      // If not, fetch from API
-      const result = await api.getServiceDetails(serviceId);
-      if (result.success && result.service) {
-        return result.service;
-      }
-      return null;
+      // If not, fetch from data service
+      const service = await dataService.getServiceById(serviceId);
+      return service;
     } catch (error) {
       console.error('Error fetching service details:', error);
       return null;
     }
   };
   
-  // Provide service context value
-  const value = {
-    services,
+  // Update the value object with proper type checking
+  const value: ServiceContextType = {
+    services: Array.isArray(services) ? services : [],
     categories,
     isLoading,
     fetchServices,

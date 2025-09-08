@@ -16,16 +16,15 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 // Removed MaterialIcons as it was not used
-import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
 import apiService from '../../services/apiService';
 
-// Mock types for navigation to make the component self-contained
-type AdminStackParamList = {
+// Local route params for this screen only
+type EditProfessionalParamList = {
   EditProfessional: { professionalId: string };
 };
 
-type AdminProfessionalEditRouteProp = RouteProp<AdminStackParamList, 'EditProfessional'>;
-type AdminProfessionalEditNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
+type AdminProfessionalEditRouteProp = RouteProp<EditProfessionalParamList, 'EditProfessional'>;
+type AdminProfessionalEditNavigationProp = NativeStackNavigationProp<EditProfessionalParamList>;
 
 // Interface for the professional's data structure
 interface Professional {

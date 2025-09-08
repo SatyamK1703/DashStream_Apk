@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,12 +7,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 
+
 const LoginScreen = () => {
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { login, setUser } = useAuth();
-
+  const { sendOtp, loginAsGuest } = useAuth();
   const handleLogin = async () => {
     if (!/^\d{10}$/.test(phone)) {
       Alert.alert('Invalid Phone', 'Please enter a valid 10-digit phone number.');
@@ -20,27 +20,39 @@ const LoginScreen = () => {
     }
     setIsLoading(true);
     try {
-      await login(phone);
-      navigation.navigate('OtpVerification', { phone });
-    } catch (error) {
-      Alert.alert('Login Failed', 'Could not send OTP. Please try again.');
+      const result = await sendOtp(phone);
+      if (result.success) {
+        navigation.navigate('OtpVerification', { phone });
+      } else {
+        Alert.alert('Login Failed', result.error || 'Could not send OTP. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      Alert.alert('Login Failed', error.message || 'Could not send OTP. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
-
-  const handleSkip = () => {
-    if (setUser) {
-      setUser({
-        id: 'skip-user',
-        name: 'Guest User',
-        email: 'guest@example.com',
-        phone: '0000000000',
-        role: 'customer',
-        profileImage: undefined,
-      });
-    } else {
-      console.error('setUser function is not available in AuthContext');
+  const handleSkip = async () => {
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    try {
+      const result = await loginAsGuest();
+      
+      if (result.success) {
+        // Navigate to customer app as guest
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'CustomerApp' }],
+        });
+      } else {
+        Alert.alert('Error', result.error || 'Failed to continue as guest');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to continue as guest. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -59,7 +71,7 @@ const LoginScreen = () => {
             source={require('../../assets/icon.png')} // Replace with your logo
             style={styles.logo}
           />
-          <Text style={styles.title}>Welcome to DashStream</Text>
+          <Text style={styles.title}>Welcome to DashSteam</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
         </View>
 
@@ -101,13 +113,22 @@ const LoginScreen = () => {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <TouchableOpacity onPress={handleSkip} disabled={isLoading}>
-            <Text style={styles.skipText}>Continue as Guest</Text>
+          <TouchableOpacity 
+            style={[styles.skipButton, isLoading && styles.disabledButton]} 
+            onPress={handleSkip} 
+            disabled={isLoading}
+            activeOpacity={0.7}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#4e73df" />
+            ) : (
+              <Text style={styles.skipText}>Continue as Guest</Text>
+            )}
           </TouchableOpacity>
           
           <Text style={styles.footerText}>
             By continuing, you agree to our 
-            <Text style={styles.link}> Terms</Text> and 
+            <Text style={styles.link} onPress={() => navigation.navigate('TermsAndConditions')}> Terms</Text> and 
             <Text style={styles.link}> Privacy Policy</Text>
           </Text>
         </View>
@@ -196,11 +217,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 20,
   },
+  firebaseButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    backgroundColor: '#FF9800',
+    marginBottom: 16,
+    minWidth: 180,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  firebaseButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  skipButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#4e73df',
+    marginBottom: 24,
+    minWidth: 180,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  disabledButton: {
+    opacity: 0.5,
+    borderColor: '#a0a7b5',
+  },
   skipText: {
     color: '#4e73df',
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 24,
   },
   footerText: {
     color: '#718096',

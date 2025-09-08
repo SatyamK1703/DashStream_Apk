@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, View, Platform,StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Platform, StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // Import navigators for different user roles
@@ -16,7 +16,6 @@ import { useAuth } from '../../src/contexts/AuthContext';
 
 // Define the root stack param list
 export type RootStackParamList = {
-  Splash: undefined;
   Login: undefined;
   OtpVerification: { phone: string };
   CustomerApp: undefined;
@@ -27,26 +26,35 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => {
-  const { user, isLoading, isBooting } = useAuth() as any;
+  const { user, isLoading } = useAuth();
 
-  // ⬇️ Show splash/loader ONLY while restoring session at launch
-  if (isBooting) {
+  if (isLoading) {
     return (
-          <View style={styles.container}>
-      <ActivityIndicator size="large" color="#2563eb" />
-    </View>
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
     );
   }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+    <Stack.Navigator 
+      screenOptions={{ 
+        headerShown: false, 
+        animation: 'slide_from_right',
+        gestureEnabled: true,
+        gestureDirection: 'horizontal'
+      }}
+      initialRouteName="Login"
+    >
       {user ? (
         user.role === 'customer' ? (
           <Stack.Screen name="CustomerApp" component={CustomerNavigator} />
         ) : user.role === 'professional' ? (
           <Stack.Screen name="ProfessionalApp" component={ProNavigator} />
-        ) : (
+        ) : user.role === 'admin' ? (
           <Stack.Screen name="AdminApp" component={AdminNavigator} />
+        ) : (
+          <Stack.Screen name="Login" component={LoginScreen} />
         )
       ) : (
         <>

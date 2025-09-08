@@ -1,11 +1,14 @@
 // types.ts
 export interface PaymentMethod {
   id: string;
-  type: 'card' | 'upi' | 'netbanking' | 'wallet';
+  type: 'card' | 'upi' | 'wallet' | 'netbanking' | 'emi';
   name: string;
   details: string;
   icon: string;
   isDefault: boolean;
+  // Additional fields for UI display
+  backgroundColor?: string;
+  textColor?: string;
 }
 
 export interface RazorpayOrder {
@@ -52,4 +55,21 @@ export interface PaymentDetails {
   paymentId: string;
   order: RazorpayOrder;
   key: string;
+  status?: 'created' | 'authorized' | 'captured' | 'refunded' | 'failed';
+  method?: string;
+  amount?: number;
+  currency?: string;
+  createdAt?: string;
+  bookingId?: string;
+}
+
+export interface PaymentConfirmation {
+  amount: number;
+  currency: string;
+  bookingId: string;
+  serviceName?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  selectedMethod?: PaymentMethod;
 }

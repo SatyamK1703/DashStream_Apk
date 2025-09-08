@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,17 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
-  StyleSheet, // Import StyleSheet
+  StyleSheet,
   Platform,
+  Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 
-import { ProStackParamList } from '../../../app/routes/ProfessionalNavigator';
+import { ProStackParamList } from '../../../app/routes/ProNavigator';
 import { useAuth } from '../../contexts/AuthContext';
-import apiService from '../../services/apiService';
+import { ProfessionalService, ProfessionalJob, ProfessionalEarnings, ProfessionalStats } from '../../services/ProfessionalServices';
 
 type ProDashboardScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;
 
@@ -56,38 +57,90 @@ const ProDashboardScreen = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [upcomingJobs, setUpcomingJobs] = useState<Job[]>([]);
-  const [earningsSummary, setEarningsSummary] = useState<EarningsSummary | null>(null);
-  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [upcomingJobs, setUpcomingJobs] = useState<ProfessionalJob[]>([]);
+  const [todaysJobs, setTodaysJobs] = useState<ProfessionalJob[]>([]);
+  const [earningsSummary, setEarningsSummary] = useState<ProfessionalEarnings>({
+    today: 0,
+    thisWeek: 0,
+    thisMonth: 0,
+    total: 0,
+    pendingPayout: 0
+  });
+  const [performanceMetrics, setPerformanceMetrics] = useState<ProfessionalStats>({
+    totalJobs: 0,
+    completedJobs: 0,
+    cancelledJobs: 0,
+    averageRating: 0,
+    onTimeRate: 0,
+    completionRate: 0
+  });
 
   // --- Data Fetching ---
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async (isRefresh = false) => {
     try {
-      // Real API calls
-      const jobsResponse = await apiService.get('/professional/jobs/upcoming');
-      setUpcomingJobs(jobsResponse.data);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+
+      const dashboardData = await ProfessionalService.getDashboardData();
       
-      const earningsResponse = await apiService.get('/professional/earnings/summary');
-      setEarningsSummary(earningsResponse.data);
-      
-      const performanceResponse = await apiService.get('/professional/performance');
-      setPerformanceMetrics(performanceResponse.data);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      setTodaysJobs(dashboardData.todaysJobs);
+      setUpcomingJobs(dashboardData.upcomingJobs);
+      setEarningsSummary(dashboardData.earnings);
+      setPerformanceMetrics(dashboardData.stats);
+    } catch (err: any) {
+      console.error('Error fetching dashboard data:', err);
+      setError(err.response?.data?.message || 'Failed to load dashboard data');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
-
-  useEffect(() => {
-    setLoading(true);
-    fetchDashboardData();
   }, []);
 
-  const onRefresh = () => {
-    setRefreshing(true);
+  useEffect(() => {
     fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // Auto-refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchDashboardData(false);
+    }, [fetchDashboardData])
+  );
+
+  const onRefresh = () => {
+    fetchDashboardData(true);
+  };
+
+  // Helper functions
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return '#f59e0b';
+      case 'confirmed': return '#10b981';
+      case 'assigned': return '#3b82f6';
+      case 'in-progress': return '#8b5cf6';
+      case 'completed': return '#059669';
+      case 'cancelled': return '#ef4444';
+      case 'rejected': return '#dc2626';
+      default: return '#6b7280';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'pending': return 'Pending';
+      case 'confirmed': return 'Confirmed';
+      case 'assigned': return 'Assigned';
+      case 'in-progress': return 'In Progress';
+      case 'completed': return 'Completed';
+      case 'cancelled': return 'Cancelled';
+      case 'rejected': return 'Rejected';
+      default: return status;
+    }
   };
 
   // --- Render Functions ---
@@ -129,33 +182,52 @@ const ProDashboardScreen = () => {
     </View>
   );
 
-  const renderJobItem = (job: Job) => (
-    <TouchableOpacity key={job.id} style={styles.card} onPress={() => navigation.navigate('JobDetails', { jobId: job.id })}>
+  const renderJobItem = (job: ProfessionalJob) => (
+    <TouchableOpacity key={job._id} style={styles.card} onPress={() => navigation.navigate('JobDetails', { jobId: job._id })}>
       <View style={styles.jobHeader}>
         <View style={styles.jobCustomerInfo}>
-          <Image source={{ uri: job.customerImage }} style={styles.customerImage} />
+          {job.customer.profileImage ? (
+            <Image source={{ uri: job.customer.profileImage }} style={styles.customerImage} />
+          ) : (
+            <View style={[styles.customerImage, styles.avatarPlaceholder]}>
+              <Ionicons name="person" size={20} color="#6b7280" />
+            </View>
+          )}
           <View>
-            <Text style={styles.customerName}>{job.customerName}</Text>
-            <Text style={styles.jobTime}>{job.date} • {job.time}</Text>
+            <Text style={styles.customerName}>{job.customer.name}</Text>
+            <Text style={styles.jobTime}>{new Date(job.scheduledDate).toLocaleDateString()} • {job.scheduledTime}</Text>
           </View>
         </View>
-        <View style={styles.statusBadge}><Text style={styles.statusBadgeText}>Upcoming</Text></View>
-      </View>
-      <View style={styles.jobDetailRow}><Ionicons name="location-outline" size={16} color={colors.gray500} /><Text style={styles.jobDetailText} numberOfLines={1}>{job.address}</Text></View>
-      {job.distance && job.estimatedArrival && (
-        <View style={styles.jobDetailRowContainer}>
-          <View style={styles.jobDetailRow}><Ionicons name="navigate-outline" size={16} color={colors.gray500} /><Text style={styles.jobDetailText}>{job.distance}</Text></View>
-          <View style={styles.jobDetailRow}><Ionicons name="time-outline" size={16} color={colors.gray500} /><Text style={styles.jobDetailText}>ETA: {job.estimatedArrival}</Text></View>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(job.status) }]}>
+          <Text style={styles.statusBadgeText}>{getStatusText(job.status)}</Text>
         </View>
-      )}
+      </View>
+      <View style={styles.jobDetailRow}>
+        <Ionicons name="location-outline" size={16} color={colors.gray500} />
+        <Text style={styles.jobDetailText} numberOfLines={1}>{job.location.address}</Text>
+      </View>
+      <View style={styles.jobDetailRow}>
+        <Ionicons name="car-outline" size={16} color={colors.gray500} />
+        <Text style={styles.jobDetailText}>{job.vehicle.type}</Text>
+      </View>
+      <View style={styles.jobDetailRow}>
+        <Ionicons name="time-outline" size={16} color={colors.gray500} />
+        <Text style={styles.jobDetailText}>{job.estimatedDuration} minutes</Text>
+      </View>
       <View style={styles.divider} />
       <View style={styles.serviceList}>
-        {job.services.map((service, index) => (
-          <View key={index} style={styles.serviceItem}><Text style={styles.serviceName}>{service.name}</Text><Text style={styles.servicePrice}>₹{service.price}</Text></View>
-        ))}
+        <View style={styles.serviceItem}>
+          <Text style={styles.serviceName}>{job.service.title}</Text>
+          <Text style={styles.servicePrice}>₹{job.service.price}</Text>
+        </View>
       </View>
-      <View style={styles.totalRow}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalAmount}>₹{job.totalAmount}</Text></View>
-      <View style={styles.chevronIcon}><Ionicons name="chevron-forward" size={16} color={colors.gray500} /></View>
+      <View style={styles.totalRow}>
+        <Text style={styles.totalLabel}>Total</Text>
+        <Text style={styles.totalAmount}>₹{job.totalAmount}</Text>
+      </View>
+      <View style={styles.chevronIcon}>
+        <Ionicons name="chevron-forward" size={16} color={colors.gray500} />
+      </View>
     </TouchableOpacity>
   );
 
@@ -299,6 +371,12 @@ const styles = StyleSheet.create({
   quickActionItem: { alignItems: 'center', flex: 1 },
   quickActionIconContainer: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   quickActionLabel: { color: colors.gray700, fontSize: 14, textAlign: 'center' },
+  avatarPlaceholder: {
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center'
+  }
 });
 
 export default ProDashboardScreen;
+

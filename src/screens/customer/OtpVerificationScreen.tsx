@@ -2,14 +2,20 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Keyboard, Platform } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../../app/routes/RootNavigator';
+// Define navigation types for OTP verification
+type OtpStackParamList = {
+  Login: undefined;
+  OtpVerification: { phone: string };
+  CustomerTab: undefined;
+};
 import { useAuth } from '../../contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
-type OtpVerificationRouteProp = RouteProp<RootStackParamList, 'OtpVerification'>;
-type OtpVerificationNavigationProp = NativeStackNavigationProp<RootStackParamList, 'OtpVerification'>;
+
+type OtpVerificationRouteProp = RouteProp<OtpStackParamList, 'OtpVerification'>;
+type OtpVerificationNavigationProp = NativeStackNavigationProp<OtpStackParamList, 'OtpVerification'>;
 
 const OtpVerificationScreen = () => {
   const [otp, setOtp] = useState(['', '', '', '']);
@@ -21,7 +27,7 @@ const OtpVerificationScreen = () => {
   const navigation = useNavigation<OtpVerificationNavigationProp>();
   const route = useRoute<OtpVerificationRouteProp>();
   const { phone } = route.params;
-  const { verifyOtp, isLoading, login } = useAuth();
+  const { verifyOtp, isLoading, sendOtp } = useAuth();
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -67,26 +73,65 @@ const OtpVerificationScreen = () => {
   const handleVerifyOtp = async () => {
     Keyboard.dismiss();
     const otpString = otp.join('');
+    
     if (otpString.length !== 4) {
       Alert.alert('Invalid OTP', 'Please enter a valid 4-digit OTP');
       return;
     }
 
-    const ok = await verifyOtp(phone, otpString);
-    if (!ok) return;
+    try {
+      const result = await verifyOtp(phone, otpString);
+
+      if (!result.success) {
+        // Handle specific error codes
+        let errorMessage = result.error || 'Invalid OTP. Please try again.';
+        
+        if (result.error?.includes('APP-500-962')) {
+          errorMessage = 'OTP verification service is temporarily unavailable. Please try again later.';
+        } else if (result.error?.includes('APP-400-100')) {
+          errorMessage = 'Invalid OTP. Please check the code and try again.';
+        } else if (result.error?.includes('APP-400-101')) {
+          errorMessage = 'OTP has expired. Please request a new code.';
+        }
+        
+        Alert.alert('Verification Failed', errorMessage);
+        
+        // Clear OTP inputs on error
+        setOtp(['', '', '', '']);
+        inputRefs.current[0]?.focus();
+        setActiveIndex(0);
+        return;
+      }
+    } catch (error: any) {
+      console.error('OTP Verification Error:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to verify OTP. Please try again.'
+      );
+      
+      // Clear OTP inputs on error
+      setOtp(['', '', '', '']);
+      inputRefs.current[0]?.focus();
+      setActiveIndex(0);
+    }
   };
 
   const handleResendOtp = async () => {
-    setTimer(30);
-    setCanResend(false);
-    setOtp(['', '', '', '']);
-    inputRefs.current[0]?.focus();
-    setActiveIndex(0);
-    
     try {
-      await login(phone);
-      Alert.alert('OTP Sent', 'A new OTP has been sent to your phone number.');
-    } catch (error) {
+      const result = await sendOtp(phone);
+      
+      if (result.success) {
+        setTimer(30);
+        setCanResend(false);
+        setOtp(['', '', '', '']);
+        inputRefs.current[0]?.focus();
+        setActiveIndex(0);
+        Alert.alert('Success', 'OTP resent successfully');
+      } else {
+        Alert.alert('Error', result.error || 'Failed to resend OTP');
+      }
+    } catch (error: any) {
+      console.error('Resend OTP Error:', error);
       Alert.alert('Error', 'Failed to resend OTP. Please try again.');
     }
   };
@@ -114,7 +159,7 @@ const OtpVerificationScreen = () => {
           <Text style={styles.subtitle}>
             Enter the 4-digit code sent to
           </Text>
-          <Text style={styles.phoneText}>+{phone}</Text>
+          <Text style={styles.phoneText}>+91{phone}</Text>
         </View>
 
         {/* OTP Input Container */}

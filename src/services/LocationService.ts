@@ -1,229 +1,229 @@
-// src/services/LocationService.ts
 import * as Location from 'expo-location';
+import { Platform } from 'react-native';
+import apiService from './apiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { APP_CONFIG } from '../constants/config';
-import * as locationApi from './locationApi';
 
-// Define location data type
-export type LocationData = {
+const LOCATION_PERMISSION_KEY = '@dashstream:location_permission';
+const LAST_LOCATION_KEY = '@dashstream:last_location';
+const LOCATION_SETTINGS_KEY = '@dashstream:location_settings';
+
+export interface LocationData {
   latitude: number;
   longitude: number;
   accuracy?: number;
-  altitude?: number;
   speed?: number;
   heading?: number;
   timestamp: number;
-  status?: 'available' | 'busy' | 'offline';
-  batteryLevel?: number;
-};
+}
 
-// Define geofence type
-export type Geofence = {
+export interface LocationSettings {
+  enableTracking: boolean;
+  updateInterval: number; // in milliseconds
+  significantChangeThreshold: number; // in meters
+  batteryOptimizationEnabled: boolean;
+  maxHistoryItems: number;
+}
+
+export interface ProfessionalLocation {
   id: string;
-  name: string;
+  professionalId: string;
   latitude: number;
   longitude: number;
-  radius: number; // in meters
-  notifyOnEntry: boolean;
-  notifyOnExit: boolean;
-};
+  accuracy: number;
+  speed?: number;
+  heading?: number;
+  status: 'available' | 'busy' | 'offline';
+  lastUpdated: string;
+  batteryLevel?: number;
+  networkType?: string;
+}
 
-// Class to handle location tracking and storage
-export class LocationService {
-  private userId: string;
-  private userRole: string;
-  private locationWatchId: Location.LocationSubscription | null = null;
-  private geofences: Geofence[] = [];
+class LocationService {
+  private watchId: Location.LocationSubscription | null = null;
+  private settings: LocationSettings = {
+    enableTracking: true,
+    updateInterval: 30000, // 30 seconds
+    significantChangeThreshold: 100, // 100 meters
+    batteryOptimizationEnabled: true,
+    maxHistoryItems: 100,
+  };
   private lastLocation: LocationData | null = null;
-  private updateInterval: number = 10000; // 10 seconds default
-  private significantChangeThreshold: number = 10; // 10 meters default
-  private isTracking: boolean = false;
-  private batteryOptimizationEnabled: boolean = true;
-  private maxHistoryItems: number = 100; // Default max history items
+  private isTracking = false;
 
-  constructor(userId: string, userRole: string) {
-    this.userId = userId;
-    this.userRole = userRole;
+  constructor() {
+    this.loadSettings();
+    this.loadLastLocation();
   }
 
-  // Initialize location tracking
-  async initialize(): Promise<boolean> {
+  /**
+   * Request location permissions
+   */
+  async requestPermissions(): Promise<boolean> {
     try {
-      // Request location permissions
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
       
-      if (status !== 'granted') {
-        console.error('Location permission not granted');
+      if (foregroundStatus !== 'granted') {
+        console.log('Foreground location permission denied');
         return false;
       }
 
-      // Load saved geofences
-      await this.loadGeofences();
+      // Request background permissions for professional users
+      if (Platform.OS === 'ios') {
+        const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+        if (backgroundStatus !== 'granted') {
+          console.log('Background location permission denied');
+        }
+      }
 
-      // Load configuration
-      await this.loadConfiguration();
-
+      await AsyncStorage.setItem(LOCATION_PERMISSION_KEY, 'granted');
       return true;
     } catch (error) {
-      console.error('Error initializing location service:', error);
+      console.error('Error requesting location permissions:', error);
       return false;
     }
   }
 
-  // Start tracking location
-  async startTracking(): Promise<boolean> {
+  /**
+   * Check if location permissions are granted
+   */
+  async hasPermissions(): Promise<boolean> {
     try {
-      if (this.isTracking) {
-        return true; // Already tracking
+      const { status } = await Location.getForegroundPermissionsAsync();
+      return status === 'granted';
+    } catch (error) {
+      console.error('Error checking location permissions:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get current location
+   */
+  async getCurrentLocation(): Promise<LocationData | null> {
+    try {
+      const hasPermission = await this.hasPermissions();
+      if (!hasPermission) {
+        const granted = await this.requestPermissions();
+        if (!granted) {
+          throw new Error('Location permission denied');
+        }
       }
 
-      // Request background location permissions for continuous tracking
-      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+        timeInterval: 5000,
+      });
+
+      const locationData: LocationData = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        accuracy: location.coords.accuracy || undefined,
+        speed: location.coords.speed || undefined,
+        heading: location.coords.heading || undefined,
+        timestamp: location.timestamp,
+      };
+
+      this.lastLocation = locationData;
+      await this.saveLastLocation();
       
-      if (backgroundStatus !== 'granted') {
-        console.warn('Background location permission not granted, falling back to foreground only');
+      return locationData;
+    } catch (error) {
+      console.error('Error getting current location:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Start location tracking
+   */
+  async startTracking(): Promise<void> {
+    if (this.isTracking) {
+      console.log('Location tracking already started');
+      return;
+    }
+
+    try {
+      const hasPermission = await this.hasPermissions();
+      if (!hasPermission) {
+        const granted = await this.requestPermissions();
+        if (!granted) {
+          throw new Error('Location permission denied');
+        }
       }
 
-      // Update tracking status on the server
-      await this.setTrackingEnabled(true);
-
-      // Start watching location with appropriate accuracy and interval
-      this.locationWatchId = await Location.watchPositionAsync(
+      this.watchId = await Location.watchPositionAsync(
         {
-          accuracy: this.batteryOptimizationEnabled ? 
-            Location.Accuracy.Balanced : 
-            Location.Accuracy.High,
-          distanceInterval: this.significantChangeThreshold,
-          timeInterval: this.updateInterval,
+          accuracy: Location.Accuracy.High,
+          timeInterval: this.settings.updateInterval,
+          distanceInterval: this.settings.significantChangeThreshold,
         },
-        this.handleLocationUpdate.bind(this)
+        (location) => {
+          this.handleLocationUpdate(location);
+        }
       );
 
       this.isTracking = true;
-      return true;
+      console.log('Location tracking started');
     } catch (error) {
       console.error('Error starting location tracking:', error);
-      return false;
+      throw error;
     }
   }
 
-  // Stop tracking location
-  async stopTracking(): Promise<boolean> {
-    try {
-      if (!this.isTracking) {
-        return true; // Already stopped
-      }
-
-      // Remove the location watch
-      if (this.locationWatchId) {
-        this.locationWatchId.remove();
-        this.locationWatchId = null;
-      }
-
-      // Update status to offline
-      await this.updateStatus('offline');
-      
-      // Update tracking status on the server
-      await this.setTrackingEnabled(false);
-
-      this.isTracking = false;
-      return true;
-    } catch (error) {
-      console.error('Error stopping location tracking:', error);
-      return false;
+  /**
+   * Stop location tracking
+   */
+  async stopTracking(): Promise<void> {
+    if (this.watchId) {
+      this.watchId.remove();
+      this.watchId = null;
     }
+    this.isTracking = false;
+    console.log('Location tracking stopped');
   }
 
-  // Handle location updates
+  /**
+   * Handle location update
+   */
   private async handleLocationUpdate(location: Location.LocationObject): Promise<void> {
-    try {
-      const newLocation: LocationData = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        accuracy: location.coords.accuracy,
-        altitude: location.coords.altitude,
-        speed: location.coords.speed,
-        heading: location.coords.heading,
-        timestamp: location.timestamp,
-        status: this.lastLocation?.status || 'available',
-      };
+    const locationData: LocationData = {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      accuracy: location.coords.accuracy || undefined,
+      speed: location.coords.speed || undefined,
+      heading: location.coords.heading || undefined,
+      timestamp: location.timestamp,
+    };
 
-      // Check if this is a significant change worth storing
-      if (!this.lastLocation || this.isSignificantChange(this.lastLocation, newLocation)) {
-        // Store the location
-        await this.storeLocation(newLocation);
-        
-        // Check geofences
-        await this.checkGeofences(newLocation);
-        
-        // Update last location
-        this.lastLocation = newLocation;
-      }
-    } catch (error) {
-      console.error('Error handling location update:', error);
+    // Check if location has changed significantly
+    if (this.hasLocationChanged(locationData)) {
+      this.lastLocation = locationData;
+      await this.saveLastLocation();
+      await this.updateProfessionalLocation(locationData);
     }
   }
 
-  // Store location to API
-  private async storeLocation(location: LocationData): Promise<void> {
-    try {
-      // Send location update to the server
-      await locationApi.updateLocation({
-        latitude: location.latitude,
-        longitude: location.longitude,
-        accuracy: location.accuracy,
-        speed: location.speed,
-        heading: location.heading,
-      });
-    } catch (error) {
-      console.error('Error storing location:', error);
-    }
-  }
+  /**
+   * Check if location has changed significantly
+   */
+  private hasLocationChanged(newLocation: LocationData): boolean {
+    if (!this.lastLocation) return true;
 
-  // Update user status
-  async updateStatus(status: 'available' | 'busy' | 'offline'): Promise<boolean> {
-    try {
-      // Update status on the server
-      const result = await locationApi.updateStatus(status);
-      
-      if (result.success) {
-        // Update local status
-        if (this.lastLocation) {
-          this.lastLocation.status = status;
-        }
-        return true;
-      } else {
-        console.error('Error updating status:', result.error);
-        return false;
-      }
-    } catch (error) {
-      console.error('Error updating status:', error);
-      return false;
-    }
-  }
-
-  // Check if location change is significant enough to store
-  private isSignificantChange(oldLocation: LocationData, newLocation: LocationData): boolean {
-    // Calculate distance between points
     const distance = this.calculateDistance(
-      oldLocation.latitude,
-      oldLocation.longitude,
+      this.lastLocation.latitude,
+      this.lastLocation.longitude,
       newLocation.latitude,
       newLocation.longitude
     );
-    
-    // Check if distance exceeds threshold
-    return distance > this.significantChangeThreshold;
+
+    return distance >= this.settings.significantChangeThreshold;
   }
 
-  // Calculate distance between two points using Haversine formula
-  private calculateDistance(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ): number {
-    const R = 6371e3; // Earth radius in meters
+  /**
+   * Calculate distance between two coordinates
+   */
+  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371e3; // Earth's radius in meters
     const φ1 = (lat1 * Math.PI) / 180;
     const φ2 = (lat2 * Math.PI) / 180;
     const Δφ = ((lat2 - lat1) * Math.PI) / 180;
@@ -234,253 +234,223 @@ export class LocationService {
       Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    return R * c; // Distance in meters
+    return R * c;
   }
 
-  // Add a geofence
-  async addGeofence(geofence: Omit<Geofence, 'id'>): Promise<Geofence | null> {
+  /**
+   * Update professional location on backend
+   */
+  async updateProfessionalLocation(locationData: LocationData): Promise<void> {
     try {
-      // Generate a unique ID for the geofence
-      const id = Date.now().toString();
-      const newGeofence: Geofence = { ...geofence, id };
-      
-      // Add to local cache
-      this.geofences.push(newGeofence);
-      
-      // Save to storage
-      await this.saveGeofences();
-      
-      return newGeofence;
-    } catch (error) {
-      console.error('Error adding geofence:', error);
-      return null;
-    }
-  }
-
-  // Remove a geofence
-  async removeGeofence(geofenceId: string): Promise<boolean> {
-    try {
-      // Remove from local cache
-      this.geofences = this.geofences.filter(g => g.id !== geofenceId);
-      
-      // Save to storage
-      await this.saveGeofences();
-      
-      return true;
-    } catch (error) {
-      console.error('Error removing geofence:', error);
-      return false;
-    }
-  }
-
-  // Get all geofences
-  getGeofences(): Geofence[] {
-    return [...this.geofences];
-  }
-
-  // Save geofences to storage
-  private async saveGeofences(): Promise<void> {
-    try {
-      await AsyncStorage.setItem(
-        `${APP_CONFIG.STORAGE_KEYS.USER_DATA}_geofences_${this.userId}`,
-        JSON.stringify(this.geofences)
-      );
-    } catch (error) {
-      console.error('Error saving geofences:', error);
-    }
-  }
-
-  // Load geofences from storage
-  private async loadGeofences(): Promise<void> {
-    try {
-      const geofencesJson = await AsyncStorage.getItem(
-        `${APP_CONFIG.STORAGE_KEYS.USER_DATA}_geofences_${this.userId}`
-      );
-      
-      if (geofencesJson) {
-        this.geofences = JSON.parse(geofencesJson);
-      }
-    } catch (error) {
-      console.error('Error loading geofences:', error);
-    }
-  }
-
-  // Check if a location is inside any geofences
-  private async checkGeofences(location: LocationData): Promise<void> {
-    try {
-      for (const geofence of this.geofences) {
-        const distance = this.calculateDistance(
-          location.latitude,
-          location.longitude,
-          geofence.latitude,
-          geofence.longitude
-        );
-        
-        const isInside = distance <= geofence.radius;
-        const wasInside = this.isLocationInGeofence(this.lastLocation, geofence);
-        
-        // Check for entry
-        if (isInside && !wasInside && geofence.notifyOnEntry) {
-          console.log(`Entered geofence: ${geofence.name}`);
-          // TODO: Send notification for geofence entry
-        }
-        
-        // Check for exit
-        if (!isInside && wasInside && geofence.notifyOnExit) {
-          console.log(`Exited geofence: ${geofence.name}`);
-          // TODO: Send notification for geofence exit
-        }
-      }
-    } catch (error) {
-      console.error('Error checking geofences:', error);
-    }
-  }
-
-  // Check if a location is inside a specific geofence
-  private isLocationInGeofence(location: LocationData | null, geofence: Geofence): boolean {
-    if (!location) return false;
-    
-    const distance = this.calculateDistance(
-      location.latitude,
-      location.longitude,
-      geofence.latitude,
-      geofence.longitude
-    );
-    
-    return distance <= geofence.radius;
-  }
-
-  // Get location history
-  async getLocationHistory(limit: number = this.maxHistoryItems): Promise<LocationData[]> {
-    try {
-      const result = await locationApi.getProfessionalLocationHistory(this.userId, limit);
-      
-      if (result.success && result.data && Array.isArray(result.data.data)) {
-        return result.data.data;
-      }
-      
-      return [];
-    } catch (error) {
-      console.error('Error getting location history:', error);
-      return [];
-    }
-  }
-
-  // Configure tracking settings
-  async configureTracking(settings: {
-    updateInterval?: number;
-    significantChangeThreshold?: number;
-    batteryOptimizationEnabled?: boolean;
-    maxHistoryItems?: number;
-  }): Promise<boolean> {
-    try {
-      // Update local settings
-      if (settings.updateInterval !== undefined) {
-        this.updateInterval = settings.updateInterval;
-      }
-      
-      if (settings.significantChangeThreshold !== undefined) {
-        this.significantChangeThreshold = settings.significantChangeThreshold;
-      }
-      
-      if (settings.batteryOptimizationEnabled !== undefined) {
-        this.batteryOptimizationEnabled = settings.batteryOptimizationEnabled;
-      }
-      
-      if (settings.maxHistoryItems !== undefined) {
-        this.maxHistoryItems = settings.maxHistoryItems;
-      }
-      
-      // Save configuration
-      await this.saveConfiguration();
-      
-      // Update settings on the server
-      const result = await locationApi.updateTrackingSettings({
-        updateInterval: this.updateInterval,
-        significantChangeThreshold: this.significantChangeThreshold,
-        batteryOptimizationEnabled: this.batteryOptimizationEnabled,
-        maxHistoryItems: this.maxHistoryItems
+      await apiService.post('/location/update', {
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+        accuracy: locationData.accuracy,
+        speed: locationData.speed,
+        heading: locationData.heading,
+        timestamp: locationData.timestamp,
       });
-      
-      // Restart tracking if active
-      if (this.isTracking) {
-        await this.stopTracking();
+    } catch (error) {
+      console.error('Error updating professional location:', error);
+    }
+  }
+
+  /**
+   * Update professional status
+   */
+  async updateProfessionalStatus(status: 'available' | 'busy' | 'offline'): Promise<void> {
+    try {
+      await apiService.post('/location/status', { status });
+    } catch (error) {
+      console.error('Error updating professional status:', error);
+    }
+  }
+
+  /**
+   * Set tracking enabled/disabled
+   */
+  async setTrackingEnabled(enabled: boolean): Promise<void> {
+    try {
+      await apiService.post('/location/tracking', { enabled });
+      this.settings.enableTracking = enabled;
+      await this.saveSettings();
+
+      if (enabled) {
         await this.startTracking();
+      } else {
+        await this.stopTracking();
       }
-      
-      return result.success;
-    } catch (error) {
-      console.error('Error configuring tracking:', error);
-      return false;
-    }
-  }
-
-  // Save configuration to storage
-  private async saveConfiguration(): Promise<void> {
-    try {
-      const config = {
-        updateInterval: this.updateInterval,
-        significantChangeThreshold: this.significantChangeThreshold,
-        batteryOptimizationEnabled: this.batteryOptimizationEnabled,
-        maxHistoryItems: this.maxHistoryItems
-      };
-      
-      await AsyncStorage.setItem(
-        `${APP_CONFIG.STORAGE_KEYS.USER_DATA}_location_config_${this.userId}`,
-        JSON.stringify(config)
-      );
-    } catch (error) {
-      console.error('Error saving configuration:', error);
-    }
-  }
-
-  // Load configuration from storage
-  private async loadConfiguration(): Promise<void> {
-    try {
-      const configJson = await AsyncStorage.getItem(
-        `${APP_CONFIG.STORAGE_KEYS.USER_DATA}_location_config_${this.userId}`
-      );
-      
-      if (configJson) {
-        const config = JSON.parse(configJson);
-        
-        if (config.updateInterval !== undefined) {
-          this.updateInterval = config.updateInterval;
-        }
-        
-        if (config.significantChangeThreshold !== undefined) {
-          this.significantChangeThreshold = config.significantChangeThreshold;
-        }
-        
-        if (config.batteryOptimizationEnabled !== undefined) {
-          this.batteryOptimizationEnabled = config.batteryOptimizationEnabled;
-        }
-        
-        if (config.maxHistoryItems !== undefined) {
-          this.maxHistoryItems = config.maxHistoryItems;
-        }
-      }
-    } catch (error) {
-      console.error('Error loading configuration:', error);
-    }
-  }
-
-  // Enable or disable tracking
-  private async setTrackingEnabled(enabled: boolean): Promise<void> {
-    try {
-      await locationApi.setTrackingEnabled(enabled);
     } catch (error) {
       console.error('Error setting tracking enabled:', error);
     }
   }
+
+  /**
+   * Update tracking settings
+   */
+  async updateTrackingSettings(newSettings: Partial<LocationSettings>): Promise<void> {
+    try {
+      await apiService.post('/location/settings', newSettings);
+      this.settings = { ...this.settings, ...newSettings };
+      await this.saveSettings();
+
+      // Restart tracking with new settings if currently tracking
+      if (this.isTracking) {
+        await this.stopTracking();
+        await this.startTracking();
+      }
+    } catch (error) {
+      console.error('Error updating tracking settings:', error);
+    }
+  }
+
+  /**
+   * Get professional location
+   */
+  async getProfessionalLocation(professionalId: string): Promise<ProfessionalLocation | null> {
+    try {
+      const response = await apiService.get(`/location/professional/${professionalId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting professional location:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get professional location history
+   */
+  async getProfessionalLocationHistory(professionalId: string, limit?: number): Promise<LocationData[]> {
+    try {
+      const response = await apiService.get(`/location/professional/${professionalId}/history`, { limit });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error getting professional location history:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Find nearby professionals
+   */
+  async findNearbyProfessionals(params: {
+    latitude: number;
+    longitude: number;
+    maxDistance?: number;
+    status?: string;
+  }): Promise<ProfessionalLocation[]> {
+    try {
+      const response = await apiService.get('/location/nearby', params);
+      return response.data || [];
+    } catch (error) {
+      console.error('Error finding nearby professionals:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Subscribe to location updates for a professional
+   */
+  async subscribeToLocationUpdates(professionalId: string): Promise<void> {
+    try {
+      await apiService.post(`/location/subscribe/${professionalId}`);
+    } catch (error) {
+      console.error('Error subscribing to location updates:', error);
+    }
+  }
+
+  /**
+   * Unsubscribe from location updates for a professional
+   */
+  async unsubscribeFromLocationUpdates(professionalId: string): Promise<void> {
+    try {
+      await apiService.post(`/location/unsubscribe/${professionalId}`);
+    } catch (error) {
+      console.error('Error unsubscribing from location updates:', error);
+    }
+  }
+
+  /**
+   * Get location settings
+   */
+  getSettings(): LocationSettings {
+    return { ...this.settings };
+  }
+
+  /**
+   * Get last known location
+   */
+  getLastLocation(): LocationData | null {
+    return this.lastLocation ? { ...this.lastLocation } : null;
+  }
+
+  /**
+   * Check if tracking is active
+   */
+  isTrackingActive(): boolean {
+    return this.isTracking;
+  }
+
+  /**
+   * Save settings to local storage
+   */
+  private async saveSettings(): Promise<void> {
+    try {
+      await AsyncStorage.setItem(LOCATION_SETTINGS_KEY, JSON.stringify(this.settings));
+    } catch (error) {
+      console.error('Error saving location settings:', error);
+    }
+  }
+
+  /**
+   * Load settings from local storage
+   */
+  private async loadSettings(): Promise<void> {
+    try {
+      const settingsJson = await AsyncStorage.getItem(LOCATION_SETTINGS_KEY);
+      if (settingsJson) {
+        this.settings = { ...this.settings, ...JSON.parse(settingsJson) };
+      }
+    } catch (error) {
+      console.error('Error loading location settings:', error);
+    }
+  }
+
+  /**
+   * Save last location to local storage
+   */
+  private async saveLastLocation(): Promise<void> {
+    if (this.lastLocation) {
+      try {
+        await AsyncStorage.setItem(LAST_LOCATION_KEY, JSON.stringify(this.lastLocation));
+      } catch (error) {
+        console.error('Error saving last location:', error);
+      }
+    }
+  }
+
+  /**
+   * Load last location from local storage
+   */
+  private async loadLastLocation(): Promise<void> {
+    try {
+      const locationJson = await AsyncStorage.getItem(LAST_LOCATION_KEY);
+      if (locationJson) {
+        this.lastLocation = JSON.parse(locationJson);
+      }
+    } catch (error) {
+      console.error('Error loading last location:', error);
+    }
+  }
+
+  /**
+   * Cleanup resources
+   */
+  async cleanup(): Promise<void> {
+    await this.stopTracking();
+  }
 }
 
-// Hook to use location service
-export const useLocationService = (userId: string, userRole: string) => {
-  // Only create the service for professional users
-  if (userRole === 'professional' && userId) {
-    return new LocationService(userId, userRole);
-  }
-  
-  return null;
-};
+// Create and export a singleton instance
+const locationService = new LocationService();
+export default locationService;

@@ -1,9 +1,7 @@
 import { Alert, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
-/**
- * Configure notification permissions and settings
- */
+
 export const configureNotifications = async () => {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('payment-notifications', {
@@ -18,16 +16,10 @@ export const configureNotifications = async () => {
   return status === 'granted';
 };
 
-/**
- * Show a success notification
- * @param title Notification title
- * @param message Notification message
- */
 export const showSuccessNotification = async (title: string, message: string) => {
   try {
     // Show in-app alert
     Alert.alert(title, message);
-    
     // Also send a system notification if app is in background
     await Notifications.scheduleNotificationAsync({
       content: {
@@ -43,12 +35,6 @@ export const showSuccessNotification = async (title: string, message: string) =>
   }
 };
 
-/**
- * Show an error notification
- * @param title Notification title
- * @param message Notification message
- * @param error Optional error object for logging
- */
 export const showErrorNotification = async (
   title: string,
   message: string,
@@ -78,11 +64,6 @@ export const showErrorNotification = async (
   }
 };
 
-/**
- * Show a payment success notification
- * @param amount Payment amount
- * @param paymentId Payment ID
- */
 export const showPaymentSuccessNotification = async (amount: number, paymentId: string) => {
   const title = 'Payment Successful';
   const message = `Your payment of ₹${amount.toFixed(2)} was successful. Payment ID: ${paymentId.substring(0, 8)}...`;
@@ -90,11 +71,6 @@ export const showPaymentSuccessNotification = async (amount: number, paymentId: 
   await showSuccessNotification(title, message);
 };
 
-/**
- * Show a payment failure notification
- * @param amount Payment amount
- * @param error Error message or object
- */
 export const showPaymentFailureNotification = async (amount: number, error: any) => {
   const title = 'Payment Failed';
   const message = `Your payment of ₹${amount.toFixed(2)} could not be processed. ${error.message || 'Please try again later.'}`;

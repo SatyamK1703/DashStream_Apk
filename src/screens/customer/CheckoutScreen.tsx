@@ -6,7 +6,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import apiService from '../../services/apiService';
 
 type CheckoutScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -47,7 +46,7 @@ const CheckoutScreen = () => {
   useEffect(() => {
     // Check if user is not authenticated or is a guest user
     if (!user || user.email === 'skip-user') {
-      navigation.navigate('Login');
+      navigation.navigate('Login' as never);
       return;
     }
     

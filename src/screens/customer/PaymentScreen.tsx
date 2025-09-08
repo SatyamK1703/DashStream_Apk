@@ -1,25 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { showErrorNotification } from '../../utils/notificationUtils';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, SafeAreaView, Dimensions } from 'react-native';
+import { showErrorNotification, showSuccessNotification } from '../../utils/notificationUtils';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import RazorpayCheckout from '../../components/paymentscreen/RazorpayCheckout';
 import { usePayment } from '../../contexts/PaymentContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface PaymentScreenParams {
   bookingId: string;
   amount: number;
   serviceName?: string;
+  professionalName?: string;
+  bookingDate?: string;
 }
 
 const PaymentScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { bookingId, amount, serviceName } = route.params as PaymentScreenParams;
+  const { bookingId, amount, serviceName, professionalName, bookingDate } = route.params as PaymentScreenParams;
   const { fetchPaymentHistory } = usePayment();
+  const { user } = useAuth();
   
   const [paymentStep, setPaymentStep] = useState<'summary' | 'checkout' | 'success'>('summary');
   const [paymentId, setPaymentId] = useState<string | null>(null);
+  const windowHeight = Dimensions.get('window').height;
 
   useEffect(() => {
     // Set navigation options
@@ -52,7 +57,7 @@ const PaymentScreen: React.FC = () => {
         ]
       );
     } else if (paymentStep === 'success') {
-      navigation.navigate('Bookings');
+      navigation.navigate('Bookings' as never);
     } else {
       navigation.goBack();
     }
@@ -90,6 +95,20 @@ const PaymentScreen: React.FC = () => {
             <Text style={styles.detailValue}>{serviceName || 'Professional Service'}</Text>
           </View>
           
+          {professionalName && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Professional:</Text>
+              <Text style={styles.detailValue}>{professionalName}</Text>
+            </View>
+          )}
+          
+          {bookingDate && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Date:</Text>
+              <Text style={styles.detailValue}>{bookingDate}</Text>
+            </View>
+          )}
+          
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Booking ID:</Text>
             <Text style={styles.detailValue}>{bookingId.substring(0, 8)}...</Text>
@@ -115,6 +134,10 @@ const PaymentScreen: React.FC = () => {
       onSuccess={handlePaymentSuccess}
       onFailure={handlePaymentFailure}
       description={`Payment for ${serviceName || 'Professional Service'}`}
+      serviceName={serviceName || 'Professional Service'}
+      customerName={user?.name || ''}
+      customerEmail={user?.email || ''}
+      customerPhone={user?.phone || ''}
     />
   );
 
@@ -145,18 +168,30 @@ const PaymentScreen: React.FC = () => {
   );
 
   return (
-    <ScrollView style={styles.scrollView}>
-      {paymentStep === 'summary' && renderPaymentSummary()}
-      {paymentStep === 'checkout' && renderPaymentCheckout()}
-      {paymentStep === 'success' && renderPaymentSuccess()}
-    </ScrollView>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollViewContent, { minHeight: windowHeight * 0.9 }]}
+      >
+        {paymentStep === 'summary' && renderPaymentSummary()}
+        {paymentStep === 'checkout' && renderPaymentCheckout()}
+        {paymentStep === 'success' && renderPaymentSuccess()}
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   scrollView: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  scrollViewContent: {
+    flexGrow: 1,
   },
   container: {
     flex: 1,

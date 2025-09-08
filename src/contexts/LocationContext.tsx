@@ -1,6 +1,6 @@
 // src/contexts/LocationContext.tsx
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { LocationApiService, LocationData, Geofence } from '../services/LocationApiService';
+import { LocationApiService, LocationData, Geofence } from '../services/dataService';
 import { useAuth } from './AuthContext';
 import * as Location from 'expo-location';
 

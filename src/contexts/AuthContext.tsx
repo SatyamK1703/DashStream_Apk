@@ -1,12 +1,9 @@
 // src/contexts/AuthContext.tsx
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { APP_CONFIG } from '../constants/config';
-import * as api from '../services/api';
-import apiService from '../services/apiService';
-import authService, { AuthUser } from '../services/AuthService';
+import dataService from '../services/dataService';
+import { AuthUser } from '../types/auth';
 
-// Use AuthUser type from AuthService
+// Use AuthUser type from types
 type User = AuthUser;
 
 // Define auth context state
@@ -15,21 +12,26 @@ type AuthContextType = {
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isGuest: boolean;
   sendOtp: (phone: string) => Promise<{ success: boolean; error?: string }>;
   verifyOtp: (phone: string, otp: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
+  loginAsGuest: () => Promise<{ success: boolean; error?: string }>;
   updateUserProfile: (userData: Partial<User>) => Promise<{ success: boolean; error?: string }>;
 };
 
 // Create context with default values
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  setUser: () => null, // Default implementation that does nothing
+  setUser: () => {}, // Default implementation that does nothing
   isLoading: true,
   isAuthenticated: false,
+  isGuest: false,
   sendOtp: async () => ({ success: false }),
   verifyOtp: async () => ({ success: false }),
   logout: async () => {},
+  loginAsGuest: async () => ({ success: false }),
+  
   updateUserProfile: async () => ({ success: false }),
 });
 
@@ -42,13 +44,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const loadUserFromStorage = async () => {
       try {
-        // Get current user from AuthService
-        const currentUser = authService.getCurrentUser();
+        // Get current user from data service using the new method
+        const currentUser = await dataService.getCurrentUser();
         if (currentUser) {
           setUser(currentUser);
         }
       } catch (error) {
         console.error('Error loading user data:', error);
+        // Clear corrupted data
+        await dataService.clearUserData();
       } finally {
         setIsLoading(false);
       }
@@ -60,74 +64,127 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Send OTP for authentication
   const sendOtp = async (phone: string) => {
     try {
-      const result = await api.sendOtp(phone);
-      return result;
-    } catch (error) {
+      const response = await dataService.sendOtp(phone);
+      return { 
+        success: response.success, 
+        message: response.message || 'OTP sent successfully'
+      };
+    } catch (error: any) {
       console.error('Error in sendOtp:', error);
-      return { success: false, error: 'Failed to send OTP. Please try again.' };
+      return { 
+        success: false, 
+        error: error.message || 'Failed to send OTP'
+      };
     }
   };
   
   // Verify OTP and login
   const verifyOtp = async (phone: string, otp: string) => {
     try {
-      const result = await api.verifyOtp(phone, otp);
+      const response = await dataService.verifyOtp(phone, otp);
       
-      if (result.success && result.user) {
-        setUser(result.user);
+      if (response.success && response.data?.user) {
+        setUser(response.data.user);
+        return { success: true, user: response.data.user };
+      } else {
+        return { 
+          success: false, 
+          error: response.message || 'Invalid OTP'
+        };
       }
-      
-      return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in verifyOtp:', error);
-      return { success: false, error: 'Failed to verify OTP. Please try again.' };
+      return { 
+        success: false, 
+        error: error.message || 'Failed to verify OTP'
+      };
     }
   };
   
   // Logout user
   const logout = async () => {
     try {
-      await authService.logout();
+      await dataService.logout();
       setUser(null);
     } catch (error) {
       console.error('Error in logout:', error);
+      // Even if API call fails, clear local data
+      try {
+        await dataService.clearUserData();
+        setUser(null);
+      } catch (innerError) {
+        console.error('Error clearing user data during logout:', innerError);
+      }
     }
   };
-  
+
+  // Login as guest
+  const loginAsGuest = async () => {
+    try {
+      // Create a guest user locally
+      const guestUser: User = {
+        id: 'guest-' + Date.now(),
+        name: 'Guest User',
+        phone: '',
+        role: 'customer',
+        email: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Store guest user in local storage
+      await dataService.setCurrentUser(guestUser);
+      setUser(guestUser);
+      
+      return { success: true, user: guestUser };
+    } catch (error: any) {
+      console.error('Error in loginAsGuest:', error);
+      return { 
+        success: false,
+        error: error.message || 'Failed to login as guest'
+      };
+    }
+  };
+
+
   // Update user profile
   const updateUserProfile = async (userData: Partial<User>) => {
     try {
-      if (userData.displayName) {
-        const result = await authService.updateProfile(userData.displayName);
-        
-        if (result.success && result.user) {
-          setUser(result.user);
-        }
-        
-        return result;
-      } else if (userData.email) {
-        const result = await authService.updateEmail(userData.email);
-        
-        if (result.success && result.user) {
-          setUser(result.user);
-        }
-        
-        return result;
+      if (!user) {
+        return { success: false, error: 'No user logged in' };
       }
       
-      // Fall back to the original API if other fields need to be updated
-      const result = await api.updateUserProfile({ ...user, ...userData });
+      // Determine if the current user is a guest user
+      const isGuestUser = user ? user.id?.startsWith('guest-') || user.name === 'Guest User' : false;
       
-      if (result.success && result.user) {
-        setUser(result.user);
+      // If it's a guest user, just update locally
+      if (isGuestUser) {
+        const updatedUser = { ...user, ...userData, updatedAt: new Date().toISOString() };
+        await dataService.setCurrentUser(updatedUser);
+        setUser(updatedUser);
+        return { success: true, user: updatedUser };
       }
       
-      return result;
-    } catch (error) {
+      // For regular users, update via API
+      const response = await dataService.updateUser(userData);
+      
+      if (response.success && response.data) {
+        setUser(response.data);
+        return { success: true, user: response.data };
+      } else {
+        return { 
+          success: false, 
+          error: response.message || 'Failed to update profile'
+        };
+      }
+    } catch (error: any) {
       console.error('Error updating user profile:', error);
-      return { success: false, error: 'Failed to update profile. Please try again.' };
+      return { success: false, error: error.message || 'Failed to update profile. Please try again.' };
     }
   };
+  
+  // Determine if the current user is a guest user
+  const isGuest = user ? user.id?.startsWith('guest-') || user.name === 'Guest User' : false;
   
   // Provide auth context value
   const value = {
@@ -135,9 +192,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser,
     isLoading,
     isAuthenticated: !!user,
+    isGuest,
     sendOtp,
     verifyOtp,
     logout,
+    loginAsGuest,
     updateUserProfile,
   };
   

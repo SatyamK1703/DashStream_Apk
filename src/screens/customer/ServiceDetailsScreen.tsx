@@ -1,37 +1,76 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import { services } from '~/constants/data/serviceDetails';
+import { RootStackParamList } from '../../../app/routes/RootNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
+import { ServiceService } from '../../services/serviceService';
+import { Service } from '../../types/ServiceType';
 
 type ServiceDetailsRouteProp = RouteProp<CustomerStackParamList, 'ServiceDetails'>;
-type ServiceDetailsNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
+type ServiceDetailsNavigationProp = NativeStackNavigationProp<CustomerStackParamList | RootStackParamList>;
+
 
 const ServiceDetailsScreen = () => {
   const [quantity, setQuantity] = useState(1);
+  const [service, setService] = useState<Service | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const navigation = useNavigation<ServiceDetailsNavigationProp>();
   const route = useRoute<ServiceDetailsRouteProp>();
   const { serviceId } = route.params;
   const { user } = useAuth();
   
+  // Fetch service data
+  const fetchService = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await ServiceService.getService(serviceId);
+      setService(response.data.service);
+    } catch (err: any) {
+      console.error('Error fetching service:', err);
+      setError(err.response?.data?.message || 'Failed to load service details');
+    } finally {
+      setLoading(false);
+    }
+  }, [serviceId]);
+
+  useEffect(() => {
+    fetchService();
+  }, [fetchService]);
+  
   // Check if user is authenticated or a guest user
   useEffect(() => {
     if (!user || user.name === 'Guest User') {
-      navigation.navigate('Login');
+      navigation.navigate('Login' as never);
     }
   }, [user, navigation]);
   
-  const service = services[serviceId as keyof typeof services];
-  
-  if (!service) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContainer}>
-          <Text>Service not found</Text>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>Loading service details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !service) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centerContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+          <Text style={styles.errorTitle}>Service Not Found</Text>
+          <Text style={styles.errorText}>{error || 'The service you are looking for does not exist.'}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchService}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -39,29 +78,35 @@ const ServiceDetailsScreen = () => {
 
   const handleAddToCart = () => {
     if (!user || user.name === 'Guest User') {
-      navigation.navigate('Login');
+      navigation.navigate('Login' as never);
       return;
     }
-    navigation.navigate('Cart');
+    navigation.navigate('Cart' as never);
   };
 
   const handleBookNow = () => {
     if (!user || user.name === 'Guest User') {
-      navigation.navigate('Login');
+      navigation.navigate('Login' as never);
       return;
     }
-    navigation.navigate('Checkout');
+    navigation.navigate('Checkout' as never);
   };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header Image */}
       <View style={styles.headerImageWrapper}>
-        <Image source={service.image} style={styles.headerImage} resizeMode="cover" />
+        {service.image ? (
+          <Image source={{ uri: service.image }} style={styles.headerImage} resizeMode="cover" />
+        ) : (
+          <View style={[styles.headerImage, styles.placeholderImage]}>
+            <Ionicons name="car-outline" size={48} color="#6b7280" />
+          </View>
+        )}
         <TouchableOpacity style={[styles.headerButton, styles.leftButton]} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#2563eb" />
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.headerButton, styles.rightButton]} onPress={() => navigation.navigate('Cart')}>
+        <TouchableOpacity style={[styles.headerButton, styles.rightButton]} onPress={() => navigation.navigate('Cart' as never)}>
           <Ionicons name="cart-outline" size={24} color="#2563eb" />
         </TouchableOpacity>
       </View>
@@ -75,32 +120,54 @@ const ServiceDetailsScreen = () => {
           </View>
           <View style={styles.ratingBox}>
             <Ionicons name="star" size={16} color="#f59e0b" />
-            <Text style={styles.ratingText}>{service.rating}</Text>
-            <Text style={styles.reviewCount}>({service.reviewCount})</Text>
+            <Text style={styles.ratingText}>4.5</Text>
+            <Text style={styles.reviewCount}>(12)</Text>
           </View>
         </View>
 
         {/* Duration */}
         <View style={styles.durationRow}>
           <Ionicons name="time-outline" size={18} color="#64748b" />
-          <Text style={styles.durationText}>{service.duration}</Text>
+          <Text style={styles.durationText}>{service.duration} minutes</Text>
+        </View>
+
+        {/* Vehicle Type */}
+        <View style={styles.durationRow}>
+          <Ionicons name="car-outline" size={18} color="#64748b" />
+          <Text style={styles.durationText}>{service.vehicleType}</Text>
+        </View>
+
+        {/* Category */}
+        <View style={styles.durationRow}>
+          <Ionicons name="grid-outline" size={18} color="#64748b" />
+          <Text style={styles.durationText}>{service.category}</Text>
         </View>
 
         {/* Description */}
-        <Text style={styles.description}>{service.longDescription}</Text>
+        <Text style={styles.description}>{service.description}</Text>
 
-        {/* Features */}
-        <Text style={styles.sectionTitle}>What's Included</Text>
-        <View style={{ marginBottom: 24 }}>
-          {service.features.map((feature: string, index: number) => (
-            <View key={index} style={styles.featureRow}>
-              <View style={styles.featureIcon}>
-                <Ionicons name="checkmark" size={16} color="#2563eb" />
+        {/* Professional Info */}
+        {service.professional && (
+          <>
+            <Text style={styles.sectionTitle}>Service Provider</Text>
+            <View style={styles.professionalRow}>
+              {service.professional.profileImage ? (
+                <Image source={{ uri: service.professional.profileImage }} style={styles.professionalAvatar} />
+              ) : (
+                <View style={[styles.professionalAvatar, styles.avatarPlaceholder]}>
+                  <Ionicons name="person" size={20} color="#6b7280" />
+                </View>
+              )}
+              <View style={styles.professionalInfo}>
+                <Text style={styles.professionalName}>{service.professional.name}</Text>
+                <View style={styles.ratingRow}>
+                  <Ionicons name="star" size={14} color="#f59e0b" />
+                  <Text style={styles.professionalRating}>{service.professional.rating}</Text>
+                </View>
               </View>
-              <Text style={styles.featureText}>{feature}</Text>
             </View>
-          ))}
-        </View>
+          </>
+        )}
 
         {/* Quantity Selector */}
         <Text style={styles.sectionTitle}>Quantity</Text>
@@ -305,6 +372,76 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16
   },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6b7280'
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginTop: 16,
+    marginBottom: 8
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 20
+  },
+  retryButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontWeight: '600'
+  },
+  placeholderImage: {
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  professionalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    padding: 16,
+    backgroundColor: '#f9fafb',
+    borderRadius: 12
+  },
+  professionalAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 12
+  },
+  professionalInfo: {
+    flex: 1
+  },
+  professionalName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 4
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  professionalRating: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginLeft: 4
+  },
+  avatarPlaceholder: {
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center'
+  }
 });
 
 export default ServiceDetailsScreen;

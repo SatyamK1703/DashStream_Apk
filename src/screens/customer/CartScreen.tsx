@@ -11,20 +11,7 @@ type CartScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList
 
 // Mock cart data - in a real app, this would come from a cart context/state
 const initialCartItems = [
-  {
-    id: '1',
-    title: 'Basic Wash',
-    price: 499,
-    quantity: 1,
-    image: require('../../assets/images/image.png'),
-  },
-  {
-    id: '2',
-    title: 'Premium Wash',
-    price: 999,
-    quantity: 1,
-    image: require('../../assets/images/image.png'),
-  },
+{}//form select service screen
 ];
 
 const CartScreen = () => {
@@ -37,7 +24,7 @@ const CartScreen = () => {
   useEffect(() => {
     // Check if user is not authenticated or is a guest user
     if (!user || user.email === 'skip-user') {
-      navigation.navigate('Login');
+      navigation.navigate('Login' as never);
     }
   }, [user, navigation]);
 
@@ -89,7 +76,7 @@ const CartScreen = () => {
       Alert.alert('Empty Cart', 'Please add services to your cart before proceeding to checkout.');
       return;
     }
-    navigation.navigate('Checkout');
+    navigation.navigate('Checkout' as never);
   };
 
   return (
@@ -112,7 +99,7 @@ const CartScreen = () => {
             />
             <Text style={styles.emptyTitle}>Your cart is empty</Text>
             <Text style={styles.emptyDescription}>Looks like you haven't added any services to your cart yet</Text>
-            <TouchableOpacity style={styles.browseButton} onPress={() => navigation.navigate('CustomerTabs')}>
+            <TouchableOpacity style={styles.browseButton} onPress={() => navigation.navigate('CustomerTabs' as never)}>
               <Text style={styles.browseButtonText}>Browse Services</Text>
             </TouchableOpacity>
           </View>

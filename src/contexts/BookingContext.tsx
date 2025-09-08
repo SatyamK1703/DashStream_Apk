@@ -1,7 +1,7 @@
 // src/contexts/BookingContext.tsx
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import * as api from '../services/api';
 import { useAuth } from './AuthContext';
+import dataService from '../services/dataService';
 
 // Define booking type
 type Booking = {
@@ -57,15 +57,16 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [isAuthenticated]);
   
-  // Fetch bookings from API
+  // Fetch bookings from data service
   const fetchBookings = async () => {
     if (!isAuthenticated) return;
     
     setIsLoading(true);
     try {
-      const result = await api.fetchBookings();
-      if (result.success && result.bookings) {
-        setBookings(result.bookings);
+      const currentUser = await dataService.getCurrentUser();
+      if (currentUser) {
+        const bookingsData = await dataService.getBookings(currentUser.id);
+        setBookings(bookingsData);
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -77,11 +78,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Get booking details
   const getBookingDetails = async (bookingId: string): Promise<Booking | null> => {
     try {
-      const result = await api.getBookingDetails(bookingId);
-      if (result.success && result.booking) {
-        return result.booking;
-      }
-      return null;
+      return await dataService.getBookingById(bookingId);
     } catch (error) {
       console.error('Error fetching booking details:', error);
       return null;
@@ -91,15 +88,11 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Create booking
   const createBooking = async (bookingData: any) => {
     try {
-      const result = await api.createBooking(bookingData);
+      const newBooking = await dataService.createBooking(bookingData);
       
-      if (result.success && result.booking) {
-        // Add new booking to state
-        setBookings(prevBookings => [result.booking, ...prevBookings]);
-        return { success: true, booking: result.booking };
-      }
-      
-      return { success: false, error: result.error || 'Failed to create booking' };
+      // Add new booking to state
+      setBookings(prevBookings => [newBooking, ...prevBookings]);
+      return { success: true, booking: newBooking };
     } catch (error: any) {
       console.error('Error creating booking:', error);
       return { success: false, error: 'Failed to create booking. Please try again.' };
@@ -109,9 +102,9 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Cancel booking
   const cancelBooking = async (bookingId: string, reason?: string) => {
     try {
-      const result = await api.cancelBooking(bookingId, reason);
+      const updatedBooking = await dataService.updateBookingStatus(bookingId, 'cancelled');
       
-      if (result.success) {
+      if (updatedBooking) {
         // Update booking in state
         setBookings(prevBookings =>
           prevBookings.map(booking =>
@@ -123,7 +116,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return { success: true };
       }
       
-      return { success: false, error: result.error || 'Failed to cancel booking' };
+      return { success: false, error: 'Failed to cancel booking' };
     } catch (error: any) {
       console.error('Error cancelling booking:', error);
       return { success: false, error: 'Failed to cancel booking. Please try again.' };

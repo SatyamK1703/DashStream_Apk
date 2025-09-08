@@ -1,8 +1,9 @@
-module.exports = {
+import 'dotenv/config';
+
+export default {
   expo: {
-    name: 'DashSteam',
-    slug: 'DashSteam',
-    owner: 'satyamk1078',
+    name: 'DashStream',
+    slug: 'dashstream',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
@@ -10,27 +11,37 @@ module.exports = {
     splash: {
       image: './assets/splash.png',
       resizeMode: 'contain',
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
     },
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.satyamk1078.dashsteam'
+      bundleIdentifier: 'com.dashstream.app',
+      buildNumber: '1.0.0',
     },
     android: {
-      package: 'com.satyamk1078.dashsteam',
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
-        backgroundColor: '#ffffff'
-      }
+        backgroundColor: '#ffffff',
+      },
+      package: 'com.dashstream.app',
+      versionCode: 1,
     },
     web: {
-      favicon: './assets/favicon.png'
+      favicon: './assets/favicon.png',
+      bundler: 'metro',
     },
+    plugins: [
+      // No plugins for now - will add back after dependencies are resolved
+    ],
     extra: {
       eas: {
-        projectId: 'af6129b4-010e-4b50-b3b4-f011c253a1bc'
-      }
-    }
-  }
+        projectId: process.env.EXPO_PROJECT_ID || 'your-expo-project-id',
+      },
+      apiUrl: process.env.API_URL || 'https://dash-stream-apk-backend.vercel.app/api',
+      environment: process.env.NODE_ENV || 'development',
+    },
+    owner: process.env.EXPO_USERNAME || 'your-expo-username',
+    jsEngine: 'hermes',
+  },
 };

@@ -51,6 +51,55 @@ const MembershipScreen = () => {
     totalServices: 0,
     savings: 0
   });
+
+  // Membership plans data
+  const membershipPlans: MembershipPlan[] = [
+    {
+      id: '1',
+      name: 'Basic',
+      price: 299,
+      duration: '1 Month',
+      features: [
+        '10% discount on all services',
+        'Priority customer support',
+        'Free pickup & delivery',
+        'Monthly car wash included'
+      ],
+      popular: false
+    },
+    {
+      id: '2',
+      name: 'Premium',
+      price: 799,
+      duration: '3 Months',
+      features: [
+        '20% discount on all services',
+        'Priority customer support',
+        'Free pickup & delivery',
+        'Monthly car wash included',
+        'Free interior cleaning',
+        'Emergency service support'
+      ],
+      popular: true
+    },
+    {
+      id: '3',
+      name: 'Elite',
+      price: 1499,
+      duration: '6 Months',
+      features: [
+        '30% discount on all services',
+        'Priority customer support',
+        'Free pickup & delivery',
+        'Monthly car wash included',
+        'Free interior cleaning',
+        'Emergency service support',
+        'Free detailing service',
+        'Exclusive offers'
+      ],
+      popular: false
+    }
+  ];
   
   // Fetch user membership data
   const fetchMembershipData = async () => {

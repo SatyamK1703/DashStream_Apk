@@ -52,25 +52,22 @@ const PopularServices = ({ services }: any) => {
       </View>
 
       {/* Services Grid */}
-      <FlatList
-        data={services.slice(0, 6)} // Show only first 6 items
-        keyExtractor={(item) => item.id}
-        numColumns={3}
-        scrollEnabled={false}
-        columnWrapperStyle={styles.row}
-        renderItem={({ item }) => (
-          <TouchableOpacity 
-            style={styles.item} 
-            onPress={() => handlePress(item)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.iconContainer}>
-              <Image source={item.image} style={styles.icon} resizeMode="contain" />
-            </View>
-            <Text style={styles.label} numberOfLines={2}>{item.title}</Text>
-          </TouchableOpacity>
-        )}
-      />
+      <View style={styles.gridContainer}>
+        {services.slice(0, 6).map((item, index) => (
+          <View key={item.id || index} style={styles.row}>
+            <TouchableOpacity 
+              style={styles.item} 
+              onPress={() => handlePress(item)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.iconContainer}>
+                <Image source={item.image} style={styles.icon} resizeMode="contain" />
+              </View>
+              <Text style={styles.label} numberOfLines={2}>{item.title}</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
     </View>
   );
 };
@@ -112,8 +109,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginRight: 4,
   },
-  row: {
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
+  },
+  row: {
+    width: '30%',
     marginBottom: 8,
   },
   item: {

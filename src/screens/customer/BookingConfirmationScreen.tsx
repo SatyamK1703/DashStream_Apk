@@ -23,7 +23,7 @@ const BookingConfirmationScreen = () => {
   };
 
   const handleViewAllBookings = () => {
-    navigation.navigate('CustomerTabs', { screen: 'Bookings' });
+    navigation.navigate('CustomerTabs', { screen: 'Bookings' } as never);
   };
 
   return (

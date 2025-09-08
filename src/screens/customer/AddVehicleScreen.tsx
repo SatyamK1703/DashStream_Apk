@@ -54,7 +54,7 @@ const getBrandsForType = (type: VehicleType) => {
   }
 };
 
-const yearOptions = Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i);
+
 
 const AddVehicleScreen = () => {
   const navigation = useNavigation<AddVehicleScreenNavigationProp>();
@@ -67,7 +67,7 @@ const AddVehicleScreen = () => {
   // Check if user is authenticated or a guest user
   useEffect(() => {
     if (!user || user.name === 'Guest User') {
-      navigation.navigate('Login');
+      navigation.navigate('Login' as never);
     }
   }, [user, navigation]);
 
@@ -222,7 +222,7 @@ const AddVehicleScreen = () => {
         <View style={styles.pickerContainer}>
           <Text style={styles.pickerTitle}>Select Year</Text>
           <FlatList
-            data={yearOptions}
+            data={Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i)}
             keyExtractor={(item) => item.toString()}
             renderItem={({ item }) => (
               <TouchableOpacity 

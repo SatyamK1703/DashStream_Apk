@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,73 +9,117 @@ import {
   TextInput,
   Dimensions,
   ActivityIndicator,
-  ScrollView,
+  RefreshControl,
+  Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { services } from '../../constants/data/serviceDetails';
 import CategoryTabs from '../../components/service/CategoryTabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Service, ServiceCategory } from '../../types/ServiceType';
 
 type NavigationProp = NativeStackNavigationProp<CustomerStackParamList, 'AllServices'>;
 
-const CATEGORY_TABS = ['All','Car Wash', 'Deep Clean', 'Special Car Care'];
 const AllServicesScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute();
-  const [servicesData, setServicesData] = useState<any[]>([]);
-  const [filteredServices, setFilteredServices] = useState<any[]>([]);
+  const [servicesData, setServicesData] = useState<Service[]>([]);
+  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedTab, setSelectedTab] = useState('Car Wash');
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState('All');
+
+  // Fetch services and categories
+  const fetchData = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+      setError(null);
+
+      const [servicesResponse, categoriesResponse] = await Promise.all([
+        ServiceService.getAllServices(),
+        ServiceService.getServiceCategories()
+      ]);
+
+      setServicesData(servicesResponse.data.services || []);
+      setFilteredServices(servicesResponse.data.services || []);
+      setCategories(categoriesResponse.data.categories || []);
+    } catch (err: any) {
+      console.error('Error fetching services:', err);
+      setError(err.response?.data?.message || 'Failed to load services');
+      setServicesData([]);
+      setFilteredServices([]);
+      setCategories([]);
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    setIsLoading(true);
+    fetchData();
+  }, [fetchData]);
 
-    if (route.params?.allServices) {
-      setServicesData(route.params.allServices);
-      setFilteredServices(route.params.allServices);
-    } else {
-      const servicesArray = Object.values(services);
-      setServicesData(servicesArray);
-      setFilteredServices(servicesArray);
-    }
-    setIsLoading(false);
-  }, [route.params]);
-
+  // Search functionality
   useEffect(() => {
     if (searchQuery.trim() === '') {
-      setFilteredServices(servicesData);
+      filterServicesByCategory(selectedTab);
     } else {
       const filtered = servicesData.filter(service =>
-        service.title.toLowerCase().includes(searchQuery.toLowerCase())
+        service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.category.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setFilteredServices(filtered);
     }
-  }, [searchQuery, servicesData]);
+  }, [searchQuery, servicesData, selectedTab]);
 
-  const handleServicePress = (service: any) => {
-    navigation.navigate('ServiceDetails', { serviceId: service.id });
+  const filterServicesByCategory = (category: string) => {
+    if (category === 'All') {
+      setFilteredServices(servicesData);
+    } else {
+      const filtered = servicesData.filter(service => service.category === category);
+      setFilteredServices(filtered);
+    }
   };
 
-  const renderServiceItem = ({ item }: { item: any }) => (
+  const handleTabChange = (tab: string) => {
+    setSelectedTab(tab);
+    filterServicesByCategory(tab);
+  };
+
+  const handleServicePress = (service: Service) => {
+    navigation.navigate('ServiceDetails', { serviceId: service._id });
+  };
+
+  const renderServiceItem = ({ item }: { item: Service }) => (
     <TouchableOpacity style={styles.card} onPress={() => handleServicePress(item)} activeOpacity={0.9}>
       <View style={styles.cardContent}>
         <View style={styles.cardInfo}>
           <Text style={styles.cardTitle}>{item.title}</Text>
-          <Text style={styles.cardRating}>⭐ {item.rating} ({item.reviews} ratings)</Text>
-          <Text style={styles.cardFeature}>• {item.features?.[0]}</Text>
-          <Text style={styles.cardFeature}>• {item.features?.[1]}</Text>
-          <Text style={styles.cardFeature}>• {item.features?.[2]}</Text>
+          <Text style={styles.cardRating}>⭐ 4.5 (12 ratings)</Text>
+          <Text style={styles.cardFeature}>• {item.duration} minutes</Text>
+          <Text style={styles.cardFeature}>• {item.vehicleType}</Text>
+          <Text style={styles.cardFeature}>• {item.category}</Text>
           <View style={styles.cardPriceRow}>
-            <Text style={styles.oldPrice}>₹{item.originalPrice}</Text>
-            <Text style={styles.newPrice}>₹{item.discountedPrice}</Text>
-            <Text style={styles.discount}>50% OFF</Text>
+            <Text style={styles.newPrice}>₹{item.price}</Text>
           </View>
         </View>
-        <Image source={item.image} style={styles.cardImage} />
+        {item.image ? (
+          <Image source={{ uri: item.image }} style={styles.cardImage} />
+        ) : (
+          <View style={[styles.cardImage, styles.placeholderImage]}>
+            <Ionicons name="car-outline" size={32} color="#6b7280" />
+          </View>
+        )}
       </View>
       <TouchableOpacity style={styles.addButton}>
         <Text style={styles.addText}>ADD</Text>
@@ -96,31 +140,53 @@ const AllServicesScreen = () => {
         <View style={styles.headerRight} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
+      <View style={styles.contentContainer}>
         <CategoryTabs
           tabs={CATEGORY_TABS}
           selected={selectedTab}
           onSelect={(tab) => setSelectedTab(tab)}
         />
         
-
         {/* Service List */}
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#2563eb" />
-            <Text style={styles.loadingText}>Loading Services...</Text>
+        {error ? (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+            <Text style={styles.errorTitle}>Error Loading Services</Text>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => fetchData()}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <FlatList
             data={filteredServices}
-            keyExtractor={item => item.id}
+            keyExtractor={item => item._id}
             renderItem={renderServiceItem}
             contentContainerStyle={styles.flatListContent}
             showsVerticalScrollIndicator={false}
-            scrollEnabled={false}
+            style={styles.flatList}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={() => fetchData(true)}
+                colors={['#2563eb']}
+                tintColor="#2563eb"
+              />
+            }
+            ListEmptyComponent={
+              !isLoading ? (
+                <View style={styles.emptyContainer}>
+                  <Ionicons name="search-outline" size={48} color="#9ca3af" />
+                  <Text style={styles.emptyTitle}>No Services Found</Text>
+                  <Text style={styles.emptyText}>
+                    {searchQuery ? 'Try adjusting your search terms' : 'No services available in this category'}
+                  </Text>
+                </View>
+              ) : null
+            }
           />
         )}
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 };
@@ -160,7 +226,11 @@ const styles = StyleSheet.create({
   headerRight: {
     width: 40
   },
-  scrollView: {
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 16
+  },
+  flatList: {
     flex: 1
   },
   filterRow: {
@@ -268,6 +338,59 @@ const styles = StyleSheet.create({
   },
   flatListContent: {
     paddingBottom: 100
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginTop: 16,
+    marginBottom: 8
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 20
+  },
+  retryButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontWeight: '600'
+  },
+  placeholderImage: {
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginTop: 16,
+    marginBottom: 8
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    paddingHorizontal: 40
   }
 });
 

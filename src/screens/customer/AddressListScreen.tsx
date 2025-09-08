@@ -15,7 +15,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import apiService from '../../services/apiService';
 
 
 const AddressListScreen = () => {
@@ -34,15 +33,6 @@ const AddressListScreen = () => {
 
   const fetchAddresses = async () => {
     setLoading(true);
-    try {
-      const response = await apiService.get('/addresses');
-      setAddresses(response.data);
-    } catch (error) {
-      console.error('Error fetching addresses:', error);
-      Alert.alert('Error', 'Failed to load addresses');
-    } finally {
-      setLoading(false);
-    }
   };
 
   // Fetch addresses when the screen is focused
