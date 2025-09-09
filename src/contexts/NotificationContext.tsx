@@ -1,7 +1,8 @@
 // src/contexts/NotificationContext.tsx
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import Constants from 'expo-constants';
 import { useAuth } from './AuthContext';
-import * as notificationService from '../services/notificationService';
+import notificationService from '../services/notificationService';
 import * as notificationApi from '../services/notificationApi';
 
 // Define notification type
@@ -111,15 +112,25 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   
   // Register device for push notifications
   const registerDeviceForPushNotifications = async (deviceInfo: any = {}) => {
+    // Check if we're running in Expo Go
+    const isExpoGo = Constants.appOwnership === 'expo';
+    
+    if (isExpoGo) {
+      console.warn('Push notifications are not supported in Expo Go. Use a development build instead.');
+      return;
+    }
+
     try {
       setIsLoading(true);
-      const token = await notificationService.registerForPushNotificationsAsync();
-      if (token) {
-        // Pass the token and device info to the API
-        await notificationApi.registerDeviceForPushNotifications(token, deviceInfo);
-        console.log('Device registered for push notifications with token:', token);
+      // Initialize notification service and register device
+      await notificationService.initialize();
+      
+      // Register with the API (this will handle token generation and backend registration)
+      const result = await notificationApi.registerDeviceForPushNotifications('', deviceInfo);
+      if (result.success) {
+        console.log('Device registered for push notifications successfully');
       } else {
-        console.log('Failed to get push notification token');
+        console.log('Failed to register device for push notifications:', result.message);
       }
     } catch (error) {
       console.error('Error registering device for push notifications:', error);

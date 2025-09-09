@@ -44,7 +44,8 @@ const VehicleTypeSelector = ({ selectedType, onSelectType }) => {
       );
     })}
   </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   container: {

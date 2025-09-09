@@ -52,8 +52,8 @@ export const ServiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const fetchServices = async (filters?: any) => {
     setIsLoading(true);
     try {
-      const servicesData = await dataService.getServices(filters);
-      setServices(servicesData);
+      const response = await dataService.getAllServices(filters);
+      setServices(response.data?.services || []);
     } catch (error) {
       console.error('Error fetching services:', error);
       setServices([]); // Ensure array even on error
@@ -66,12 +66,12 @@ export const ServiceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const getServiceDetails = async (serviceId: string): Promise<Service | null> => {
     try {
       // First check if we already have the service in state
-      const cachedService = services.find(service => service.id === serviceId);
+      const cachedService = services.find(service => service._id === serviceId);
       if (cachedService) return cachedService;
       
       // If not, fetch from data service
-      const service = await dataService.getServiceById(serviceId);
-      return service;
+      const response = await dataService.getServiceById(serviceId);
+      return response.data || null;
     } catch (error) {
       console.error('Error fetching service details:', error);
       return null;

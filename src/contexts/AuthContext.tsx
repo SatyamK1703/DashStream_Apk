@@ -128,8 +128,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         phone: '',
         role: 'customer',
         email: '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        profileComplete: false,
+        isPhoneVerified: false,
+        isGuest: true
       };
       
       // Store guest user in local storage

@@ -46,12 +46,12 @@ const STAGING_CONFIG: EnvironmentConfig = {
 
 // Production environment
 const PROD_CONFIG: EnvironmentConfig = {
-  API_BASE_URL: getEnvVar('API_URL') || 'https://dash-stream-apk-backend.vercel.app/api',
+  API_BASE_URL: 'https://dash-stream-apk-backend.vercel.app/api',
   ENVIRONMENT: 'production',
   TIMEOUT: 30000,
   DEBUG: false,
   GOOGLE_MAPS_API_KEY: getEnvVar('GOOGLE_MAPS_API_KEY'),
-  RAZORPAY_KEY_ID: getEnvVar('RAZORPAY_KEY_ID'),
+  RAZORPAY_KEY_ID: 'rzp_live_REERfmRqrw93oG',
   FIREBASE_CONFIG: Constants.expoConfig?.extra?.firebaseConfig,
   TWILIO_CONFIG: Constants.expoConfig?.extra?.twilioConfig,
   CLOUDINARY_CONFIG: Constants.expoConfig?.extra?.cloudinaryConfig,
@@ -59,16 +59,21 @@ const PROD_CONFIG: EnvironmentConfig = {
 
 // Determine which environment to use
 const getEnvironmentConfig = (): EnvironmentConfig => {
-  const env = getEnvVar('NODE_ENV') || Constants.expoConfig?.extra?.environment || 'production';
-  
-  switch (env) {
-    case 'development':
-      return DEV_CONFIG;
-    case 'staging':
-      return STAGING_CONFIG;
-    case 'production':
-    default:
-      return PROD_CONFIG;
+  try {
+    const env = getEnvVar('NODE_ENV') || Constants.expoConfig?.extra?.environment || 'production';
+    
+    switch (env) {
+      case 'development':
+        return DEV_CONFIG;
+      case 'staging':
+        return STAGING_CONFIG;
+      case 'production':
+      default:
+        return PROD_CONFIG;
+    }
+  } catch (error) {
+    console.warn('Error determining environment config, defaulting to production:', error);
+    return PROD_CONFIG;
   }
 };
 

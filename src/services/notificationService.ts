@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import apiService from './apiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -54,6 +55,14 @@ class NotificationService {
    */
   async initialize(): Promise<void> {
     try {
+      // Check if we're running in Expo Go
+      const isExpoGo = Constants.appOwnership === 'expo';
+      
+      if (isExpoGo) {
+        console.warn('Push notifications are not supported in Expo Go. Use a development build instead.');
+        return;
+      }
+
       // Request permissions
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
@@ -70,8 +79,14 @@ class NotificationService {
 
       // Get push token
       if (Device.isDevice) {
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId || process.env.EXPO_PROJECT_ID;
+        if (!projectId) {
+          console.warn('No Expo project ID found. Please set EXPO_PROJECT_ID in your .env file');
+          return;
+        }
+
         const token = await Notifications.getExpoPushTokenAsync({
-          projectId: 'your-expo-project-id', // Replace with your actual project ID
+          projectId,
         });
         this.notificationToken = token.data;
         await this.saveToken();

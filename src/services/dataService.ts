@@ -6,6 +6,108 @@ import { User, Professional } from '../types/UserType';
 import { Payment } from '../types/PaymentType';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Location service types
+export interface LocationData {
+  latitude: number;
+  longitude: number;
+  accuracy?: number | null;
+  altitude?: number | null;
+  speed?: number | null;
+  heading?: number | null;
+  timestamp?: number;
+  status?: 'available' | 'busy' | 'offline';
+}
+
+export interface Geofence {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  radius: number;
+  type: 'enter' | 'exit' | 'both';
+}
+
+// Location API Service
+export class LocationApiService {
+  private userId: string;
+
+  constructor(userId: string) {
+    this.userId = userId;
+  }
+
+  async initialize(): Promise<void> {
+    // Initialize location service
+    console.log('Location service initialized for user:', this.userId);
+  }
+
+  async startTracking(): Promise<boolean> {
+    try {
+      // Start location tracking
+      return true;
+    } catch (error) {
+      console.error('Error starting location tracking:', error);
+      return false;
+    }
+  }
+
+  async stopTracking(): Promise<void> {
+    try {
+      // Stop location tracking
+      console.log('Location tracking stopped');
+    } catch (error) {
+      console.error('Error stopping location tracking:', error);
+    }
+  }
+
+  async updateStatus(status: 'available' | 'busy' | 'offline'): Promise<void> {
+    try {
+      await apiService.post('/location/status', { status });
+    } catch (error) {
+      console.error('Error updating location status:', error);
+    }
+  }
+
+  async getLocationHistory(limit?: number): Promise<LocationData[]> {
+    try {
+      const response = await apiService.get('/location/history', { limit });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error getting location history:', error);
+      return [];
+    }
+  }
+
+  async addGeofence(geofence: Omit<Geofence, 'id'>): Promise<void> {
+    try {
+      await apiService.post('/location/geofences', geofence);
+    } catch (error) {
+      console.error('Error adding geofence:', error);
+    }
+  }
+
+  async removeGeofence(geofenceId: string): Promise<boolean> {
+    try {
+      await apiService.delete(`/location/geofences/${geofenceId}`);
+      return true;
+    } catch (error) {
+      console.error('Error removing geofence:', error);
+      return false;
+    }
+  }
+
+  async updateTrackingSettings(options: {
+    updateInterval?: number;
+    significantChangeThreshold?: number;
+    batteryOptimizationEnabled?: boolean;
+  }): Promise<void> {
+    try {
+      await apiService.post('/location/settings', options);
+    } catch (error) {
+      console.error('Error updating tracking settings:', error);
+    }
+  }
+}
+
 // Dashboard statistics interface
 interface DashboardStats {
   totalBookings: number;
@@ -49,7 +151,7 @@ class DataService {
   }
   
   // Local storage methods
-  async setCurrentUser(user: User): Promise<void> {
+  async setCurrentUser(user: AuthUser): Promise<void> {
     try {
       await AsyncStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(user));
     } catch (error) {
@@ -523,6 +625,115 @@ class DataService {
   // Health check
   async healthCheck(): Promise<ApiResponse<any>> {
     return apiService.get('/health');
+  }
+
+  // Wrapper methods for contexts (to match expected method names)
+  async getServices(filters?: any): Promise<Service[]> {
+    try {
+      const response = await this.getAllServices(filters);
+      return response.data?.services || [];
+    } catch (error) {
+      console.error('Error getting services:', error);
+      return [];
+    }
+  }
+
+  async getPopularServices(limit?: number): Promise<Service[]> {
+    try {
+      const response = await this.getAllServices({ limit });
+      // For now, return all services. You can add popularity logic later
+      return response.data?.services || [];
+    } catch (error) {
+      console.error('Error getting popular services:', error);
+      return [];
+    }
+  }
+
+  async getProfessionals(): Promise<Professional[]> {
+    try {
+      const response = await this.getAllProfessionals();
+      return response.data?.professionals || [];
+    } catch (error) {
+      console.error('Error getting professionals:', error);
+      return [];
+    }
+  }
+
+  async getBookings(userId?: string): Promise<Booking[]> {
+    try {
+      if (userId) {
+        const response = await this.getUserBookings();
+        return response.data?.bookings || [];
+      } else {
+        const response = await this.getAllBookings();
+        return response.data?.bookings || [];
+      }
+    } catch (error) {
+      console.error('Error getting bookings:', error);
+      return [];
+    }
+  }
+
+  async getActiveOffers(): Promise<Offer[]> {
+    try {
+      const response = await this.getAllOffers({ active: true });
+      return response.data?.offers || [];
+    } catch (error) {
+      console.error('Error getting active offers:', error);
+      return [];
+    }
+  }
+
+  async getFeaturedOffers(): Promise<Offer[]> {
+    try {
+      const response = await this.getAllOffers(); // Add featured filter when available
+      return response.data?.offers || [];
+    } catch (error) {
+      console.error('Error getting featured offers:', error);
+      return [];
+    }
+  }
+
+  async validateOfferCode(code: string, serviceId?: string, orderAmount?: number): Promise<{ isValid: boolean; offer?: Offer; error?: string }> {
+    try {
+      // This would need an API endpoint for validation
+      // For now, return a placeholder
+      return { isValid: false, error: 'Offer validation not implemented' };
+    } catch (error) {
+      console.error('Error validating offer code:', error);
+      return { isValid: false, error: 'Validation failed' };
+    }
+  }
+
+  async getRecentBookings(limit?: number): Promise<Booking[]> {
+    try {
+      const response = await this.getAllBookings({ limit });
+      return response.data?.bookings || [];
+    } catch (error) {
+      console.error('Error getting recent bookings:', error);
+      return [];
+    }
+  }
+
+  async getTopProfessionals(limit?: number): Promise<Professional[]> {
+    try {
+      const response = await this.getAllProfessionals({ limit });
+      return response.data?.professionals || [];
+    } catch (error) {
+      console.error('Error getting top professionals:', error);
+      return [];
+    }
+  }
+
+  // Generic data method
+  async getData<T>(endpoint: string): Promise<T[]> {
+    try {
+      const response = await apiService.get(`/${endpoint}`);
+      return response.data?.data || [];
+    } catch (error) {
+      console.error(`Error getting data from ${endpoint}:`, error);
+      return [];
+    }
   }
 }
 

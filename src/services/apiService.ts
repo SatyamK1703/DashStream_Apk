@@ -39,7 +39,9 @@ class ApiService {
         'X-Platform': Constants.platform?.ios ? 'ios' : 'android',
         'X-App-Version': Constants.expoConfig?.version || '1.0.0',
         'X-Device-ID': Constants.deviceId || 'unknown',
+        'X-Requested-With': 'XMLHttpRequest',
       },
+      withCredentials: false, // Set to false for mobile apps
     });
 
     // Add request interceptor for auth token

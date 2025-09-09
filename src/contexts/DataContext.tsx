@@ -2,7 +2,11 @@
 // This context replaces API-based contexts with data service integration
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import dataService, { Service, Offer, Booking, Professional, User } from '../services/dataService';
+import dataService from '../services/dataService';
+import { Service } from '../types/ServiceType';
+import { Offer } from '../types/OfferType';
+import { Booking } from '../types/BookingType';
+import { Professional, User } from '../types/UserType';
 
 // Context types
 interface DataContextType {
@@ -109,8 +113,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setIsLoadingServices(true);
       setError(null);
-      const servicesData = await dataService.getServices(filters);
-      setServices(servicesData);
+      const response = await dataService.getAllServices(filters);
+      setServices(response.data?.services || []);
     } catch (err: any) {
       console.error('Error fetching services:', err);
       setError(err.message || 'Failed to fetch services');
@@ -121,7 +125,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const getServiceById = async (id: string): Promise<Service | null> => {
     try {
-      return await dataService.getServiceById(id);
+      const response = await dataService.getServiceById(id);
+      return response.data || null;
     } catch (err: any) {
       console.error('Error fetching service:', err);
       setError(err.message || 'Failed to fetch service');
@@ -131,7 +136,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const getPopularServices = async (limit?: number): Promise<Service[]> => {
     try {
-      const popular = await dataService.getPopularServices(limit);
+      // Get all services and simulate popular services (first few)
+      const response = await dataService.getAllServices({ limit });
+      const popular = response.data?.services || [];
       setPopularServices(popular);
       return popular;
     } catch (err: any) {
@@ -146,14 +153,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setIsLoadingOffers(true);
       setError(null);
-      const [offersData, activeData, featuredData] = await Promise.all([
-        dataService.getData<Offer>('offers'),
-        dataService.getActiveOffers(),
-        dataService.getFeaturedOffers()
-      ]);
-      setOffers(offersData);
-      setActiveOffers(activeData);
-      setFeaturedOffers(featuredData);
+      const response = await dataService.getAllOffers();
+      const allOffers = response.data?.offers || [];
+      setOffers(allOffers);
+      setActiveOffers(allOffers.filter(offer => offer.isActive));
+      setFeaturedOffers(allOffers.filter(offer => offer.isFeatured));
     } catch (err: any) {
       console.error('Error fetching offers:', err);
       setError(err.message || 'Failed to fetch offers');
@@ -164,7 +168,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const getOfferById = async (id: string): Promise<Offer | null> => {
     try {
-      return await dataService.getOfferById(id);
+      const response = await dataService.getOfferById(id);
+      return response.data || null;
     } catch (err: any) {
       console.error('Error fetching offer:', err);
       setError(err.message || 'Failed to fetch offer');
@@ -174,7 +179,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const validateOfferCode = async (code: string, serviceId?: string, orderAmount?: number) => {
     try {
-      return await dataService.validateOfferCode(code, serviceId, orderAmount);
+      // Mock implementation - find offer by code
+      const matchedOffer = offers.find(offer => offer.code === code && offer.isActive);
+      if (!matchedOffer) {
+        return { isValid: false, error: 'Invalid offer code' };
+      }
+      
+      // Basic validation
+      const now = new Date();
+      const validFrom = new Date(matchedOffer.validFrom);
+      const validUntil = new Date(matchedOffer.validUntil);
+      
+      if (now < validFrom || now > validUntil) {
+        return { isValid: false, error: 'Offer code has expired' };
+      }
+      
+      return { isValid: true, offer: matchedOffer };
     } catch (err: any) {
       console.error('Error validating offer code:', err);
       setError(err.message || 'Failed to validate offer code');
@@ -187,8 +207,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setIsLoadingBookings(true);
       setError(null);
-      const bookingsData = await dataService.getBookings(userId);
-      setBookings(bookingsData);
+      const response = await dataService.getUserBookings();
+      setBookings(response.data?.bookings || []);
     } catch (err: any) {
       console.error('Error fetching bookings:', err);
       setError(err.message || 'Failed to fetch bookings');
@@ -200,7 +220,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const createBooking = async (bookingData: any): Promise<Booking> => {
     try {
       setError(null);
-      const newBooking = await dataService.createBooking(bookingData);
+      const response = await dataService.createBooking(bookingData);
+      const newBooking = response.data;
+      if (!newBooking) {
+        throw new Error('Failed to create booking');
+      }
       // Refresh bookings list
       await fetchBookings(currentUser?.id);
       return newBooking;
@@ -214,7 +238,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateBookingStatus = async (id: string, status: string): Promise<Booking | null> => {
     try {
       setError(null);
-      const updatedBooking = await dataService.updateBookingStatus(id, status);
+      const response = await dataService.updateBookingStatus(id, status);
+      const updatedBooking = response.data;
       // Refresh bookings list
       await fetchBookings(currentUser?.id);
       return updatedBooking;
@@ -227,7 +252,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const getBookingById = async (id: string): Promise<Booking | null> => {
     try {
-      return await dataService.getBookingById(id);
+      const response = await dataService.getBookingById(id);
+      return response.data || null;
     } catch (err: any) {
       console.error('Error fetching booking:', err);
       setError(err.message || 'Failed to fetch booking');
@@ -240,8 +266,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setIsLoadingProfessionals(true);
       setError(null);
-      const professionalsData = await dataService.getProfessionals();
-      setProfessionals(professionalsData);
+      const response = await dataService.getAllProfessionals();
+      setProfessionals(response.data?.professionals || []);
     } catch (err: any) {
       console.error('Error fetching professionals:', err);
       setError(err.message || 'Failed to fetch professionals');
@@ -252,7 +278,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const getProfessionalById = async (id: string): Promise<Professional | null> => {
     try {
-      return await dataService.getProfessionalById(id);
+      const response = await dataService.getProfessionalById(id);
+      return response.data || null;
     } catch (err: any) {
       console.error('Error fetching professional:', err);
       setError(err.message || 'Failed to fetch professional');
@@ -261,7 +288,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // User methods
-  const setCurrentUser = async (user: User): Promise<void> => {
+  const setCurrentUser = async (user: AuthUser): Promise<void> => {
     try {
       setError(null);
       await dataService.setCurrentUser(user);
@@ -288,14 +315,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setIsLoadingDashboard(true);
       setError(null);
-      const [stats, recent, top] = await Promise.all([
-        dataService.getDashboardStats(),
-        dataService.getRecentBookings(5),
-        dataService.getTopProfessionals(5)
-      ]);
-      setDashboardStats(stats);
-      setRecentBookings(recent);
-      setTopProfessionals(top);
+      // Mock dashboard stats for now
+      const mockStats = {
+        totalBookings: bookings.length,
+        totalServices: services.length,
+        totalProfessionals: professionals.length,
+        totalRevenue: bookings.reduce((sum, booking) => sum + booking.price, 0)
+      };
+      setDashboardStats(mockStats);
+      setRecentBookings(bookings.slice(0, 5));
+      setTopProfessionals(professionals.slice(0, 5));
     } catch (err: any) {
       console.error('Error fetching dashboard data:', err);
       setError(err.message || 'Failed to fetch dashboard data');
