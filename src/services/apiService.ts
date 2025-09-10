@@ -72,13 +72,31 @@ class ApiService {
     // Add response interceptor for error handling
     this.instance.interceptors.response.use(
       (response: AxiosResponse) => {
+        const data = response.data;
+        
         // Check if response has the expected structure
-        if (response.data && typeof response.data === 'object') {
+        if (data && typeof data === 'object') {
+          // Handle backend auth response format: { status: 'success', token: '...', data: { user: ... } }
+          if (data.status === 'success' && data.token) {
+            return {
+              success: true,
+              data: {
+                token: data.token,
+                user: data.data?.user || data.user,
+                refreshToken: data.refreshToken,
+                expiresAt: data.expiresAt,
+                ...data.data
+              },
+              message: data.message || 'Success',
+              statusCode: response.status,
+            };
+          }
+          
           // Return standardized response format
           return {
-            success: true,
-            data: response.data.data || response.data,
-            message: response.data.message || 'Success',
+            success: data.success !== false && data.status !== 'error',
+            data: data.data || data,
+            message: data.message || 'Success',
             statusCode: response.status,
           };
         } else {
@@ -130,10 +148,14 @@ class ApiService {
 
   // Set auth token (called after login/registration)
   public setAuthToken(token: string): void {
-    this.authToken = token;
-    AsyncStorage.setItem('authToken', token).catch(error => {
-      console.error('Error saving auth token to storage:', error);
-    });
+    if (token && typeof token === 'string' && token.trim() !== '') {
+      this.authToken = token;
+      AsyncStorage.setItem('authToken', token).catch(error => {
+        console.error('Error saving auth token to storage:', error);
+      });
+    } else {
+      console.error('Error: Cannot save invalid token to storage:', token);
+    }
   }
 
   // Clear auth token (called after logout)
@@ -145,7 +167,7 @@ class ApiService {
   }
 
   // Generic request method with retry logic and improved error handling
-  public async request<T>(config: AxiosRequestConfig, retries: number = 3): Promise<ApiResponse<T>> {
+  public async request<T>(config: AxiosRequestConfig, retries: number = 2): Promise<ApiResponse<T>> {
     try {
       // Check network connectivity before making request
       const connected = await isConnected();
@@ -182,12 +204,15 @@ class ApiService {
       
       return response;
     } catch (error: any) {
-      // Retry logic for network errors
-      if (retries > 0 && this.shouldRetry(error)) {
+      // Only retry for specific network errors, not authentication errors
+      if (retries > 0 && this.shouldRetry(error) && !this.isAuthError(error)) {
         if (DEBUG_MODE) {
           console.log(`Retrying request, ${retries} attempts left: ${config.method?.toUpperCase()} ${config.url}`);
         }
-        await this.delay(1000 * (4 - retries)); // Exponential backoff
+        // Exponential backoff with jitter
+        const baseDelay = 1000 * (3 - retries);
+        const jitter = Math.random() * 500;
+        await this.delay(baseDelay + jitter);
         return this.request<T>(config, retries - 1);
       }
       
@@ -207,7 +232,15 @@ class ApiService {
   private shouldRetry(error: any): boolean {
     if (!error.response) return true; // Network error
     const status = error.response.status;
-    return status >= 500 || status === 408 || status === 429; // Server errors, timeout, rate limit
+    // Only retry for server errors, timeout, and rate limit (not client errors like 4xx)
+    return status >= 500 || status === 408 || status === 429;
+  }
+
+  // Check if error is authentication related
+  private isAuthError(error: any): boolean {
+    if (!error.response) return false;
+    const status = error.response.status;
+    return status === 401 || status === 403;
   }
 
   // Delay utility for retry logic

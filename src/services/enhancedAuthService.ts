@@ -435,14 +435,34 @@ class EnhancedAuthService {
         rememberDevice
       });
 
+      console.log('OTP Verification Response:', JSON.stringify(response, null, 2));
+
       if (response.success && response.data) {
         const { token, refreshToken, user, expiresAt } = response.data;
         
-        // Update auth state
+        // Validate token before proceeding
+        if (!token || typeof token !== 'string' || token.trim() === '') {
+          console.error('Invalid token received from server:', { token, responseData: response.data });
+          return {
+            success: false,
+            message: 'Authentication failed: Invalid token received from server'
+          };
+        }
+
+        // Validate user data
+        if (!user || typeof user !== 'object') {
+          console.error('Invalid user data received from server:', { user, responseData: response.data });
+          return {
+            success: false,
+            message: 'Authentication failed: Invalid user data received from server'
+          };
+        }
+        
+        // Update auth state with validated data
         this.authState.token = token;
-        this.authState.refreshToken = refreshToken;
+        this.authState.refreshToken = refreshToken || null;
         this.authState.user = user;
-        this.authState.sessionExpiry = expiresAt;
+        this.authState.sessionExpiry = expiresAt || null;
         this.authState.isAuthenticated = true;
         this.updateLastActivity();
 
@@ -459,12 +479,14 @@ class EnhancedAuthService {
 
         this.notifyListeners();
 
+        console.log('✅ OTP verification successful, user authenticated');
         return {
           success: true,
           data: response.data,
           message: response.message || 'Login successful'
         };
       } else {
+        console.warn('OTP verification failed:', response);
         return {
           success: false,
           message: response.message || 'Invalid OTP. Please try again.'

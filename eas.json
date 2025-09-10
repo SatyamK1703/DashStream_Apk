@@ -16,7 +16,7 @@
       },
       "env": {
         "NODE_ENV": "development",
-        "API_URL": "https://dash-stream-apk-backend.vercel.app/api/api"
+        "API_URL": "https://dash-stream-apk-backend.vercel.app/api"
       }
     },
     "preview": {

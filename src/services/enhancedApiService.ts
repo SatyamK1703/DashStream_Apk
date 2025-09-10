@@ -217,8 +217,28 @@ class EnhancedApiService {
     
     // Handle different response formats
     if (data && typeof data === 'object') {
+      // Handle backend auth response format: { status: 'success', token: '...', data: { user: ... } }
+      if (data.status === 'success' && data.token) {
+        return {
+          success: true,
+          data: {
+            token: data.token,
+            user: data.data?.user || data.user,
+            refreshToken: data.refreshToken,
+            expiresAt: data.expiresAt,
+            ...data.data
+          },
+          message: data.message || 'Success',
+          statusCode: response.status,
+          timestamp: new Date().toISOString(),
+          requestId: response.config.headers?.['X-Request-ID'],
+          pagination: data.pagination || data.meta?.pagination
+        };
+      }
+      
+      // Handle standard API response format
       return {
-        success: data.success !== false,
+        success: data.success !== false && data.status !== 'error',
         data: data.data || data.result || data,
         message: data.message || 'Success',
         statusCode: response.status,
@@ -365,16 +385,23 @@ class EnhancedApiService {
 
   // Public methods
   public async setAuthToken(token: string, refreshToken?: string): Promise<void> {
+    // Validate token before saving
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      console.error('Error: Cannot save invalid token to storage:', token);
+      return;
+    }
+
     this.authToken = token;
-    if (refreshToken) {
+    if (refreshToken && typeof refreshToken === 'string' && refreshToken.trim() !== '') {
       this.refreshToken = refreshToken;
     }
 
     try {
-      await AsyncStorage.multiSet([
-        ['authToken', token],
-        ...(refreshToken ? [['refreshToken', refreshToken]] : [])
-      ]);
+      const tokensToSave: [string, string][] = [['authToken', token]];
+      if (this.refreshToken) {
+        tokensToSave.push(['refreshToken', this.refreshToken]);
+      }
+      await AsyncStorage.multiSet(tokensToSave);
     } catch (error) {
       console.error('Failed to save tokens:', error);
     }
