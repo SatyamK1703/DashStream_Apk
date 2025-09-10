@@ -16,7 +16,7 @@
       },
       "env": {
         "NODE_ENV": "development",
-        "API_URL": "http://localhost:5000/api"
+        "API_URL": "https://dash-stream-apk-backend.vercel.app/api/api"
       }
     },
     "preview": {

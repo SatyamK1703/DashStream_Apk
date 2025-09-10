@@ -65,7 +65,7 @@ Create a `.env` file in the root directory:
 
 ```env
 # API Configuration
-API_URL=http://localhost:5000/api
+API_URL=https://dash-stream-apk-backend.vercel.app/api/api
 NODE_ENV=development
 
 # Google Maps
@@ -170,7 +170,7 @@ Environment-specific settings are in `src/config/environment.ts`:
 
 ```typescript
 const DEV_CONFIG = {
-  API_BASE_URL: 'http://localhost:5000/api',
+  API_BASE_URL: 'https://dash-stream-apk-backend.vercel.app/api/api',
   ENVIRONMENT: 'development',
   TIMEOUT: 10000,
   DEBUG: true,

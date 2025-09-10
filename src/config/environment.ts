@@ -20,7 +20,7 @@ const getEnvVar = (key: string): string | undefined => {
 
 // Development environment (local)
 const DEV_CONFIG: EnvironmentConfig = {
-  API_BASE_URL: getEnvVar('API_URL') || 'http://localhost:5000/api',
+  API_BASE_URL: getEnvVar('API_URL') || 'https://dash-stream-apk-backend.vercel.app/api',
   ENVIRONMENT: 'development',
   TIMEOUT: 10000,
   DEBUG: true,
@@ -33,7 +33,7 @@ const DEV_CONFIG: EnvironmentConfig = {
 
 // Staging environment
 const STAGING_CONFIG: EnvironmentConfig = {
-  API_BASE_URL: getEnvVar('API_URL') || 'https://dash-stream-apk-backend-staging.vercel.app/api',
+  API_BASE_URL: getEnvVar('API_URL') || 'https://dash-stream-apk-backend.vercel.app/api',
   ENVIRONMENT: 'staging',
   TIMEOUT: 20000,
   DEBUG: false,
