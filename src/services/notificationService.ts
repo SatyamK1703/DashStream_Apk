@@ -11,7 +11,10 @@ const NOTIFICATION_SETTINGS_KEY = '@dashstream:notification_settings';
 // Configure notification behavior
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    // shouldShowAlert is deprecated on iOS; use banner/list instead
+    shouldShowAlert: Platform.OS !== 'ios',
+    shouldShowBanner: Platform.OS === 'ios',
+    shouldShowList: Platform.OS === 'ios',
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),

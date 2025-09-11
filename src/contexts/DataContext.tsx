@@ -89,11 +89,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
   
   const [error, setError] = useState<string | null>(null);
+  
+  // Request deduplication and caching
+  const [activeRequests, setActiveRequests] = useState<Map<string, Promise<any>>>(new Map());
+  const [dataCache, setDataCache] = useState<Map<string, { data: any; timestamp: number }>>(new Map());
+  const CACHE_DURATION = 30000; // 30 seconds cache
 
   // Initialize data on mount
   useEffect(() => {
-    initializeData();
-  }, []);
+    // Only initialize if user is not already loaded
+    if (!currentUser && !isLoadingUser) {
+      initializeData();
+    }
+  }, []); // Empty dependency array to run once
 
   const initializeData = async () => {
     try {
@@ -110,17 +118,45 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Services methods
   const fetchServices = async (filters?: any) => {
-    try {
-      setIsLoadingServices(true);
-      setError(null);
-      const response = await dataService.getAllServices(filters);
-      setServices(response.data?.services || []);
-    } catch (err: any) {
-      console.error('Error fetching services:', err);
-      setError(err.message || 'Failed to fetch services');
-    } finally {
-      setIsLoadingServices(false);
+    const cacheKey = `services_${JSON.stringify(filters || {})}`;
+    
+    // Check cache first
+    const cached = dataCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      setServices(cached.data);
+      return;
     }
+    
+    // Check if request already in progress
+    const existingRequest = activeRequests.get(cacheKey);
+    if (existingRequest) {
+      return existingRequest;
+    }
+    
+    const requestPromise = (async () => {
+      try {
+        setIsLoadingServices(true);
+        setError(null);
+        const response = await dataService.getAllServices(filters);
+        const servicesData = response.data?.services || [];
+        setServices(servicesData);
+        
+        // Cache the result
+        dataCache.set(cacheKey, { data: servicesData, timestamp: Date.now() });
+        
+        return servicesData;
+      } catch (err: any) {
+        console.error('Error fetching services:', err);
+        setError(err.message || 'Failed to fetch services');
+        throw err;
+      } finally {
+        setIsLoadingServices(false);
+        activeRequests.delete(cacheKey);
+      }
+    })();
+    
+    activeRequests.set(cacheKey, requestPromise);
+    return requestPromise;
   };
 
   const getServiceById = async (id: string): Promise<Service | null> => {
@@ -135,35 +171,91 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const getPopularServices = async (limit?: number): Promise<Service[]> => {
-    try {
-      // Get all services and simulate popular services (first few)
-      const response = await dataService.getAllServices({ limit });
-      const popular = response.data?.services || [];
-      setPopularServices(popular);
-      return popular;
-    } catch (err: any) {
-      console.error('Error fetching popular services:', err);
-      setError(err.message || 'Failed to fetch popular services');
-      return [];
+    const cacheKey = `popular_services_${limit || 'all'}`;
+    
+    // Check cache first
+    const cached = dataCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      setPopularServices(cached.data);
+      return cached.data;
     }
+    
+    // Check if request already in progress
+    const existingRequest = activeRequests.get(cacheKey);
+    if (existingRequest) {
+      return existingRequest;
+    }
+    
+    const requestPromise = (async () => {
+      try {
+        // Get all services and simulate popular services (first few)
+        const response = await dataService.getAllServices({ limit });
+        const popular = response.data?.services || [];
+        setPopularServices(popular);
+        
+        // Cache the result
+        dataCache.set(cacheKey, { data: popular, timestamp: Date.now() });
+        
+        return popular;
+      } catch (err: any) {
+        console.error('Error fetching popular services:', err);
+        setError(err.message || 'Failed to fetch popular services');
+        return [];
+      } finally {
+        activeRequests.delete(cacheKey);
+      }
+    })();
+    
+    activeRequests.set(cacheKey, requestPromise);
+    return requestPromise;
   };
 
   // Offers methods
   const fetchOffers = async () => {
-    try {
-      setIsLoadingOffers(true);
-      setError(null);
-      const response = await dataService.getAllOffers();
-      const allOffers = response.data?.offers || [];
-      setOffers(allOffers);
-      setActiveOffers(allOffers.filter(offer => offer.isActive));
-      setFeaturedOffers(allOffers.filter(offer => offer.isFeatured));
-    } catch (err: any) {
-      console.error('Error fetching offers:', err);
-      setError(err.message || 'Failed to fetch offers');
-    } finally {
-      setIsLoadingOffers(false);
+    const cacheKey = 'offers_all';
+    
+    // Check cache first
+    const cached = dataCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      const cachedOffers = cached.data;
+      setOffers(cachedOffers);
+      setActiveOffers(cachedOffers.filter((offer: Offer) => offer.isActive));
+      setFeaturedOffers(cachedOffers.filter((offer: Offer) => offer.isFeatured));
+      return;
     }
+    
+    // Check if request already in progress
+    const existingRequest = activeRequests.get(cacheKey);
+    if (existingRequest) {
+      return existingRequest;
+    }
+    
+    const requestPromise = (async () => {
+      try {
+        setIsLoadingOffers(true);
+        setError(null);
+        const response = await dataService.getAllOffers();
+        const allOffers = response.data?.offers || [];
+        setOffers(allOffers);
+        setActiveOffers(allOffers.filter(offer => offer.isActive));
+        setFeaturedOffers(allOffers.filter(offer => offer.isFeatured));
+        
+        // Cache the result
+        dataCache.set(cacheKey, { data: allOffers, timestamp: Date.now() });
+        
+        return allOffers;
+      } catch (err: any) {
+        console.error('Error fetching offers:', err);
+        setError(err.message || 'Failed to fetch offers');
+        throw err;
+      } finally {
+        setIsLoadingOffers(false);
+        activeRequests.delete(cacheKey);
+      }
+    })();
+    
+    activeRequests.set(cacheKey, requestPromise);
+    return requestPromise;
   };
 
   const getOfferById = async (id: string): Promise<Offer | null> => {

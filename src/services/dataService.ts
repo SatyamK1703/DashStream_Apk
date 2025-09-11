@@ -127,15 +127,18 @@ class DataService {
     return apiService.post('/auth/send-otp', { phone });
   }
 
-  async verifyOtp(phone: string, otp: string): Promise<ApiResponse<{ token: string; user: User }>> {
-    const response = await apiService.post<{ token: string; user: User }>('/auth/verify-otp', { phone, otp });
+  async verifyOtp(phone: string, otp: string): Promise<ApiResponse<{ token: string; refreshToken?: string; user: User }>> {
+    const response = await apiService.post<{ token: string; refreshToken?: string; user: User }>('/auth/verify-otp', { phone, otp });
     
     if (response.success && response.data) {
-      // Save token to API service
-      apiService.setAuthToken(response.data.token);
+      // Save tokens to API service
+      const { token, refreshToken, user } = response.data;
+      await apiService.setTokens(token, refreshToken);
       
       // Save user to local storage
-      await this.setCurrentUser(response.data.user);
+      if (user) {
+        await this.setCurrentUser(user);
+      }
     }
     
     return response;
@@ -294,7 +297,7 @@ class DataService {
   }
 
   async getUserBookings(params?: { status?: string; page?: number; limit?: number }): Promise<ApiResponse<{ bookings: Booking[]; total: number; page: number; limit: number }>> {
-    return apiService.get('/bookings/user', params);
+    return apiService.get('/bookings/my-bookings', params);
   }
 
   async getProfessionalBookings(params?: { status?: string; page?: number; limit?: number }): Promise<ApiResponse<{ bookings: Booking[]; total: number; page: number; limit: number }>> {

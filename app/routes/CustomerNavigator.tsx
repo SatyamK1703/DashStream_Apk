@@ -30,6 +30,7 @@ import ProfessionalLocationScreen from '../../src/screens/customer/ProfessionalL
 import PaymentScreen from '../../src/screens/customer/PaymentScreen';
 import PaymentHistoryScreen from '../../src/screens/customer/PaymentHistoryScreen';
 import PaymentDetailsScreen from '../../src/screens/customer/PaymentDetailsScreen';
+import TestNotificationScreen from '../../src/screens/customer/TestNotificationScreen';
 
 // Define the customer stack param list
 export type CustomerStackParamList = {
@@ -192,6 +193,7 @@ const CustomerNavigator = () => {
       <Stack.Screen name='Payment' component={PaymentScreen}/>
       <Stack.Screen name='PaymentHistory' component={PaymentHistoryScreen}/>
       <Stack.Screen name='PaymentDetails' component={PaymentDetailsScreen}/>
+      <Stack.Screen name='TestNotification' component={TestNotificationScreen}/>
 
     </Stack.Navigator>
   );

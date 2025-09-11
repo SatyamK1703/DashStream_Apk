@@ -60,17 +60,16 @@ const HomeScreen = () => {
     }
   }, [fetchOffers, getPopularServices, clearError]);
 
-  // Initial data fetch
+  // Initial data fetch - only fetch once
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    // Check if data is not already loaded
+    if (!offers || offers.length === 0) {
+      fetchData();
+    }
+  }, []); // Remove fetchData dependency to prevent infinite loop
 
-  // Auto-refresh when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      fetchData(false);
-    }, [fetchData])
-  );
+  // Do not auto-refresh when screen comes into focus - data is already loaded
+  // Remove useFocusEffect to prevent duplicate calls
 
   // Auto scroll offers
   useEffect(() => {

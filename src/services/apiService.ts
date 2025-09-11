@@ -23,6 +23,9 @@ export interface ApiError {
 class ApiService {
   private instance: AxiosInstance;
   private authToken: string | null = null;
+  private refreshToken: string | null = null;
+  private isRefreshing = false;
+  private refreshWaiters: Array<(token?: string) => void> = [];
 
   constructor() {
     // Initialize network monitoring
@@ -44,19 +47,15 @@ class ApiService {
       withCredentials: false, // Set to false for mobile apps
     });
 
+    // Eagerly load any stored tokens
+    this.loadStoredTokens();
+
     // Add request interceptor for auth token
     this.instance.interceptors.request.use(
       async (config) => {
         // Try to get token from storage if not already loaded
         if (!this.authToken) {
-          try {
-            const token = await AsyncStorage.getItem('authToken');
-            if (token) {
-              this.authToken = token;
-            }
-          } catch (error) {
-            console.error('Error getting auth token from storage:', error);
-          }
+          await this.loadStoredTokens();
         }
 
         // Add auth token to headers if available
@@ -111,13 +110,32 @@ class ApiService {
         }
       },
       async (error: AxiosError) => {
+        const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+        const status = error.response?.status;
+        const url = originalRequest?.url || '';
+
+        // Attempt token refresh on 401 (except auth endpoints)
+        if (status === 401 && !url.includes('/auth/')) {
+          try {
+            const newToken = await this.handle401WithRefresh();
+            if (newToken && originalRequest) {
+              originalRequest._retry = true;
+              originalRequest.headers = originalRequest.headers || {};
+              (originalRequest.headers as any).Authorization = `Bearer ${newToken}`;
+              return this.instance.request(originalRequest);
+            }
+          } catch (refreshErr) {
+            // fall through to standard error handling
+          }
+        }
+
         // Import error handling utilities dynamically to avoid circular dependencies
         const { processApiError, ErrorType, handleAuthError } = await import('../utils/errorHandlingUtils');
         
         // Process the error to get standardized format
         const processedError = processApiError(error);
         
-        // Handle authentication errors
+        // Handle authentication errors (if refresh failed)
         if (processedError.type === ErrorType.AUTHENTICATION) {
           await handleAuthError();
         }
@@ -146,24 +164,91 @@ class ApiService {
     );
   }
 
-  // Set auth token (called after login/registration)
-  public setAuthToken(token: string): void {
-    if (token && typeof token === 'string' && token.trim() !== '') {
-      this.authToken = token;
-      AsyncStorage.setItem('authToken', token).catch(error => {
-        console.error('Error saving auth token to storage:', error);
-      });
-    } else {
-      console.error('Error: Cannot save invalid token to storage:', token);
+  private async loadStoredTokens() {
+    try {
+      const [t1, t2, r1, r2] = await Promise.all([
+        AsyncStorage.getItem('auth_token'),
+        AsyncStorage.getItem('authToken'),
+        AsyncStorage.getItem('refresh_token'),
+        AsyncStorage.getItem('refreshToken')
+      ]);
+      this.authToken = t1 || t2 || this.authToken;
+      this.refreshToken = r1 || r2 || this.refreshToken;
+    } catch (e) {
+      console.error('Failed to load tokens from storage:', e);
     }
   }
 
-  // Clear auth token (called after logout)
-  public clearAuthToken(): void {
+  private async handle401WithRefresh(): Promise<string | null> {
+    if (!this.refreshToken) {
+      await this.loadStoredTokens();
+    }
+    if (!this.refreshToken) return null;
+
+    if (this.isRefreshing) {
+      // Queue until refresh completes
+      return new Promise((resolve) => this.refreshWaiters.push(resolve));
+    }
+
+    this.isRefreshing = true;
+    try {
+      const resp = await this.instance.post('/auth/refresh-token', { refreshToken: this.refreshToken });
+      const data = (resp.data?.data || resp.data) as any;
+      const newToken: string | undefined = data?.token;
+      const newRefresh: string | undefined = data?.refreshToken;
+      if (!newToken) throw new Error('No token in refresh response');
+      await this.setTokens(newToken, newRefresh);
+      // Resolve queued waiters
+      this.refreshWaiters.forEach((fn) => fn(newToken));
+      this.refreshWaiters = [];
+      return newToken;
+    } catch (err) {
+      // Fail queued waiters
+      this.refreshWaiters.forEach((fn) => fn(undefined));
+      this.refreshWaiters = [];
+      // Clear tokens on refresh failure
+      await this.clearAuthToken();
+      return null;
+    } finally {
+      this.isRefreshing = false;
+    }
+  }
+
+  // Set tokens (called after login/registration or refresh)
+  public async setTokens(token: string, refreshToken?: string): Promise<void> {
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      console.error('Error: Cannot save invalid token to storage:', token);
+      return;
+    }
+    this.authToken = token;
+    if (refreshToken && typeof refreshToken === 'string' && refreshToken.trim() !== '') {
+      this.refreshToken = refreshToken;
+    }
+    try {
+      const ops: [string, string][] = [['auth_token', token], ['authToken', token]]; // write both keys for compatibility
+      if (this.refreshToken) {
+        ops.push(['refresh_token', this.refreshToken], ['refreshToken', this.refreshToken]);
+      }
+      await AsyncStorage.multiSet(ops);
+    } catch (e) {
+      console.error('Error saving tokens to storage:', e);
+    }
+  }
+
+  // Backwards-compatible single-token setter
+  public setAuthToken(token: string): void {
+    this.setTokens(token).catch(() => {});
+  }
+
+  // Clear tokens (called after logout or refresh failure)
+  public async clearAuthToken(): Promise<void> {
     this.authToken = null;
-    AsyncStorage.removeItem('authToken').catch(error => {
-      console.error('Error removing auth token from storage:', error);
-    });
+    this.refreshToken = null;
+    try {
+      await AsyncStorage.multiRemove(['auth_token','authToken','refresh_token','refreshToken']);
+    } catch (e) {
+      console.error('Error removing tokens from storage:', e);
+    }
   }
 
   // Generic request method with retry logic and improved error handling

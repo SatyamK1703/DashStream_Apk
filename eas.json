@@ -41,8 +41,8 @@
         "simulator": false
       },
       "android": {
-        "buildType": "aab",
-        "gradleCommand": ":app:bundleRelease"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
       },
       "env": {
         "NODE_ENV": "production",

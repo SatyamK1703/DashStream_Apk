@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "DashSteam",
-    "slug": "DashSteam",
+    "slug": "dashsteam",
     "version": "1.0.0",
     "owner": "satyamk1078",
     "orientation": "portrait",
@@ -26,7 +26,7 @@
       }
     },
     "android": {
-      "package": "com.satyamk1078.dashsteam",
+      "package": "com.satyamk1078.dashstream",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
