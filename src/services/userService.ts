@@ -1,332 +1,539 @@
-// src/services/userService.ts
-import dataService from './dataService';
-import { ApiResponse } from './apiService';
-import { User, Customer, Professional, Address, Vehicle, CreateAddressRequest, CreateVehicleRequest, UpdateAddressRequest, UpdateVehicleRequest } from '../types/UserType';
+// Production User Service
+import unifiedApiService from './unifiedApiService';
+import { API_CONFIG } from '../constants/apiConfig';
+import productionAuthService from './productionAuthService';
 
-/**
- * User Service - Provides user-related API operations
- * Acts as a wrapper around dataService for user-specific operations
- */
-class UserServiceClass {
-  
-  /**
-   * Get current user profile
-   */
-  async getCurrentUser(): Promise<ApiResponse<User | Customer | Professional>> {
-    try {
-      const user = await dataService.getCurrentUser();
-      return {
-        success: true,
-        data: user as any,
-        message: 'User retrieved successfully'
-      };
-    } catch (error) {
-      console.error('Error in getCurrentUser:', error);
-      throw error;
+// Types
+export interface Address {
+  _id?: string;
+  name: string;
+  address: string;
+  city: string;
+  landmark?: string;
+  pincode: string;
+  isDefault?: boolean;
+  type?: 'home' | 'work' | 'other';
+}
+
+export interface Vehicle {
+  _id?: string;
+  type: '2 Wheeler' | '4 Wheeler';
+  brand?: string;
+  model?: string;
+  registrationNumber?: string;
+  isDefault?: boolean;
+}
+
+export interface UserProfile {
+  _id: string;
+  name?: string;
+  email?: string;
+  phone: string;
+  role: 'customer' | 'professional' | 'admin';
+  profileImage?: string;
+  profileComplete: boolean;
+  isPhoneVerified: boolean;
+  addresses?: Address[];
+  vehicles?: Vehicle[];
+  preferences?: {
+    notifications: boolean;
+    newsletter: boolean;
+    smsAlerts: boolean;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserResponse {
+  success: boolean;
+  data?: UserProfile;
+  message: string;
+  statusCode?: number;
+}
+
+export interface AddressResponse {
+  success: boolean;
+  data?: { addresses: Address[] };
+  message: string;
+  statusCode?: number;
+}
+
+export interface VehicleResponse {
+  success: boolean;
+  data?: { vehicles: Vehicle[] };
+  message: string;
+  statusCode?: number;
+}
+
+class UserService {
+  private static instance: UserService;
+
+  private constructor() {}
+
+  public static getInstance(): UserService {
+    if (!UserService.instance) {
+      UserService.instance = new UserService();
     }
+    return UserService.instance;
   }
 
-  /**
-   * Update current user profile
-   */
-  async updateProfile(profileData: Partial<User>): Promise<ApiResponse<User>> {
+  // Get current user profile
+  public async getCurrentUser(): Promise<UserResponse> {
     try {
-      return await dataService.updateUser(profileData);
-    } catch (error) {
-      console.error('Error in updateProfile:', error);
-      throw error;
-    }
-  }
+      console.log('👤 Fetching current user profile...');
 
-  /**
-   * Get user addresses
-   * Note: Since there's no specific address endpoint, this returns addresses from user profile
-   */
-  async getMyAddresses(): Promise<ApiResponse<{ addresses: Address[] }>> {
-    try {
-      const user = await dataService.getCurrentUser();
-      const customer = user as Customer;
-      
-      return {
-        success: true,
-        data: {
-          addresses: customer?.addresses || []
-        },
-        message: 'Addresses retrieved successfully'
-      };
-    } catch (error) {
-      console.error('Error in getMyAddresses:', error);
-      return {
-        success: false,
-        data: { addresses: [] },
-        message: 'Failed to retrieve addresses'
-      };
-    }
-  }
+      if (!productionAuthService.isAuthenticated()) {
+        return {
+          success: false,
+          message: 'User not authenticated'
+        };
+      }
 
-  /**
-   * Get user vehicles
-   * Uses existing vehicle endpoints from dataService
-   */
-  async getMyVehicles(): Promise<ApiResponse<{ vehicles: Vehicle[] }>> {
-    try {
-      const response = await dataService.getMyVehicles();
-      return {
-        success: response.success,
-        data: {
-          vehicles: response.data || []
-        },
-        message: response.message || 'Vehicles retrieved successfully'
-      };
-    } catch (error) {
-      console.error('Error in getMyVehicles:', error);
-      return {
-        success: false,
-        data: { vehicles: [] },
-        message: 'Failed to retrieve vehicles'
-      };
-    }
-  }
+      const response = await unifiedApiService.get(API_CONFIG.ENDPOINTS.USERS.PROFILE);
 
-  /**
-   * Get default vehicle
-   */
-  async getDefaultVehicle(): Promise<ApiResponse<Vehicle>> {
-    try {
-      return await dataService.getMyDefaultVehicle();
-    } catch (error) {
-      console.error('Error in getDefaultVehicle:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create a new address
-   * Note: This would need a specific backend endpoint
-   */
-  async createAddress(addressData: CreateAddressRequest): Promise<ApiResponse<Address>> {
-    try {
-      // For now, this is a placeholder - you'd need to implement the backend endpoint
-      return {
-        success: false,
-        message: 'Address creation endpoint not yet implemented',
-        data: {} as Address
-      };
-    } catch (error) {
-      console.error('Error in createAddress:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update an address
-   * Note: This would need a specific backend endpoint
-   */
-  async updateAddress(addressId: string, addressData: UpdateAddressRequest): Promise<ApiResponse<Address>> {
-    try {
-      // For now, this is a placeholder - you'd need to implement the backend endpoint
+      if (response.success && response.data) {
+        console.log('✅ User profile fetched successfully');
+        return {
+          success: true,
+          data: response.data,
+          message: response.message || 'Profile fetched successfully',
+          statusCode: response.statusCode
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || 'Failed to fetch user profile',
+          statusCode: response.statusCode
+        };
+      }
+    } catch (error: any) {
+      console.error('❌ Fetch user profile failed:', error);
       return {
         success: false,
-        message: 'Address update endpoint not yet implemented',
-        data: {} as Address
+        message: error.message || 'Failed to fetch user profile',
+        statusCode: error.statusCode
       };
-    } catch (error) {
-      console.error('Error in updateAddress:', error);
-      throw error;
     }
   }
 
-  /**
-   * Delete an address
-   * Note: This would need a specific backend endpoint
-   */
-  async deleteAddress(addressId: string): Promise<ApiResponse<{ message: string }>> {
+  // Update user profile
+  public async updateProfile(profileData: Partial<UserProfile>): Promise<UserResponse> {
     try {
-      // For now, this is a placeholder - you'd need to implement the backend endpoint
+      console.log('📝 Updating user profile...');
+
+      if (!productionAuthService.isAuthenticated()) {
+        return {
+          success: false,
+          message: 'User not authenticated'
+        };
+      }
+
+      const response = await unifiedApiService.put(
+        API_CONFIG.ENDPOINTS.USERS.UPDATE_PROFILE,
+        profileData
+      );
+
+      if (response.success && response.data) {
+        console.log('✅ Profile updated successfully');
+        return {
+          success: true,
+          data: response.data,
+          message: response.message || 'Profile updated successfully',
+          statusCode: response.statusCode
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || 'Failed to update profile',
+          statusCode: response.statusCode
+        };
+      }
+    } catch (error: any) {
+      console.error('❌ Update profile failed:', error);
       return {
         success: false,
-        message: 'Address deletion endpoint not yet implemented'
+        message: error.message || 'Failed to update profile',
+        statusCode: error.statusCode
       };
-    } catch (error) {
-      console.error('Error in deleteAddress:', error);
-      throw error;
     }
   }
 
-  /**
-   * Set default address
-   * Note: This would need a specific backend endpoint
-   */
-  async setDefaultAddress(addressId: string): Promise<ApiResponse<{ message: string }>> {
+  // Get user addresses
+  public async getMyAddresses(): Promise<AddressResponse> {
     try {
-      // For now, this is a placeholder - you'd need to implement the backend endpoint
+      console.log('🏠 Fetching user addresses...');
+
+      if (!productionAuthService.isAuthenticated()) {
+        return {
+          success: false,
+          message: 'User not authenticated'
+        };
+      }
+
+      const response = await unifiedApiService.get(API_CONFIG.ENDPOINTS.USERS.ADDRESSES);
+
+      if (response.success) {
+        const addresses = response.data?.addresses || response.data || [];
+        console.log('✅ Addresses fetched successfully:', addresses.length);
+        
+        return {
+          success: true,
+          data: { addresses },
+          message: response.message || 'Addresses fetched successfully',
+          statusCode: response.statusCode
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || 'Failed to fetch addresses',
+          statusCode: response.statusCode
+        };
+      }
+    } catch (error: any) {
+      console.error('❌ Fetch addresses failed:', error);
       return {
         success: false,
-        message: 'Set default address endpoint not yet implemented'
+        message: error.message || 'Failed to fetch addresses',
+        statusCode: error.statusCode
       };
-    } catch (error) {
-      console.error('Error in setDefaultAddress:', error);
-      throw error;
     }
   }
 
-  /**
-   * Create a new vehicle
-   */
-  async createVehicle(vehicleData: CreateVehicleRequest): Promise<ApiResponse<Vehicle>> {
+  // Add new address
+  public async addAddress(addressData: Omit<Address, '_id'>): Promise<AddressResponse> {
     try {
-      return await dataService.createVehicle(vehicleData);
-    } catch (error) {
-      console.error('Error in createVehicle:', error);
-      throw error;
+      console.log('➕ Adding new address...');
+
+      if (!productionAuthService.isAuthenticated()) {
+        return {
+          success: false,
+          message: 'User not authenticated'
+        };
+      }
+
+      const response = await unifiedApiService.post(
+        API_CONFIG.ENDPOINTS.USERS.ADDRESSES,
+        addressData
+      );
+
+      if (response.success) {
+        console.log('✅ Address added successfully');
+        return {
+          success: true,
+          data: response.data,
+          message: response.message || 'Address added successfully',
+          statusCode: response.statusCode
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || 'Failed to add address',
+          statusCode: response.statusCode
+        };
+      }
+    } catch (error: any) {
+      console.error('❌ Add address failed:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to add address',
+        statusCode: error.statusCode
+      };
     }
   }
 
-  /**
-   * Update a vehicle
-   */
-  async updateVehicle(vehicleId: string, vehicleData: UpdateVehicleRequest): Promise<ApiResponse<Vehicle>> {
+  // Update address
+  public async updateAddress(addressId: string, addressData: Partial<Address>): Promise<AddressResponse> {
     try {
-      return await dataService.updateVehicle(vehicleId, vehicleData);
-    } catch (error) {
-      console.error('Error in updateVehicle:', error);
-      throw error;
+      console.log('📝 Updating address:', addressId);
+
+      if (!productionAuthService.isAuthenticated()) {
+        return {
+          success: false,
+          message: 'User not authenticated'
+        };
+      }
+
+      const response = await unifiedApiService.put(
+        `${API_CONFIG.ENDPOINTS.USERS.ADDRESSES}/${addressId}`,
+        addressData
+      );
+
+      if (response.success) {
+        console.log('✅ Address updated successfully');
+        return {
+          success: true,
+          data: response.data,
+          message: response.message || 'Address updated successfully',
+          statusCode: response.statusCode
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || 'Failed to update address',
+          statusCode: response.statusCode
+        };
+      }
+    } catch (error: any) {
+      console.error('❌ Update address failed:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to update address',
+        statusCode: error.statusCode
+      };
     }
   }
 
-  /**
-   * Delete a vehicle
-   */
-  async deleteVehicle(vehicleId: string): Promise<ApiResponse<{ message: string }>> {
+  // Delete address
+  public async deleteAddress(addressId: string): Promise<AddressResponse> {
     try {
-      return await dataService.deleteVehicle(vehicleId);
-    } catch (error) {
-      console.error('Error in deleteVehicle:', error);
-      throw error;
+      console.log('🗑️ Deleting address:', addressId);
+
+      if (!productionAuthService.isAuthenticated()) {
+        return {
+          success: false,
+          message: 'User not authenticated'
+        };
+      }
+
+      const response = await unifiedApiService.delete(
+        `${API_CONFIG.ENDPOINTS.USERS.ADDRESSES}/${addressId}`
+      );
+
+      if (response.success) {
+        console.log('✅ Address deleted successfully');
+        return {
+          success: true,
+          data: response.data,
+          message: response.message || 'Address deleted successfully',
+          statusCode: response.statusCode
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || 'Failed to delete address',
+          statusCode: response.statusCode
+        };
+      }
+    } catch (error: any) {
+      console.error('❌ Delete address failed:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to delete address',
+        statusCode: error.statusCode
+      };
     }
   }
 
-  /**
-   * Set default vehicle
-   */
-  async setDefaultVehicle(vehicleId: string): Promise<ApiResponse<{ message: string }>> {
+  // Get user vehicles
+  public async getMyVehicles(): Promise<VehicleResponse> {
     try {
-      return await dataService.setDefaultVehicle(vehicleId);
-    } catch (error) {
-      console.error('Error in setDefaultVehicle:', error);
-      throw error;
+      console.log('🚗 Fetching user vehicles...');
+
+      if (!productionAuthService.isAuthenticated()) {
+        return {
+          success: false,
+          message: 'User not authenticated'
+        };
+      }
+
+      const response = await unifiedApiService.get(API_CONFIG.ENDPOINTS.USERS.VEHICLES);
+
+      if (response.success) {
+        const vehicles = response.data?.vehicles || response.data || [];
+        console.log('✅ Vehicles fetched successfully:', vehicles.length);
+        
+        return {
+          success: true,
+          data: { vehicles },
+          message: response.message || 'Vehicles fetched successfully',
+          statusCode: response.statusCode
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || 'Failed to fetch vehicles',
+          statusCode: response.statusCode
+        };
+      }
+    } catch (error: any) {
+      console.error('❌ Fetch vehicles failed:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch vehicles',
+        statusCode: error.statusCode
+      };
     }
   }
 
-  /**
-   * Upload vehicle image
-   */
-  async uploadVehicleImage(vehicleId: string, imageData: FormData): Promise<ApiResponse<any>> {
+  // Add new vehicle
+  public async addVehicle(vehicleData: Omit<Vehicle, '_id'>): Promise<VehicleResponse> {
     try {
-      return await dataService.uploadVehicleImage(vehicleId, imageData);
-    } catch (error) {
-      console.error('Error in uploadVehicleImage:', error);
-      throw error;
+      console.log('➕ Adding new vehicle...');
+
+      if (!productionAuthService.isAuthenticated()) {
+        return {
+          success: false,
+          message: 'User not authenticated'
+        };
+      }
+
+      const response = await unifiedApiService.post(
+        API_CONFIG.ENDPOINTS.USERS.VEHICLES,
+        vehicleData
+      );
+
+      if (response.success) {
+        console.log('✅ Vehicle added successfully');
+        return {
+          success: true,
+          data: response.data,
+          message: response.message || 'Vehicle added successfully',
+          statusCode: response.statusCode
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || 'Failed to add vehicle',
+          statusCode: response.statusCode
+        };
+      }
+    } catch (error: any) {
+      console.error('❌ Add vehicle failed:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to add vehicle',
+        statusCode: error.statusCode
+      };
     }
   }
 
-  /**
-   * Get user by ID (admin functionality)
-   */
-  async getUserById(userId: string): Promise<ApiResponse<User>> {
+  // Update vehicle
+  public async updateVehicle(vehicleId: string, vehicleData: Partial<Vehicle>): Promise<VehicleResponse> {
     try {
-      return await dataService.getUserById(userId);
-    } catch (error) {
-      console.error('Error in getUserById:', error);
-      throw error;
+      console.log('📝 Updating vehicle:', vehicleId);
+
+      if (!productionAuthService.isAuthenticated()) {
+        return {
+          success: false,
+          message: 'User not authenticated'
+        };
+      }
+
+      const response = await unifiedApiService.put(
+        `${API_CONFIG.ENDPOINTS.USERS.VEHICLES}/${vehicleId}`,
+        vehicleData
+      );
+
+      if (response.success) {
+        console.log('✅ Vehicle updated successfully');
+        return {
+          success: true,
+          data: response.data,
+          message: response.message || 'Vehicle updated successfully',
+          statusCode: response.statusCode
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || 'Failed to update vehicle',
+          statusCode: response.statusCode
+        };
+      }
+    } catch (error: any) {
+      console.error('❌ Update vehicle failed:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to update vehicle',
+        statusCode: error.statusCode
+      };
     }
   }
 
-  /**
-   * Get all users (admin functionality)
-   */
-  async getAllUsers(params?: { 
-    role?: string; 
-    search?: string; 
-    page?: number; 
-    limit?: number;
-  }): Promise<ApiResponse<{ users: User[]; total: number; page: number; limit: number }>> {
+  // Delete vehicle
+  public async deleteVehicle(vehicleId: string): Promise<VehicleResponse> {
     try {
-      return await dataService.getAllUsers(params);
-    } catch (error) {
-      console.error('Error in getAllUsers:', error);
-      throw error;
+      console.log('🗑️ Deleting vehicle:', vehicleId);
+
+      if (!productionAuthService.isAuthenticated()) {
+        return {
+          success: false,
+          message: 'User not authenticated'
+        };
+      }
+
+      const response = await unifiedApiService.delete(
+        `${API_CONFIG.ENDPOINTS.USERS.VEHICLES}/${vehicleId}`
+      );
+
+      if (response.success) {
+        console.log('✅ Vehicle deleted successfully');
+        return {
+          success: true,
+          data: response.data,
+          message: response.message || 'Vehicle deleted successfully',
+          statusCode: response.statusCode
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || 'Failed to delete vehicle',
+          statusCode: response.statusCode
+        };
+      }
+    } catch (error: any) {
+      console.error('❌ Delete vehicle failed:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to delete vehicle',
+        statusCode: error.statusCode
+      };
     }
   }
 
-  /**
-   * Create user (admin functionality)
-   */
-  async createUser(userData: Partial<User>): Promise<ApiResponse<User>> {
+  // Change password
+  public async changePassword(currentPassword: string, newPassword: string): Promise<UserResponse> {
     try {
-      return await dataService.createUser(userData);
-    } catch (error) {
-      console.error('Error in createUser:', error);
-      throw error;
-    }
-  }
+      console.log('🔒 Changing password...');
 
-  /**
-   * Update user by ID (admin functionality)
-   */
-  async updateUserById(userId: string, userData: Partial<User>): Promise<ApiResponse<User>> {
-    try {
-      return await dataService.updateUserById(userId, userData);
-    } catch (error) {
-      console.error('Error in updateUserById:', error);
-      throw error;
-    }
-  }
+      if (!productionAuthService.isAuthenticated()) {
+        return {
+          success: false,
+          message: 'User not authenticated'
+        };
+      }
 
-  /**
-   * Delete user (admin functionality)
-   */
-  async deleteUser(userId: string): Promise<ApiResponse<{ message: string }>> {
-    try {
-      return await dataService.deleteUser(userId);
-    } catch (error) {
-      console.error('Error in deleteUser:', error);
-      throw error;
-    }
-  }
+      const response = await unifiedApiService.put(
+        API_CONFIG.ENDPOINTS.USERS.CHANGE_PASSWORD,
+        {
+          currentPassword,
+          newPassword
+        }
+      );
 
-  /**
-   * Get user bookings
-   */
-  async getUserBookings(params?: { 
-    status?: string; 
-    page?: number; 
-    limit?: number;
-  }): Promise<ApiResponse<any>> {
-    try {
-      return await dataService.getUserBookings(params);
-    } catch (error) {
-      console.error('Error in getUserBookings:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get user payments
-   */
-  async getUserPayments(params?: { 
-    page?: number; 
-    limit?: number;
-  }): Promise<ApiResponse<any>> {
-    try {
-      return await dataService.getUserPayments(params);
-    } catch (error) {
-      console.error('Error in getUserPayments:', error);
-      throw error;
+      if (response.success) {
+        console.log('✅ Password changed successfully');
+        return {
+          success: true,
+          message: response.message || 'Password changed successfully',
+          statusCode: response.statusCode
+        };
+      } else {
+        return {
+          success: false,
+          message: response.message || 'Failed to change password',
+          statusCode: response.statusCode
+        };
+      }
+    } catch (error: any) {
+      console.error('❌ Change password failed:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to change password',
+        statusCode: error.statusCode
+      };
     }
   }
 }
 
-// Create and export a singleton instance
-export const UserService = new UserServiceClass();
-export default UserService;
+// Export singleton instance
+export default UserService.getInstance();

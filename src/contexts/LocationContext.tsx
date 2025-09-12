@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { LocationApiService, LocationData, Geofence } from '../services/dataService';
 import { useAuth } from './AuthContext';
 import * as Location from 'expo-location';
+import Constants from 'expo-constants';
 
 // Define location context state
 type LocationContextType = {
@@ -56,6 +57,14 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   try {
     setIsLoading(true);
     setError(null);
+
+    // Check if running in Expo Go
+    const isExpoGo = Constants.appOwnership === 'expo';
+    if (isExpoGo) {
+      console.log('Location services disabled in Expo Go. Use development build for full functionality.');
+      setIsLoading(false);
+      return;
+    }
 
     // Check if user is authenticated and is a professional
     if (!user || user.role !== 'professional') {

@@ -1,6 +1,6 @@
 // Production Authentication Service
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import DeviceInfo from 'react-native-device-info';
+import { getDeviceInfo } from '../utils/expoGoCompat';
 import unifiedApiService from './unifiedApiService';
 import { API_CONFIG } from '../constants/apiConfig';
 

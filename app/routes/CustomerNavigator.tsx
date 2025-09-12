@@ -1,8 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import SmartIcon from '../../src/components/common/IconFallback';
 // Import customer screens
 import HomeScreen from '../../src/screens/customer/HomeScreen';
 import BookingsScreen from '../../src/screens/customer/BookingsScreen';
@@ -109,7 +108,7 @@ const CustomerTabNavigator = () => {
               iconName = 'home-outline';
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return <SmartIcon name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: '#2563eb',
         tabBarInactiveTintColor: 'gray',

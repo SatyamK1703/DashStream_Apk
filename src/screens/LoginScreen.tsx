@@ -6,6 +6,7 @@ import { RootStackParamList } from '../../app/routes/RootNavigator';
 import { useAuth } from '../contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
+import IconTest from 'components/common/IconTest';
 import ProductionAuthContext from 'contexts/ProductionAuthContext';
 
 

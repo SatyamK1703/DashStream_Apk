@@ -4,7 +4,7 @@ import { Alert } from 'react-native';
 import enhancedApiService from './enhancedApiService';
 import { API_CONFIG } from '../constants/config';
 import { connectionHealthMonitor } from './connectionHealthMonitor';
-import DeviceInfo from 'react-native-device-info';
+import { getDeviceInfo } from '../utils/expoGoCompat';
 import CryptoJS from 'crypto-js';
 
 export interface User {
@@ -230,6 +230,7 @@ class EnhancedAuthService {
 
   private async checkDeviceTrustStatus() {
     try {
+      const DeviceInfo = await getDeviceInfo();
       const deviceId = await DeviceInfo.getUniqueId();
       const trustedDevices = await AsyncStorage.getItem('device_trust');
       
@@ -335,6 +336,7 @@ class EnhancedAuthService {
 
   private async getDeviceInfo() {
     try {
+      const DeviceInfo = await getDeviceInfo();
       const [
         deviceId,
         brand,
@@ -586,6 +588,7 @@ class EnhancedAuthService {
 
   public async trustDevice(deviceId?: string): Promise<void> {
     try {
+      const DeviceInfo = await getDeviceInfo();
       const id = deviceId || await DeviceInfo.getUniqueId();
       const trustedDevices = await AsyncStorage.getItem('device_trust');
       let trusted = trustedDevices ? JSON.parse(trustedDevices) : [];

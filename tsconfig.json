@@ -53,6 +53,7 @@
   ],
   "include": [
     "src/**/*",
-    "App.tsx"
+    "App.tsx",
+    "svg.d.ts"
   ]
 }

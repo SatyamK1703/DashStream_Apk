@@ -1,4 +1,4 @@
-import * as Notifications from 'expo-notifications';
+import { getNotifications, isExpoGo } from '../utils/expoGoCompat';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
@@ -8,17 +8,29 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const NOTIFICATION_TOKEN_KEY = '@dashstream:notification_token';
 const NOTIFICATION_SETTINGS_KEY = '@dashstream:notification_settings';
 
-// Configure notification behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    // shouldShowAlert is deprecated on iOS; use banner/list instead
-    shouldShowAlert: Platform.OS !== 'ios',
-    shouldShowBanner: Platform.OS === 'ios',
-    shouldShowList: Platform.OS === 'ios',
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// Configure notification behavior (only if not in Expo Go)
+let notificationHandlerConfigured = false;
+
+const configureNotificationHandler = async () => {
+  if (!notificationHandlerConfigured && !isExpoGo) {
+    try {
+      const Notifications = await getNotifications();
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          // shouldShowAlert is deprecated on iOS; use banner/list instead
+          shouldShowAlert: Platform.OS !== 'ios',
+          shouldShowBanner: Platform.OS === 'ios',
+          shouldShowList: Platform.OS === 'ios',
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+        }),
+      });
+      notificationHandlerConfigured = true;
+    } catch (error) {
+      console.warn('Failed to configure notification handler:', error);
+    }
+  }
+};
 
 export interface NotificationSettings {
   pushNotifications: boolean;
@@ -58,13 +70,15 @@ class NotificationService {
    */
   async initialize(): Promise<void> {
     try {
-      // Check if we're running in Expo Go
-      const isExpoGo = Constants.appOwnership === 'expo';
-      
       if (isExpoGo) {
         console.warn('Push notifications are not supported in Expo Go. Use a development build instead.');
         return;
       }
+
+      // Configure notification handler
+      await configureNotificationHandler();
+
+      const Notifications = await getNotifications();
 
       // Request permissions
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -111,37 +125,42 @@ class NotificationService {
    * Setup Android notification channels
    */
   private async setupAndroidChannels(): Promise<void> {
-    await Notifications.setNotificationChannelAsync('booking-updates', {
-      name: 'Booking Updates',
-      description: 'Notifications about your bookings',
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#2563eb',
-    });
+    try {
+      const Notifications = await getNotifications();
+      await Notifications.setNotificationChannelAsync('booking-updates', {
+        name: 'Booking Updates',
+        description: 'Notifications about your bookings',
+        importance: Notifications.AndroidImportance?.HIGH || 4,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#2563eb',
+      });
 
-    await Notifications.setNotificationChannelAsync('payment-updates', {
-      name: 'Payment Updates',
-      description: 'Notifications about payments',
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#10b981',
-    });
+      await Notifications.setNotificationChannelAsync('payment-updates', {
+        name: 'Payment Updates',
+        description: 'Notifications about payments',
+        importance: Notifications.AndroidImportance?.HIGH || 4,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#10b981',
+      });
 
-    await Notifications.setNotificationChannelAsync('promotional', {
-      name: 'Promotional Offers',
-      description: 'Special offers and promotions',
-      importance: Notifications.AndroidImportance.DEFAULT,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#f59e0b',
-    });
+      await Notifications.setNotificationChannelAsync('promotional', {
+        name: 'Promotional Offers',
+        description: 'Special offers and promotions',
+        importance: Notifications.AndroidImportance?.DEFAULT || 3,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#f59e0b',
+      });
 
-    await Notifications.setNotificationChannelAsync('system', {
-      name: 'System Updates',
-      description: 'Important system notifications',
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#ef4444',
-    });
+      await Notifications.setNotificationChannelAsync('system', {
+        name: 'System Updates',
+        description: 'Important system notifications',
+        importance: Notifications.AndroidImportance?.HIGH || 4,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#ef4444',
+      });
+    } catch (error) {
+      console.warn('Failed to setup Android notification channels:', error);
+    }
   }
 
   /**
@@ -253,9 +272,10 @@ class NotificationService {
     title: string,
     body: string,
     data?: any,
-    trigger?: Notifications.NotificationTriggerInput
+    trigger?: any
   ): Promise<string> {
     try {
+      const Notifications = await getNotifications();
       const identifier = await Notifications.scheduleNotificationAsync({
         content: {
           title,
@@ -277,6 +297,7 @@ class NotificationService {
    */
   async cancelScheduledNotification(identifier: string): Promise<void> {
     try {
+      const Notifications = await getNotifications();
       await Notifications.cancelScheduledNotificationAsync(identifier);
     } catch (error) {
       console.error('Error canceling scheduled notification:', error);
@@ -288,6 +309,7 @@ class NotificationService {
    */
   async cancelAllScheduledNotifications(): Promise<void> {
     try {
+      const Notifications = await getNotifications();
       await Notifications.cancelAllScheduledNotificationsAsync();
     } catch (error) {
       console.error('Error canceling all scheduled notifications:', error);
@@ -353,24 +375,45 @@ class NotificationService {
   /**
    * Add notification listener
    */
-  addNotificationListener(listener: (notification: Notifications.Notification) => void): Notifications.Subscription {
-    return Notifications.addNotificationReceivedListener(listener);
+  async addNotificationListener(listener: (notification: any) => void): Promise<any> {
+    try {
+      const Notifications = await getNotifications();
+      return Notifications.addNotificationReceivedListener(listener);
+    } catch (error) {
+      console.warn('Failed to add notification listener:', error);
+      return { remove: () => {} };
+    }
   }
 
   /**
    * Add notification response listener
    */
-  addNotificationResponseListener(
-    listener: (response: Notifications.NotificationResponse) => void
-  ): Notifications.Subscription {
-    return Notifications.addNotificationResponseReceivedListener(listener);
+  async addNotificationResponseListener(
+    listener: (response: any) => void
+  ): Promise<any> {
+    try {
+      const Notifications = await getNotifications();
+      return Notifications.addNotificationResponseReceivedListener(listener);
+    } catch (error) {
+      console.warn('Failed to add notification response listener:', error);
+      return { remove: () => {} };
+    }
   }
 
   /**
    * Remove notification listener
    */
-  removeNotificationListener(subscription: Notifications.Subscription): void {
-    Notifications.removeNotificationSubscription(subscription);
+  async removeNotificationListener(subscription: any): Promise<void> {
+    try {
+      if (subscription && subscription.remove) {
+        subscription.remove();
+      } else {
+        const Notifications = await getNotifications();
+        Notifications.removeNotificationSubscription(subscription);
+      }
+    } catch (error) {
+      console.warn('Failed to remove notification listener:', error);
+    }
   }
 
   /**
@@ -378,6 +421,7 @@ class NotificationService {
    */
   async getBadgeCount(): Promise<number> {
     try {
+      const Notifications = await getNotifications();
       return await Notifications.getBadgeCountAsync();
     } catch (error) {
       console.error('Error getting badge count:', error);
@@ -390,6 +434,7 @@ class NotificationService {
    */
   async setBadgeCount(count: number): Promise<void> {
     try {
+      const Notifications = await getNotifications();
       await Notifications.setBadgeCountAsync(count);
     } catch (error) {
       console.error('Error setting badge count:', error);
@@ -401,6 +446,7 @@ class NotificationService {
    */
   async clearBadgeCount(): Promise<void> {
     try {
+      const Notifications = await getNotifications();
       await Notifications.setBadgeCountAsync(0);
     } catch (error) {
       console.error('Error clearing badge count:', error);

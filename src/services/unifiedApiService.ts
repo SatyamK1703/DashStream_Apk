@@ -1,7 +1,7 @@
 // Unified API Service - Production Ready
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import DeviceInfo from 'react-native-device-info';
+import { getDeviceInfo } from '../utils/expoGoCompat';
 import NetInfo from '@react-native-community/netinfo';
 import Constants from 'expo-constants';
 import { API_CONFIG } from '../constants/apiConfig';
@@ -84,6 +84,7 @@ class UnifiedApiService {
 
   private async initializeDevice() {
     try {
+      const DeviceInfo = await getDeviceInfo();
       this.deviceInfo = {
         id: await DeviceInfo.getUniqueId(),
         brand: await DeviceInfo.getBrand(),

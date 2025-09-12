@@ -25,10 +25,18 @@ module.exports = function(api) {
             '@services': './src/services',
             '@contexts': './src/contexts',
             '@assets': './src/assets',
+            // Ensure vector icons resolve correctly
+            '@expo/vector-icons': '@expo/vector-icons',
           },
         },
       ],
       'react-native-reanimated/plugin',
     ],
+    // Add specific configuration for Expo Go compatibility
+    env: {
+      production: {
+        plugins: ['react-native-reanimated/plugin'],
+      },
+    },
   };
 };

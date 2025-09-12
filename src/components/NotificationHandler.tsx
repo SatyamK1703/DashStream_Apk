@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
+import { getNotifications, isExpoGo } from '../utils/expoGoCompat';
 import Constants from 'expo-constants';
 import { useNotifications } from '../contexts/NotificationContext';
 
@@ -14,9 +14,6 @@ const NotificationHandler: React.FC = () => {
   const responseListener = useRef<any>();
   const { fetchNotifications } = useNotifications();
 
-  // Check if we're running in Expo Go
-  const isExpoGo = Constants.appOwnership === 'expo';
-
   useEffect(() => {
     if (isExpoGo) {
       console.warn('Push notifications are not supported in Expo Go. Use a development build instead.');
@@ -28,17 +25,19 @@ const NotificationHandler: React.FC = () => {
 
     // Clean up listeners on unmount
     return () => {
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+      if (notificationListener.current && notificationListener.current.remove) {
+        notificationListener.current.remove();
       }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+      if (responseListener.current && responseListener.current.remove) {
+        responseListener.current.remove();
       }
     };
   }, []);
 
-  const registerNotificationHandlers = () => {
+  const registerNotificationHandlers = async () => {
     try {
+      const Notifications = await getNotifications();
+      
       // This listener is fired whenever a notification is received while the app is foregrounded
       notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
         console.log('Notification received in foreground:', notification);

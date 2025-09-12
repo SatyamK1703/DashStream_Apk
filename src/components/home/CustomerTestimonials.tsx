@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, FlatList, StyleSheet, Dimensions } from 'react-native';
-import { Video } from 'expo-av';
+import { getVideoComponent, isExpoGo } from '../../utils/expoGoCompat';
 
 const testimonials = [
   {
@@ -22,10 +22,16 @@ const testimonials = [
 
 const ITEM_WIDTH = Dimensions.get('window').width * 0.4;
 
+// Get the Video component synchronously at module load time
+const VideoComponent = getVideoComponent();
+
 const CustomerTestimonials = () => {
   return (
     <View style={{ marginVertical: 10 }}>
       <Text style={styles.title}>Customer Testimonials</Text>
+      {isExpoGo && (
+        <Text style={styles.warningText}>Note: Video playback limited in Expo Go</Text>
+      )}
       <FlatList
         horizontal
         data={testimonials}
@@ -34,7 +40,7 @@ const CustomerTestimonials = () => {
         contentContainerStyle={{ paddingHorizontal: 16 }}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Video
+            <VideoComponent
               source={{ uri: item.videoUri }}
               style={styles.video}
               resizeMode="cover"
@@ -56,6 +62,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
+    marginHorizontal: 16,
+    marginBottom: 10,
+  },
+  warningText: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
     marginHorizontal: 16,
     marginBottom: 10,
   },

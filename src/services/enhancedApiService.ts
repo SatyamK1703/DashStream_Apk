@@ -3,7 +3,7 @@ import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } f
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ENV_CONFIG, DEBUG_MODE } from '../config/environment';
 import Constants from 'expo-constants';
-import DeviceInfo from 'react-native-device-info';
+import { getDeviceInfo } from '../utils/expoGoCompat';
 import NetInfo from '@react-native-community/netinfo';
 
 // Enhanced response and error types
@@ -62,6 +62,7 @@ class EnhancedApiService {
 
   private async initializeDevice() {
     try {
+      const DeviceInfo = await getDeviceInfo();
       this.deviceId = await DeviceInfo.getUniqueId();
       this.deviceFingerprint = await this.generateDeviceFingerprint();
     } catch (error) {
@@ -71,6 +72,7 @@ class EnhancedApiService {
 
   private async generateDeviceFingerprint(): Promise<string> {
     try {
+      const DeviceInfo = await getDeviceInfo();
       const [
         brand,
         model,
@@ -200,6 +202,7 @@ class EnhancedApiService {
 
   private async getDeviceSecurityInfo(): Promise<string> {
     try {
+      const DeviceInfo = await getDeviceInfo();
       const securityInfo = {
         isEmulator: await DeviceInfo.isEmulator(),
         hasGms: await DeviceInfo.hasGms(),

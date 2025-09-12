@@ -20,16 +20,20 @@ export const showSuccessNotification = async (title: string, message: string) =>
   try {
     // Show in-app alert
     Alert.alert(title, message);
-    // Also send a system notification if app is in background
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title,
-        body: message,
-        data: { type: 'success' },
-        sound: true,
-      },
-      trigger: null, // Show immediately
-    });
+    
+    if (!isExpoGo) {
+      // Also send a system notification if app is in background
+      const Notifications = await getNotifications();
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body: message,
+          data: { type: 'success' },
+          sound: true,
+        },
+        trigger: null, // Show immediately
+      });
+    }
   } catch (error) {
     console.error('Error showing success notification:', error);
   }
@@ -49,16 +53,19 @@ export const showErrorNotification = async (
     // Show in-app alert
     Alert.alert(title, message);
     
-    // Also send a system notification if app is in background
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title,
-        body: message,
-        data: { type: 'error' },
-        sound: true,
-      },
-      trigger: null, // Show immediately
-    });
+    if (!isExpoGo) {
+      // Also send a system notification if app is in background
+      const Notifications = await getNotifications();
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body: message,
+          data: { type: 'error' },
+          sound: true,
+        },
+        trigger: null, // Show immediately
+      });
+    }
   } catch (err) {
     console.error('Error showing error notification:', err);
   }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
+import SmartIcon from '../../src/components/common/IconFallback';
 
 // Import admin screens
 import AdminDashboardScreen from '../../src/screens/admin/AdminDashboardScreen';
@@ -78,7 +78,7 @@ const AdminTabNavigator = () => {
             iconName = focused ? 'settings' : 'settings-outline';
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return <SmartIcon name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: '#2563eb',
         tabBarInactiveTintColor: 'gray',

@@ -54,7 +54,7 @@ const PopularServices = ({ services }: any) => {
       {/* Services Grid */}
       <View style={styles.gridContainer}>
         {services.slice(0, 6).map((item, index) => (
-          <View key={item.id || index} style={styles.row}>
+          <View key={item._id || item.id || index} style={styles.row}>
             <TouchableOpacity 
               style={styles.item} 
               onPress={() => handlePress(item)}
