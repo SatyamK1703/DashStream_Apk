@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { config, APP_CONFIG } from '../config/env';
+import { auth } from '../config/firebase';
 
 // Types for API responses
 export interface ApiResponse<T = any> {
@@ -59,10 +60,17 @@ class HttpClient {
     // Request interceptor
     this.client.interceptors.request.use(
       async (config) => {
-        // Add access token to requests
-        const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-        if (token && config.headers) {
-          config.headers.Authorization = `Bearer ${token}`;
+        // Add Firebase ID token to requests
+        try {
+          const currentUser = auth.currentUser;
+          if (currentUser) {
+            const idToken = await currentUser.getIdToken();
+            if (idToken && config.headers) {
+              config.headers.Authorization = `Bearer ${idToken}`;
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to get Firebase ID token:', error);
         }
 
         // Add request timestamp
@@ -101,42 +109,21 @@ class HttpClient {
       async (error: AxiosError<ApiError>) => {
         const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
-        // Handle token refresh
-        if (error.response?.status === 401 && !originalRequest._retry) {
-          // Check if we have a refresh token before attempting refresh
-          const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-          const accessToken = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-          
-          if (__DEV__) {
-            console.log('🔍 401 Token Debug:', {
-              hasRefreshToken: !!refreshToken,
-              hasAccessToken: !!accessToken,
-              refreshTokenLength: refreshToken ? refreshToken.length : 0,
-              accessTokenLength: accessToken ? accessToken.length : 0,
-              url: error.config?.url
-            });
-          }
-          
-          if (!refreshToken) {
-            // No refresh token available, clear any stale tokens and fail
-            await this.clearAuthTokens();
-            if (__DEV__) console.warn('401 error but no refresh token available - clearing all tokens');
-            return Promise.reject(this.handleError(error));
-          }
-
+        // Handle Firebase token refresh on 401
+        if (error.response?.status === 401 && !originalRequest._retry && auth.currentUser) {
           originalRequest._retry = true;
 
           try {
-            const newAccessToken = await this.refreshAccessToken();
-            if (newAccessToken && originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-              if (__DEV__) console.log('🔄 Retrying request with new token');
+            // Force refresh Firebase ID token
+            const newIdToken = await auth.currentUser.getIdToken(true);
+            if (newIdToken && originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${newIdToken}`;
+              if (__DEV__) console.log('🔄 Retrying request with refreshed Firebase token');
               return this.client(originalRequest);
             }
           } catch (refreshError: any) {
-            // Refresh failed, clear tokens and fail
-            await this.clearAuthTokens();
-            if (__DEV__) console.error('Token refresh failed, redirecting to login');
+            if (__DEV__) console.error('Firebase token refresh failed:', refreshError);
+            // Token refresh failed, likely need to re-authenticate
             return Promise.reject(this.handleError(error));
           }
         }
@@ -155,74 +142,35 @@ class HttpClient {
     );
   }
 
-  private async refreshAccessToken(): Promise<string | null> {
-    // Prevent multiple refresh attempts
-    if (this.refreshTokenPromise) {
-      return this.refreshTokenPromise;
-    }
-
-    this.refreshTokenPromise = this.performTokenRefresh();
-    
+  // Firebase handles token refresh automatically, so these methods are simplified
+  private async refreshFirebaseToken(): Promise<string | null> {
     try {
-      const result = await this.refreshTokenPromise;
-      return result;
-    } finally {
-      this.refreshTokenPromise = null;
-    }
-  }
-
-  private async performTokenRefresh(): Promise<string | null> {
-    try {
-      const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-      if (!refreshToken) {
-        if (__DEV__) console.warn('No refresh token available - user needs to log in again');
-        throw new Error('No refresh token available');
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        return await currentUser.getIdToken(true); // Force refresh
       }
-
-      const response = await axios.post(
-        `${config.API_URL}/auth/refresh-token`,
-        { refreshToken },
-        { 
-          timeout: 10000,
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
-      );
-
-      // Handle different response structures
-      const responseData = response.data;
-      const tokenData = responseData.data || responseData;
-      
-      // Backend may return "token" instead of "accessToken"
-      const accessToken = tokenData.accessToken || tokenData.token;
-      const newRefreshToken = tokenData.refreshToken;
-
-      if (!accessToken) {
-        throw new Error('No access token in refresh response');
-      }
-
-      await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-      if (newRefreshToken) {
-        await AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken);
-      }
-
-      if (__DEV__) console.log('Token refreshed successfully');
-      return accessToken;
+      return null;
     } catch (error: any) {
-      if (__DEV__) console.error('Token refresh failed:', error.message || error);
-      // Clear tokens on refresh failure
-      await this.clearAuthTokens();
+      if (__DEV__) console.error('Firebase token refresh failed:', error.message || error);
       throw error;
     }
   }
 
   private async clearAuthTokens(): Promise<void> {
-    await AsyncStorage.multiRemove([
-      STORAGE_KEYS.ACCESS_TOKEN,
-      STORAGE_KEYS.REFRESH_TOKEN,
-      STORAGE_KEYS.USER_DATA,
-    ]);
+    try {
+      // Clear AsyncStorage user data
+      await AsyncStorage.multiRemove([
+        STORAGE_KEYS.ACCESS_TOKEN, // Keep for backward compatibility during migration
+        STORAGE_KEYS.REFRESH_TOKEN, // Keep for backward compatibility during migration
+        STORAGE_KEYS.USER_DATA,
+      ]);
+      
+      // Sign out from Firebase (this clears Firebase tokens)
+      const { signOut } = await import('firebase/auth');
+      await signOut(auth);
+    } catch (error) {
+      if (__DEV__) console.error('Error clearing auth tokens:', error);
+    }
   }
 
   private handleError(error: AxiosError<ApiError>): ApiError {
@@ -309,58 +257,38 @@ class HttpClient {
     return response.data;
   }
 
-  // Set authentication tokens
-  async setAuthTokens(accessToken: string, refreshToken: string): Promise<void> {
-    try {
-      if (__DEV__) {
-        console.log('🔒 Storing tokens:', {
-          accessTokenLength: accessToken ? accessToken.length : 0,
-          refreshTokenLength: refreshToken ? refreshToken.length : 0,
-          accessTokenPreview: accessToken ? accessToken.substring(0, 20) + '...' : 'missing',
-          refreshTokenPreview: refreshToken ? refreshToken.substring(0, 20) + '...' : 'missing'
-        });
-      }
-
-      await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-      await AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
-
-      // Verify storage worked
-      const storedAccessToken = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-      const storedRefreshToken = await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-
-      if (__DEV__) {
-        console.log('🔍 Token storage verification:', {
-          accessTokenStored: !!storedAccessToken,
-          refreshTokenStored: !!storedRefreshToken,
-          storageSuccessful: !!(storedAccessToken && storedRefreshToken)
-        });
-      }
-
-      if (!storedAccessToken || !storedRefreshToken) {
-        throw new Error('Token storage failed - tokens not found after storage');
-      }
-    } catch (error) {
-      console.error('❌ Token storage error:', error);
-      throw error;
-    }
+  // Firebase Auth methods - simplified since Firebase handles tokens automatically
+  
+  // Check if user is authenticated with Firebase
+  async isAuthenticated(): Promise<boolean> {
+    return new Promise((resolve) => {
+      const unsubscribe = auth.onAuthStateChanged((user) => {
+        unsubscribe();
+        resolve(!!user);
+      });
+    });
   }
 
-  // Check if user is authenticated
-  async isAuthenticated(): Promise<boolean> {
-    const accessToken = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-    
-    // Need both tokens to be considered authenticated
-    // If we only have access token but no refresh token, we can't refresh when it expires
-    return !!(accessToken && refreshToken);
+  // Get current Firebase ID token
+  async getIdToken(): Promise<string | null> {
+    try {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        return await currentUser.getIdToken();
+      }
+      return null;
+    } catch (error) {
+      console.error('Get ID token error:', error);
+      return null;
+    }
   }
 
   // Logout and clear tokens
   async logout(): Promise<void> {
     try {
       // Call logout endpoint if authenticated
-      const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-      if (token) {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
         await this.post('/auth/logout');
       }
     } catch (error) {
