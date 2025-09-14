@@ -11,12 +11,14 @@ import {
   ScrollView,
   StyleSheet,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
-import { mockProfessionals } from '../../constants/data/AdminProfessionalScreen';
+import { useAdminProfessionals, useAdminProfessionalActions } from '../../hooks/useAdmin';
+
 
 // --- Helper Hook for Debouncing ---
 const useDebounce = (value, delay) => {
@@ -87,8 +89,14 @@ const ProfessionalCard = React.memo(({ item, navigation, getStatusStyles }) => {
           </View>
         </View>
         <View style={styles.cardStatsContainer}>
-            <View style={styles.cardStatItem}><Ionicons name="star" size={16} color="#F59E0B" /><Text style={styles.cardStatText}>{item.rating.toFixed(1)}</Text></View>
-            <View style={styles.cardStatItem}><MaterialIcons name="work" size={16} color="#6B7280" /><Text style={styles.cardStatText}>{item.totalJobs} jobs</Text></View>
+            <View style={styles.cardStatItem}>
+              <Ionicons name="star" size={16} color="#F59E0B" />
+              <Text style={styles.cardStatText}>{(item.rating || 0).toFixed(1)}</Text>
+            </View>
+            <View style={styles.cardStatItem}>
+              <MaterialIcons name="work" size={16} color="#6B7280" />
+              <Text style={styles.cardStatText}>{item.totalJobs || 0} jobs</Text>
+            </View>
         </View>
         <View style={styles.cardFooter}>
             <Text style={styles.cardLastActive}>Last active: {formattedLastActive}</Text>
@@ -102,10 +110,6 @@ const ProfessionalCard = React.memo(({ item, navigation, getStatusStyles }) => {
 const AdminProfessionalsScreen = () => {
   const navigation = useNavigation<AdminProfessionalsScreenNavigationProp>();
 
-  const [professionals, setProfessionals] = useState<Professional[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
   // Filtering and Sorting State
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -114,56 +118,58 @@ const AdminProfessionalsScreen = () => {
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  const fetchData = useCallback(() => {
-      setLoading(true);
-      setTimeout(() => {
-        setProfessionals(mockProfessionals);
-        setLoading(false);
-        setRefreshing(false);
-      }, 1500);
-  }, []);
+  // API hooks
+  const {
+    data: professionals = [],
+    isLoading: loading,
+    error,
+    execute: fetchProfessionals,
+    hasMore,
+    loadMore,
+    isLoadingMore,
+  } = useAdminProfessionals({
+    search: debouncedSearchQuery,
+    status: statusFilter === 'all' ? undefined : statusFilter,
+    limit: 20,
+  });
+
+  const { updateVerificationStatus } = useAdminProfessionalActions();
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchProfessionals();
+  }, [debouncedSearchQuery, statusFilter]);
 
   const onRefresh = useCallback(() => {
-      setRefreshing(true);
-      fetchData();
-  }, [fetchData]);
+    fetchProfessionals();
+  }, [fetchProfessionals]);
 
   const filteredProfessionals = useMemo(() => {
     let filtered = [...professionals];
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(pro => pro.status === statusFilter);
-    }
-
-    if (debouncedSearchQuery) {
-      const query = debouncedSearchQuery.toLowerCase();
-      filtered = filtered.filter(
-        pro =>
-          pro.name.toLowerCase().includes(query) ||
-          pro.id.toLowerCase().includes(query) ||
-          pro.phone.includes(query) ||
-          pro.email.toLowerCase().includes(query)
-      );
-    }
-
+    // Sort the professionals locally since API provides filtered data based on search/status
     filtered.sort((a, b) => {
       let comparison = 0;
       switch (sortBy) {
-        case 'name': comparison = a.name.localeCompare(b.name); break;
-        case 'rating': comparison = b.rating - a.rating; break;
-        case 'jobs': comparison = b.totalJobs - a.totalJobs; break;
-        case 'date': comparison = new Date(b.joinedDate).getTime() - new Date(a.joinedDate).getTime(); break;
-        default: comparison = a.name.localeCompare(b.name);
+        case 'name': 
+          comparison = a.name.localeCompare(b.name); 
+          break;
+        case 'rating': 
+          comparison = (b.rating || 0) - (a.rating || 0); 
+          break;
+        case 'jobs': 
+          comparison = (b.totalJobs || 0) - (a.totalJobs || 0); 
+          break;
+        case 'date': 
+          comparison = new Date(b.joinedDate || 0).getTime() - new Date(a.joinedDate || 0).getTime(); 
+          break;
+        default: 
+          comparison = a.name.localeCompare(b.name);
       }
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 
     return filtered;
-  }, [professionals, debouncedSearchQuery, statusFilter, sortBy, sortOrder]);
+  }, [professionals, sortBy, sortOrder]);
 
   const handleSortChange = (sortField: string) => {
     if (sortBy === sortField) {
@@ -259,7 +265,7 @@ const AdminProfessionalsScreen = () => {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContentContainer}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} tintColor="#2563EB" />}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#2563EB']} tintColor="#2563EB" />}
         ListEmptyComponent={
           <View style={styles.emptyListContainer}>
             <MaterialIcons name="person-search" size={60} color="#9CA3AF" />

@@ -14,7 +14,6 @@ import {
   Platform
 } from 'react-native';
 import { ChevronDown, Check } from 'lucide-react-native';
-import { vehicleData } from '~/constants/data/VehiclesData';
 import { SafeAreaView } from 'react-native-safe-area-context';
 const { width } = Dimensions.get('window');
 

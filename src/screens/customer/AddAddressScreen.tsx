@@ -48,14 +48,7 @@ const AddAddressScreen = () => {
   const [loading, setLoading] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<string | null>(null);
 
-  const indianStates = [
-    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
-    'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
-    'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana',
-    'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
-    'Delhi', 'Chandigarh', 'Puducherry'
-  ];
+
 
   // useEffect(() => {
   //   setTimeout(() => {
@@ -216,44 +209,6 @@ const AddAddressScreen = () => {
               value={city}
               onChangeText={setCity}
             />
-
-            {/* State */}
-            <Text style={styles.label}>State</Text>
-            <View style={{ marginBottom: 16 }}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.stateScroll}
-              >
-                {indianStates.map((stateName) => (
-                  <TouchableOpacity
-                    key={stateName}
-                    style={[
-                      styles.stateChip,
-                      state === stateName && styles.stateChipActive,
-                    ]}
-                    onPress={() => setState(stateName)}
-                  >
-                    <Text
-                      style={[
-                        styles.stateChipText,
-                        state === stateName && styles.stateChipTextActive,
-                      ]}
-                    >
-                      {stateName}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              {!indianStates.includes(state) && state !== '' && (
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter state name"
-                  value={state}
-                  onChangeText={setState}
-                />
-              )}
-            </View>
 
             {/* Pincode */}
             <Text style={styles.label}>Pincode</Text>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,30 +11,38 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Mock types for self-contained component
-type ProStackParamList = {
-  Jobs: undefined;
-  JobDetails: { jobId: string };
-  ProNotifications: undefined;
-};
+// Import proper types and hooks
+import { ProStackParamList } from '../../../app/routes/ProfessionalNavigator';
+import { useProfessionalJobs, useProfessionalJobActions } from '../../hooks/useProfessional';
 
-type ProJobsScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;
+type ProJobsScreenNavigationProp = NativeStackNavigationProp<ProStackParamList, 'Jobs'>;
 
 interface Job {
   id: string;
-  customerName: string;
-  customerImage: string;
-  date: string;
-  time: string;
+  customer: {
+    name: string;
+    profileImage?: string;
+    phone: string;
+  };
+  scheduledDate: string;
+  scheduledTime: string;
   address: string;
   totalAmount: number;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  status: 'pending' | 'accepted' | 'ongoing' | 'completed' | 'cancelled';
   paymentStatus: 'paid' | 'pending';
+  services: Array<{
+    id: string;
+    name: string;
+    price: number;
+  }>;
+  distance?: string;
 }
 
 type FilterStatus = 'all' | 'upcoming' | 'ongoing' | 'completed' | 'cancelled';

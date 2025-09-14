@@ -15,9 +15,9 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { services } from '../../constants/data/serviceDetails';
 import CategoryTabs from '../../components/service/CategoryTabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useServices } from '../../hooks/useServices';
 
 type NavigationProp = NativeStackNavigationProp<CustomerStackParamList, 'AllServices'>;
 
@@ -25,32 +25,47 @@ const CATEGORY_TABS = ['All','Car Wash', 'Deep Clean', 'Special Car Care'];
 const AllServicesScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute();
-  const [servicesData, setServicesData] = useState<any[]>([]);
   const [filteredServices, setFilteredServices] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedTab, setSelectedTab] = useState('Car Wash');
+  const [selectedTab, setSelectedTab] = useState('All');
 
+  // Fetch services from API
+  const { 
+    data: servicesData = [], 
+    loading: isLoading, 
+    error, 
+    refresh: fetchServices 
+  } = useServices({ 
+    category: selectedTab === 'All' ? undefined : selectedTab.toLowerCase().replace(' ', '-') 
+  });
+
+  // Initialize data on mount
   useEffect(() => {
-    setIsLoading(true);
+    fetchServices();
+  }, []);
 
-    if (route.params?.allServices) {
-      setServicesData(route.params.allServices);
-      setFilteredServices(route.params.allServices);
+  // Handle category filter changes
+  useEffect(() => {
+    if (selectedTab === 'All') {
+      fetchServices();
     } else {
-      const servicesArray = Object.values(services);
-      setServicesData(servicesArray);
-      setFilteredServices(servicesArray);
+      fetchServices();
     }
-    setIsLoading(false);
-  }, [route.params]);
+  }, [selectedTab]);
 
+  // Handle search filtering
   useEffect(() => {
+    if (!servicesData) {
+      setFilteredServices([]);
+      return;
+    }
+
     if (searchQuery.trim() === '') {
       setFilteredServices(servicesData);
     } else {
       const filtered = servicesData.filter(service =>
-        service.title.toLowerCase().includes(searchQuery.toLowerCase())
+        service.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        service.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setFilteredServices(filtered);
     }
@@ -60,28 +75,44 @@ const AllServicesScreen = () => {
     navigation.navigate('ServiceDetails', { serviceId: service.id });
   };
 
-  const renderServiceItem = ({ item }: { item: any }) => (
-    <TouchableOpacity style={styles.card} onPress={() => handleServicePress(item)} activeOpacity={0.9}>
-      <View style={styles.cardContent}>
-        <View style={styles.cardInfo}>
-          <Text style={styles.cardTitle}>{item.title}</Text>
-          <Text style={styles.cardRating}>⭐ {item.rating} ({item.reviews} ratings)</Text>
-          <Text style={styles.cardFeature}>• {item.features?.[0]}</Text>
-          <Text style={styles.cardFeature}>• {item.features?.[1]}</Text>
-          <Text style={styles.cardFeature}>• {item.features?.[2]}</Text>
-          <View style={styles.cardPriceRow}>
-            <Text style={styles.oldPrice}>₹{item.originalPrice}</Text>
-            <Text style={styles.newPrice}>₹{item.discountedPrice}</Text>
-            <Text style={styles.discount}>50% OFF</Text>
+  const renderServiceItem = ({ item }: { item: any }) => {
+    const discountPercentage = item.originalPrice && item.price ? 
+      Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100) : 0;
+    
+    return (
+      <TouchableOpacity style={styles.card} onPress={() => handleServicePress(item)} activeOpacity={0.9}>
+        <View style={styles.cardContent}>
+          <View style={styles.cardInfo}>
+            <Text style={styles.cardTitle}>{item.name || item.title}</Text>
+            <Text style={styles.cardRating}>⭐ {item.rating || 4.5} ({item.reviewCount || item.reviews || 0} ratings)</Text>
+            {item.features && item.features.length > 0 && (
+              <>
+                <Text style={styles.cardFeature}>• {item.features[0]}</Text>
+                {item.features[1] && <Text style={styles.cardFeature}>• {item.features[1]}</Text>}
+                {item.features[2] && <Text style={styles.cardFeature}>• {item.features[2]}</Text>}
+              </>
+            )}
+            <View style={styles.cardPriceRow}>
+              {item.originalPrice && item.originalPrice > item.price && (
+                <Text style={styles.oldPrice}>₹{item.originalPrice}</Text>
+              )}
+              <Text style={styles.newPrice}>₹{item.price}</Text>
+              {discountPercentage > 0 && (
+                <Text style={styles.discount}>{discountPercentage}% OFF</Text>
+              )}
+            </View>
           </View>
+          <Image 
+            source={item.image ? { uri: item.image } : require('../../assets/images/image.png')} 
+            style={styles.cardImage} 
+          />
         </View>
-        <Image source={item.image} style={styles.cardImage} />
-      </View>
-      <TouchableOpacity style={styles.addButton}>
-        <Text style={styles.addText}>ADD</Text>
+        <TouchableOpacity style={styles.addButton}>
+          <Text style={styles.addText}>ADD</Text>
+        </TouchableOpacity>
       </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>

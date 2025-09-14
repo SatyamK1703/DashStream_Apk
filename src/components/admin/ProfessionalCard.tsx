@@ -40,9 +40,9 @@ const ProfessionalCard = ({ id, name, rating, jobsCompleted, isOnline, onPress }
           <View style={styles.professionalStats}>
             <View style={styles.ratingContainer}>
               <Ionicons name="star" size={14} color="#F59E0B" />
-              <Text style={styles.ratingText}>{rating} Rating</Text>
+              <Text style={styles.ratingText}>{rating || 0} Rating</Text>
             </View>
-            <Text style={styles.jobsText}>{jobsCompleted} Jobs Completed</Text>
+            <Text style={styles.jobsText}>{jobsCompleted || 0} Jobs Completed</Text>
           </View>
         </View>
       </View>

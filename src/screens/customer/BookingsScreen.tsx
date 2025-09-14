@@ -1,133 +1,92 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator,StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import { SafeAreaView  } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useMyBookings } from '../../hooks/useBookings';
+import { Booking } from '../../types/api';
+import { showErrorAlert } from '../../utils/errorHandler';
 
 type BookingsScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
-
-type Booking = {
-  id: string;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-  date: string;
-  time: string;
-  services: Array<{
-    name: string;
-    price: number;
-  }>;
-  totalAmount: number;
-  address: string;
-  professionalName?: string;
-  professionalImage?: any;
-};
 
 const BookingsScreen = () => {
   const navigation = useNavigation<BookingsScreenNavigationProp>();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Mock data for bookings
-  const bookings: Booking[] = [
-    {
-      id: 'BK1001',
-      status: 'upcoming',
-      date: 'Today',
-      time: '11:00 AM',
-      services: [
-        { name: 'Basic Wash', price: 499 },
-        { name: 'Premium Wash', price: 999 }
-      ],
-      totalAmount: 1397,
-      address: '123 Main Street, Mumbai, Maharashtra',
-      professionalName: 'Rahul Sharma',
-      professionalImage: require('../../assets/images/image.png')
-    },
-    {
-      id: 'BK1002',
-      status: 'ongoing',
-      date: 'Today',
-      time: '09:30 AM',
-      services: [
-        { name: 'Interior Cleaning', price: 799 }
-      ],
-      totalAmount: 799,
-      address: 'Office - 42 Business Park, Mumbai, Maharashtra',
-      professionalName: 'Amit Patel',
-      professionalImage: require('../../assets/images/image.png')
-    },
-    {
-      id: 'BK1003',
-      status: 'upcoming',
-      date: 'Tomorrow',
-      time: '10:00 AM',
-      services: [
-        { name: 'Basic Wash', price: 499 }
-      ],
-      totalAmount: 499,
-      address: 'Home - 123 Main Street, Mumbai, Maharashtra'
-    },
-    {
-      id: 'BK1004',
-      status: 'completed',
-      date: 'Yesterday',
-      time: '02:00 PM',
-      services: [
-        { name: 'Premium Wash', price: 999 },
-        { name: 'Interior Cleaning', price: 799 }
-      ],
-      totalAmount: 1798,
-      address: 'Home - 123 Main Street, Mumbai, Maharashtra',
-      professionalName: 'Vikram Singh',
-      professionalImage: require('../../assets/images/image.png')
-    },
-    {
-      id: 'BK1005',
-      status: 'cancelled',
-      date: '12 Jun 2023',
-      time: '11:30 AM',
-      services: [
-        { name: 'Basic Wash', price: 499 }
-      ],
-      totalAmount: 499,
-      address: 'Office - 42 Business Park, Mumbai, Maharashtra'
-    },
-    {
-      id: 'BK1006',
-      status: 'completed',
-      date: '10 Jun 2023',
-      time: '09:00 AM',
-      services: [
-        { name: 'Interior Cleaning', price: 799 }
-      ],
-      totalAmount: 799,
-      address: 'Home - 123 Main Street, Mumbai, Maharashtra',
-      professionalName: 'Rahul Sharma',
-      professionalImage: require('../../assets/images/image.png')
-    },
-  ];
-
-  const filteredBookings = bookings.filter(booking => {
-    if (activeTab === 'upcoming') {
-      return booking.status === 'upcoming' || booking.status === 'ongoing';
-    } else {
-      return booking.status === 'completed' || booking.status === 'cancelled';
-    }
+  // API hooks for fetching bookings
+  const upcomingBookingsApi = useMyBookings({
+    status: 'pending,confirmed,in-progress'
   });
 
+  const completedBookingsApi = useMyBookings({
+    status: 'completed,cancelled'
+  });
+
+  // Get current API based on active tab
+  const currentApi = activeTab === 'upcoming' ? upcomingBookingsApi : completedBookingsApi;
+
+  useEffect(() => {
+    // Load initial data when component mounts or tab changes
+    currentApi.refresh();
+  }, [activeTab]);
+
+  const handleTabChange = (tab: 'upcoming' | 'completed') => {
+    setActiveTab(tab);
+  };
+
+  const handleRefresh = () => {
+    currentApi.refresh();
+  };
+
+  const handleLoadMore = () => {
+    if (currentApi.pagination.hasMore && !currentApi.loading) {
+      currentApi.loadMore();
+    }
+  };
+
   const handleViewBooking = (bookingId: string, status: string) => {
-    if (status === 'upcoming' || status === 'ongoing') {
+    if (status === 'pending' || status === 'confirmed' || status === 'in-progress') {
       navigation.navigate('TrackBooking', { bookingId });
     } else {
       navigation.navigate('OrderDetails', { bookingId });
     }
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      return 'Tomorrow';
+    } else {
+      return date.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+  };
+
+  const formatTime = (timeString: string) => {
+    const time = new Date(timeString);
+    return time.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
   const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'upcoming': return styles.statusBlue;
-      case 'ongoing': return styles.statusGreen;
+      case 'pending':
+      case 'confirmed': return styles.statusBlue;
+      case 'in-progress': return styles.statusGreen;
       case 'completed': return styles.statusGreen;
       case 'cancelled': return styles.statusRed;
       default: return styles.statusGray;
@@ -136,60 +95,76 @@ const BookingsScreen = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'upcoming': return 'Upcoming';
-      case 'ongoing': return 'In Progress';
+      case 'pending': return 'Pending';
+      case 'confirmed': return 'Confirmed';
+      case 'in-progress': return 'In Progress';
       case 'completed': return 'Completed';
       case 'cancelled': return 'Cancelled';
-      default: return status;
+      default: return status.charAt(0).toUpperCase() + status.slice(1);
     }
   };
 
-  const renderBookingItem = ({ item }: { item: any }) => (
-    <TouchableOpacity style={styles.card} onPress={() => handleViewBooking(item.id, item.status)}>
+  const renderBookingItem = ({ item }: { item: Booking }) => (
+    <TouchableOpacity style={styles.card} onPress={() => handleViewBooking(item._id, item.status)}>
       <View style={styles.cardContent}>
         <View style={styles.rowBetween}>
           <View style={styles.rowCenter}>
-            <Text style={styles.bookingId}>Booking #{item.id}</Text>
+            <Text style={styles.bookingId}>#{item.bookingId}</Text>
             <View style={[styles.statusBadge, getStatusStyle(item.status)]}>
               <Text style={[styles.statusText, getStatusStyle(item.status)]}>{getStatusText(item.status)}</Text>
             </View>
           </View>
-          <Text style={styles.timestamp}>{item.date}, {item.time}</Text>
+          <Text style={styles.timestamp}>
+            {formatDate(item.scheduledDate)}, {formatTime(item.scheduledTime)}
+          </Text>
         </View>
 
         <View style={styles.rowIconText}>
-          <Ionicons name="car-outline" size={18} color="#2563eb" />
-          <Text style={styles.text}>{item.services.map(service => service.name).join(', ')}</Text>
+          <Ionicons name="construct-outline" size={18} color="#2563eb" />
+          <Text style={styles.text}>{item.service.name}</Text>
         </View>
 
         <View style={styles.rowIconText}>
           <Ionicons name="location-outline" size={18} color="#2563eb" />
-          <Text style={styles.text}>{item.address}</Text>
+          <Text style={styles.text} numberOfLines={1}>
+            {`${item.address.addressLine1}, ${item.address.city}`}
+          </Text>
         </View>
 
-        {(item.status === 'ongoing' || item.status === 'completed') && item.professionalName && (
+        {item.professional && (
           <View style={styles.rowIconText}>
             <Ionicons name="person-outline" size={18} color="#2563eb" />
             <View style={styles.rowCenter}>
-              <Image source={item.professionalImage} style={styles.avatar} />
-              <Text style={styles.text}>{item.professionalName}</Text>
+              {item.professional.user.profileImage?.url ? (
+                <Image 
+                  source={{ uri: item.professional.user.profileImage.url }} 
+                  style={styles.avatar} 
+                />
+              ) : (
+                <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                  <Ionicons name="person" size={12} color="#666" />
+                </View>
+              )}
+              <Text style={styles.text}>{item.professional.user.name}</Text>
             </View>
           </View>
         )}
 
         <View style={styles.rowIconText}>
           <Ionicons name="cash-outline" size={18} color="#2563eb" />
-          <Text style={styles.text}>₹{item.totalAmount.toLocaleString()}</Text>
+          <Text style={styles.text}>₹{item.totalAmount.toLocaleString('en-IN')}</Text>
         </View>
       </View>
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          {item.services.length} {item.services.length === 1 ? 'service' : 'services'}
+          Service • {formatDate(item.scheduledDate)}
         </Text>
         <View style={styles.rowCenter}>
           <Text style={styles.linkText}>
-            {item.status === 'upcoming' || item.status === 'ongoing' ? 'Track Booking' : 'View Details'}
+            {item.status === 'pending' || item.status === 'confirmed' || item.status === 'in-progress' 
+              ? 'Track Booking' 
+              : 'View Details'}
           </Text>
           <Ionicons name="chevron-forward" size={16} color="#2563eb" />
         </View>
@@ -231,7 +206,7 @@ const BookingsScreen = () => {
       <View style={styles.tabs}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'upcoming' && styles.activeTab]}
-          onPress={() => setActiveTab('upcoming')}
+          onPress={() => handleTabChange('upcoming')}
         >
           <Text style={activeTab === 'upcoming' ? styles.activeTabText : styles.inactiveTabText}>
             Upcoming & Ongoing
@@ -239,7 +214,7 @@ const BookingsScreen = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'completed' && styles.activeTab]}
-          onPress={() => setActiveTab('completed')}
+          onPress={() => handleTabChange('completed')}
         >
           <Text style={activeTab === 'completed' ? styles.activeTabText : styles.inactiveTabText}>
             Completed & Cancelled
@@ -247,19 +222,48 @@ const BookingsScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {isLoading ? (
+      {currentApi.loading && currentApi.data.length === 0 ? (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color="#2563eb" />
           <Text style={styles.loadingText}>Loading bookings...</Text>
         </View>
+      ) : currentApi.error && currentApi.data.length === 0 ? (
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={60} color="#ef4444" />
+          <Text style={styles.errorTitle}>Failed to load bookings</Text>
+          <Text style={styles.errorMessage}>
+            Please check your connection and try again
+          </Text>
+          <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <FlatList
-          data={filteredBookings}
+          data={currentApi.data}
           renderItem={renderBookingItem}
-          keyExtractor={item => item.id}
+          keyExtractor={item => item._id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={renderEmptyList}
+          refreshControl={
+            <RefreshControl
+              refreshing={currentApi.loading && currentApi.data.length > 0}
+              onRefresh={handleRefresh}
+              colors={['#2563eb']}
+              tintColor="#2563eb"
+            />
+          }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.1}
+          ListFooterComponent={() => 
+            currentApi.loading && currentApi.data.length > 0 ? (
+              <View style={styles.loadingMore}>
+                <ActivityIndicator size="small" color="#2563eb" />
+                <Text style={styles.loadingMoreText}>Loading more...</Text>
+              </View>
+            ) : null
+          }
         />
       )}
     </SafeAreaView>
@@ -320,6 +324,14 @@ const styles = StyleSheet.create({
   emptyMessage: { color: '#6b7280', textAlign: 'center', paddingHorizontal: 40, marginBottom: 24 },
   button: { backgroundColor: '#2563eb', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
   buttonText: { color: '#fff', fontWeight: '600' },
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
+  errorTitle: { color: '#ef4444', fontSize: 18, fontWeight: '600', marginTop: 16 },
+  errorMessage: { color: '#6b7280', textAlign: 'center', paddingHorizontal: 40, marginBottom: 24 },
+  retryButton: { backgroundColor: '#ef4444', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  retryButtonText: { color: '#fff', fontWeight: '600' },
+  avatarPlaceholder: { backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center' },
+  loadingMore: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16 },
+  loadingMoreText: { marginLeft: 8, color: '#6b7280' },
 });
 
 export default BookingsScreen;

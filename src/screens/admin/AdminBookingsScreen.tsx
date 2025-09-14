@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   FlatList,
@@ -7,15 +7,15 @@ import {
   RefreshControl,
   Text,
   StyleSheet,
+  Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context'; // 1. Import from react-native-safe-area-context
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
-import { mockBookings } from '../../constants/data/AdminProfessionalScreen';
 
-// Assuming these are your custom components, no changes needed here
+// Components
 import SearchAndFilter from '~/components/admin/SearchAndFilter';
 import ScrollableFilter from '~/components/admin/ScrollableFilter';
 import FilterDropdown from '~/components/admin/FilterDropdown';
@@ -25,18 +25,37 @@ import EmptyState from '~/components/admin/EmptyStatePro';
 // Type definitions
 import { Booking, BookingStatus, FilterOption } from '../../types/AdminType';
 
+// API hooks
+import { useAdminBookings, useAdminBookingActions } from '../../hooks/useAdmin';
+
 type AdminBookingsScreenNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 
 const AdminBookingsScreen = () => {
   const navigation = useNavigation<AdminBookingsScreenNavigationProp>();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<BookingStatus>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const [showFilters, setShowFilters] = useState(false);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
+
+  // API hooks
+  const {
+    data: bookings = [],
+    isLoading: loading,
+    error,
+    execute: fetchBookings,
+    hasMore,
+    loadMore,
+    isLoadingMore,
+  } = useAdminBookings({
+    search: searchQuery,
+    status: statusFilter === 'all' ? undefined : statusFilter,
+    sortBy: sortBy === 'newest' ? 'created_at' : 'created_at',
+    sortOrder: sortBy === 'newest' ? 'desc' : 'asc',
+    limit: 20,
+  });
+
+  const { updateBookingStatus } = useAdminBookingActions();
 
   const filterOptions: FilterOption[] = [
     { label: 'All', value: 'all' },
@@ -47,53 +66,21 @@ const AdminBookingsScreen = () => {
   ];
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setBookings(mockBookings);
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    fetchBookings();
+  }, [searchQuery, statusFilter, sortBy]);
 
-  useEffect(() => {
-    applyFilters();
-  }, [bookings, searchQuery, statusFilter, sortBy]);
+  const onRefresh = useCallback(() => {
+    fetchBookings();
+  }, [fetchBookings]);
 
-  const applyFilters = () => {
-    let filtered = [...bookings];
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter((booking) => booking.status === statusFilter);
+  const handleUpdateBookingStatus = async (bookingId: string, status: BookingStatus) => {
+    try {
+      await updateBookingStatus(bookingId, { status });
+      Alert.alert('Success', 'Booking status updated successfully');
+      fetchBookings(); // Refresh the list
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update booking status');
     }
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(
-        (booking) =>
-          booking.id.toLowerCase().includes(query) ||
-          booking.customerName.toLowerCase().includes(query) ||
-          booking.customerPhone.includes(query) ||
-          (booking.professionalName &&
-            booking.professionalName.toLowerCase().includes(query)) ||
-          booking.service.toLowerCase().includes(query) ||
-          booking.address.toLowerCase().includes(query)
-      );
-    }
-
-    filtered.sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
-      return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
-    });
-
-    setFilteredBookings(filtered);
-  };
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
   };
 
   const handleBookingPress = (bookingId: string) => {
@@ -105,6 +92,18 @@ const AdminBookingsScreen = () => {
       <View style={styles.centeredScreen}>
         <ActivityIndicator size="large" color="#2563EB" />
         <Text style={styles.loadingText}>Loading bookings...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centeredScreen}>
+        <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+        <Text style={styles.errorText}>Failed to load bookings</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchBookings}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -142,21 +141,39 @@ const AdminBookingsScreen = () => {
       />
 
       <FlatList
-        data={filteredBookings}
+        data={bookings}
         renderItem={({ item }) => (
-          <BookingCard booking={item} onPress={() => handleBookingPress(item.id)} />
+          <BookingCard 
+            booking={item} 
+            onPress={() => handleBookingPress(item.id)} 
+            onUpdateStatus={(status) => handleUpdateBookingStatus(item.id, status)}
+          />
         )}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
+            refreshing={loading}
             onRefresh={onRefresh}
             colors={['#2563EB']}
           />
         }
         ListEmptyComponent={<EmptyState />}
+        onEndReached={() => {
+          if (hasMore && !isLoadingMore) {
+            loadMore();
+          }
+        }}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={() => 
+          isLoadingMore ? (
+            <View style={styles.loadingFooter}>
+              <ActivityIndicator size="small" color="#2563EB" />
+              <Text style={styles.loadingFooterText}>Loading more...</Text>
+            </View>
+          ) : null
+        }
       />
     </SafeAreaView>
   );
@@ -176,6 +193,36 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     color: '#4B5563',
+  },
+  errorText: {
+    fontSize: 18,
+    color: '#EF4444',
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingFooter: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingFooterText: {
+    marginLeft: 8,
+    color: '#6B7280',
+    fontSize: 14,
   },
   header: {
     flexDirection: 'row',

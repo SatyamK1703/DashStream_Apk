@@ -8,18 +8,19 @@ import {
   ActivityIndicator,
   StyleSheet,
   Dimensions,
-  SafeAreaView // 1. Import SafeAreaView
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
 import { useAuth } from '../../context/AuthContext';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
-import {bookingsData,revenueData,topProfessionals,recentBookings,dashboardStats} from '../../constants/data/AdminScreenData';
 import StatCard from '~/components/admin/StatCard';
 import BookingCard from '~/components/admin/BookingCard';
 import ProfessionalCard from '~/components/admin/ProfessionalCard';
+import { useAdminDashboard, useAdminBookings, useAdminProfessionals } from '../../hooks/useAdmin';
 
 // --- Type Definition ---
 type AdminDashboardScreenNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
@@ -28,28 +29,57 @@ type AdminDashboardScreenNavigationProp = NativeStackNavigationProp<AdminStackPa
 const AdminDashboardScreen = () => {
   const navigation = useNavigation<AdminDashboardScreenNavigationProp>();
   const { user } = useAuth();
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const [statsFilter, setStatsFilter] = useState<'revenue' | 'bookings'>('revenue');
-  
+
+  // Fetch dashboard data
+  const {
+    data: dashboardStats,
+    loading: isDashboardLoading,
+    error: dashboardError,
+    execute: fetchDashboard
+  } = useAdminDashboard();
+
+  // Fetch recent bookings (limited)
+  const {
+    data: recentBookings = [],
+    loading: isBookingsLoading,
+    error: bookingsError,
+    execute: fetchBookings
+  } = useAdminBookings({ limit: 5 });
+
+  // Fetch top professionals (limited)
+  const {
+    data: topProfessionals = [],
+    loading: isProfessionalsLoading,
+    error: professionalsError,
+    execute: fetchProfessionals
+  } = useAdminProfessionals({ limit: 5 });
+
+  const isLoading = Boolean(isDashboardLoading || isBookingsLoading || isProfessionalsLoading);
+
+  // Load data on mount
   useEffect(() => {
-    // Simulate data loading
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1500);
-    
-    return () => clearTimeout(timer);
+    loadDashboardData();
   }, []);
-  
-  const onRefresh = () => {
-    setRefreshing(true);
-    // Simulate refresh
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
+
+  const loadDashboardData = async () => {
+    try {
+      await Promise.all([
+        fetchDashboard(),
+        fetchBookings(),
+        fetchProfessionals()
+      ]);
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+      Alert.alert('Error', 'Failed to load dashboard data. Please try again.');
+    }
   };
-  
+
+  const onRefresh = async () => {
+    await loadDashboardData();
+  };
+
   const chartConfig = {
     backgroundGradientFrom: '#ffffff',
     backgroundGradientTo: '#ffffff',
@@ -65,10 +95,27 @@ const AdminDashboardScreen = () => {
       stroke: statsFilter === 'revenue' ? '#2563EB' : '#8B5CF6',
     },
   };
-  
-  const chartData = statsFilter === 'revenue' ? revenueData[timeFilter] : bookingsData[timeFilter];
-  
-  if (loading) {
+
+  // Generate chart data from dashboard stats
+  const getChartData = () => {
+    if (!dashboardStats?.chartData) {
+      return {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [{ data: [0, 0, 0, 0, 0, 0, 0] }]
+      };
+    }
+
+    const data = statsFilter === 'revenue' 
+      ? dashboardStats.chartData.revenue?.[timeFilter]
+      : dashboardStats.chartData.bookings?.[timeFilter];
+
+    return data || {
+      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      datasets: [{ data: [0, 0, 0, 0, 0, 0, 0] }]
+    };
+  };
+
+  if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
@@ -77,10 +124,21 @@ const AdminDashboardScreen = () => {
     );
   }
 
+  if (dashboardError) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+        <Text style={styles.errorText}>Failed to load dashboard</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadDashboardData}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
-    // 2. Use SafeAreaView as the root component
     <SafeAreaView style={styles.container}>
-      {/* 3. Updated Header */}
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Admin Dashboard</Text>
         <TouchableOpacity
@@ -91,11 +149,11 @@ const AdminDashboardScreen = () => {
           <View style={styles.notificationBadge} />
         </TouchableOpacity>
       </View>
-      
-      <ScrollView 
+
+      <ScrollView
         contentContainerStyle={styles.scrollContainer}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />
+          <RefreshControl refreshing={isLoading} onRefresh={onRefresh} colors={['#2563EB']} />
         }
       >
         {/* Stats Cards */}
@@ -103,39 +161,39 @@ const AdminDashboardScreen = () => {
           <View style={styles.statsContainer}>
             <StatCard
               title="Total Revenue"
-              value={dashboardStats.totalRevenue}
+              value={dashboardStats?.totalRevenue || 0}
               icon={<MaterialCommunityIcons name="currency-inr" size={20} color="white" />}
               color="#2563EB"
-              change={dashboardStats.revenueChange}
+              change={dashboardStats?.revenueChange || 0}
               isPositive={true}
             />
             <StatCard
               title="Total Bookings"
-              value={dashboardStats.totalBookings}
+              value={dashboardStats?.totalBookings || 0}
               icon={<MaterialCommunityIcons name="calendar-check" size={20} color="white" />}
               color="#8B5CF6"
-              change={dashboardStats.bookingsChange}
+              change={dashboardStats?.bookingsChange || 0}
               isPositive={true}
             />
             <StatCard
               title="Active Customers"
-              value={dashboardStats.activeCustomers}
+              value={dashboardStats?.activeCustomers || 0}
               icon={<Ionicons name="people" size={20} color="white" />}
               color="#10B981"
-              change={dashboardStats.customersChange}
+              change={dashboardStats?.customersChange || 0}
               isPositive={true}
             />
             <StatCard
               title="Active Pros"
-              value={dashboardStats.activeProfessionals}
+              value={dashboardStats?.activeProfessionals || 0}
               icon={<FontAwesome5 name="user-tie" size={18} color="white" />}
               color="#F59E0B"
-              change={dashboardStats.professionalsChange}
+              change={dashboardStats?.professionalsChange || 0}
               isPositive={false}
             />
           </View>
         </View>
-        
+
         {/* Chart Section */}
         <View style={styles.chartSectionContainer}>
           <View style={styles.chartHeader}>
@@ -157,16 +215,16 @@ const AdminDashboardScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
-          
+
           <LineChart
-            data={chartData}
-            width={Dimensions.get('window').width - 32} // Adjusted for padding
+            data={getChartData()}
+            width={Dimensions.get('window').width - 32}
             height={220}
             chartConfig={chartConfig}
             bezier
             style={styles.chart}
           />
-          
+
           <View style={styles.timeFilterContainer}>
             {['daily', 'weekly', 'monthly'].map((filter) => (
               <TouchableOpacity
@@ -179,7 +237,7 @@ const AdminDashboardScreen = () => {
             ))}
           </View>
         </View>
-        
+
         {/* Recent Bookings */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
@@ -188,15 +246,21 @@ const AdminDashboardScreen = () => {
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
-          {recentBookings.map((booking) => (
-            <BookingCard
-              key={booking.id}
-              {...booking}
-              onPress={() => navigation.navigate('AdminBookingDetails', { bookingId: booking.id })}
-            />
-          ))}
+          {(recentBookings && recentBookings.length > 0) ? (
+            recentBookings.map((booking) => (
+              <BookingCard
+                key={booking.id}
+                {...booking}
+                onPress={() => navigation.navigate('AdminBookingDetails', { bookingId: booking.id })}
+              />
+            ))
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No recent bookings</Text>
+            </View>
+          )}
         </View>
-        
+
         {/* Top Professionals */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
@@ -205,15 +269,21 @@ const AdminDashboardScreen = () => {
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
-          {topProfessionals.map((professional) => (
-            <ProfessionalCard
-              key={professional.id}
-              {...professional}
-              onPress={() => navigation.navigate('ProfessionalDetails', { professionalId: professional.id })}
-            />
-          ))}
+          {(topProfessionals && topProfessionals.length > 0) ? (
+            topProfessionals.map((professional) => (
+              <ProfessionalCard
+                key={professional.id}
+                {...professional}
+                onPress={() => navigation.navigate('AdminProfessionalDetails', { professionalId: professional.id })}
+              />
+            ))
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No professionals found</Text>
+            </View>
+          )}
         </View>
-        
+
         {/* Quick Actions */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -224,7 +294,7 @@ const AdminDashboardScreen = () => {
               { icon: 'users', color: '#10B981', text: 'Manage Customers', nav: 'AdminCustomers' },
               { icon: 'cogs', color: "#F59E0B", text: 'Settings', nav: 'AdminSettings' }
             ].map((action) => (
-              <TouchableOpacity 
+              <TouchableOpacity
                 key={action.text}
                 style={styles.quickActionButton}
                 onPress={() => navigation.navigate(action.nav as any)}
@@ -244,11 +314,7 @@ const AdminDashboardScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
-  },
-  scrollContainer: {
-    backgroundColor: '#F9FAFB', // Light grey background for the scrollable content
-    paddingBottom: 24,
+    backgroundColor: '#F9FAFB',
   },
   loadingContainer: {
     flex: 1,
@@ -258,42 +324,78 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    color: '#6B7280',
     fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    padding: 32,
+  },
+  errorText: {
+    fontSize: 18,
+    color: '#EF4444',
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between', // Align items to the end (right)
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: 'white',
+    borderBottomColor: '#E5E7EB',
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
-     // Ensure title is behind the button
+    fontWeight: '700',
+    color: '#111827',
   },
   notificationButton: {
-    padding: 5,
+    padding: 8,
+    position: 'relative',
   },
   notificationBadge: {
     position: 'absolute',
-    top: 5,
-    right: 5,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
     backgroundColor: '#EF4444',
-    borderWidth: 2,
-    borderColor: 'white',
+    borderRadius: 4,
+  },
+  scrollContainer: {
+    paddingBottom: 32,
   },
   sectionContainer: {
-    paddingHorizontal: 16,
+    backgroundColor: 'white',
+    marginHorizontal: 16,
+    borderRadius: 12,
+    padding: 16,
     marginTop: 16,
+    elevation: 2,
+    shadowColor: '#4B5563',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   chartSectionContainer: {
     backgroundColor: 'white',
@@ -410,7 +512,15 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
   },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
 });
 
 export default AdminDashboardScreen;
-

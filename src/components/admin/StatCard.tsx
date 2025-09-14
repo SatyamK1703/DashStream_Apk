@@ -4,10 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 import styles from './styles'
 interface StatCardProps {
   title: string;
-  value: string;
+  value: number | string;
   icon: React.ReactNode;
   color: string;
-  change?: string;
+  change?: number | string;
   isPositive?: boolean;
 }
 
@@ -16,13 +16,13 @@ const StatCard = ({ title, value, icon, color, change, isPositive }: StatCardPro
     <View style={styles.statCardContent}>
       <View>
         <Text style={styles.statCardTitle}>{title}</Text>
-        <Text style={styles.statCardValue}>{value}</Text>
+        <Text style={styles.statCardValue}>{String(value)}</Text>
       </View>
       <View style={[styles.statCardIcon, { backgroundColor: color }]}>
         {icon}
       </View>
     </View>
-    {change && (
+    {change !== undefined && change !== null && (
       <View style={styles.statCardChange}>
         <Ionicons 
           name={isPositive ? 'arrow-up' : 'arrow-down'} 
@@ -30,7 +30,7 @@ const StatCard = ({ title, value, icon, color, change, isPositive }: StatCardPro
           color={isPositive ? '#10B981' : '#EF4444'} 
         />
         <Text style={[styles.statCardChangeText, isPositive ? styles.positiveChange : styles.negativeChange]}>
-          {change} from last month
+          {String(change)} from last month
         </Text>
       </View>
     )}

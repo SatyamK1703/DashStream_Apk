@@ -392,7 +392,7 @@ const AdminProfessionalDetailsScreen = () => {
                 <View style={styles.ratingContainer}>
                   <Ionicons name="star" size={16} color="#F59E0B" />
                   <Text style={styles.ratingText}>{professional.rating.toFixed(1)}</Text>
-                  <Text style={styles.reviewCount}>({professional.reviews.length} reviews)</Text>
+                  <Text style={styles.reviewCount}>({professional.reviews?.length || 0} reviews)</Text>
                 </View>
                 
                 <View style={[styles.statusBadge, getStatusColor(professional.status)]}>
@@ -837,13 +837,13 @@ const AdminProfessionalDetailsScreen = () => {
     <View style={styles.sectionCard}>
       <Text style={styles.sectionTitle}>Recent Bookings</Text>
       
-      {professional.recentBookings.length > 0 ? (
+      {(professional.recentBookings && professional.recentBookings.length > 0) ? (
         professional.recentBookings.map((booking, index) => (
           <TouchableOpacity 
             key={booking.id}
             style={[
               styles.bookingItem,
-              index !== professional.recentBookings.length - 1 && styles.bookingItemBorder
+              index !== (professional.recentBookings?.length || 1) - 1 && styles.bookingItemBorder
             ]}
             onPress={() => navigation.navigate('BookingDetails', { bookingId: booking.id })}
           >
@@ -934,17 +934,17 @@ const AdminProfessionalDetailsScreen = () => {
         <View style={styles.ratingContainer}>
           <Ionicons name="star" size={16} color="#F59E0B" />
           <Text style={styles.ratingText}>{professional.rating.toFixed(1)}</Text>
-          <Text style={styles.reviewCountText}>({professional.reviews.length})</Text>
+          <Text style={styles.reviewCountText}>({professional.reviews?.length || 0})</Text>
         </View>
       </View>
       
-      {professional.reviews.length > 0 ? (
+      {(professional.reviews && professional.reviews.length > 0) ? (
         professional.reviews.map((review, index) => (
           <View 
             key={review.id}
             style={[
               styles.reviewItem,
-              index !== professional.reviews.length - 1 && styles.reviewItemBorder
+              index !== (professional.reviews?.length || 1) - 1 && styles.reviewItemBorder
             ]}
           >
             <View style={styles.reviewHeader}>
@@ -971,8 +971,8 @@ const AdminProfessionalDetailsScreen = () => {
       <Text style={styles.sectionTitle}>Rating Breakdown</Text>
       
       {[5, 4, 3, 2, 1].map(rating => {
-        const count = professional.reviews.filter(r => r.rating === rating).length;
-        const percentage = professional.reviews.length > 0 
+        const count = professional.reviews?.filter(r => r.rating === rating).length || 0;
+        const percentage = (professional.reviews && professional.reviews.length > 0) 
           ? (count / professional.reviews.length) * 100 
           : 0;
         

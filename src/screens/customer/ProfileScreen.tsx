@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -7,7 +7,9 @@ import {
   Image, 
   Switch, 
   Alert, 
-  StyleSheet 
+  StyleSheet,
+  ActivityIndicator,
+  RefreshControl 
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -15,14 +17,83 @@ import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { useAuth } from '../../context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useUserProfile, useUpdateProfile, useNotificationPreferences } from '../../hooks';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
 const ProfileScreen = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const { user, logout } = useAuth();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [locationEnabled, setLocationEnabled] = useState(true);
+  
+  // API hooks
+  const {
+    data: userProfile,
+    loading: profileLoading,
+    execute: fetchProfile,
+    error: profileError,
+  } = useUserProfile();
+
+  const {
+    preferences,
+    loading: preferencesLoading,
+    updatePreferences,
+    refreshPreferences,
+  } = useNotificationPreferences();
+
+  const [localNotificationState, setLocalNotificationState] = useState(true);
+  const [localLocationState, setLocalLocationState] = useState(true);
+  
+  // Update local state when preferences load
+  useEffect(() => {
+    if (preferences) {
+      setLocalNotificationState(preferences.push || false);
+      // Location is typically handled by device permissions, but we can store preference
+      setLocalLocationState(true);
+    }
+  }, [preferences]);
+
+  // Load data on mount
+  useEffect(() => {
+    loadProfileData();
+  }, []);
+
+  const loadProfileData = async () => {
+    try {
+      await Promise.all([
+        fetchProfile(),
+        refreshPreferences(),
+      ]);
+    } catch (error) {
+      console.error('Failed to load profile data:', error);
+    }
+  };
+
+  const handleRefresh = () => {
+    loadProfileData();
+  };
+
+  const handleNotificationToggle = async (value: boolean) => {
+    setLocalNotificationState(value);
+    
+    if (preferences) {
+      try {
+        await updatePreferences({
+          ...preferences,
+          push: value,
+        });
+      } catch (error) {
+        // Revert on error
+        setLocalNotificationState(!value);
+        Alert.alert('Error', 'Failed to update notification preferences');
+      }
+    }
+  };
+
+  const handleLocationToggle = (value: boolean) => {
+    setLocalLocationState(value);
+    // Here you would typically handle location permissions
+    // For now, we'll just update the local state
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -142,22 +213,54 @@ const ProfileScreen = () => {
         </View>
       </View>
 
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scroll} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={profileLoading || preferencesLoading}
+            onRefresh={handleRefresh}
+            colors={['#2563eb']}
+            tintColor="#2563eb"
+          />
+        }
+      >
         {/* Profile Card */}
         <View style={styles.card}>
           <TouchableOpacity 
             style={styles.profileRow}
             onPress={() => navigation.navigate('EditProfile')}
           >
-            <Image 
-              source={user?.profileImage || require('../../assets/images/image.png')} 
-              style={styles.profileImage} 
-              resizeMode="cover"
-            />
+            {profileLoading ? (
+              <View style={styles.profileImagePlaceholder}>
+                <ActivityIndicator size="small" color="#2563eb" />
+              </View>
+            ) : (
+              <Image 
+                source={
+                  userProfile?.profileImage?.url 
+                    ? { uri: userProfile.profileImage.url }
+                    : user?.profileImage || require('../../assets/images/image.png')
+                } 
+                style={styles.profileImage} 
+                resizeMode="cover"
+              />
+            )}
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user?.name || 'User Name'}</Text>
-              <Text style={styles.profileMeta}>{user?.phone || '+91 98765 43210'}</Text>
-              <Text style={styles.profileMeta}>{user?.email || 'user@example.com'}</Text>
+              <Text style={styles.profileName}>
+                {userProfile?.name || user?.name || 'User Name'}
+              </Text>
+              <Text style={styles.profileMeta}>
+                {userProfile?.phone || user?.phone || '+91 98765 43210'}
+              </Text>
+              <Text style={styles.profileMeta}>
+                {userProfile?.email || user?.email || 'user@example.com'}
+              </Text>
+              {userProfile?.dateOfBirth && (
+                <Text style={styles.profileMeta}>
+                  {new Date(userProfile.dateOfBirth).toLocaleDateString('en-IN')}
+                </Text>
+              )}
             </View>
             <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
           </TouchableOpacity>
@@ -174,12 +277,17 @@ const ProfileScreen = () => {
               </View>
               <Text style={styles.settingText}>Push Notifications</Text>
             </View>
-            <Switch
-              trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
-              thumbColor={notificationsEnabled ? '#2563eb' : '#f4f4f5'}
-              onValueChange={setNotificationsEnabled}
-              value={notificationsEnabled}
-            />
+            {preferencesLoading ? (
+              <ActivityIndicator size="small" color="#2563eb" />
+            ) : (
+              <Switch
+                trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
+                thumbColor={localNotificationState ? '#2563eb' : '#f4f4f5'}
+                onValueChange={handleNotificationToggle}
+                value={localNotificationState}
+                disabled={preferencesLoading}
+              />
+            )}
           </View>
 
           <View style={styles.settingRow}>
@@ -191,9 +299,9 @@ const ProfileScreen = () => {
             </View>
             <Switch
               trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
-              thumbColor={locationEnabled ? '#2563eb' : '#f4f4f5'}
-              onValueChange={setLocationEnabled}
-              value={locationEnabled}
+              thumbColor={localLocationState ? '#2563eb' : '#f4f4f5'}
+              onValueChange={handleLocationToggle}
+              value={localLocationState}
             />
           </View>
         </View>
@@ -267,6 +375,15 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     marginRight: 16
+  },
+  profileImagePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginRight: 16,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   profileInfo: {
     flex: 1

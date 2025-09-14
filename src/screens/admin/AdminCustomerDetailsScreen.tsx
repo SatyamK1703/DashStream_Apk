@@ -189,7 +189,7 @@ const AdminCustomerDetailsScreen = () => {
     if (!customer || !newNote.trim()) return;
     
     const newNoteObj: Note = {
-      id: `NOTE-${customer.notes.length + 1}`,
+      id: `NOTE-${(customer.notes?.length || 0) + 1}`,
       text: newNote.trim(),
       createdBy: 'Admin',
       createdAt: new Date().toISOString()
@@ -452,12 +452,12 @@ const AdminCustomerDetailsScreen = () => {
         <View style={[styles.statsRow, { marginTop: 12 }]}>
           <View style={[styles.statsItem, styles.statsItemPurple, styles.statsItemLeft]}>
             <Text style={styles.statsLabel}>Addresses</Text>
-            <Text style={[styles.statsValue, styles.statsValuePurple]}>{customer.addresses.length}</Text>
+            <Text style={[styles.statsValue, styles.statsValuePurple]}>{customer.addresses?.length || 0}</Text>
           </View>
           
           <View style={[styles.statsItem, styles.statsItemAmber, styles.statsItemRight]}>
             <Text style={styles.statsLabel}>Vehicles</Text>
-            <Text style={[styles.statsValue, styles.statsValueAmber]}>{customer.vehicles.length}</Text>
+            <Text style={[styles.statsValue, styles.statsValueAmber]}>{customer.vehicles?.length || 0}</Text>
           </View>
         </View>
       </View>

@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StatusBar, StyleSheet } from 'react-native';
+import { View, ScrollView, StatusBar, StyleSheet, RefreshControl } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import Header from '../../components/home/Header';
 import OffersCarousel from '../../components/home/OfferCarousel';
 import PopularServices from '../../components/home/PopularServices';
 import PromoBanner from '../../components/home/PromoBanner';
-import { offers, popularServices } from '../../constants/data/homeData';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator'; // adjust path as needed
-import VehicleSelector from '~/components/home/VehicleSelector';
+import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import CustomerTestimonials from '~/components/home/CustomerTestimonials';
 import QuickFixes from '~/components/home/QuickFixes';
 import Footer from '~/components/home/FooterMain';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Import API hooks
+import { usePopularServices, useActiveOffers, usePersonalizedOffers } from '../../hooks';
 
 
 interface PromoBannerProps {
@@ -27,34 +28,104 @@ const HomeScreen = () => {
   const [currentOfferIndex, setCurrentOfferIndex] = useState(0);
   const { user } = useAuth();
 
-  // Auto scroll offers
+  // API hooks
+  const {
+    data: popularServicesData,
+    loading: servicesLoading,
+    execute: fetchPopularServices,
+    error: servicesError,
+  } = usePopularServices(8);
+
+  const {
+    data: activeOffersData,
+    loading: offersLoading,
+    execute: fetchActiveOffers,
+    error: offersError,
+  } = useActiveOffers({ limit: 5 });
+
+  const {
+    data: personalizedOffersData,
+    loading: personalizedLoading,
+    execute: fetchPersonalizedOffers,
+  } = usePersonalizedOffers();
+
+  // Track loading state for refresh control
+  const isRefreshing = servicesLoading || offersLoading || personalizedLoading;
+
+  // Load initial data
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentOfferIndex((prevIndex) => (prevIndex + 1) % offers.length);
-    }, 3000);
-    return () => clearInterval(interval);
+    loadHomeData();
   }, []);
 
+  // Auto scroll offers
+  useEffect(() => {
+    const offersToShow = activeOffersData || [];
+    if (offersToShow.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentOfferIndex((prevIndex) => (prevIndex + 1) % offersToShow.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [activeOffersData]);
+
+  const loadHomeData = async () => {
+    try {
+      await Promise.all([
+        fetchPopularServices(),
+        fetchActiveOffers(),
+        fetchPersonalizedOffers(),
+      ]);
+    } catch (error) {
+      console.error('Failed to load home data:', error);
+    }
+  };
+
+  const handleRefresh = () => {
+    loadHomeData();
+  };
+
+  // Prepare data for components
+  const offersToShow = activeOffersData || [];
+  const servicesToShow = popularServicesData || [];
+
   return (
-    
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <Header userName={user?.name || 'Guest'} />
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={['#007AFF']}
+            tintColor="#007AFF"
+          />
+        }
+      >
+        {/* Show offers carousel with API data */}
         <OffersCarousel
-          offers={offers}
+          offers={offersToShow}
           currentIndex={currentOfferIndex}
           setCurrentIndex={setCurrentOfferIndex}
+          loading={offersLoading}
+          error={offersError}
         />
-        <VehicleSelector/>
-        <PopularServices services={popularServices} />
+        
+        {/* Show popular services with API data */}
+        <PopularServices 
+          services={servicesToShow} 
+          loading={servicesLoading}
+          error={servicesError}
+        />
+        
         <PromoBanner onPress={() => navigation.navigate('Membership')} />
         <CustomerTestimonials/>
         <QuickFixes/>
         <Footer/>
       </ScrollView>
     </View>
-  
   );
 };
 
@@ -66,75 +137,3 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
 });
 
-// import React, { useState, useEffect } from 'react';
-// import { View, ScrollView, StatusBar, StyleSheet } from 'react-native';
-// import { useAuth } from '../../context/AuthContext';
-// import Header from '../../components/home/Header';
-// import OffersCarousel from '../../components/home/OfferCarousel';
-// import PopularServices from '../../components/home/PopularServices';
-// import PromoBanner from '../../components/home/PromoBanner';
-// import { offers, popularServices } from '../../constants/data/homeData';
-// import { useNavigation } from '@react-navigation/native';
-// import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-// import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-// import VehicleSelector from '~/components/home/VehicleSelector';
-// import CustomerTestimonials from '~/components/home/CustomerTestimonials';
-// import QuickFixes from '~/components/home/QuickFixes';
-// import Footer from '~/components/home/FooterMain';
-// import { SafeAreaView } from 'react-native-safe-area-context';
-
-// interface PromoBannerProps {
-//   onPress: () => void;
-// }
-
-// const HomeScreen = () => {
-//   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
-//   const [currentOfferIndex, setCurrentOfferIndex] = useState(0);
-//   const { user } = useAuth();
-
-//   // Auto scroll offers
-//   useEffect(() => {
-//     const interval = setInterval(() => {
-//       setCurrentOfferIndex((prevIndex) => (prevIndex + 1) % offers.length);
-//     }, 3000);
-//     return () => clearInterval(interval);
-//   }, []);
-
-//   return (
-//     <SafeAreaView style={styles.safeArea} edges={['top']}>
-//       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-//       <View style={styles.container}>
-//         <Header userName={user?.name || 'Guest'} />
-//         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-//           <OffersCarousel
-//             offers={offers}
-//             currentIndex={currentOfferIndex}
-//             setCurrentIndex={setCurrentOfferIndex}
-//           />
-//           <VehicleSelector/>
-//           <PopularServices services={popularServices} />
-//           <PromoBanner onPress={() => navigation.navigate('Membership')} />
-//           <CustomerTestimonials/>
-//           <QuickFixes/>
-//           <Footer/>
-//         </ScrollView>
-//       </View>
-//     </SafeAreaView>
-//   );
-// };
-
-// export default HomeScreen;
-
-// const styles = StyleSheet.create({
-//   safeArea: {
-//     flex: 1,
-//     backgroundColor: '#fff'
-//   },
-//   container: { 
-//     flex: 1, 
-//     backgroundColor: '#fff' 
-//   },
-//   scrollView: { 
-//     flex: 1 
-//   },
-// });
