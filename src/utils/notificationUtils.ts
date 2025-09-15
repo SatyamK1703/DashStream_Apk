@@ -1,5 +1,6 @@
 import { Alert, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import { getExpoGoCompat } from './expoGoCompat';
 
 
 export const configureNotifications = async () => {
@@ -21,10 +22,11 @@ export const showSuccessNotification = async (title: string, message: string) =>
     // Show in-app alert
     Alert.alert(title, message);
     
+    const { isExpoGo, getNotifications } = getExpoGoCompat();
     if (!isExpoGo) {
       // Also send a system notification if app is in background
-      const Notifications = await getNotifications();
-      await Notifications.scheduleNotificationAsync({
+      const NotificationsModule = await getNotifications();
+      await NotificationsModule.scheduleNotificationAsync({
         content: {
           title,
           body: message,
@@ -53,10 +55,11 @@ export const showErrorNotification = async (
     // Show in-app alert
     Alert.alert(title, message);
     
+    const { isExpoGo, getNotifications } = getExpoGoCompat();
     if (!isExpoGo) {
       // Also send a system notification if app is in background
-      const Notifications = await getNotifications();
-      await Notifications.scheduleNotificationAsync({
+      const NotificationsModule = await getNotifications();
+      await NotificationsModule.scheduleNotificationAsync({
         content: {
           title,
           body: message,

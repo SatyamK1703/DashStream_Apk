@@ -122,4 +122,16 @@ export const getVideo = async () => {
   return { Video: getVideoComponent() };
 };
 
+// Main compatibility function to export all the compatibility helpers
+export const getExpoGoCompat = () => ({
+  isExpoGo,
+  MockDeviceInfo,
+  MockNotifications,
+  MockVideo,
+  getDeviceInfo,
+  getNotifications,
+  getVideoComponent,
+  getVideo,
+});
+
 // Note: Mock icon system removed - SVG icons now work properly with fixed Metro config

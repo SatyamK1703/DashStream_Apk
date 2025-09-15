@@ -1,7 +1,6 @@
 // Production User Service
-import unifiedApiService from './unifiedApiService';
+import apiService from './apiService';
 import { API_CONFIG } from '../constants/apiConfig';
-import productionAuthService from './productionAuthService';
 
 // Types
 export interface Address {
@@ -82,14 +81,9 @@ class UserService {
     try {
       console.log('👤 Fetching current user profile...');
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'User not authenticated'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.get(API_CONFIG.ENDPOINTS.USERS.PROFILE);
+      const response = await apiService.get(API_CONFIG.ENDPOINTS.USERS.PROFILE);
 
       if (response.success && response.data) {
         console.log('✅ User profile fetched successfully');
@@ -121,14 +115,9 @@ class UserService {
     try {
       console.log('📝 Updating user profile...');
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'User not authenticated'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.put(
+      const response = await apiService.put(
         API_CONFIG.ENDPOINTS.USERS.UPDATE_PROFILE,
         profileData
       );
@@ -163,14 +152,9 @@ class UserService {
     try {
       console.log('🏠 Fetching user addresses...');
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'User not authenticated'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.get(API_CONFIG.ENDPOINTS.USERS.ADDRESSES);
+      const response = await apiService.get(API_CONFIG.ENDPOINTS.USERS.ADDRESSES);
 
       if (response.success) {
         const addresses = response.data?.addresses || response.data || [];
@@ -204,14 +188,9 @@ class UserService {
     try {
       console.log('➕ Adding new address...');
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'User not authenticated'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.post(
+      const response = await apiService.post(
         API_CONFIG.ENDPOINTS.USERS.ADDRESSES,
         addressData
       );
@@ -246,14 +225,9 @@ class UserService {
     try {
       console.log('📝 Updating address:', addressId);
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'User not authenticated'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.put(
+      const response = await apiService.put(
         `${API_CONFIG.ENDPOINTS.USERS.ADDRESSES}/${addressId}`,
         addressData
       );
@@ -288,14 +262,9 @@ class UserService {
     try {
       console.log('🗑️ Deleting address:', addressId);
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'User not authenticated'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.delete(
+      const response = await apiService.delete(
         `${API_CONFIG.ENDPOINTS.USERS.ADDRESSES}/${addressId}`
       );
 
@@ -329,14 +298,9 @@ class UserService {
     try {
       console.log('🚗 Fetching user vehicles...');
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'User not authenticated'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.get(API_CONFIG.ENDPOINTS.USERS.VEHICLES);
+      const response = await apiService.get(API_CONFIG.ENDPOINTS.USERS.VEHICLES);
 
       if (response.success) {
         const vehicles = response.data?.vehicles || response.data || [];
@@ -370,14 +334,9 @@ class UserService {
     try {
       console.log('➕ Adding new vehicle...');
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'User not authenticated'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.post(
+      const response = await apiService.post(
         API_CONFIG.ENDPOINTS.USERS.VEHICLES,
         vehicleData
       );
@@ -412,14 +371,9 @@ class UserService {
     try {
       console.log('📝 Updating vehicle:', vehicleId);
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'User not authenticated'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.put(
+      const response = await apiService.put(
         `${API_CONFIG.ENDPOINTS.USERS.VEHICLES}/${vehicleId}`,
         vehicleData
       );
@@ -454,14 +408,9 @@ class UserService {
     try {
       console.log('🗑️ Deleting vehicle:', vehicleId);
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'User not authenticated'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.delete(
+      const response = await apiService.delete(
         `${API_CONFIG.ENDPOINTS.USERS.VEHICLES}/${vehicleId}`
       );
 
@@ -495,14 +444,9 @@ class UserService {
     try {
       console.log('🔒 Changing password...');
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'User not authenticated'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.put(
+      const response = await apiService.put(
         API_CONFIG.ENDPOINTS.USERS.CHANGE_PASSWORD,
         {
           currentPassword,

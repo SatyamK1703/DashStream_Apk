@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { getNotifications, isExpoGo } from '../utils/expoGoCompat';
 import Constants from 'expo-constants';
-import { useNotifications } from '../contexts/NotificationContext';
+import { useNotifications } from '../store';
 
 /**
  * Component to handle push notification listeners
@@ -10,8 +10,8 @@ import { useNotifications } from '../contexts/NotificationContext';
  * Note: Push notifications don't work in Expo Go with SDK 53+, only in development builds
  */
 const NotificationHandler: React.FC = () => {
-  const notificationListener = useRef<any>();
-  const responseListener = useRef<any>();
+  const notificationListener = useRef<any>(null);
+  const responseListener = useRef<any>(null);
   const { fetchNotifications } = useNotifications();
 
   useEffect(() => {
@@ -39,14 +39,14 @@ const NotificationHandler: React.FC = () => {
       const Notifications = await getNotifications();
       
       // This listener is fired whenever a notification is received while the app is foregrounded
-      notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      notificationListener.current = Notifications.addNotificationReceivedListener((notification: any) => {
         console.log('Notification received in foreground:', notification);
         // Refresh notifications list when a new notification is received
         fetchNotifications();
       });
 
       // This listener is fired whenever a user taps on or interacts with a notification
-      responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      responseListener.current = Notifications.addNotificationResponseReceivedListener((response: any) => {
         console.log('Notification response received:', response);
         const { notification } = response;
         const data = notification.request.content.data;

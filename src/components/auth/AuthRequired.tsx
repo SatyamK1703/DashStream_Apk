@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../app/routes/RootNavigator';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../store';
 
 type AuthRequiredProps = {
   children: React.ReactNode;

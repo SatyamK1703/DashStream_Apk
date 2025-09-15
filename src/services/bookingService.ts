@@ -1,7 +1,6 @@
 // Production Booking Service
-import unifiedApiService from './unifiedApiService';
+import apiService from './apiService';
 import { API_CONFIG } from '../constants/apiConfig';
-import productionAuthService from './productionAuthService';
 
 // Types
 export interface Vehicle {
@@ -141,13 +140,7 @@ class BookingService {
         time: bookingData.scheduledTime
       });
 
-      // Ensure user is authenticated
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'Authentication required to create booking'
-        };
-      }
+      // Authentication will be handled by apiService
 
       // Format the booking data
       const formattedData = {
@@ -157,7 +150,7 @@ class BookingService {
           : bookingData.scheduledDate.toISOString(),
       };
 
-      const response = await unifiedApiService.post(
+      const response = await apiService.post(
         API_CONFIG.ENDPOINTS.BOOKINGS.CREATE,
         formattedData
       );
@@ -233,7 +226,7 @@ class BookingService {
         ? `${API_CONFIG.ENDPOINTS.BOOKINGS.LIST}?${queryString}`
         : API_CONFIG.ENDPOINTS.BOOKINGS.LIST;
 
-      const response = await unifiedApiService.get(endpoint);
+      const response = await apiService.get(endpoint);
 
       if (response.success) {
         console.log('✅ Bookings fetched successfully:', response.data?.bookings?.length || 0);
@@ -268,14 +261,9 @@ class BookingService {
     try {
       console.log('📄 Fetching booking details:', bookingId);
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'Authentication required'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.get(
+      const response = await apiService.get(
         `${API_CONFIG.ENDPOINTS.BOOKINGS.DETAILS}/${bookingId}`
       );
 
@@ -312,14 +300,9 @@ class BookingService {
     try {
       console.log('📝 Updating booking:', bookingId);
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'Authentication required'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.put(
+      const response = await apiService.put(
         `${API_CONFIG.ENDPOINTS.BOOKINGS.UPDATE}/${bookingId}`,
         updateData
       );
@@ -354,14 +337,9 @@ class BookingService {
     try {
       console.log('❌ Cancelling booking:', bookingId);
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'Authentication required'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.put(
+      const response = await apiService.put(
         `${API_CONFIG.ENDPOINTS.BOOKINGS.CANCEL}/${bookingId}`,
         { reason }
       );
@@ -399,14 +377,9 @@ class BookingService {
     try {
       console.log('📚 Fetching booking history...');
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'Authentication required'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.get(
+      const response = await apiService.get(
         `${API_CONFIG.ENDPOINTS.BOOKINGS.HISTORY}?page=${page}&limit=${limit}`
       );
 
@@ -443,14 +416,9 @@ class BookingService {
     try {
       console.log('🔍 Checking booking status:', bookingId);
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'Authentication required'
-        };
-      }
+      // Authentication will be handled by apiService
 
-      const response = await unifiedApiService.get(
+      const response = await apiService.get(
         `${API_CONFIG.ENDPOINTS.BOOKINGS.STATUS}/${bookingId}`
       );
 
@@ -488,12 +456,7 @@ class BookingService {
     try {
       console.log('⭐ Adding booking review:', bookingId);
 
-      if (!productionAuthService.isAuthenticated()) {
-        return {
-          success: false,
-          message: 'Authentication required'
-        };
-      }
+      // Authentication will be handled by apiService
 
       if (rating < 1 || rating > 5) {
         return {
@@ -502,7 +465,7 @@ class BookingService {
         };
       }
 
-      const response = await unifiedApiService.put(
+      const response = await apiService.put(
         `${API_CONFIG.ENDPOINTS.BOOKINGS.UPDATE}/${bookingId}`,
         { 
           customerRating: rating,

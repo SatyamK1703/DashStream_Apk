@@ -56,14 +56,14 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, onPress }) => {
   return (
     <TouchableOpacity
       style={styles.bookingCard}
-      onPress={() => onPress(booking.id)}
+      onPress={() => onPress(booking._id)}
     >
       <View style={styles.cardHeader}>
         <View style={styles.customerInfo}>
-          <Text style={styles.customerName}>{booking.customerName}</Text>
-          <Text style={styles.serviceName}>{booking.service}</Text>
+          <Text style={styles.customerName}>{booking.customer.name}</Text>
+          <Text style={styles.serviceName}>{booking.service.title}</Text>
         </View>
-        <Text style={styles.amount}>{booking.amount}</Text>
+        <Text style={styles.amount}>₹{booking.totalAmount}</Text>
       </View>
 
       <View style={styles.cardDetails}>

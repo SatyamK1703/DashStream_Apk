@@ -8,7 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "ios": {
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "simulator": true
       },
       "android": {
         "buildType": "apk",
@@ -23,7 +24,7 @@
       "distribution": "internal",
       "ios": {
         "resourceClass": "m-medium",
-        "simulator": false
+        "simulator": true
       },
       "android": {
         "buildType": "apk",
@@ -38,7 +39,7 @@
       "autoIncrement": true,
       "ios": {
         "resourceClass": "m-medium",
-        "simulator": false
+        "simulator": true
       },
       "android": {
         "buildType": "apk",

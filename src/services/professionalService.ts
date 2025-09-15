@@ -1,5 +1,5 @@
 // Professional Service
-import unifiedApiService from './unifiedApiService';
+import apiService from './apiService';
 import { API_CONFIG } from '../constants/apiConfig';
 
 // Types
@@ -212,7 +212,7 @@ class ProfessionalService {
         ? `${API_CONFIG.ENDPOINTS.PROFESSIONALS.LIST}?${queryString}`
         : API_CONFIG.ENDPOINTS.PROFESSIONALS.LIST;
 
-      const response = await unifiedApiService.get(endpoint);
+      const response = await apiService.get(endpoint);
 
       if (response.success) {
         const professionals = response.data?.professionals || response.data || [];
@@ -249,7 +249,7 @@ class ProfessionalService {
     try {
       console.log('📄 Fetching professional details:', professionalId);
 
-      const response = await unifiedApiService.get(
+      const response = await apiService.get(
         `${API_CONFIG.ENDPOINTS.PROFESSIONALS.DETAILS}/${professionalId}`
       );
 
@@ -319,7 +319,7 @@ class ProfessionalService {
         queryParams.append('time', time);
       }
 
-      const response = await unifiedApiService.get(
+      const response = await apiService.get(
         `${API_CONFIG.ENDPOINTS.PROFESSIONALS.AVAILABILITY}/${professionalId}?${queryParams.toString()}`
       );
 
@@ -357,7 +357,7 @@ class ProfessionalService {
     try {
       console.log('⭐ Fetching professional reviews:', professionalId);
 
-      const response = await unifiedApiService.get(
+      const response = await apiService.get(
         `${API_CONFIG.ENDPOINTS.PROFESSIONALS.REVIEWS}/${professionalId}?page=${page}&limit=${limit}`
       );
 
@@ -439,7 +439,7 @@ class ProfessionalService {
         }
       });
 
-      const response = await unifiedApiService.get(
+      const response = await apiService.get(
         `${API_CONFIG.ENDPOINTS.PROFESSIONALS.LIST}?${queryParams.toString()}`
       );
 

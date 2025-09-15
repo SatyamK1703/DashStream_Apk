@@ -1,8 +1,15 @@
 // Production optimizations and error handling
-import * as Sentry from '@sentry/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+
+// Conditionally import Sentry
+let Sentry: any = null;
+try {
+  Sentry = require('@sentry/react-native');
+} catch (error) {
+  console.warn('Sentry not available - error tracking disabled');
+}
 
 // Initialize Sentry for production error tracking
 export const initializeErrorTracking = () => {
@@ -25,13 +32,13 @@ export const initializeErrorTracking = () => {
         }),
       ],
       tracesSampleRate: 0.1, // Reduce sampling rate for production
-      beforeSend(event) {
+      beforeSend(event: any) {
         // Filter out sensitive information
         if (event.exception) {
-          event.exception.values?.forEach(exception => {
+          event.exception.values?.forEach((exception: any) => {
             if (exception.stacktrace?.frames) {
               exception.stacktrace.frames = exception.stacktrace.frames.filter(
-                frame => !frame.filename?.includes('node_modules')
+                (frame: any) => !frame.filename?.includes('node_modules')
               );
             }
           });
@@ -69,7 +76,7 @@ class PerformanceMonitor {
       console.warn(`⚠️ Slow operation detected: ${operation} took ${duration}ms`);
       
       if (!__DEV__) {
-        Sentry.addBreadcrumb({
+        Sentry?.addBreadcrumb({
           category: 'performance',
           message: `Slow operation: ${operation}`,
           level: 'warning',
@@ -96,7 +103,7 @@ export const performanceMonitor = new PerformanceMonitor();
 
 // Memory usage monitoring
 export const monitorMemoryUsage = () => {
-  if (__DEV__ || !global.performance?.memory) {
+  if (__DEV__ || !global.performance || !(global.performance as any).memory) {
     return;
   }
 
@@ -110,7 +117,7 @@ export const monitorMemoryUsage = () => {
       console.warn(`⚠️ High memory usage: ${percentage.toFixed(1)}%`);
       
       if (!__DEV__) {
-        Sentry.addBreadcrumb({
+        Sentry?.addBreadcrumb({
           category: 'memory',
           message: 'High memory usage detected',
           level: 'warning',
@@ -204,7 +211,7 @@ export const optimizeNetworkRequests = () => {
   return {
     deduplicate: <T>(key: string, requestFn: () => Promise<T>): Promise<T> => {
       if (pendingRequests.has(key)) {
-        return pendingRequests.get(key);
+        return pendingRequests.get(key)!;
       }
 
       const request = requestFn().finally(() => {
@@ -256,14 +263,14 @@ export const productionLogger = {
   warn: (message: string, data?: any) => {
     console.warn(message, data);
     if (!__DEV__) {
-      Sentry.captureMessage(message, 'warning');
+      Sentry?.captureMessage(message, 'warning');
     }
   },
 
   error: (message: string, error?: any) => {
     console.error(message, error);
     if (!__DEV__) {
-      Sentry.captureException(error || new Error(message));
+      Sentry?.captureException(error || new Error(message));
     }
   }
 };
