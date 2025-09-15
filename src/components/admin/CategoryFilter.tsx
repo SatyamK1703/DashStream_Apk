@@ -23,25 +23,25 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
       showsHorizontalScrollIndicator={false}
       style={styles.categoryScroll}
     >
-      {categories.map((category) => (
+      {categories && categories.length > 0 && categories.map((category) => (
         <TouchableOpacity
-          key={category.id}
+          key={category?.id || Math.random().toString()}
           style={[
             styles.categoryButton,
-            selectedCategory === category.id 
+            selectedCategory === category?.id 
               ? styles.categoryButtonActive 
               : styles.categoryButtonInactive
           ]}
-          onPress={() => onCategorySelect(category.id)}
+          onPress={() => onCategorySelect(category?.id || '')}
         >
           <Text 
             style={
-              selectedCategory === category.id 
+              selectedCategory === category?.id 
                 ? styles.categoryTextActive 
                 : styles.categoryTextInactive
             }
           >
-            {category.name}
+            {category?.name || 'Unknown'}
           </Text>
         </TouchableOpacity>
       ))}

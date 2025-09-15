@@ -18,17 +18,20 @@ export const useAdminServices = (filters?: AdminFilters) => {
 export const useCreateService = () => {
   return useApi(
     (serviceData: {
-      name: string;
+      title: string; // Backend expects 'title' not 'name'
       description: string;
+      longDescription?: string;
       price: number;
-      discountedPrice?: number;
+      discountPrice?: number;
       category: string;
-      duration: number;
+      duration: string; // Backend expects string not number
       features: string[];
       tags: string[];
       isActive: boolean;
       isPopular?: boolean;
-      image?: string;
+      image: string; // Required field
+      banner: string; // Required field  
+      vehicleType?: string;
     }) => adminService.createService(serviceData),
     {
       showErrorAlert: true,

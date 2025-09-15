@@ -449,13 +449,13 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
         
         <Text style={cardStyles.featuresTitle}>Features:</Text>
         <View style={cardStyles.featuresContainer}>
-          {service.features.slice(0, 3).map((feature, index) => (
-            <View key={index} style={cardStyles.feature}>
+          {service.features && service.features.slice(0, 3).map((feature, index) => (
+            <View key={`feature-${feature}-${index}`} style={cardStyles.feature}>
               <View style={cardStyles.featureDot} />
               <Text style={cardStyles.featureText}>{feature}</Text>
             </View>
           ))}
-          {service.features.length > 3 && (
+          {service.features && service.features.length > 3 && (
             <Text style={cardStyles.moreFeatures}>
               +{service.features.length - 3} more
             </Text>

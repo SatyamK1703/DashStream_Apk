@@ -8,48 +8,51 @@ const Header = ({ onAdd }: { onAdd: () => void }) => {
 
   return (
     <View style={styles.header}>
-      <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color="white" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Manage Services</Text>
-      </View>
+      {/* Back Button */}
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Ionicons name="arrow-back" size={22} color="black" />
+      </TouchableOpacity>
+
+      {/* Center Title */}
+      <Text style={styles.headerTitle}>Manage Services</Text>
+
+      {/* Add Button */}
       <TouchableOpacity style={styles.addButton} onPress={onAdd}>
-        <Ionicons name="add" size={22} color="#2563EB" />
+        <Ionicons name="add" size={22} color="white" />
       </TouchableOpacity>
     </View>
   );
 };
 
 export default Header;
-const styles=StyleSheet.create({
-    header: {
-    backgroundColor: '#2563EB',
-    paddingTop: 48,
+
+const styles = StyleSheet.create({
+  header: {
+    backgroundColor: '#FFFFFF', // White header
     paddingBottom: 16,
     paddingHorizontal: 16,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    position: 'relative',
   },
   backButton: {
     padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 999,
+    zIndex: 1,
   },
   headerTitle: {
-    color: 'white',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    color: 'black',
     fontSize: 20,
     fontWeight: 'bold',
-    marginLeft: 16,
   },
   addButton: {
-    backgroundColor: 'white',
+    backgroundColor: '#2563EB',
     padding: 8,
-    borderRadius: 999,
-  }
-})
+    zIndex: 1,
+    borderRadius:99,
+  },
+});
