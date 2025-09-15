@@ -246,9 +246,11 @@ export interface VerifyOtpRequest {
 
 export interface VerifyOtpResponse {
   user: User;
-  accessToken: string;
+  // Backend may return either 'token' or 'accessToken'
+  accessToken?: string;
+  token?: string;
   refreshToken: string;
-  isNewUser: boolean;
+  isNewUser?: boolean;
 }
 
 export interface UpdateProfileRequest {

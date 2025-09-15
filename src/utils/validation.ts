@@ -43,54 +43,7 @@ export const validatePhone = (phone: string): ValidationResult => {
 };
 
 // Password validation
-export const validatePassword = (password: string): ValidationResult => {
-  if (!password) {
-    return { isValid: false, message: 'Password is required' };
-  }
 
-  if (password.length < 8) {
-    return { isValid: false, message: 'Password must be at least 8 characters long' };
-  }
-
-  if (password.length > 128) {
-    return { isValid: false, message: 'Password is too long' };
-  }
-
-  // At least one uppercase letter
-  if (!/[A-Z]/.test(password)) {
-    return { isValid: false, message: 'Password must contain at least one uppercase letter' };
-  }
-
-  // At least one lowercase letter
-  if (!/[a-z]/.test(password)) {
-    return { isValid: false, message: 'Password must contain at least one lowercase letter' };
-  }
-
-  // At least one number
-  if (!/\d/.test(password)) {
-    return { isValid: false, message: 'Password must contain at least one number' };
-  }
-
-  // At least one special character
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-    return { isValid: false, message: 'Password must contain at least one special character' };
-  }
-
-  return { isValid: true };
-};
-
-// Confirm password validation
-export const validateConfirmPassword = (password: string, confirmPassword: string): ValidationResult => {
-  if (!confirmPassword) {
-    return { isValid: false, message: 'Please confirm your password' };
-  }
-
-  if (password !== confirmPassword) {
-    return { isValid: false, message: 'Passwords do not match' };
-  }
-
-  return { isValid: true };
-};
 
 // Name validation
 export const validateName = (name: string, fieldName: string = 'Name'): ValidationResult => {
@@ -159,23 +112,7 @@ export const validatePincode = (pincode: string): ValidationResult => {
 };
 
 // Vehicle number validation (Indian)
-export const validateVehicleNumber = (vehicleNumber: string): ValidationResult => {
-  if (!vehicleNumber) {
-    return { isValid: false, message: 'Vehicle number is required' };
-  }
 
-  // Remove spaces and convert to uppercase
-  const cleanNumber = vehicleNumber.replace(/\s/g, '').toUpperCase();
-
-  // Indian vehicle number format: XX00XX0000 or XX-00-XX-0000
-  const vehicleRegex = /^[A-Z]{2}[0-9]{2}[A-Z]{2}[0-9]{4}$/;
-  
-  if (!vehicleRegex.test(cleanNumber)) {
-    return { isValid: false, message: 'Please enter a valid vehicle number (e.g., MH01AB1234)' };
-  }
-
-  return { isValid: true };
-};
 
 // Amount validation
 export const validateAmount = (amount: string | number, min: number = 0, max: number = 999999): ValidationResult => {

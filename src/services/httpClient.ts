@@ -1,7 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { config, APP_CONFIG } from '../config/env';
-import { auth } from '../config/firebase';
+import { config, APP_CONFIG, ENDPOINTS } from '../config/env';
 
 // Types for API responses
 export interface ApiResponse<T = any> {
@@ -60,17 +59,14 @@ class HttpClient {
     // Request interceptor
     this.client.interceptors.request.use(
       async (config) => {
-        // Add Firebase ID token to requests
         try {
-          const currentUser = auth.currentUser;
-          if (currentUser) {
-            const idToken = await currentUser.getIdToken();
-            if (idToken && config.headers) {
-              config.headers.Authorization = `Bearer ${idToken}`;
-            }
+          // Attach JWT access token from storage
+          const accessToken = await this.getAccessToken();
+          if (accessToken && config.headers) {
+            config.headers.Authorization = `Bearer ${accessToken}`;
           }
         } catch (error) {
-          console.warn('Failed to get Firebase ID token:', error);
+          if (__DEV__) console.warn('Failed to read access token:', error);
         }
 
         // Add request timestamp
@@ -109,22 +105,20 @@ class HttpClient {
       async (error: AxiosError<ApiError>) => {
         const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
-        // Handle Firebase token refresh on 401
-        if (error.response?.status === 401 && !originalRequest._retry && auth.currentUser) {
+        // Handle 401 with refresh token
+        if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
           try {
-            // Force refresh Firebase ID token
-            const newIdToken = await auth.currentUser.getIdToken(true);
-            if (newIdToken && originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${newIdToken}`;
-              if (__DEV__) console.log('🔄 Retrying request with refreshed Firebase token');
+            const newAccessToken = await this.refreshAccessToken();
+            if (newAccessToken && originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+              if (__DEV__) console.log('🔄 Retrying request with refreshed JWT');
               return this.client(originalRequest);
             }
           } catch (refreshError: any) {
-            if (__DEV__) console.error('Firebase token refresh failed:', refreshError);
-            // Token refresh failed, likely need to re-authenticate
-            return Promise.reject(this.handleError(error));
+            if (__DEV__) console.error('JWT refresh failed:', refreshError?.message || refreshError);
+            await this.clearAuthTokens();
           }
         }
 
@@ -142,35 +136,67 @@ class HttpClient {
     );
   }
 
-  // Firebase handles token refresh automatically, so these methods are simplified
-  private async refreshFirebaseToken(): Promise<string | null> {
-    try {
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        return await currentUser.getIdToken(true); // Force refresh
-      }
-      return null;
-    } catch (error: any) {
-      if (__DEV__) console.error('Firebase token refresh failed:', error.message || error);
-      throw error;
-    }
+  // Token helpers
+  async setAuthTokens(accessToken: string, refreshToken: string): Promise<void> {
+    await AsyncStorage.multiSet([
+      [STORAGE_KEYS.ACCESS_TOKEN, accessToken],
+      [STORAGE_KEYS.REFRESH_TOKEN, refreshToken],
+    ]);
+  }
+
+  async getAccessToken(): Promise<string | null> {
+    return await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+  }
+
+  async getRefreshToken(): Promise<string | null> {
+    return await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
   }
 
   private async clearAuthTokens(): Promise<void> {
     try {
-      // Clear AsyncStorage user data
       await AsyncStorage.multiRemove([
-        STORAGE_KEYS.ACCESS_TOKEN, // Keep for backward compatibility during migration
-        STORAGE_KEYS.REFRESH_TOKEN, // Keep for backward compatibility during migration
+        STORAGE_KEYS.ACCESS_TOKEN,
+        STORAGE_KEYS.REFRESH_TOKEN,
         STORAGE_KEYS.USER_DATA,
       ]);
-      
-      // Sign out from Firebase (this clears Firebase tokens)
-      const { signOut } = await import('firebase/auth');
-      await signOut(auth);
     } catch (error) {
       if (__DEV__) console.error('Error clearing auth tokens:', error);
     }
+  }
+
+  private async refreshAccessToken(): Promise<string | null> {
+    if (this.refreshTokenPromise) return this.refreshTokenPromise;
+
+    this.refreshTokenPromise = new Promise<string>(async (resolve, reject) => {
+      try {
+        const refreshToken = await this.getRefreshToken();
+        if (!refreshToken) {
+          throw new Error('No refresh token available');
+        }
+
+        const response = await this.client.post<ApiResponse<{ token?: string; accessToken?: string; refreshToken?: string }>>(
+          ENDPOINTS.AUTH.REFRESH_TOKEN,
+          { refreshToken }
+        );
+
+        const data = response.data;
+        const newAccessToken = data.data?.accessToken || data.data?.token;
+        const newRefreshToken = data.data?.refreshToken || refreshToken;
+
+        if (!newAccessToken) throw new Error('Refresh endpoint did not return access token');
+
+        await this.setAuthTokens(newAccessToken, newRefreshToken);
+
+        resolve(newAccessToken);
+      } catch (err) {
+        await this.clearAuthTokens();
+        reject(err);
+      } finally {
+        this.refreshTokenPromise = null;
+      }
+    });
+
+    return this.refreshTokenPromise;
   }
 
   private handleError(error: AxiosError<ApiError>): ApiError {
@@ -178,30 +204,30 @@ class HttpClient {
       return error.response.data;
     }
 
-    if (error.code === 'ECONNABORTED') {
+    if ((error as any).code === 'ECONNABORTED') {
       return {
         success: false,
         status: 'timeout',
         message: 'Request timeout. Please check your internet connection.',
         statusCode: 408,
-      };
+      } as ApiError;
     }
 
-    if (error.code === 'ERR_NETWORK') {
+    if ((error as any).code === 'ERR_NETWORK') {
       return {
         success: false,
         status: 'network_error',
         message: 'Network error. Please check your internet connection.',
         statusCode: 0,
-      };
+      } as ApiError;
     }
 
     return {
       success: false,
       status: 'unknown_error',
-      message: error.message || 'An unexpected error occurred.',
+      message: (error as any).message || 'An unexpected error occurred.',
       statusCode: error.response?.status || 500,
-    };
+    } as ApiError;
   }
 
   // Public methods
@@ -257,42 +283,21 @@ class HttpClient {
     return response.data;
   }
 
-  // Firebase Auth methods - simplified since Firebase handles tokens automatically
-  
-  // Check if user is authenticated with Firebase
+  // Simple auth helpers for app usage
   async isAuthenticated(): Promise<boolean> {
-    return new Promise((resolve) => {
-      const unsubscribe = auth.onAuthStateChanged((user) => {
-        unsubscribe();
-        resolve(!!user);
-      });
-    });
-  }
-
-  // Get current Firebase ID token
-  async getIdToken(): Promise<string | null> {
-    try {
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        return await currentUser.getIdToken();
-      }
-      return null;
-    } catch (error) {
-      console.error('Get ID token error:', error);
-      return null;
-    }
+    const token = await this.getAccessToken();
+    return !!token;
   }
 
   // Logout and clear tokens
   async logout(): Promise<void> {
     try {
-      // Call logout endpoint if authenticated
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        await this.post('/auth/logout');
+      const token = await this.getAccessToken();
+      if (token) {
+        await this.post(ENDPOINTS.AUTH.LOGOUT);
       }
     } catch (error) {
-      console.warn('Logout API call failed:', error);
+      if (__DEV__) console.warn('Logout API call failed:', error);
     } finally {
       await this.clearAuthTokens();
     }

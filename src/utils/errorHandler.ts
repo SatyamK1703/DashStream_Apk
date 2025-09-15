@@ -9,8 +9,21 @@ export interface ApiError {
 }
 
 export const parseApiError = (error: any): ApiError => {
-  // Network error
-  if (error.code === 'NETWORK_ERROR' || !error.response) {
+  // If this already looks like our ApiError shape, return it as-is
+  if (error && typeof error === 'object' && (
+    typeof error.status !== 'undefined' || typeof error.statusCode !== 'undefined'
+  ) && error.message) {
+    return {
+      status: error.status ?? error.statusCode,
+      statusCode: error.statusCode ?? error.status,
+      message: error.message,
+      code: error.code,
+      details: error.details,
+    };
+  }
+
+  // Network error (no response)
+  if (error && (error.code === 'NETWORK_ERROR' || !error.response)) {
     return {
       status: 0,
       message: 'Network error. Please check your internet connection.',
@@ -19,7 +32,7 @@ export const parseApiError = (error: any): ApiError => {
   }
 
   // Server response error
-  if (error.response) {
+  if (error && error.response) {
     const { status, data } = error.response;
     
     switch (status) {

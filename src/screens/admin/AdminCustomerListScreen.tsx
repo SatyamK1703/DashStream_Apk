@@ -15,6 +15,8 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import { adminService } from '../../services';
+import { handleApiError } from '../../utils/errorHandler';
 
 // --- Type Definitions ---
 type AdminCustomerListNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
@@ -43,32 +45,52 @@ const AdminCustomerListScreen = () => {
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Mock customer data
-  const mockCustomers: Customer[] = [
-    { id: 'CUST-001', name: 'Priya Sharma', email: 'priya.sharma@example.com', phone: '+91 9876543210', profileImage: 'https://randomuser.me/api/portraits/women/1.jpg', status: 'active', totalBookings: 15, totalSpent: 12500, membershipStatus: 'gold', joinDate: '2023-01-15', lastActive: '2023-06-10' },
-    { id: 'CUST-002', name: 'Rahul Verma', email: 'rahul.verma@example.com', phone: '+91 9876543211', profileImage: 'https://randomuser.me/api/portraits/men/1.jpg', status: 'active', totalBookings: 8, totalSpent: 7800, membershipStatus: 'silver', joinDate: '2023-02-20', lastActive: '2023-06-05' },
-    { id: 'CUST-003', name: 'Ananya Patel', email: 'ananya.patel@example.com', phone: '+91 9876543212', profileImage: 'https://randomuser.me/api/portraits/women/2.jpg', status: 'inactive', totalBookings: 3, totalSpent: 2500, membershipStatus: 'none', joinDate: '2023-03-10', lastActive: '2023-04-15' },
-  ];
+  // Load customers from backend
+  const loadCustomers = async () => {
+    try {
+      setLoading(true);
+      // Reuse admin users endpoint with role=customer
+      const res = await adminService.getUsers({ role: 'customer', limit: 50 });
+      // Backend returns { status: 'success', data: { users, pagination } }
+      const apiUsers = (res as any)?.data?.users || [];
+
+      const mapped: Customer[] = apiUsers.map((u: any) => ({
+        id: u._id || u.id,
+        name: u.name || 'Unknown',
+        email: u.email || '',
+        phone: u.phone || '',
+        profileImage: u.profileImage?.url || '',
+        status: (u.status === true || u.active === true) ? 'active' : (u.status || 'active'),
+        totalBookings: u.totalBookings || 0,
+        totalSpent: u.totalSpent || 0,
+        membershipStatus: u.membershipStatus || 'none',
+        joinDate: u.createdAt || '',
+        lastActive: u.lastActive || '',
+      }));
+
+      setCustomers(mapped);
+      setFilteredCustomers(mapped);
+    } catch (error) {
+      handleApiError(error, 'LoadCustomers');
+      setCustomers([]);
+      setFilteredCustomers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setCustomers(mockCustomers);
-      setFilteredCustomers(mockCustomers);
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
+    loadCustomers();
   }, []);
 
   useEffect(() => {
     applyFilters();
   }, [searchQuery, customers]);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setCustomers(mockCustomers);
-      setRefreshing(false);
-    }, 1500);
+    await loadCustomers();
+    setRefreshing(false);
   };
 
   const applyFilters = () => {

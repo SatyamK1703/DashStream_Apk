@@ -20,10 +20,10 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { Alert } from 'react-native';
-import { firebaseAuthService } from '../services/firebaseAuthService';
-import { userService } from '../services';
+
+import { userService, authService } from '../services';
 import type { User as ApiUser } from '../services';
-import { User as FirebaseUser } from 'firebase/auth';
+
 
 // Define user types
 export type UserRole = 'customer' | 'professional' | 'admin';
@@ -86,34 +86,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkAuthStatus = async () => {
     try {
       setIsBooting(true);
-      
-      // Set up Firebase auth state listener
-      const unsubscribe = firebaseAuthService.onAuthStateChanged(async (firebaseUser: FirebaseUser | null) => {
-        if (firebaseUser) {
-          try {
-            // User is signed in, get user data from backend
-            const response = await firebaseAuthService.getCurrentUser();
-            const isSuccess = response.success === true || response.status === 'success';
-            
-            if (isSuccess && response.data?.user) {
-              setUser(convertApiUserToAppUser(response.data.user));
-            }
-          } catch (error) {
-            if (__DEV__) console.warn('Failed to get user data:', error);
-            await firebaseAuthService.logout();
-          }
-        } else {
-          // User is signed out
-          setUser(null);
-        }
-        setIsBooting(false);
-      });
 
-      // Return unsubscribe function for cleanup
-      return unsubscribe;
+      // If tokens exist, fetch current user
+      const response = await authService.getCurrentUser();
+      const isSuccess = response.success === true || response.status === 'success';
+      if (isSuccess && response.data?.user) {
+        setUser(convertApiUserToAppUser(response.data.user));
+      } else {
+        setUser(null);
+      }
     } catch (error) {
       if (__DEV__) console.warn('Auth check failed:', error);
       setUser(null);
+    } finally {
       setIsBooting(false);
     }
   };
@@ -121,12 +106,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (phone: string) => {
     try {
       setIsLoading(true);
-      
-      const response = await firebaseAuthService.sendOtp(phone);
-      
+
+      const response = await authService.sendOtp({ phone });
+
       // Handle both success formats: response.success (boolean) or response.status === 'success' (string)
       const isSuccess = response.success === true || response.status === 'success';
-      
+
       if (isSuccess) {
         if (__DEV__) console.log('OTP sent successfully');
         return;
@@ -147,33 +132,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
 
-      const response = await firebaseAuthService.verifyOtp(phone, otp);
-      
+      const response = await authService.verifyOtp({ phone, otp });
+
       // Handle both success formats: response.success (boolean) or response.status === 'success' (string)
       const isSuccess = response.success === true || response.status === 'success';
-      
+
       if (isSuccess && response.data?.user) {
-        try {
-          const appUser = convertApiUserToAppUser(response.data.user);
-          
-          // Firebase handles authentication automatically after custom token sign-in
-          // Just wait a moment for Firebase to process the sign-in
-          await new Promise(resolve => setTimeout(resolve, 200));
-          
-          // Verify Firebase authentication status
-          const isAuthenticated = await firebaseAuthService.isAuthenticated();
-          if (!isAuthenticated) {
-            throw new Error('Firebase authentication failed after OTP verification');
-          }
-          
-          setUser(appUser);
-          if (__DEV__) console.log('✅ OTP verified and user authenticated with Firebase');
-          return true;
-        } catch (conversionError: any) {
-          if (__DEV__) console.error('User data conversion or Firebase auth failed:', conversionError);
-          Alert.alert('Error', 'Invalid user data received or Firebase authentication failed');
-          return false;
-        }
+        const appUser = convertApiUserToAppUser(response.data.user);
+        setUser(appUser);
+        if (__DEV__) console.log('✅ OTP verified and user authenticated');
+        return true;
       } else {
         const errorMessage = response.message || 'Invalid OTP. Please try again.';
         Alert.alert('Verification Failed', errorMessage);
@@ -192,7 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       setIsLoading(true);
-      await firebaseAuthService.logout();
+      await authService.logout();
       setUser(null);
     } catch (error) {
       if (__DEV__) console.error('Logout error:', error);
@@ -239,8 +207,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshUser = async () => {
     try {
-      const response = await firebaseAuthService.getCurrentUser();
-      if (response.success && response.data?.user) {
+      const response = await authService.getCurrentUser();
+      if ((response.success === true || response.status === 'success') && response.data?.user) {
         setUser(convertApiUserToAppUser(response.data.user));
       }
     } catch (error) {

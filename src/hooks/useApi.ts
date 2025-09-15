@@ -46,7 +46,8 @@ export const useApi = <T = any>(
           ? await retryOperation(operation, retries, retryDelay)
           : await operation();
 
-        if (response.success) {
+        const isSuccess = (response as any)?.success === true || (response as any)?.status === 'success';
+        if (isSuccess) {
           setState({
             data: response.data,
             loading: false,

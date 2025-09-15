@@ -20,6 +20,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
 import {Customer , Address , Vehicle ,Booking ,Note} from '../../types/AdminType';
+import { adminService } from '../../services';
+import { handleApiError } from '../../utils/errorHandler';
 
 type AdminCustomerDetailsRouteProp = RouteProp<AdminStackParamList, 'CustomerDetails'>;
 type AdminCustomerDetailsNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
@@ -35,135 +37,88 @@ const AdminCustomerDetailsScreen = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'addresses' | 'vehicles' | 'notes'>('overview');
   const [newNote, setNewNote] = useState('');
   
-  // Mock customer data
-  const mockCustomer: Customer = {
-    id: 'CUST-001',
-    name: 'Priya Sharma',
-    email: 'priya.sharma@example.com',
-    phone: '+91 9876543210',
-    profileImage: 'https://randomuser.me/api/portraits/women/1.jpg',
-    status: 'active',
-    totalBookings: 15,
-    totalSpent: 12500,
-    membershipStatus: 'gold',
-    membershipExpiry: '2023-12-31',
-    joinDate: '2023-01-15',
-    lastActive: '2023-06-10',
-    addresses: [
-      {
-        id: 'ADDR-001',
-        type: 'home',
-        name: 'Home',
-        address: '123, Green Park Colony, Sector 15',
-        city: 'Mumbai',
-        state: 'Maharashtra',
-        pincode: '400001',
-        isDefault: true
-      },
-      {
-        id: 'ADDR-002',
-        type: 'work',
-        name: 'Office',
-        address: 'Tech Park, Building B, Floor 5',
-        city: 'Mumbai',
-        state: 'Maharashtra',
-        pincode: '400002',
-        isDefault: false
-      }
-    ],
-    vehicles: [
-      {
-        id: 'VEH-001',
-        type: 'car',
-        brand: 'Honda',
-        model: 'City',
-        year: '2020',
-        color: 'White',
-        licensePlate: 'MH 01 AB 1234',
-        image: 'https://example.com/car-image.jpg'
-      }
-    ],
-    bookings: [
-      {
-        id: 'BOOK-001',
-        date: '2023-06-10',
-        time: '10:00 AM',
-        services: [
-          { name: 'Premium Car Wash', price: 999 },
-          { name: 'Interior Cleaning', price: 799 }
-        ],
-        totalAmount: 1798,
-        status: 'completed',
-        paymentStatus: 'paid',
-        paymentMethod: 'Credit Card',
-        professionalName: 'Rajesh Kumar',
-        professionalId: 'PRO-001',
-        rating: 4.5,
-        address: 'Home - 123, Green Park Colony, Sector 15, Mumbai'
-      },
-      {
-        id: 'BOOK-002',
-        date: '2023-05-25',
-        time: '02:30 PM',
-        services: [
-          { name: 'Basic Car Wash', price: 499 }
-        ],
-        totalAmount: 499,
-        status: 'completed',
-        paymentStatus: 'paid',
-        paymentMethod: 'UPI',
-        professionalName: 'Amit Singh',
-        professionalId: 'PRO-003',
-        rating: 5,
-        address: 'Home - 123, Green Park Colony, Sector 15, Mumbai'
-      },
-      {
-        id: 'BOOK-003',
-        date: '2023-06-20',
-        time: '11:00 AM',
-        services: [
-          { name: 'Premium Car Wash', price: 999 },
-          { name: 'Waxing & Polishing', price: 1299 }
-        ],
-        totalAmount: 2298,
-        status: 'confirmed',
-        paymentStatus: 'paid',
-        paymentMethod: 'Credit Card',
-        address: 'Office - Tech Park, Building B, Floor 5, Mumbai'
-      },
-    ],
-    notes: [
-      {
-        id: 'NOTE-001',
-        text: 'Customer prefers weekend appointments only.',
-        createdBy: 'Admin',
-        createdAt: '2023-02-10T10:30:00Z'
-      },
-      {
-        id: 'NOTE-002',
-        text: 'Upgraded to Gold membership after 10th booking.',
-        createdBy: 'System',
-        createdAt: '2023-05-15T14:45:00Z'
-      }
-    ]
+  // Load customer from backend
+  const loadCustomer = async () => {
+    try {
+      setLoading(true);
+      const res = await adminService.getUserById(customerId);
+      const apiUser: any = (res as any)?.data?.user || (res as any)?.data;
+
+      // Map addresses
+      const addresses: Address[] = (apiUser?.addresses || []).map((a: any) => ({
+        id: a._id || a.id,
+        type: (a.type || 'home'),
+        name: a.title || a.name || 'Address',
+        address: [a.addressLine1, a.addressLine2].filter(Boolean).join(', '),
+        city: a.city || '',
+        landmark:a.landmark ||'',
+        pincode: a.postalCode || a.pincode || '',
+        isDefault: !!a.isDefault,
+      }));
+
+      // Vehicles might be separate; fallback to empty
+      const vehicles: Vehicle[] = (apiUser?.vehicles || []).map((v: any) => ({
+        id: v._id || v.id,
+        type: v.type || 'car',
+        brand: v.make || v.brand || '',
+        model: v.model || '',
+        image: v.image?.url || v.image || undefined,
+      }));
+
+      // Recent bookings if included in response (backend sends separate in details)
+      const bookings: Booking[] = (res as any)?.data?.bookings?.map((b: any) => ({
+        id: b.id || b._id,
+        date: b.date || b.scheduledDate || '',
+        time: b.time || b.scheduledTime || '',
+        services: Array.isArray(b.services)
+          ? b.services.map((s: any) => ({ name: s.name || s, price: s.price || 0 }))
+          : [{ name: b.service?.name || 'Service', price: b.totalAmount || 0 }],
+        totalAmount: b.totalAmount || 0,
+        status: b.status,
+        paymentStatus: b.paymentStatus || 'paid',
+        paymentMethod: b.paymentMethod || 'N/A',
+        professionalName: b.professionalName,
+        professionalId: b.professionalId,
+        rating: b.rating,
+        address: b.address || '',
+      })) || [];
+
+      const mapped: Customer = {
+        id: apiUser?._id || apiUser?.id || customerId,
+        name: apiUser?.name || 'Unknown',
+        email: apiUser?.email || '',
+        phone: apiUser?.phone || '',
+        profileImage: apiUser?.profileImage?.url || '',
+        status: (apiUser?.status === true || apiUser?.active === true) ? 'active' : (apiUser?.status || 'active'),
+        totalBookings: apiUser?.totalBookings || bookings.length || 0,
+        totalSpent: apiUser?.totalSpent || 0,
+        membershipStatus: apiUser?.membershipStatus || 'none',
+        membershipExpiry: apiUser?.membershipExpiry,
+        joinDate: apiUser?.createdAt || '',
+        lastActive: apiUser?.lastActive || apiUser?.updatedAt || '',
+        addresses,
+        vehicles,
+        bookings,
+        notes: [],
+      };
+
+      setCustomer(mapped);
+    } catch (error) {
+      handleApiError(error, 'LoadCustomer');
+      setCustomer(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    //simulate API call
-    const timer = setTimeout(() => {
-      setCustomer(mockCustomer);
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
+    loadCustomer();
   }, [customerId]);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
-    //simulate API call 
-    setTimeout(() => {
-      setCustomer(mockCustomer);
-      setRefreshing(false);
-    }, 1500);
+    await loadCustomer();
+    setRefreshing(false);
   };
 
   const handleToggleStatus = (newStatus: 'active' | 'inactive' | 'blocked') => {
@@ -176,9 +131,15 @@ const AdminCustomerDetailsScreen = () => {
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Confirm', 
-          onPress: () => {
-            setCustomer({ ...customer, status: newStatus });
-            Alert.alert('Success', `Customer status updated to ${newStatus}`);
+          onPress: async () => {
+            try {
+              // Backend supports update user via admin
+              await adminService.updateUser(customer.id, { status: newStatus });
+              setCustomer({ ...customer, status: newStatus });
+              Alert.alert('Success', `Customer status updated to ${newStatus}`);
+            } catch (error) {
+              handleApiError(error, 'UpdateCustomerStatus');
+            }
           }
         }
       ]

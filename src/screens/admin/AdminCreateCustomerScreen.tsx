@@ -24,16 +24,14 @@ interface FormData {
   name: string;
   email: string;
   phone: string;
-  password: string;
-  confirmPassword: string;
   profileImage: string | null;
   status: 'active' | 'inactive';
   sendCredentials: boolean;
   address: {
     line1: string;
     line2: string;
+    landmark:string;
     city: string;
-    state: string;
     pincode: string;
   };
 }
@@ -45,8 +43,6 @@ const AdminCreateCustomerScreen = () => {
     name: '',
     email: '',
     phone: '',
-    password: '',
-    confirmPassword: '',
     profileImage: null,
     status: 'active',
     sendCredentials: true,
@@ -108,53 +104,43 @@ const AdminCreateCustomerScreen = () => {
   };
   
   const validateForm = () => {
-    const newErrors: Partial<Record<keyof FormData, string>> = {};
-    
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+  const newErrors: Partial<Record<keyof FormData, string>> = {};
+
+  if (!formData.name.trim()) {
+    newErrors.name = 'Name is required';
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!formData.email.trim()) {
+    newErrors.email = 'Email is required';
+  } else if (!emailRegex.test(formData.email)) {
+    newErrors.email = 'Please enter a valid email';
+  }
+
+  const phoneRegex = /^[0-9+\s]{10,15}$/;
+  if (!formData.phone.trim()) {
+    newErrors.phone = 'Phone number is required';
+  } else if (!phoneRegex.test(formData.phone.replace(/\s/g, ''))) {
+    newErrors.phone = 'Please enter a valid phone number';
+  }
+
+  // ✅ Address validation only if section is open
+  if (showAddressSection) {
+    if (!formData.address.line1.trim()) {
+      newErrors.address = 'Address line 1 is required';
+    } else if (!formData.address.city.trim()) {
+      newErrors.address = 'City is required';
+    } else if (!formData.address.pincode.trim()) {
+      newErrors.address = 'Pincode is required';
+    } else if (!/^\d{6}$/.test(formData.address.pincode)) {
+      newErrors.address = 'Please enter a valid 6-digit pincode';
     }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email';
-    }
-    
-    const phoneRegex = /^[0-9+\s]{10,15}$/;
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!phoneRegex.test(formData.phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Please enter a valid phone number';
-    }
-    
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-    }
-    
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-    
-    if (showAddressSection) {
-      if (!formData.address.line1.trim()) {
-        newErrors.address = 'Address line 1 is required';
-      } else if (!formData.address.city.trim()) {
-        newErrors.address = 'City is required';
-      } else if (!formData.address.state.trim()) {
-        newErrors.address = 'State is required';
-      } else if (!formData.address.pincode.trim()) {
-        newErrors.address = 'Pincode is required';
-      } else if (!/^\d{6}$/.test(formData.address.pincode)) {
-        newErrors.address = 'Please enter a valid 6-digit pincode';
-      }
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  }
+
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
+
   
   const handleSubmit = () => {
     if (!validateForm()) {
@@ -177,21 +163,6 @@ const AdminCreateCustomerScreen = () => {
       );
     }, 2000);
   };
-  
-  const generateRandomPassword = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-    let password = '';
-    for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    
-    setFormData(prev => ({
-      ...prev,
-      password,
-      confirmPassword: password
-    }));
-  };
-  
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -344,81 +315,6 @@ const AdminCreateCustomerScreen = () => {
                 </View>
               </View>
             </View>
-            
-            {/* Password Section */}
-            <View style={styles.formSection}>
-              <View style={styles.passwordSectionHeader}>
-                <Text style={styles.sectionTitle}>Account Password</Text>
-                <TouchableOpacity 
-                  style={styles.generateButton}
-                  onPress={generateRandomPassword}
-                >
-                  <Text style={styles.generateButtonText}>Generate Random</Text>
-                </TouchableOpacity>
-              </View>
-              
-              {/* Password */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>
-                  Password <Text style={styles.requiredAsterisk}>*</Text>
-                </Text>
-                <View style={styles.passwordInputContainer}>
-                  <TextInput
-                    style={[
-                      styles.textInput,
-                      styles.passwordInput,
-                      errors.password && styles.textInputError
-                    ]}
-                    placeholder="Enter password"
-                    secureTextEntry
-                    value={formData.password}
-                    onChangeText={(value) => updateFormData('password', value)}
-                    placeholderTextColor="#9CA3AF"
-                  />
-                  <View style={styles.eyeIcon}>
-                    <Ionicons name="eye-off" size={20} color="#9CA3AF" />
-                  </View>
-                </View>
-                {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-              </View>
-              
-              {/* Confirm Password */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>
-                  Confirm Password <Text style={styles.requiredAsterisk}>*</Text>
-                </Text>
-                <View style={styles.passwordInputContainer}>
-                  <TextInput
-                    style={[
-                      styles.textInput,
-                      styles.passwordInput,
-                      errors.confirmPassword && styles.textInputError
-                    ]}
-                    placeholder="Confirm password"
-                    secureTextEntry
-                    value={formData.confirmPassword}
-                    onChangeText={(value) => updateFormData('confirmPassword', value)}
-                    placeholderTextColor="#9CA3AF"
-                  />
-                  <View style={styles.eyeIcon}>
-                    <Ionicons name="eye-off" size={20} color="#9CA3AF" />
-                  </View>
-                </View>
-                {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
-              </View>
-              
-              {/* Send Credentials */}
-              <View style={styles.switchContainer}>
-                <Text style={styles.switchText}>Send login credentials to customer</Text>
-                <Switch
-                  value={formData.sendCredentials}
-                  onValueChange={(value) => updateFormData('sendCredentials', value)}
-                  trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
-                  thumbColor={formData.sendCredentials ? '#2563EB' : '#F3F4F6'}
-                />
-              </View>
-            </View>
-            
             {/* Address Section Toggle */}
             <TouchableOpacity 
               style={styles.addressToggle}
@@ -475,19 +371,6 @@ const AdminCreateCustomerScreen = () => {
                       placeholder="City"
                       value={formData.address.city}
                       onChangeText={(value) => updateAddress('city', value)}
-                      placeholderTextColor="#9CA3AF"
-                    />
-                  </View>
-                  
-                  <View style={styles.addressInputRight}>
-                    <Text style={styles.inputLabel}>
-                      State <Text style={styles.requiredAsterisk}>*</Text>
-                    </Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="State"
-                      value={formData.address.state}
-                      onChangeText={(value) => updateAddress('state', value)}
                       placeholderTextColor="#9CA3AF"
                     />
                   </View>

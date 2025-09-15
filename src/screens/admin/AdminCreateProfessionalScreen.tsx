@@ -28,8 +28,6 @@ interface FormData {
   name: string;
   email: string;
   phone: string;
-  password: string;
-  confirmPassword: string;
   profileImage: string | null;
   status: 'active' | 'inactive' | 'pending';
   sendCredentials: boolean;
@@ -37,7 +35,6 @@ interface FormData {
     line1: string;
     line2: string;
     city: string;
-    state: string;
     pincode: string;
   };
   skills: string[];
@@ -45,7 +42,6 @@ interface FormData {
   experience: string;
   vehicleInfo: {
     type: string;
-    number: string;
   };
 }
 
@@ -56,8 +52,6 @@ const AdminCreateProfessionalScreen = () => {
     name: '',
     email: '',
     phone: '',
-    password: '',
-    confirmPassword: '',
     profileImage: null,
     status: 'pending',
     sendCredentials: true,
@@ -65,7 +59,6 @@ const AdminCreateProfessionalScreen = () => {
       line1: '',
       line2: '',
       city: '',
-      state: '',
       pincode: ''
     },
     skills: [],
@@ -73,7 +66,6 @@ const AdminCreateProfessionalScreen = () => {
     experience: '',
     vehicleInfo: {
       type: 'bike',
-      number: ''
     }
   });
   
@@ -190,8 +182,6 @@ const AdminCreateProfessionalScreen = () => {
     if (!formData.name.trim()) newErrors.name = 'Name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
-    if (!formData.password) newErrors.password = 'Password is required';
-    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -208,16 +198,6 @@ const AdminCreateProfessionalScreen = () => {
       );
     }, 2000);
   };
-  
-  const generateRandomPassword = () => {
-    const pass = Math.random().toString(36).slice(-8);
-    setFormData(prev => ({
-      ...prev,
-      password: pass,
-      confirmPassword: pass
-    }));
-  };
-  
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 

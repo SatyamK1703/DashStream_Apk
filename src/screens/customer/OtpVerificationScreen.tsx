@@ -12,12 +12,12 @@ type OtpVerificationRouteProp = RouteProp<RootStackParamList, 'OtpVerification'>
 type OtpVerificationNavigationProp = NativeStackNavigationProp<RootStackParamList, 'OtpVerification'>;
 
 const OtpVerificationScreen = () => {
-  const [otp, setOtp] = useState(Array(6).fill(''));
+  const [otp, setOtp] = useState(['', '', '', '','','']);
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const inputRefs = useRef<Array<TextInput | null>>(Array(6).fill(null));
-
+  const inputRefs = useRef<Array<TextInput | null>>([null, null, null, null]);
+  
   const navigation = useNavigation<OtpVerificationNavigationProp>();
   const route = useRoute<OtpVerificationRouteProp>();
   const { phone } = route.params;
@@ -47,7 +47,7 @@ const OtpVerificationScreen = () => {
     newOtp[index] = text;
     setOtp(newOtp);
 
-    if (text && index < otp.length - 1) {
+    if (text && index < 3) {
       inputRefs.current[index + 1]?.focus();
       setActiveIndex(index + 1);
     } else if (!text && index > 0) {
@@ -67,8 +67,8 @@ const OtpVerificationScreen = () => {
   const handleVerifyOtp = async () => {
     Keyboard.dismiss();
     const otpString = otp.join('');
-    if (otpString.length !== 6) {
-      Alert.alert('Invalid OTP', 'Please enter a valid 6-digit OTP');
+    if (otpString.length !== 4) {
+      Alert.alert('Invalid OTP', 'Please enter a valid 4-digit OTP');
       return;
     }
 
@@ -79,10 +79,10 @@ const OtpVerificationScreen = () => {
   const handleResendOtp = async () => {
     setTimer(30);
     setCanResend(false);
-    setOtp(Array(6).fill(''));
+    setOtp(['', '', '', '']);
     inputRefs.current[0]?.focus();
     setActiveIndex(0);
-
+    
     try {
       await login(phone);
       Alert.alert('OTP Sent', 'A new OTP has been sent to your phone number.');
@@ -112,7 +112,7 @@ const OtpVerificationScreen = () => {
         <View style={styles.header}>
           <Text style={styles.title}>Verify Your Number</Text>
           <Text style={styles.subtitle}>
-            Enter the 6-digit code sent to
+            Enter the 4-digit code sent to
           </Text>
           <Text style={styles.phoneText}>+{phone}</Text>
         </View>
@@ -145,14 +145,14 @@ const OtpVerificationScreen = () => {
         {/* Verify Button */}
         <TouchableOpacity
           onPress={handleVerifyOtp}
-          disabled={isLoading || otp.join('').length !== 6}
+          disabled={isLoading || otp.join('').length !== 4}
           activeOpacity={0.8}
         >
           <LinearGradient
             colors={['#4e73df', '#224abe']}
             style={[
               styles.verifyButton,
-              (isLoading || otp.join('').length !== 6) && styles.disabledButton
+              (isLoading || otp.join('').length !== 4) && styles.disabledButton
             ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -233,17 +233,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 40,
-    paddingHorizontal: 10, // adjusted for 6 digits
+    paddingHorizontal: 20,
   },
   otpInput: {
-    width: 50,
+    width: 64,
     height: 64,
     borderWidth: 1.5,
     borderColor: '#e2e8f0',
-    borderRadius: 12,
+    borderRadius: 16,
     backgroundColor: '#fff',
     textAlign: 'center',
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     color: '#2d3748',
     shadowColor: '#4e73df',
