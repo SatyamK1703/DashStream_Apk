@@ -335,7 +335,7 @@ const AdminServicesScreen = () => {
   // Prepare categories data
   const categories = [
     { id: 'all', name: 'All Services' },
-    ...categoriesData.map(cat => ({ id: cat.id, name: cat.name }))
+    ...(((categoriesData || []) || []).map(cat => ({ id: cat.id, name: cat.name })))
   ];
 
   if (loading) {

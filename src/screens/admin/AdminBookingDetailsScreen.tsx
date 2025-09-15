@@ -18,35 +18,19 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { adminService } from '../../services/adminService';
+import { Booking } from '../../types/api';
 
 // --- Type Definitions ---
 type AdminBookingDetailsScreenNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 type AdminBookingDetailsScreenRouteProp = RouteProp<AdminStackParamList, 'AdminBookingDetails'>;
 
-interface BookingDetails {
+interface ProfessionalOption {
   id: string;
-  customerName: string;
-  customerPhone: string;
-  customerEmail: string;
-  customerId: string;
-  professionalName: string | null;
-  professionalPhone: string | null;
-  professionalId: string | null;
-  services: Array<{ name: string; price: string; duration: string }>;
-  date: string;
-  time: string;
-  address: string;
-  status: 'pending' | 'ongoing' | 'completed' | 'cancelled';
-  paymentStatus: 'paid' | 'pending' | 'failed';
-  paymentMethod: string;
-  subtotal: string;
-  tax: string;
-  total: string;
-  specialInstructions: string;
-  createdAt: string;
-  completedAt: string | null;
-  cancelledAt: string | null;
-  cancelReason: string | null;
+  name: string;
+  rating: number;
+  experience?: number;
+  isAvailable?: boolean;
 }
 
 // --- Main Component ---
@@ -57,58 +41,131 @@ const AdminBookingDetailsScreen = () => {
 
   // --- State Management ---
   const [loading, setLoading] = useState(true);
-  const [booking, setBooking] = useState<BookingDetails | null>(null);
+  const [booking, setBooking] = useState<Booking | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
-  const [professionals, setProfessionals] = useState<Array<{ id: string; name: string; rating: number }>>([]);
+  const [professionals, setProfessionals] = useState<ProfessionalOption[]>([]);
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string | null>(null);
   const [assignLoading, setAssignLoading] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
-
-  // --- Mock Data ---
-  const mockBooking: BookingDetails = { id: 'BK-7845', customerName: 'Rahul Sharma', customerPhone: '+91 9876543210', customerEmail: 'rahul.sharma@example.com', customerId: 'CUST-1234', professionalName: 'Rajesh Kumar', professionalPhone: '+91 9876543220', professionalId: 'PRO-001', services: [{ name: 'Premium Wash', price: '₹800', duration: '45 mins' }, { name: 'Polish', price: '₹400', duration: '30 mins' }], date: '15 Aug 2023', time: '10:30 AM', address: '123 Main Street, Andheri East, Mumbai, Maharashtra 400069', status: 'ongoing', paymentStatus: 'paid', paymentMethod: 'Credit Card', subtotal: '₹1,200', tax: '₹216', total: '₹1,416', specialInstructions: 'Please be careful with the side mirrors, they are custom made.', createdAt: '2023-08-14T18:30:00Z', completedAt: null, cancelledAt: null, cancelReason: null };
-  const mockProfessionals = [{ id: 'PRO-001', name: 'Rajesh Kumar', rating: 4.8 }, { id: 'PRO-002', name: 'Amit Singh', rating: 4.5 }, { id: 'PRO-003', name: 'Vikram Patel', rating: 4.7 }];
+  const [error, setError] = useState<string | null>(null);
 
   // --- Effects ---
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setBooking(mockBooking);
-      setProfessionals(mockProfessionals);
-      setLoading(false);
-      if (mockBooking.professionalId) {
-        setSelectedProfessionalId(mockBooking.professionalId);
-      }
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    fetchBookingDetails();
+    fetchProfessionals();
+  }, [bookingId]);
 
-  // --- Handlers ---
-  const handleAssignProfessional = () => {
-    if (!selectedProfessionalId) return Alert.alert('Error', 'Please select a professional.');
-    setAssignLoading(true);
-    setTimeout(() => {
-      const selectedPro = professionals.find(pro => pro.id === selectedProfessionalId);
-      if (booking && selectedPro) {
-        setBooking({ ...booking, professionalId: selectedPro.id, professionalName: selectedPro.name, professionalPhone: '+91 9876543220' });
+  // --- API Functions ---
+  const fetchBookingDetails = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminService.getBookingById(bookingId);
+      if (response.success && response.data) {
+        setBooking(response.data);
+        if (response.data.professional?._id) {
+          setSelectedProfessionalId(response.data.professional._id);
+        }
+      } else {
+        setError('Failed to load booking details');
       }
-      setAssignLoading(false);
-      setShowAssignModal(false);
-      Alert.alert('Success', 'Professional assigned successfully');
-    }, 1500);
+    } catch (err: any) {
+      console.error('Error fetching booking details:', err);
+      setError(err.message || 'Failed to load booking details');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCancelBooking = () => {
-    if (!cancelReason.trim()) return Alert.alert('Error', 'Please provide a reason for cancellation.');
-    setCancelLoading(true);
-    setTimeout(() => {
-      if (booking) {
-        setBooking({ ...booking, status: 'cancelled', cancelledAt: new Date().toISOString(), cancelReason });
+  const fetchProfessionals = async () => {
+    try {
+      const response = await adminService.getProfessionals({ 
+        page: 1, 
+        limit: 50,
+        status: 'active'
+      });
+      if (response.success && response.data) {
+        const professionalOptions: ProfessionalOption[] = response.data.map(prof => ({
+          id: prof._id,
+          name: prof.user.name,
+          rating: prof.rating,
+          experience: prof.experience,
+          isAvailable: prof.isAvailable
+        }));
+        setProfessionals(professionalOptions);
       }
+    } catch (err: any) {
+      console.error('Error fetching professionals:', err);
+      // Don't set error here as this is secondary data
+    }
+  };
+
+  // --- Handlers ---
+  const handleAssignProfessional = async () => {
+    if (!selectedProfessionalId || !booking) {
+      return Alert.alert('Error', 'Please select a professional.');
+    }
+    
+    setAssignLoading(true);
+    try {
+      const response = await adminService.assignProfessional(booking._id, selectedProfessionalId);
+      if (response.success && response.data) {
+        setBooking(response.data);
+        setShowAssignModal(false);
+        Alert.alert('Success', 'Professional assigned successfully');
+      } else {
+        Alert.alert('Error', 'Failed to assign professional');
+      }
+    } catch (err: any) {
+      console.error('Error assigning professional:', err);
+      Alert.alert('Error', err.message || 'Failed to assign professional');
+    } finally {
+      setAssignLoading(false);
+    }
+  };
+
+  const handleCancelBooking = async () => {
+    if (!cancelReason.trim()) {
+      return Alert.alert('Error', 'Please provide a reason for cancellation.');
+    }
+    if (!booking) return;
+    
+    setCancelLoading(true);
+    try {
+      const response = await adminService.cancelBooking(booking._id, cancelReason);
+      if (response.success && response.data) {
+        setBooking(response.data);
+        setShowCancelModal(false);
+        setCancelReason('');
+        Alert.alert('Success', 'Booking cancelled successfully');
+      } else {
+        Alert.alert('Error', 'Failed to cancel booking');
+      }
+    } catch (err: any) {
+      console.error('Error cancelling booking:', err);
+      Alert.alert('Error', err.message || 'Failed to cancel booking');
+    } finally {
       setCancelLoading(false);
-      setShowCancelModal(false);
-      Alert.alert('Success', 'Booking cancelled successfully');
-    }, 1500);
+    }
+  };
+
+  const handleUpdateBookingStatus = async (newStatus: string) => {
+    if (!booking) return;
+    
+    try {
+      const response = await adminService.updateBookingStatus(booking._id, newStatus);
+      if (response.success && response.data) {
+        setBooking(response.data);
+        Alert.alert('Success', `Booking status updated to ${newStatus}`);
+      } else {
+        Alert.alert('Error', 'Failed to update booking status');
+      }
+    } catch (err: any) {
+      console.error('Error updating booking status:', err);
+      Alert.alert('Error', err.message || 'Failed to update booking status');
+    }
   };
 
   // --- Style Helpers ---
@@ -145,7 +202,7 @@ const renderActionButtons = () => {
           >
             <MaterialIcons name="person-add" size={20} color="white" />
             <Text style={buttonstyles.buttonText}>
-              {booking.professionalId ? 'Reassign Professional' : 'Assign Professional'}
+              {booking.professional ? 'Reassign Professional' : 'Assign Professional'}
             </Text>
           </TouchableOpacity>
 
@@ -164,7 +221,7 @@ const renderActionButtons = () => {
         <View style={buttonstyles.row}>
           <TouchableOpacity
             style={[buttonstyles.button, buttonstyles.buttonPrimary, buttonstyles.mr2]}
-            onPress={() => navigation.navigate('TrackBooking', { bookingId: booking.id })}
+            onPress={() => navigation.navigate('TrackBooking', { bookingId: booking._id })}
           >
             <MaterialIcons name="location-on" size={20} color="white" />
             <Text style={buttonstyles.buttonText}>Track Progress</Text>
@@ -193,7 +250,7 @@ const renderActionButtons = () => {
 
           <TouchableOpacity
             style={[buttonstyles.button, buttonstyles.buttonGray, buttonstyles.ml2]}
-            onPress={() => navigation.navigate('CreateBooking', { customerId: booking.customerId })}
+            onPress={() => navigation.navigate('CreateBooking', { customerId: booking.customer._id })}
           >
             <MaterialIcons name="refresh" size={20} color="white" />
             <Text style={buttonstyles.buttonText}>Book Again</Text>
@@ -206,7 +263,7 @@ const renderActionButtons = () => {
         <View style={buttonstyles.row}>
           <TouchableOpacity
             style={[buttonstyles.button, buttonstyles.buttonPrimary]}
-            onPress={() => navigation.navigate('CreateBooking', { customerId: booking.customerId })}
+            onPress={() => navigation.navigate('CreateBooking', { customerId: booking.customer._id })}
           >
             <MaterialIcons name="refresh" size={20} color="white" />
             <Text style={buttonstyles.buttonText}>Book Again</Text>
@@ -224,6 +281,28 @@ const renderActionButtons = () => {
       <View style={styles.centeredScreen}>
         <ActivityIndicator size="large" color="#2563EB" />
         <Text style={styles.loadingText}>Loading booking details...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centeredScreen}>
+        <MaterialIcons name="error-outline" size={48} color="#EF4444" />
+        <Text style={styles.errorTitle}>Error Loading Booking</Text>
+        <Text style={styles.errorSubtitle}>{error}</Text>
+        <TouchableOpacity 
+          style={styles.primaryButton} 
+          onPress={fetchBookingDetails}
+        >
+          <Text style={styles.primaryButtonText}>Retry</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.primaryButton, { marginTop: 10, backgroundColor: '#6B7280' }]} 
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.primaryButtonText}>Go Back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -251,7 +330,7 @@ const renderActionButtons = () => {
         </TouchableOpacity>
         <View>
           <Text style={styles.headerTitle}>Booking Details</Text>
-          <Text style={styles.headerSubtitle}>{booking.id}</Text>
+          <Text style={styles.headerSubtitle}>{booking.bookingId}</Text>
         </View>
         <View style={styles.headerButton} />{/* Placeholder */}
       </View>
@@ -270,23 +349,31 @@ const renderActionButtons = () => {
           <View style={styles.rowBetweenMarginTop}>
             <View style={styles.row}>
               <Ionicons name="calendar-outline" size={16} color="#6B7280" />
-              <Text style={styles.timeText}>{booking.date}</Text>
+              <Text style={styles.timeText}>
+                {new Date(booking.scheduledDate).toLocaleDateString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric'
+                })}
+              </Text>
             </View>
             <View style={styles.row}>
               <Ionicons name="time-outline" size={16} color="#6B7280" />
-              <Text style={styles.timeText}>{booking.time}</Text>
+              <Text style={styles.timeText}>{booking.scheduledTime}</Text>
             </View>
           </View>
 
           <View style={styles.rowMarginTop}>
             <Ionicons name="location-outline" size={16} color="#6B7280" />
-            <Text style={styles.addressText}>{booking.address}</Text>
+            <Text style={styles.addressText}>
+              {`${booking.address.addressLine1}, ${booking.address.city}, ${booking.address.state} ${booking.address.postalCode}`}
+            </Text>
           </View>
 
-          {booking.specialInstructions ? (
+          {booking.notes ? (
             <View style={styles.instructions}>
               <Text style={styles.instructionsLabel}>Special Instructions:</Text>
-              <Text style={styles.instructionsText}>{booking.specialInstructions}</Text>
+              <Text style={styles.instructionsText}>{booking.notes}</Text>
             </View>
           ) : null}
         </View>
@@ -297,7 +384,7 @@ const renderActionButtons = () => {
           <Text style={Customerstyles.headerText}>Customer Details</Text>
           <TouchableOpacity 
             style={Customerstyles.profileButton}
-            onPress={() => navigation.navigate('AdminCustomerDetails', { customerId: booking.customerId })}
+            onPress={() => navigation.navigate('AdminCustomerDetails', { customerId: booking.customer._id })}
           >
             <Text style={Customerstyles.primaryText}>View Profile</Text>
             <Ionicons name="chevron-forward" size={16} color="#2563EB" />
@@ -306,18 +393,21 @@ const renderActionButtons = () => {
 
         <View style={Customerstyles.customerRow}>
           <View style={Customerstyles.avatar}>
-            <Text style={Customerstyles.avatarText}>{booking.customerName.charAt(0)}</Text>
+            <Text style={Customerstyles.avatarText}>{booking.customer.name.charAt(0)}</Text>
           </View>
           <View style={Customerstyles.customerInfo}>
-            <Text style={Customerstyles.customerName}>{booking.customerName}</Text>
-            <Text style={Customerstyles.customerPhone}>{booking.customerPhone}</Text>
+            <Text style={Customerstyles.customerName}>{booking.customer.name}</Text>
+            <Text style={Customerstyles.customerPhone}>{booking.customer.phone}</Text>
+            {booking.customer.email && (
+              <Text style={Customerstyles.customerEmail}>{booking.customer.email}</Text>
+            )}
           </View>
         </View>
 
         <View style={Customerstyles.actionRow}>
           <TouchableOpacity 
             style={Customerstyles.callButton}
-            onPress={() => Alert.alert('Call', `Call ${booking.customerPhone}?`, [
+            onPress={() => Alert.alert('Call', `Call ${booking.customer.phone}?`, [
               { text: 'Cancel', style: 'cancel' },
               { text: 'Call', style: 'default' }
             ])}
@@ -326,16 +416,18 @@ const renderActionButtons = () => {
             <Text style={Customerstyles.buttonText}>Call</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={Customerstyles.emailButton}
-            onPress={() => Alert.alert('Email', `Send email to ${booking.customerEmail}?`, [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Email', style: 'default' }
-            ])}
-          >
-            <Ionicons name="mail" size={16} color="white" />
-            <Text style={Customerstyles.buttonText}>Email</Text>
-          </TouchableOpacity>
+          {booking.customer.email && (
+            <TouchableOpacity 
+              style={Customerstyles.emailButton}
+              onPress={() => Alert.alert('Email', `Send email to ${booking.customer.email}?`, [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Email', style: 'default' }
+              ])}
+            >
+              <Ionicons name="mail" size={16} color="white" />
+              <Text style={Customerstyles.buttonText}>Email</Text>
+            </TouchableOpacity>
+          )}
         </View>
         </View>
 
@@ -343,10 +435,10 @@ const renderActionButtons = () => {
         <View style={Prostyles.container}>
         <View style={Prostyles.header}>
         <Text style={Prostyles.title}>Professional Details</Text>
-        {booking.professionalId && (
+        {booking.professional && (
           <TouchableOpacity 
             style={Prostyles.viewProfile}
-            onPress={() => navigation.navigate('AdminProfessionalDetails', { professionalId: booking.professionalId })}
+            onPress={() => navigation.navigate('AdminProfessionalDetails', { professionalId: booking.professional._id })}
           >
             <Text style={Prostyles.viewProfileText}>View Profile</Text>
             <Ionicons name="chevron-forward" size={16} color="#2563EB" />
@@ -354,22 +446,27 @@ const renderActionButtons = () => {
         )}
         </View>
 
-        {booking.professionalName ? (
+        {booking.professional ? (
         <>
           <View style={Prostyles.professionalRow}>
             <View style={Prostyles.avatar}>
-              <Text style={Prostyles.avatarText}>{booking.professionalName.charAt(0)}</Text>
+              <Text style={Prostyles.avatarText}>{booking.professional.user.name.charAt(0)}</Text>
             </View>
             <View style={Prostyles.professionalInfo}>
-              <Text style={Prostyles.professionalName}>{booking.professionalName}</Text>
-              <Text style={Prostyles.professionalPhone}>{booking.professionalPhone}</Text>
+              <Text style={Prostyles.professionalName}>{booking.professional.user.name}</Text>
+              <Text style={Prostyles.professionalPhone}>{booking.professional.user.phone}</Text>
+              <View style={Prostyles.ratingContainer}>
+                <Ionicons name="star" size={14} color="#FFC107" />
+                <Text style={Prostyles.ratingText}>{booking.professional.rating.toFixed(1)}</Text>
+                <Text style={Prostyles.reviewCount}>({booking.professional.reviewCount} reviews)</Text>
+              </View>
             </View>
           </View>
 
           <View style={Prostyles.actionRow}>
             <TouchableOpacity 
               style={Prostyles.callButton}
-              onPress={() => Alert.alert('Call', `Call ${booking.professionalPhone}?`, [
+              onPress={() => Alert.alert('Call', `Call ${booking.professional.user.phone}?`, [
                 { text: 'Cancel', style: 'cancel' },
                 { text: 'Call', style: 'default' }
               ])}
@@ -407,37 +504,58 @@ const renderActionButtons = () => {
        <View style={servicestyles.container}>
       <Text style={servicestyles.heading}>Service Details</Text>
 
-      {booking.services.map((service, index) => (
-        <View key={index} style={servicestyles.serviceItem}>
-          <View>
-            <Text style={servicestyles.serviceName}>{service.name}</Text>
-            <Text style={servicestyles.serviceDuration}>{service.duration}</Text>
-          </View>
-          <Text style={servicestyles.servicePrice}>{service.price}</Text>
+      <View style={servicestyles.serviceItem}>
+        <View>
+          <Text style={servicestyles.serviceName}>{booking.service.name}</Text>
+          <Text style={servicestyles.serviceDuration}>{booking.service.duration} minutes</Text>
+          <Text style={servicestyles.serviceDescription}>{booking.service.description}</Text>
         </View>
-      ))}
+        <Text style={servicestyles.servicePrice}>₹{booking.service.basePrice}</Text>
+      </View>
 
       <View style={servicestyles.section}>
         <View style={servicestyles.row}>
-          <Text style={servicestyles.label}>Subtotal</Text>
-          <Text style={servicestyles.value}>{booking.subtotal}</Text>
+          <Text style={servicestyles.label}>Base Price</Text>
+          <Text style={servicestyles.value}>₹{booking.service.basePrice}</Text>
         </View>
         <View style={servicestyles.row}>
           <Text style={servicestyles.label}>Tax (18% GST)</Text>
-          <Text style={servicestyles.value}>{booking.tax}</Text>
+          <Text style={servicestyles.value}>₹{(booking.totalAmount * 0.18 / 1.18).toFixed(2)}</Text>
         </View>
         <View style={servicestyles.totalRow}>
-          <Text style={servicestyles.totalLabel}>Total</Text>
-          <Text style={servicestyles.totalValue}>{booking.total}</Text>
+          <Text style={servicestyles.totalLabel}>Total Amount</Text>
+          <Text style={servicestyles.totalValue}>₹{booking.totalAmount}</Text>
         </View>
       </View>
 
       <View style={servicestyles.section}>
         <View style={servicestyles.row}>
           <Text style={servicestyles.label}>Payment Method</Text>
-          <Text style={servicestyles.value}>{booking.paymentMethod}</Text>
+          <Text style={servicestyles.value}>{booking.paymentMethod || 'Not specified'}</Text>
+        </View>
+        <View style={servicestyles.row}>
+          <Text style={servicestyles.label}>Payment Status</Text>
+          <Text style={[servicestyles.value, getPaymentStatusColor(booking.paymentStatus)]}>
+            {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+          </Text>
         </View>
       </View>
+
+      {booking.vehicle && (
+        <View style={servicestyles.section}>
+          <Text style={servicestyles.sectionTitle}>Vehicle Details</Text>
+          <View style={servicestyles.row}>
+            <Text style={servicestyles.label}>Vehicle</Text>
+            <Text style={servicestyles.value}>
+              {booking.vehicle.make} {booking.vehicle.model} ({booking.vehicle.year})
+            </Text>
+          </View>
+          <View style={servicestyles.row}>
+            <Text style={servicestyles.label}>License Plate</Text>
+            <Text style={servicestyles.value}>{booking.vehicle.licensePlate}</Text>
+          </View>
+        </View>
+      )}
     </View>
 
         {/* Booking Timeline */}
@@ -470,35 +588,44 @@ const renderActionButtons = () => {
               title="Booking Created" 
               time={new Date(booking.createdAt).toLocaleString()} 
               isActive={true}
-              isLast={!booking.completedAt && !booking.cancelledAt}
+              isLast={booking.status === 'pending'}
             />
             
-            {booking.status === 'ongoing' && (
+            {booking.status === 'confirmed' && (
               <TimelineItem 
-                title="Service Started" 
-                time="15 Aug 2023, 10:35 AM" 
+                title="Booking Confirmed" 
+                time={new Date(booking.updatedAt).toLocaleString()} 
                 isActive={true}
                 isLast={true}
               />
             )}
             
-            {booking.completedAt && (
+            {booking.status === 'in-progress' && (
+              <TimelineItem 
+                title="Service In Progress" 
+                time={new Date(booking.updatedAt).toLocaleString()} 
+                isActive={true}
+                isLast={true}
+              />
+            )}
+            
+            {booking.status === 'completed' && (
               <TimelineItem 
                 title="Service Completed" 
-                time={new Date(booking.completedAt).toLocaleString()} 
+                time={new Date(booking.updatedAt).toLocaleString()} 
                 isActive={true}
                 isLast={true}
               />
             )}
             
-            {booking.cancelledAt && (
+            {booking.status === 'cancelled' && (
               <TimelineItem 
                 title="Booking Cancelled" 
-                time={new Date(booking.cancelledAt).toLocaleString()} 
+                time={new Date(booking.updatedAt).toLocaleString()} 
                 isActive={true}
                 isLast={true}
                 isCancelled={true}
-                reason={booking.cancelReason}
+                reason={booking.cancellationReason}
               />
             )}
           </View>

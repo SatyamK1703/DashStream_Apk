@@ -45,7 +45,7 @@ const AdminDashboardScreen = () => {
     data: recentBookings = [],
     loading: isBookingsLoading,
     error: bookingsError,
-    execute: fetchBookings
+    loadMore: fetchBookings
   } = useAdminBookings({ limit: 5 });
 
   // Fetch top professionals (limited)
@@ -53,7 +53,7 @@ const AdminDashboardScreen = () => {
     data: topProfessionals = [],
     loading: isProfessionalsLoading,
     error: professionalsError,
-    execute: fetchProfessionals
+    loadMore: fetchProfessionals
   } = useAdminProfessionals({ limit: 5 });
 
   const isLoading = Boolean(isDashboardLoading || isBookingsLoading || isProfessionalsLoading);
@@ -272,7 +272,7 @@ const AdminDashboardScreen = () => {
           {(topProfessionals && topProfessionals.length > 0) ? (
             topProfessionals.map((professional) => (
               <ProfessionalCard
-                key={professional.id}
+                key={professional._id}
                 {...professional}
                 onPress={() => navigation.navigate('AdminProfessionalDetails', { professionalId: professional.id })}
               />

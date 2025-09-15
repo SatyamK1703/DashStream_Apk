@@ -14,24 +14,16 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import { adminService } from '../../services/adminService';
+import { Notification as APINotification } from '../../types/api';
 
 type AdminNotificationsScreenNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 
 type NotificationType = 'booking' | 'professional' | 'customer' | 'payment' | 'system';
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: NotificationType;
-  isRead: boolean;
+// Use APINotification from types and extend if needed
+interface Notification extends APINotification {
   timestamp: string;
-  data?: {
-    bookingId?: string;
-    professionalId?: string;
-    customerId?: string;
-    paymentId?: string;
-  };
 }
 
 const AdminNotificationsScreen = () => {
@@ -44,174 +36,83 @@ const AdminNotificationsScreen = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
-  // Mock data for notifications
-  const mockNotifications: Notification[] = [
-    {
-      id: 'notif001',
-      title: 'New Booking Request',
-      message: 'A new booking #BK7890 has been created by customer John Doe',
-      type: 'booking',
-      isRead: false,
-      timestamp: new Date(Date.now() - 15 * 60000).toISOString(), // 15 minutes ago
-      data: { bookingId: 'BK7890' }
-    },
-    {
-      id: 'notif002',
-      title: 'Professional Verification',
-      message: 'Professional Rahul Singh has submitted documents for verification',
-      type: 'professional',
-      isRead: false,
-      timestamp: new Date(Date.now() - 2 * 3600000).toISOString(), // 2 hours ago
-      data: { professionalId: 'PRO456' }
-    },
-    {
-      id: 'notif003',
-      title: 'Payment Failed',
-      message: 'Payment for booking #BK7885 has failed. Please check the payment gateway',
-      type: 'payment',
-      isRead: true,
-      timestamp: new Date(Date.now() - 5 * 3600000).toISOString(), // 5 hours ago
-      data: { bookingId: 'BK7885', paymentId: 'PAY12345' }
-    },
-    {
-      id: 'notif004',
-      title: 'New Customer Registration',
-      message: 'A new customer Priya Sharma has registered on the platform',
-      type: 'customer',
-      isRead: true,
-      timestamp: new Date(Date.now() - 1 * 86400000).toISOString(), // 1 day ago
-      data: { customerId: 'CUS789' }
-    },
-    {
-      id: 'notif005',
-      title: 'System Update',
-      message: 'The system will undergo maintenance on Sunday, 10 PM to 2 AM',
-      type: 'system',
-      isRead: false,
-      timestamp: new Date(Date.now() - 2 * 86400000).toISOString(), // 2 days ago
-    },
-    {
-      id: 'notif006',
-      title: 'Booking Canceled',
-      message: 'Booking #BK7870 has been canceled by the customer',
-      type: 'booking',
-      isRead: true,
-      timestamp: new Date(Date.now() - 3 * 86400000).toISOString(), // 3 days ago
-      data: { bookingId: 'BK7870' }
-    },
-    {
-      id: 'notif007',
-      title: 'Professional Rating',
-      message: 'Professional Amit Kumar has received a 5-star rating',
-      type: 'professional',
-      isRead: true,
-      timestamp: new Date(Date.now() - 4 * 86400000).toISOString(), // 4 days ago
-      data: { professionalId: 'PRO123' }
-    },
-    {
-      id: 'notif008',
-      title: 'Payment Received',
-      message: 'Payment of ₹1,200 received for booking #BK7865',
-      type: 'payment',
-      isRead: true,
-      timestamp: new Date(Date.now() - 5 * 86400000).toISOString(), // 5 days ago
-      data: { bookingId: 'BK7865', paymentId: 'PAY12340' }
-    },
-    {
-      id: 'notif009',
-      title: 'Customer Complaint',
-      message: 'Customer Vikram Singh has raised a complaint about booking #BK7860',
-      type: 'customer',
-      isRead: false,
-      timestamp: new Date(Date.now() - 6 * 86400000).toISOString(), // 6 days ago
-      data: { customerId: 'CUS456', bookingId: 'BK7860' }
-    },
-    {
-      id: 'notif010',
-      title: 'Database Backup',
-      message: 'Automatic database backup completed successfully',
-      type: 'system',
-      isRead: true,
-      timestamp: new Date(Date.now() - 7 * 86400000).toISOString(), // 7 days ago
-    },
-  ];
-  
-  // Load notifications
-  useEffect(() => {
-    // Simulate API call
-    const loadNotifications = async () => {
+  // API Functions
+  const fetchNotifications = async () => {
+    try {
       setIsLoading(true);
-      try {
-        // In a real app, this would be an API call
-        setTimeout(() => {
-          setNotifications(mockNotifications);
-          setFilteredNotifications(mockNotifications);
-          setIsLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Error loading notifications:', error);
-        setIsLoading(false);
-        Alert.alert('Error', 'Failed to load notifications. Please try again.');
+      setError(null);
+      const response = await adminService.getNotifications({
+        page: 1,
+        limit: 100
+      });
+
+      if (response.success && response.data) {
+        const notificationsData = response.data.map(notif => ({
+          ...notif,
+          id: notif._id,
+          timestamp: notif.createdAt
+        }));
+        setNotifications(notificationsData);
+        setFilteredNotifications(notificationsData);
+      } else {
+        setError('Failed to fetch notifications');
       }
-    };
-    
-    loadNotifications();
+    } catch (err: any) {
+      console.error('Error fetching notifications:', err);
+      setError(err.message || 'Failed to fetch notifications');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const markAsRead = async (notificationId: string) => {
+    try {
+      await adminService.markNotificationRead(notificationId);
+      setNotifications(prevNotifications =>
+        prevNotifications.map(notif =>
+          notif.id === notificationId ? { ...notif, isRead: true } : notif
+        )
+      );
+    } catch (err: any) {
+      console.error('Error marking notification as read:', err);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      setIsMarkingAllRead(true);
+      await adminService.markAllNotificationsRead();
+      setNotifications(prevNotifications =>
+        prevNotifications.map(notif => ({ ...notif, isRead: true }))
+      );
+    } catch (err: any) {
+      console.error('Error marking all notifications as read:', err);
+      Alert.alert('Error', 'Failed to mark all notifications as read');
+    } finally {
+      setIsMarkingAllRead(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
   }, []);
-  
-  // Filter notifications when activeFilter changes
+
+  // Filter notifications based on active filter
   useEffect(() => {
     if (activeFilter === 'all') {
       setFilteredNotifications(notifications);
     } else {
       setFilteredNotifications(notifications.filter(notif => notif.type === activeFilter));
     }
-  }, [activeFilter, notifications]);
-  
-  // Handle refresh
-  const handleRefresh = useCallback(() => {
+  }, [notifications, activeFilter]);
+
+  const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      // In a real app, this would refresh data from the server
-      setNotifications(mockNotifications);
-      setIsRefreshing(false);
-    }, 1500);
+    await fetchNotifications();
+    setIsRefreshing(false);
   }, []);
-  
-  // Mark notification as read
-  const markAsRead = useCallback((notificationId: string) => {
-    setNotifications(prevNotifications => 
-      prevNotifications.map(notif => 
-        notif.id === notificationId ? { ...notif, isRead: true } : notif
-      )
-    );
-    
-    // In a real app, you would make an API call to update the read status
-  }, []);
-  
-  // Mark all notifications as read
-  const markAllAsRead = useCallback(() => {
-    if (filteredNotifications.every(notif => notif.isRead)) {
-      // All notifications are already read
-      Alert.alert('Info', 'All notifications are already marked as read.');
-      return;
-    }
-    
-    setIsMarkingAllRead(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setNotifications(prevNotifications => 
-        prevNotifications.map(notif => 
-          activeFilter === 'all' || notif.type === activeFilter 
-            ? { ...notif, isRead: true } 
-            : notif
-        )
-      );
-      setIsMarkingAllRead(false);
-    }, 1000);
-  }, [filteredNotifications, activeFilter]);
   
   // Delete notification
   const deleteNotification = useCallback((notificationId: string) => {
@@ -467,7 +368,7 @@ const AdminNotificationsScreen = () => {
         refreshControl={
           <RefreshControl 
             refreshing={isRefreshing} 
-            onRefresh={handleRefresh} 
+            onRefresh={onRefresh} 
             colors={['#4CAF50']} 
             tintColor="#4CAF50"
           />

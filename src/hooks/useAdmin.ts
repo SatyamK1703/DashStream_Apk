@@ -99,9 +99,9 @@ export const useAdminDashboard = () => {
 };
 
 // Hook for admin bookings with optional filters
-export const useAdminBookings = (filters?: { limit?: number; status?: string }) => {
-  return useApi(
-    () => adminService.getBookings(filters),
+export const useAdminBookings = (filters?: { limit?: number; status?: string; search?: string }) => {
+  return usePaginatedApi(
+    (params) => adminService.getBookings({ ...filters, ...params }),
     {
       showErrorAlert: false,
     }
@@ -109,9 +109,9 @@ export const useAdminBookings = (filters?: { limit?: number; status?: string }) 
 };
 
 // Hook for admin professionals with optional filters
-export const useAdminProfessionals = (filters?: { limit?: number; status?: string }) => {
-  return useApi(
-    () => adminService.getProfessionals(filters),
+export const useAdminProfessionals = (filters?: { limit?: number; status?: string; search?: string }) => {
+  return usePaginatedApi(
+    (params) => adminService.getProfessionals({ ...filters, ...params }),
     {
       showErrorAlert: false,
     }

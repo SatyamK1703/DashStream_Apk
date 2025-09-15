@@ -39,27 +39,28 @@ type AdminProfessionalsScreenNavigationProp = NativeStackNavigationProp<AdminSta
 
 interface Professional {
   id: string;
-  name: string;
-  phone: string;
-  email:string;
-  rating: number;
-  totalJobs: number;
-  completedJobs: number;
-  cancelledJobs: number;
-  totalEarnings: string;
-  status: 'active' | 'inactive' | 'pending' | 'rejected';
-  skills: string[];
-  joinedDate: string;
-  lastActive: string;
+  _id?: string;
+  name?: string;
+  phone?: string;
+  email?: string;
+  rating?: number;
+  totalJobs?: number;
+  completedJobs?: number;
+  cancelledJobs?: number;
+  totalEarnings?: string;
+  status?: 'active' | 'inactive' | 'pending' | 'rejected';
+  skills?: string[];
+  joinedDate?: string;
+  lastActive?: string;
   profileImage?: string;
-  isVerified: boolean;
+  isVerified?: boolean;
 }
 
 // --- Memoized Card Component for Performance ---
 const ProfessionalCard = React.memo(({ item, navigation, getStatusStyles }) => {
-  const lastActiveDate = new Date(item.lastActive);
+  const lastActiveDate = new Date(item.lastActive || Date.now());
   const formattedLastActive = `${lastActiveDate.toLocaleDateString()} ${lastActiveDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-  const statusStyles = getStatusStyles(item.status);
+  const statusStyles = getStatusStyles(item.status || 'inactive');
 
   return (
     <TouchableOpacity
@@ -73,15 +74,15 @@ const ProfessionalCard = React.memo(({ item, navigation, getStatusStyles }) => {
               <Image source={{ uri: item.profileImage }} style={styles.cardAvatar} />
             ) : (
               <View style={[styles.cardAvatar, styles.cardAvatarPlaceholder]}>
-                <Text style={styles.cardAvatarText}>{item.name.charAt(0)}</Text>
+                <Text style={styles.cardAvatarText}>{(item.name || 'U').charAt(0)}</Text>
               </View>
             )}
             <View style={styles.cardInfo}>
               <View style={styles.cardNameContainer}>
-                <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.cardName} numberOfLines={1}>{item.name || 'Unknown Professional'}</Text>
                 {item.isVerified && <Ionicons name="checkmark-circle" size={16} color="#2563EB" style={styles.cardVerifiedIcon} />}
               </View>
-              <Text style={styles.cardId}>{item.id}</Text>
+              <Text style={styles.cardId}>{item.id || 'N/A'}</Text>
             </View>
           </View>
           <View style={[styles.cardStatusBadge, statusStyles.badge]}>
@@ -121,12 +122,11 @@ const AdminProfessionalsScreen = () => {
   // API hooks
   const {
     data: professionals = [],
-    isLoading: loading,
+    loading,
     error,
-    execute: fetchProfessionals,
-    hasMore,
     loadMore,
-    isLoadingMore,
+    refresh,
+    pagination,
   } = useAdminProfessionals({
     search: debouncedSearchQuery,
     status: statusFilter === 'all' ? undefined : statusFilter,
@@ -136,14 +136,20 @@ const AdminProfessionalsScreen = () => {
   const { updateVerificationStatus } = useAdminProfessionalActions();
 
   useEffect(() => {
-    fetchProfessionals();
+    // Reset pagination and load first page when filters/search change
+    // Note: intentionally omit `refresh` from deps to avoid identity changes causing loops
+    refresh();
   }, [debouncedSearchQuery, statusFilter]);
 
   const onRefresh = useCallback(() => {
-    fetchProfessionals();
-  }, [fetchProfessionals]);
+    refresh();
+  }, [refresh]);
 
   const filteredProfessionals = useMemo(() => {
+    if (!professionals || !Array.isArray(professionals)) {
+      return [];
+    }
+    
     let filtered = [...professionals];
 
     // Sort the professionals locally since API provides filtered data based on search/status
@@ -151,7 +157,7 @@ const AdminProfessionalsScreen = () => {
       let comparison = 0;
       switch (sortBy) {
         case 'name': 
-          comparison = a.name.localeCompare(b.name); 
+          comparison = (a.name || '').localeCompare(b.name || ''); 
           break;
         case 'rating': 
           comparison = (b.rating || 0) - (a.rating || 0); 
@@ -163,7 +169,7 @@ const AdminProfessionalsScreen = () => {
           comparison = new Date(b.joinedDate || 0).getTime() - new Date(a.joinedDate || 0).getTime(); 
           break;
         default: 
-          comparison = a.name.localeCompare(b.name);
+          comparison = (a.name || '').localeCompare(b.name || '');
       }
       return sortOrder === 'asc' ? comparison : -comparison;
     });
@@ -199,7 +205,7 @@ const AdminProfessionalsScreen = () => {
     </TouchableOpacity>
   );
 
-  if (loading && !refreshing) {
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />

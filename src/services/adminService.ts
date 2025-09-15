@@ -295,6 +295,42 @@ class AdminService {
   }
 
   /**
+   * Get admin notifications
+   */
+  async getNotifications(filters?: AdminFilters): Promise<ApiResponse<any[]>> {
+    try {
+      return await httpClient.get(`${ENDPOINTS.ADMIN.DASHBOARD}/notifications`, { params: filters });
+    } catch (error) {
+      console.error('Get notifications error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark notification as read
+   */
+  async markNotificationRead(notificationId: string): Promise<ApiResponse<void>> {
+    try {
+      return await httpClient.patch(`${ENDPOINTS.ADMIN.DASHBOARD}/notifications/${notificationId}/read`);
+    } catch (error) {
+      console.error('Mark notification read error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark all notifications as read
+   */
+  async markAllNotificationsRead(): Promise<ApiResponse<void>> {
+    try {
+      return await httpClient.patch(`${ENDPOINTS.ADMIN.DASHBOARD}/notifications/mark-all-read`);
+    } catch (error) {
+      console.error('Mark all notifications read error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Send notification to users
    */
   async sendNotification(data: {

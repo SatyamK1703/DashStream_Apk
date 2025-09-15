@@ -41,12 +41,11 @@ const AdminBookingsScreen = () => {
   // API hooks
   const {
     data: bookings = [],
-    isLoading: loading,
+    loading,
     error,
-    execute: fetchBookings,
-    hasMore,
+    refresh,
     loadMore,
-    isLoadingMore,
+    pagination,
   } = useAdminBookings({
     search: searchQuery,
     status: statusFilter === 'all' ? undefined : statusFilter,
@@ -54,6 +53,11 @@ const AdminBookingsScreen = () => {
     sortOrder: sortBy === 'newest' ? 'desc' : 'asc',
     limit: 20,
   });
+
+  // Alias for consistent naming
+  const fetchBookings = refresh;
+  const hasMore = pagination.hasMore;
+  const isLoadingMore = loading && pagination.page > 1;
 
   const { updateBookingStatus } = useAdminBookingActions();
 

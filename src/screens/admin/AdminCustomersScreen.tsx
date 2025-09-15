@@ -8,29 +8,24 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
-  Alert,StyleSheet
+  Alert,
+  StyleSheet
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import { adminService } from '../../services/adminService';
+import { User } from '../../types/api';
 
 type AdminCustomersNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  profileImage: string;
-  status: 'active' | 'inactive' | 'blocked';
+interface Customer extends User {
   totalBookings: number;
   totalSpent: number;
-  membershipStatus: 'none' | 'silver' | 'gold' | 'platinum';
-  joinDate: string;
-  lastActive: string;
-  addresses: number;
-  vehicles: number;
+  status: 'active' | 'inactive' | 'blocked';
+  joinDate: string; // Mapped from createdAt
+  profileImage: string; // Flattened from profileImage.url
 }
 
 const AdminCustomersScreen = () => {
@@ -53,185 +48,80 @@ const resetFilters = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'blocked'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'bookings' | 'spent' | 'date'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [error, setError] = useState<string | null>(null);
   
-  // Mock data
-  const mockCustomers: Customer[] = [
-    {
-      id: 'CUST-001',
-      name: 'Priya Sharma',
-      email: 'priya.sharma@example.com',
-      phone: '+91 9876543210',
-      profileImage: 'https://randomuser.me/api/portraits/women/1.jpg',
-      status: 'active',
-      totalBookings: 15,
-      totalSpent: 12500,
-      membershipStatus: 'gold',
-      joinDate: '2023-01-15',
-      lastActive: '2023-06-10',
-      addresses: 2,
-      vehicles: 1
-    },
-    {
-      id: 'CUST-002',
-      name: 'Rahul Verma',
-      email: 'rahul.verma@example.com',
-      phone: '+91 9876543211',
-      profileImage: 'https://randomuser.me/api/portraits/men/2.jpg',
-      status: 'active',
-      totalBookings: 8,
-      totalSpent: 6800,
-      membershipStatus: 'silver',
-      joinDate: '2023-02-20',
-      lastActive: '2023-06-08',
-      addresses: 1,
-      vehicles: 2
-    },
-    {
-      id: 'CUST-003',
-      name: 'Ananya Patel',
-      email: 'ananya.patel@example.com',
-      phone: '+91 9876543212',
-      profileImage: 'https://randomuser.me/api/portraits/women/3.jpg',
-      status: 'inactive',
-      totalBookings: 3,
-      totalSpent: 2200,
-      membershipStatus: 'none',
-      joinDate: '2023-03-10',
-      lastActive: '2023-04-15',
-      addresses: 1,
-      vehicles: 1
-    },
-    {
-      id: 'CUST-004',
-      name: 'Vikram Singh',
-      email: 'vikram.singh@example.com',
-      phone: '+91 9876543213',
-      profileImage: 'https://randomuser.me/api/portraits/men/4.jpg',
-      status: 'blocked',
-      totalBookings: 1,
-      totalSpent: 800,
-      membershipStatus: 'none',
-      joinDate: '2023-03-25',
-      lastActive: '2023-03-28',
-      addresses: 1,
-      vehicles: 1
-    },
-    {
-      id: 'CUST-005',
-      name: 'Neha Gupta',
-      email: 'neha.gupta@example.com',
-      phone: '+91 9876543214',
-      profileImage: 'https://randomuser.me/api/portraits/women/5.jpg',
-      status: 'active',
-      totalBookings: 22,
-      totalSpent: 18500,
-      membershipStatus: 'platinum',
-      joinDate: '2022-11-05',
-      lastActive: '2023-06-12',
-      addresses: 3,
-      vehicles: 2
-    },
-    {
-      id: 'CUST-006',
-      name: 'Arjun Reddy',
-      email: 'arjun.reddy@example.com',
-      phone: '+91 9876543215',
-      profileImage: 'https://randomuser.me/api/portraits/men/6.jpg',
-      status: 'active',
-      totalBookings: 12,
-      totalSpent: 9800,
-      membershipStatus: 'silver',
-      joinDate: '2023-01-30',
-      lastActive: '2023-06-05',
-      addresses: 2,
-      vehicles: 1
-    },
-    {
-      id: 'CUST-007',
-      name: 'Kavita Joshi',
-      email: 'kavita.joshi@example.com',
-      phone: '+91 9876543216',
-      profileImage: 'https://randomuser.me/api/portraits/women/7.jpg',
-      status: 'inactive',
-      totalBookings: 5,
-      totalSpent: 4200,
-      membershipStatus: 'none',
-      joinDate: '2023-02-15',
-      lastActive: '2023-05-01',
-      addresses: 1,
-      vehicles: 1
-    },
-  ];
+  // API Functions
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminService.getUsers({
+        page: 1,
+        limit: 100,
+        role: 'customer',
+        search: searchQuery
+      });
 
-  useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setCustomers(mockCustomers);
-      setFilteredCustomers(mockCustomers);
+      if (response.success && response.data) {
+        // Transform users into customers with additional data
+        const customersData = response.data.map(user => ({
+          ...user,
+          id: user._id,
+          profileImage: user.profileImage?.url || '',
+          totalBookings: 0, // This would come from a separate endpoint or be included in the response
+          totalSpent: 0, // This would come from a separate endpoint or be included in the response
+          status: user.role === 'customer' ? 'active' as const : 'inactive' as const,
+          joinDate: user.createdAt // Map createdAt to joinDate for compatibility
+        }));
+        setCustomers(customersData);
+        setFilteredCustomers(customersData);
+      } else {
+        setError('Failed to fetch customers');
+      }
+    } catch (err: any) {
+      console.error('Error fetching customers:', err);
+      setError(err.message || 'Failed to fetch customers');
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
+  };
 
-    return () => clearTimeout(timer);
-  }, []);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchCustomers();
+    setRefreshing(false);
+  };
 
   useEffect(() => {
-    applyFilters();
-  }, [searchQuery, statusFilter, sortBy, sortOrder, customers]);
+    fetchCustomers();
+  }, [searchQuery, sortBy, sortOrder]);
 
-  const applyFilters = () => {
+  // Filter and sort logic
+  useEffect(() => {
     let filtered = [...customers];
-    
-    // Apply status filter
+
+    // Status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(customer => customer.status === statusFilter);
     }
-    
-    // Apply search filter
-    if (searchQuery.trim() !== '') {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(customer => 
-        customer.name.toLowerCase().includes(query) ||
-        customer.email.toLowerCase().includes(query) ||
-        customer.phone.includes(query) ||
-        customer.id.toLowerCase().includes(query)
+
+    // Membership filter
+    if (membershipFilter !== 'all') {
+      // This would need to be implemented based on your membership system
+      // For now, we'll skip this filter
+    }
+
+    // Search filter
+    if (searchQuery) {
+      filtered = filtered.filter(customer =>
+        customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        customer.phone.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-    
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let comparison = 0;
-      
-      switch (sortBy) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case 'bookings':
-          comparison = a.totalBookings - b.totalBookings;
-          break;
-        case 'spent':
-          comparison = a.totalSpent - b.totalSpent;
-          break;
-        case 'date':
-          comparison = new Date(a.joinDate).getTime() - new Date(b.joinDate).getTime();
-          break;
-      }
-      
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-    
-    setFilteredCustomers(filtered);
-  };
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setCustomers(mockCustomers);
-      setFilteredCustomers(mockCustomers);
-      setRefreshing(false);
-    }, 1500);
-  };
+    setFilteredCustomers(filtered);
+  }, [customers, statusFilter, membershipFilter, searchQuery]);
 
   const handleToggleSort = (newSortBy: 'name' | 'bookings' | 'spent' | 'date') => {
     if (sortBy === newSortBy) {
@@ -528,7 +418,7 @@ const getStatusDotStyle = (status: string) => {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={handleRefresh}
+            onRefresh={onRefresh}
             colors={['#2563EB']}
             tintColor="#2563EB"
           />
