@@ -52,7 +52,7 @@ class NotificationService {
    */
   async getUnreadCount(): Promise<ApiResponse<{ count: number }>> {
     try {
-      return await httpClient.get('/notifications/unread-count');
+      return await httpClient.get(ENDPOINTS.NOTIFICATIONS.UNREAD_COUNT);
     } catch (error) {
       console.error('Get unread count error:', error);
       throw error;
@@ -64,7 +64,7 @@ class NotificationService {
    */
   async deleteNotification(notificationId: string): Promise<ApiResponse<{ success: boolean }>> {
     try {
-      return await httpClient.delete(`/notifications/${notificationId}`);
+      return await httpClient.delete(ENDPOINTS.NOTIFICATIONS.DELETE(notificationId));
     } catch (error) {
       console.error('Delete notification error:', error);
       throw error;
@@ -76,7 +76,7 @@ class NotificationService {
    */
   async clearAllNotifications(): Promise<ApiResponse<{ success: boolean; count: number }>> {
     try {
-      return await httpClient.delete('/notifications/clear-all');
+      return await httpClient.delete(ENDPOINTS.NOTIFICATIONS.CLEAR_ALL);
     } catch (error) {
       console.error('Clear all notifications error:', error);
       throw error;
@@ -96,7 +96,7 @@ class NotificationService {
     sms: boolean;
   }): Promise<ApiResponse<{ success: boolean }>> {
     try {
-      return await httpClient.patch('/notifications/preferences', preferences);
+      return await httpClient.patch(ENDPOINTS.NOTIFICATIONS.PREFERENCES, preferences);
     } catch (error) {
       console.error('Update notification preferences error:', error);
       throw error;
@@ -116,7 +116,7 @@ class NotificationService {
     sms: boolean;
   }>> {
     try {
-      return await httpClient.get('/notifications/preferences');
+      return await httpClient.get(ENDPOINTS.NOTIFICATIONS.PREFERENCES);
     } catch (error) {
       console.error('Get notification preferences error:', error);
       throw error;
@@ -128,7 +128,7 @@ class NotificationService {
    */
   async registerFCMToken(token: string): Promise<ApiResponse<{ success: boolean }>> {
     try {
-      return await httpClient.post('/notifications/register-fcm', { token });
+      return await httpClient.post(ENDPOINTS.NOTIFICATIONS.REGISTER_FCM, { token });
     } catch (error) {
       console.error('Register FCM token error:', error);
       throw error;

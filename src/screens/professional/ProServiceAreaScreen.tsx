@@ -15,10 +15,11 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 
-// Mock types for self-contained component
-type ProStackParamList = {
-  ProServiceArea: undefined;
-};
+// Import proper types and hooks
+import { ProStackParamList } from '../../../app/routes/ProfessionalNavigator';
+import { useProfessionalProfile } from '../../hooks/useProfessional';
+import { useApi } from '../../hooks/useApi';
+import httpClient from '../../services/httpClient';
 
 type ProServiceAreaScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;
 
@@ -32,28 +33,33 @@ interface AreaItem {
 
 const ProServiceAreaScreen = () => {
   const navigation = useNavigation<ProServiceAreaScreenNavigationProp>();
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [maxDistance, setMaxDistance] = useState(15);
   const [autoAcceptJobs, setAutoAcceptJobs] = useState(false);
-  const [availableAreas, setAvailableAreas] = useState<AreaItem[]>([]);
 
+  // Use professional profile hooks
+  const { data: profile } = useProfessionalProfile();
+  
+  // Service areas API hook
+  const { 
+    data: serviceAreasData, 
+    isLoading, 
+    execute: refreshServiceAreas 
+  } = useApi(
+    () => httpClient.get('/professionals/service-areas'),
+    { showErrorAlert: false }
+  );
+
+  const availableAreas = serviceAreasData?.areas || [];
+
+  // Initialize settings from profile/service areas data
   useEffect(() => {
-    const mockAreas: AreaItem[] = [
-      { id: '1', name: 'Koramangala', isSelected: true, distance: 0, estimatedJobs: 12 },
-      { id: '2', name: 'HSR Layout', isSelected: true, distance: 3.5, estimatedJobs: 10 },
-      { id: '3', name: 'Indiranagar', isSelected: true, distance: 5.2, estimatedJobs: 8 },
-      { id: '4', name: 'Jayanagar', isSelected: false, distance: 7.8, estimatedJobs: 7 },
-      { id: '5', name: 'JP Nagar', isSelected: false, distance: 8.5, estimatedJobs: 6 },
-      { id: '6', name: 'Whitefield', isSelected: false, distance: 12.3, estimatedJobs: 9 },
-      { id: '7', name: 'Electronic City', isSelected: false, distance: 14.1, estimatedJobs: 5 },
-    ];
-    setTimeout(() => {
-      setAvailableAreas(mockAreas);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
+    if (serviceAreasData?.settings) {
+      setMaxDistance(serviceAreasData.settings.maxDistance || 15);
+      setAutoAcceptJobs(serviceAreasData.settings.autoAcceptJobs || false);
+    }
+  }, [serviceAreasData]);
 
   const filteredAreas = availableAreas
     .filter(area => area.name.toLowerCase().includes(searchQuery.toLowerCase()) && area.distance <= maxDistance)
@@ -62,20 +68,43 @@ const ProServiceAreaScreen = () => {
   const selectedAreas = availableAreas.filter(area => area.isSelected);
   const totalEstimatedJobs = selectedAreas.reduce((total, area) => total + area.estimatedJobs, 0);
 
-  const toggleAreaSelection = (id: string) => {
-    setAvailableAreas(prev => prev.map(area => (area.id === id ? { ...area, isSelected: !area.isSelected } : area)));
+  const toggleAreaSelection = async (id: string) => {
+    try {
+      const area = availableAreas.find(a => a.id === id);
+      if (!area) return;
+
+      await httpClient.patch(`/professionals/service-areas/${id}`, {
+        isSelected: !area.isSelected
+      });
+      
+      refreshServiceAreas(); // Refresh the data
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update service area. Please try again.');
+    }
   };
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     if (selectedAreas.length === 0) {
       Alert.alert('Error', 'Please select at least one service area.');
       return;
     }
+    
     setIsSaving(true);
-    setTimeout(() => {
+    try {
+      await httpClient.patch('/professionals/service-settings', {
+        maxDistance,
+        autoAcceptJobs,
+        selectedAreas: selectedAreas.map(area => area.id)
+      });
+      
+      Alert.alert('Success', 'Service areas updated successfully.', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update service areas. Please try again.');
+    } finally {
       setIsSaving(false);
-      Alert.alert('Success', 'Service areas updated.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
-    }, 1500);
+    }
   };
 
   if (isLoading) {

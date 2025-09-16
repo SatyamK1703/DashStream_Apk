@@ -14,6 +14,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import { adminService } from '../../services/adminService';
 
 type AdminProfessionalDetailsRouteProp = RouteProp<AdminStackParamList, 'ProfessionalDetails'>;
 type AdminProfessionalDetailsNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
@@ -217,15 +218,7 @@ const AdminProfessionalDetailsScreen = () => {
     }
   };
 
-  useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setProfessional(mockProfessional);
-      setLoading(false);
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [professionalId]);
+  // Removed mock useEffect - using real API call now
 
   const handleStatusChange = () => {
     if (!professional) return;

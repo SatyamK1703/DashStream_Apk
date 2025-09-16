@@ -40,6 +40,7 @@ const STORAGE_KEYS = {
 class HttpClient {
   private client: AxiosInstance;
   private refreshTokenPromise: Promise<string> | null = null;
+  private onTokenRefreshCallback: (() => void) | null = null;
 
   constructor() {
     this.client = axios.create({
@@ -64,6 +65,14 @@ class HttpClient {
           const accessToken = await this.getAccessToken();
           if (accessToken && config.headers) {
             config.headers.Authorization = `Bearer ${accessToken}`;
+            if (__DEV__ && config.url?.includes('/auth/me')) {
+              console.log('🔑 Using token for /auth/me:', {
+                tokenLength: accessToken.length,
+                tokenPreview: accessToken.substring(0, 20) + '...'
+              });
+            }
+          } else if (__DEV__ && config.url?.includes('/auth/me')) {
+            console.warn('⚠️ No access token found for /auth/me request');
           }
         } catch (error) {
           if (__DEV__) console.warn('Failed to read access token:', error);
@@ -79,6 +88,7 @@ class HttpClient {
           console.log(`🔵 ${config.method?.toUpperCase()} ${config.url}`, {
             data: config.data,
             params: config.params,
+            hasAuth: !!config.headers?.Authorization
           });
         }
 
@@ -99,6 +109,25 @@ class HttpClient {
             status: response.status,
             data: response.data,
           });
+          
+          // Special logging for /auth/me to debug the issue
+          if (response.config.url?.includes('/auth/me')) {
+            console.log('🔍 /auth/me detailed response:', {
+              status: response.status,
+              statusText: response.statusText,
+              headers: response.headers,
+              dataType: typeof response.data,
+              dataKeys: response.data ? Object.keys(response.data) : 'No data',
+              fullData: JSON.stringify(response.data, null, 2),
+              hasUserInData: !!(response.data?.data?.user),
+              userDataType: typeof response.data?.data?.user
+            });
+            
+            // If data is undefined but status is 200, this might be a backend issue
+            if (response.status === 200 && response.data?.data === undefined) {
+              console.warn('⚠️ /auth/me returned 200 but data is undefined - possible backend issue');
+            }
+          }
         }
         return response;
       },
@@ -117,8 +146,28 @@ class HttpClient {
               return this.client(originalRequest);
             }
           } catch (refreshError: any) {
-            if (__DEV__) console.error('JWT refresh failed:', refreshError?.message || refreshError);
+            if (__DEV__) {
+              console.error('JWT refresh failed:', {
+                message: refreshError?.message || refreshError,
+                status: refreshError?.response?.status,
+                data: refreshError?.response?.data,
+                errorCode: refreshError?.response?.data?.errorCode
+              });
+            }
+            
+            // Clear tokens on refresh failure
             await this.clearAuthTokens();
+            
+            // If the error is "User no longer exists" or similar, we should not retry
+            const errorCode = refreshError?.response?.data?.errorCode;
+            const isUserNotFound = errorCode === 'APP-401-051' || 
+                                 refreshError?.response?.data?.message?.includes('User no longer exists');
+            
+            if (isUserNotFound) {
+              if (__DEV__) console.log('🚪 User no longer exists - forcing logout');
+              // Don't retry the original request, just fail
+              return Promise.reject(this.handleError(error));
+            }
           }
         }
 
@@ -142,6 +191,13 @@ class HttpClient {
       [STORAGE_KEYS.ACCESS_TOKEN, accessToken],
       [STORAGE_KEYS.REFRESH_TOKEN, refreshToken],
     ]);
+    
+    if (__DEV__) {
+      console.log('🔐 Tokens stored successfully', {
+        accessTokenLength: accessToken.length,
+        refreshTokenLength: refreshToken.length
+      });
+    }
   }
 
   async getAccessToken(): Promise<string | null> {
@@ -187,9 +243,50 @@ class HttpClient {
 
         await this.setAuthTokens(newAccessToken, newRefreshToken);
 
+        if (__DEV__) {
+          console.log('✅ Token refreshed successfully');
+        }
+
         resolve(newAccessToken);
-      } catch (err) {
+
+        // Notify callback AFTER resolving to ensure token is available
+        if (this.onTokenRefreshCallback) {
+          try {
+            // Use setTimeout to ensure the token is fully stored before callback
+            setTimeout(() => {
+              this.onTokenRefreshCallback!();
+            }, 100);
+          } catch (callbackError) {
+            if (__DEV__) console.warn('Token refresh callback error:', callbackError);
+          }
+        }
+      } catch (err: any) {
+        if (__DEV__) {
+          console.error('❌ Token refresh failed:', {
+            message: err?.message || err,
+            status: err?.response?.status,
+            data: err?.response?.data,
+            errorCode: err?.response?.data?.errorCode
+          });
+        }
+        
         await this.clearAuthTokens();
+        
+        // Check if this is a "user no longer exists" error
+        const errorCode = err?.response?.data?.errorCode;
+        const isUserNotFound = errorCode === 'APP-401-051' || 
+                             err?.response?.data?.message?.includes('User no longer exists');
+        
+        if (isUserNotFound && this.onTokenRefreshCallback) {
+          if (__DEV__) console.log('🚪 User deleted - notifying auth context to logout');
+          // Notify the auth context that the user should be logged out
+          setTimeout(() => {
+            if (this.onTokenRefreshCallback) {
+              this.onTokenRefreshCallback();
+            }
+          }, 100);
+        }
+        
         reject(err);
       } finally {
         this.refreshTokenPromise = null;
@@ -287,6 +384,26 @@ class HttpClient {
   async isAuthenticated(): Promise<boolean> {
     const token = await this.getAccessToken();
     return !!token;
+  }
+
+  // Verify if current token is valid by making a test request
+  async verifyCurrentToken(): Promise<boolean> {
+    try {
+      const token = await this.getAccessToken();
+      if (!token) return false;
+
+      // Make a simple request to verify token
+      const response = await this.get('/auth/verify-token');
+      return response.success === true || response.status === 'success';
+    } catch (error) {
+      if (__DEV__) console.log('Token verification failed:', error);
+      return false;
+    }
+  }
+
+  // Set callback for token refresh events
+  setTokenRefreshCallback(callback: (() => void) | null): void {
+    this.onTokenRefreshCallback = callback;
   }
 
   // Logout and clear tokens

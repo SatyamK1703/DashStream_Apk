@@ -9,6 +9,18 @@ export interface ApiError {
 }
 
 export const parseApiError = (error: any): ApiError => {
+  if (__DEV__) {
+    console.log('parseApiError - Processing error:', {
+      error,
+      hasResponse: !!error?.response,
+      errorMessage: error?.message,
+      errorCode: error?.code,
+      errorStatus: error?.response?.status,
+      errorData: error?.response?.data,
+      fullResponseData: error?.response?.data
+    });
+  }
+
   // If this already looks like our ApiError shape, return it as-is
   if (error && typeof error === 'object' && (
     typeof error.status !== 'undefined' || typeof error.statusCode !== 'undefined'

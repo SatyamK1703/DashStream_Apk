@@ -17,37 +17,40 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
-// Mock types and hooks for self-contained component
-type ProStackParamList = {
-  EditProfile: undefined;
-  ProSkills: undefined;
-  ProServiceArea: undefined;
-};
-
-const useAuth = () => ({
-  user: {
-    name: 'Rajesh Kumar',
-    email: 'rajesh.kumar@example.com',
-    phone: '+91 9876543210',
-  },
-  updateUserProfile: async (data: any) => {
-    console.log('Updating profile with:', data);
-    return Promise.resolve();
-  },
-});
+// Import proper types and hooks
+import { ProStackParamList } from '../../../app/routes/ProfessionalNavigator';
+import { useAuth } from '../../context/AuthContext';
+import { useProfessionalProfile, useProfessionalProfileActions } from '../../hooks/useProfessional';
 
 type ProEditProfileScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;
 
 const ProEditProfileScreen = () => {
   const navigation = useNavigation<ProEditProfileScreenNavigationProp>();
-  const { user, updateUserProfile } = useAuth();
+  const { user } = useAuth();
 
-  const [name, setName] = useState(user?.name || '');
-  const [email, setEmail] = useState(user?.email || '');
-  const [phone, setPhone] = useState(user?.phone || '');
-  const [profileImage, setProfileImage] = useState('https://randomuser.me/api/portraits/men/32.jpg');
-  const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string }>({});
+  // Use professional profile hooks
+  const { data: profile, isLoading: profileLoading, execute: refreshProfile } = useProfessionalProfile();
+  const { updateProfile, isLoading: updateLoading } = useProfessionalProfileActions();
+
+  const [name, setName] = useState(profile?.name || user?.name || '');
+  const [email, setEmail] = useState(profile?.email || user?.email || '');
+  const [phone, setPhone] = useState(profile?.phone || user?.phone || '');
+  const [profileImage, setProfileImage] = useState(profile?.profileImage || 'https://randomuser.me/api/portraits/men/32.jpg');
+  const [bio, setBio] = useState(profile?.bio || '');
+  const [experience, setExperience] = useState(profile?.experience || '');
+  const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string; bio?: string }>({});
+
+  // Update form fields when profile data is loaded
+  React.useEffect(() => {
+    if (profile) {
+      setName(profile.name || '');
+      setEmail(profile.email || '');
+      setPhone(profile.phone || '');
+      setProfileImage(profile.profileImage || '');
+      setBio(profile.bio || '');
+      setExperience(profile.experience || '');
+    }
+  }, [profile]);
 
   const validateInputs = () => {
     const newErrors: { name?: string; email?: string; phone?: string } = {};
@@ -64,14 +67,22 @@ const ProEditProfileScreen = () => {
 
   const handleSaveProfile = async () => {
     if (!validateInputs()) return;
-    setIsLoading(true);
+    
     try {
-      await updateUserProfile({ name, email, phone, profileImage });
-      Alert.alert('Success', 'Profile updated successfully.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+      await updateProfile({
+        name,
+        email,
+        phone,
+        profileImage,
+        bio,
+        experience,
+      });
+      Alert.alert('Success', 'Profile updated successfully.', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+      refreshProfile(); // Refresh profile data
     } catch (error) {
-      Alert.alert('Error', 'Failed to update profile.');
-    } finally {
-      setIsLoading(false);
+      Alert.alert('Error', 'Failed to update profile. Please try again.');
     }
   };
 
@@ -161,8 +172,8 @@ const ProEditProfileScreen = () => {
 
         {/* Save Button Footer */}
         <View style={styles.footer}>
-          <TouchableOpacity style={[styles.primaryButton, isLoading && styles.buttonDisabled]} onPress={handleSaveProfile} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color={colors.white} size="small" /> : <Text style={styles.primaryButtonText}>Save Changes</Text>}
+          <TouchableOpacity style={[styles.primaryButton, updateLoading && styles.buttonDisabled]} onPress={handleSaveProfile} disabled={updateLoading}>
+            {updateLoading ? <ActivityIndicator color={colors.white} size="small" /> : <Text style={styles.primaryButtonText}>Save Changes</Text>}
           </TouchableOpacity>
         </View>
       </View>

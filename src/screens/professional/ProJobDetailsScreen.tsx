@@ -17,11 +17,9 @@ import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 
-// Mock types for self-contained component
-type ProStackParamList = {
-  JobDetails: { jobId: string };
-  RouteTracking: { jobId: string };
-};
+// Import proper types and hooks
+import { ProStackParamList } from '../../../app/routes/ProfessionalNavigator';
+import { useProfessionalJob, useProfessionalJobActions } from '../../hooks/useProfessional';
 
 type ProJobDetailsScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;
 type ProJobDetailsScreenRouteProp = RouteProp<ProStackParamList, 'JobDetails'>;
@@ -49,18 +47,15 @@ const ProJobDetailsScreen = () => {
   const route = useRoute<ProJobDetailsScreenRouteProp>();
   const { jobId } = route.params;
 
-  const [loading, setLoading] = useState(true);
-  const [job, setJob] = useState<JobDetail | null>(null);
-
-  useEffect(() => {
-    const mockJob: JobDetail = {
-      id: 'JOB123456', customerName: 'Priya Sharma', customerImage: 'https://randomuser.me/api/portraits/women/44.jpg', customerPhone: '+91 9876543210', date: 'Today', time: '11:30 AM', address: '123 Main St, Koramangala, Bangalore', location: { latitude: 12.9352, longitude: 77.6245 }, professionalLocation: { latitude: 12.9252, longitude: 77.6145 }, services: [{ name: 'Premium Wash', price: 599, description: 'Exterior wash, wax, tire shine' }, { name: 'Interior Cleaning', price: 399, description: 'Vacuum, dashboard polish' }], totalAmount: 998, status: 'upcoming', paymentStatus: 'paid', specialInstructions: 'Be careful with the side mirrors.', vehicleDetails: { type: 'car', brand: 'Honda', model: 'City', color: 'Silver', licensePlate: 'KA 01 AB 1234' }
-    };
-    setTimeout(() => {
-      setJob(mockJob);
-      setLoading(false);
-    }, 1000);
-  }, [jobId]);
+  // Use professional job hooks
+  const { data: job, isLoading, error, execute: refreshJob } = useProfessionalJob(jobId);
+  const { 
+    acceptJob, 
+    startJob, 
+    completeJob, 
+    cancelJob, 
+    isLoading: actionLoading 
+  } = useProfessionalJobActions();
 
   const handleCallCustomer = () => {
     if (job?.customerPhone) {
@@ -81,7 +76,14 @@ const ProJobDetailsScreen = () => {
     }
   };
 
-  const updateJobStatus = (newStatus: JobDetail['status']) => {
+  const updateJobStatus = async (newStatus: string) => {
+    const statusMap: {[key: string]: () => Promise<any>} = {
+      'confirmed': () => acceptJob(jobId),
+      'in-progress': () => startJob(jobId),
+      'completed': () => completeJob(jobId),
+      'cancelled': () => cancelJob(jobId)
+    };
+
     Alert.alert(
       `${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)} Job`,
       `Are you sure you want to ${newStatus} this job?`,
@@ -89,16 +91,27 @@ const ProJobDetailsScreen = () => {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Confirm',
-          onPress: () => {
-            if (job) setJob({ ...job, status: newStatus });
-            if (newStatus === 'ongoing') navigation.navigate('RouteTracking', { jobId });
+          onPress: async () => {
+            try {
+              const action = statusMap[newStatus];
+              if (action) {
+                await action();
+                refreshJob(); // Refresh job data
+                Alert.alert('Success', `Job ${newStatus} successfully!`);
+                if (newStatus === 'in-progress') {
+                  navigation.navigate('RouteTracking', { jobId });
+                }
+              }
+            } catch (error) {
+              Alert.alert('Error', `Failed to ${newStatus} job. Please try again.`);
+            }
           },
         },
       ]
     );
   };
 
-  if (loading) {
+  if (isLoading) {
     return <View style={styles.centeredScreen}><ActivityIndicator size="large" color={colors.primary} /></View>;
   }
 

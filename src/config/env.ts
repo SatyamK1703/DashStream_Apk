@@ -5,7 +5,7 @@ const ENV = {
   development: {
     API_URL: Platform.OS === 'ios' 
       ? 'https://dash-stream-apk-backend.vercel.app/api'
-      : 'https://dash-stream-apk-backend.vercel.app/api', // Android emulator
+      : 'https://dash-stream-apk-backend.vercel.app/api', // Use your local backend
     WS_URL: Platform.OS === 'ios'
       ? 'https://dash-stream-apk-backend.vercel.app/api'
       : 'https://dash-stream-apk-backend.vercel.app/api',
@@ -62,14 +62,18 @@ export const ENDPOINTS = {
   // Services
   SERVICES: {
     ALL: '/services',
+    CREATE: '/services',
+    BY_ID: (id: string) => `/services/${id}`,
+    UPDATE: (id: string) => `/services/${id}`,
+    DELETE: (id: string) => `/services/${id}`,
     POPULAR: '/services/popular',
     TOP_SERVICES: '/services/top-services',
     CATEGORIES: '/services/categories',
     BY_CATEGORY: (category: string) => `/services/categories/${category}`,
     SEARCH: '/services/search',
-    BY_ID: (id: string) => `/services/${id}`,
+    STATS: '/services/stats',
   },
-
+  
   // Bookings
   BOOKINGS: {
     CREATE: '/bookings',
@@ -128,24 +132,36 @@ export const ENDPOINTS = {
   // Admin endpoints
   ADMIN: {
     DASHBOARD: '/admins/dashboard',
-    USERS: '/admins/users',
-    USER_BY_ID: (id: string) => `/admins/users/${id}`,
-    BOOKINGS: '/admins/bookings',
+    USERS: '/users',
+    USER_BY_ID: (id: string) => `/users/${id}`,
+    CREATE_USER: '/admins/users',
+    UPDATE_USER: (id: string) => `/users/${id}`,
+    DELETE_USER: (id: string) => `/users/${id}`,
+    BOOKINGS: '/bookings',
     BOOKING_BY_ID: (id: string) => `/admins/bookings/${id}`,
-    SERVICES: '/admins/services',
-    SERVICE_BY_ID: (id: string) => `/admins/services/${id}`,
-    PROFESSIONALS: '/admins/professionals',
-    PROFESSIONAL_BY_ID: (id: string) => `/admins/professionals/${id}`,
+    ASSIGN_PROFESSIONAL: (id: string) => `/admins/bookings/${id}/assign`,
+    CANCEL_BOOKING: (id: string) => `/admins/bookings/${id}/cancel`,
+    UPDATE_BOOKING_STATUS: (id: string) => `/admins/bookings/${id}/status`,
+    SERVICES: '/services',
+    SERVICE_BY_ID: (id: string) => `/services/${id}`,
+    CREATE_SERVICE: '/services',
+    UPDATE_SERVICE: (id: string) => `/services/${id}`,
+    DELETE_SERVICE: (id: string) => `/services/${id}`,
+    PROFESSIONALS: '/professionals',
+    PROFESSIONAL_BY_ID: (id: string) => `/professionals/${id}`,
+    CREATE_PROFESSIONAL: '/professionals',
+    UPDATE_PROFESSIONAL: (id: string) => `/professionals/${id}`,
+    VERIFY_PROFESSIONAL: (id: string) => `/professionals/${id}/verification`,
     STATS: '/admins/stats',
   },
 
   // Professional endpoints
   PROFESSIONALS: {
     PROFILE: '/professionals/profile',
-    AVAILABILITY: '/professionals/toggle-availability',
+    DASHBOARD: '/professionals/dashboard',
     JOBS: '/professionals/jobs',
-    EARNINGS: '/professionals/earnings',
-    VERIFICATION: '/professionals/verification',
+    JOB_BY_ID: (id: string) => `/professionals/jobs/${id}`,
+    UPDATE_JOB_STATUS: (id: string) => `/professionals/jobs/${id}/status`,
   },
 };
 

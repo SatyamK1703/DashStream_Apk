@@ -12,7 +12,7 @@ type OtpVerificationRouteProp = RouteProp<RootStackParamList, 'OtpVerification'>
 type OtpVerificationNavigationProp = NativeStackNavigationProp<RootStackParamList, 'OtpVerification'>;
 
 const OtpVerificationScreen = () => {
-  const [otp, setOtp] = useState(['', '', '', '','','']);
+  const [otp, setOtp] = useState(['', '', '', '']);
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);

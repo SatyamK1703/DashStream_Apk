@@ -15,14 +15,10 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 
-// Mock types for self-contained component
-type ProStackParamList = {
-  ProNotifications: undefined;
-  JobDetails: { jobId: string };
-  ProEarnings: undefined;
-  ProProfile: undefined;
-  ProDashboard: undefined;
-};
+// Import proper types and hooks
+import { ProStackParamList } from '../../../app/routes/ProfessionalNavigator';
+import { useApi } from '../../hooks/useApi';
+import httpClient from '../../services/httpClient';
 
 type ProNotificationsScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;
 
@@ -42,45 +38,50 @@ interface Notification {
 
 const ProNotificationsScreen = () => {
   const navigation = useNavigation<ProNotificationsScreenNavigationProp>();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'job' | 'payment' | 'system' | 'promo'>('all');
 
-  // --- Data Fetching ---
-  const fetchNotifications = useCallback(() => {
-    const mockNotifications: Notification[] = [
-        { id: '1', type: 'job', title: 'New Job Assigned', message: 'New car wash job in Koramangala.', timestamp: new Date(Date.now() - 30 * 60 * 1000), isRead: false, data: { jobId: 'JOB123456', route: 'JobDetails' } },
-        { id: '2', type: 'payment', title: 'Payment Received', message: 'Received ₹450 for job #JOB123123.', timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), isRead: true, data: { route: 'ProEarnings' } },
-        { id: '3', type: 'system', title: 'Profile Verified', message: 'Your profile and documents are verified.', timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), isRead: true, data: { route: 'ProProfile' } },
-        { id: '4', type: 'job', title: 'Job Reminder', message: 'Upcoming job tomorrow at 10:00 AM.', timestamp: new Date(Date.now() - 26 * 60 * 60 * 1000), isRead: false, data: { jobId: 'JOB123457', route: 'JobDetails' } },
-        { id: '5', type: 'promo', title: 'Performance Bonus', message: 'Complete 10 jobs this week for a ₹500 bonus!', timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000), isRead: true },
-    ];
-    setTimeout(() => {
-      setNotifications(mockNotifications);
-      setIsLoading(false);
-      setRefreshing(false);
-    }, 1000);
-  }, []);
+  // Use API hook for notifications
+  const { 
+    data: notifications = [], 
+    isLoading, 
+    error, 
+    execute: refreshNotifications 
+  } = useApi(
+    () => httpClient.get('/notifications'), // Professional notifications endpoint
+    {
+      showErrorAlert: false,
+    }
+  );
 
-  useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+  // Filter notifications based on active filter
+  const filteredNotifications = notifications.filter(notification => 
+    activeFilter === 'all' || notification.type === activeFilter
+  );
 
   const onRefresh = () => {
-    setRefreshing(true);
-    fetchNotifications();
+    refreshNotifications();
   };
 
   // --- Handlers ---
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => (n.id === id ? { ...n, isRead: true } : n)));
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await httpClient.patch(`/notifications/${id}/read`);
+      refreshNotifications(); // Refresh the notifications list
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
   };
 
-  const handleMarkAllAsRead = () => {
-    if (notifications.some(n => !n.isRead)) {
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-      Alert.alert('Success', 'All notifications marked as read.');
+  const handleMarkAllAsRead = async () => {
+    const unreadNotifications = notifications.filter(n => !n.isRead);
+    if (unreadNotifications.length > 0) {
+      try {
+        await httpClient.patch('/notifications/mark-all-read');
+        refreshNotifications();
+        Alert.alert('Success', 'All notifications marked as read.');
+      } catch (error) {
+        Alert.alert('Error', 'Failed to mark notifications as read. Please try again.');
+      }
     }
   };
 
@@ -93,18 +94,25 @@ const ProNotificationsScreen = () => {
     }
   };
 
-  const handleDeleteNotification = (id: string) => {
-    Alert.alert('Delete Notification', 'Are you sure?', [
+  const handleDeleteNotification = async (id: string) => {
+    Alert.alert('Delete Notification', 'Are you sure you want to delete this notification?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => setNotifications(prev => prev.filter(n => n.id !== id)) },
+      { 
+        text: 'Delete', 
+        style: 'destructive', 
+        onPress: async () => {
+          try {
+            await httpClient.delete(`/notifications/${id}`);
+            refreshNotifications();
+          } catch (error) {
+            Alert.alert('Error', 'Failed to delete notification. Please try again.');
+          }
+        }
+      },
     ]);
   };
 
   // --- Helpers & Render Functions ---
-  const getFilteredNotifications = () => {
-    if (activeFilter === 'all') return notifications;
-    return notifications.filter(n => n.type === activeFilter);
-  };
 
   const getNotificationIcon = (type: Notification['type']) => {
     const iconMap = {
@@ -185,11 +193,11 @@ const ProNotificationsScreen = () => {
       </View>
 
       <FlatList
-        data={getFilteredNotifications()}
+        data={filteredNotifications}
         renderItem={renderNotificationItem}
         keyExtractor={item => item.id}
         ListEmptyComponent={renderEmptyList}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} colors={[colors.primary]} />}
         contentContainerStyle={styles.listContainer}
       />
     </View>

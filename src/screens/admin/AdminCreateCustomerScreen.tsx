@@ -18,6 +18,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { adminService } from '../../services/adminService';
 type AdminCreateCustomerNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 
 interface FormData {

@@ -14,12 +14,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 
-// Mock types and hooks for self-contained component
-type ProStackParamList = {
-  Earnings: undefined;
-  ProNotifications: undefined;
-  ProSettings: undefined;
-};
+// Import proper types and hooks
+import { ProStackParamList } from '../../../app/routes/ProfessionalNavigator';
+import { useProfessionalEarningsScreen } from '../../hooks/useProfessional';
 
 type ProEarningsScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;
 
@@ -44,44 +41,27 @@ interface PaymentHistory {
 const ProEarningsScreen = () => {
   const navigation = useNavigation<ProEarningsScreenNavigationProp>();
   const [activeTab, setActiveTab] = useState<'summary' | 'history'>('summary');
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [earningsSummary, setEarningsSummary] = useState<EarningsSummary | null>(null);
-  const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
+
+  // Use the earnings hook
+  const {
+    earnings,
+    isLoading,
+    error,
+    refresh
+  } = useProfessionalEarningsScreen();
   const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'year'>('week');
 
-  // --- Mock Data ---
-  const mockData = {
-    summary: { totalEarnings: 24850, pendingPayouts: 3500, completedJobs: 42, averageRating: 4.8 },
-    history: [
-      { id: 'PAY123456', amount: 3500, date: '2023-06-15', status: 'pending', jobIds: ['JOB789012', 'JOB789013'], paymentMethod: 'Bank Transfer' },
-      { id: 'PAY123455', amount: 4200, date: '2023-06-10', status: 'completed', jobIds: ['JOB789010', 'JOB789011'], paymentMethod: 'Bank Transfer', transactionId: 'TXN987654321' },
-      { id: 'PAY123454', amount: 3850, date: '2023-06-03', status: 'completed', jobIds: ['JOB789008', 'JOB789009'], paymentMethod: 'Bank Transfer', transactionId: 'TXN987654320' },
-    ],
-    charts: {
-      week: [{ day: 'Mon', amount: 850 }, { day: 'Tue', amount: 1200 }, { day: 'Wed', amount: 950 }, { day: 'Thu', amount: 1100 }, { day: 'Fri', amount: 1500 }, { day: 'Sat', amount: 1800 }, { day: 'Sun', amount: 1400 }],
-      month: [{ day: 'Week 1', amount: 5500 }, { day: 'Week 2', amount: 6200 }, { day: 'Week 3', amount: 6800 }, { day: 'Week 4', amount: 6350 }],
-      year: [{ day: 'Jan', amount: 18500 }, { day: 'Feb', amount: 19200 }, { day: 'Mar', amount: 21500 }, { day: 'Apr', amount: 22800 }, { day: 'May', amount: 24500 }, { day: 'Jun', amount: 24850 }],
-    }
-  };
-
-  // --- Data Fetching ---
-  const fetchData = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setEarningsSummary(mockData.summary);
-      setPaymentHistory(mockData.history);
-      setLoading(false);
-      setRefreshing(false);
-    }, 1000);
-  };
-
-  useEffect(fetchData, []);
-  const onRefresh = () => { setRefreshing(true); fetchData(); };
-
   // --- Helper Functions ---
-  const getChartData = () => mockData.charts[timeFilter];
   const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  
+  const getChartData = () => {
+    if (!earnings?.chartData) return [];
+    return earnings.chartData[timeFilter] || [];
+  };
+
+  const onRefresh = () => {
+    refresh();
+  };
 
   // --- Render Functions ---
   const renderChartBars = () => {
@@ -101,17 +81,17 @@ const ProEarningsScreen = () => {
   };
 
   const renderSummary = () => {
-    if (!earningsSummary) return null;
+    if (!earnings) return null;
     return (
       <View style={styles.contentContainer}>
         <View style={styles.card}>
           <Text style={styles.summaryLabel}>Total Earnings</Text>
-          <Text style={styles.summaryTotal}>₹{earningsSummary.totalEarnings.toLocaleString('en-IN')}</Text>
+          <Text style={styles.summaryTotal}>₹{earnings.totalEarnings?.toLocaleString('en-IN') || '0'}</Text>
           <View style={styles.summaryMetrics}>
             {[
-              { label: 'Pending', value: `₹${earningsSummary.pendingPayouts.toLocaleString('en-IN')}`, icon: 'money-bill-wave', color: colors.blue, bgColor: colors.blue100 },
-              { label: 'Jobs', value: earningsSummary.completedJobs, icon: 'checkmark-circle', color: colors.green, bgColor: colors.green100 },
-              { label: 'Rating', value: earningsSummary.averageRating, icon: 'star', color: colors.amber, bgColor: colors.amber100 },
+              { label: 'Pending', value: `₹${earnings.pendingPayouts?.toLocaleString('en-IN') || '0'}`, icon: 'money-bill-wave', color: colors.blue, bgColor: colors.blue100 },
+              { label: 'Jobs', value: earnings.completedJobs || 0, icon: 'checkmark-circle', color: colors.green, bgColor: colors.green100 },
+              { label: 'Rating', value: earnings.averageRating || 0, icon: 'star', color: colors.amber, bgColor: colors.amber100 },
             ].map(metric => (
               <View key={metric.label} style={styles.metricItem}>
                 <View style={[styles.metricIconContainer, { backgroundColor: metric.bgColor }]}>
@@ -184,11 +164,12 @@ const ProEarningsScreen = () => {
 
   const renderHistory = () => (
     <FlatList
-      data={paymentHistory}
+      data={earnings?.paymentHistory || []}
       renderItem={renderHistoryItem}
       keyExtractor={item => item.id}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} colors={[colors.primary]} />}
       ListEmptyComponent={
         <View style={styles.emptyState}>
           <Ionicons name="cash-outline" size={64} color={colors.gray300} />
@@ -198,7 +179,7 @@ const ProEarningsScreen = () => {
     />
   );
 
-  if (loading && !refreshing) {
+  if (isLoading) {
     return (
       <View style={styles.loadingScreen}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -225,7 +206,7 @@ const ProEarningsScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.flex1} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}>
+      <ScrollView style={styles.flex1} refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} colors={[colors.primary]} />}>
         {activeTab === 'summary' ? renderSummary() : renderHistory()}
       </ScrollView>
     </View>

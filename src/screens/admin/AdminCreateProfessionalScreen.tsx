@@ -20,6 +20,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
+import { adminService } from '../../services/adminService';
 
 
 type AdminCreateProfessionalNavigationProp = NativeStackNavigationProp<AdminStackParamList>;

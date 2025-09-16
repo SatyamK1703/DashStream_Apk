@@ -3,9 +3,6 @@ import { ENDPOINTS } from '../config/env';
 import { Service, ServiceCategory, SearchParams } from '../types/api';
 
 class ServiceService {
-  /**
-   * Get all services with optional filters
-   */
   async getAllServices(params?: SearchParams): Promise<ApiResponse<Service[]>> {
     try {
       return await httpClient.get(ENDPOINTS.SERVICES.ALL, { params });
@@ -15,9 +12,7 @@ class ServiceService {
     }
   }
 
-  /**
-   * Get popular services
-   */
+
   async getPopularServices(limit?: number): Promise<ApiResponse<Service[]>> {
     try {
       const params = limit ? { limit } : undefined;
@@ -28,9 +23,7 @@ class ServiceService {
     }
   }
 
-  /**
-   * Get top services
-   */
+ 
   async getTopServices(limit?: number): Promise<ApiResponse<Service[]>> {
     try {
       const params = limit ? { limit } : undefined;

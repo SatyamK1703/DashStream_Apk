@@ -22,6 +22,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { Alert } from 'react-native';
 
 import { userService, authService } from '../services';
+import httpClient from '../services/httpClient';
 import type { User as ApiUser } from '../services';
 
 
@@ -46,6 +47,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUserProfile: (userData: Partial<User>) => Promise<void>;
   refreshUser: () => Promise<void>;
+  recheckAuth: () => Promise<void>;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
@@ -80,23 +82,124 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check if user is already authenticated on app launch
   useEffect(() => {
-    checkAuthStatus();
+    // Add a timeout to prevent infinite loading
+    const authTimeout = setTimeout(() => {
+      if (isBooting) {
+        if (__DEV__) console.warn('⚠️ Auth check timeout - forcing boot completion');
+        setIsBooting(false);
+        setUser(null);
+      }
+    }, 10000); // 10 second timeout
+
+    checkAuthStatus().finally(() => {
+      clearTimeout(authTimeout);
+    });
+    
+    // Set up callback for token refresh events
+    httpClient.setTokenRefreshCallback(() => {
+      if (__DEV__) console.log('🔄 Token refresh event triggered...');
+      
+      // Check if we still have tokens after refresh attempt
+      setTimeout(async () => {
+        try {
+          const hasTokens = await authService.isAuthenticated();
+          if (!hasTokens) {
+            if (__DEV__) console.log('🚪 No tokens after refresh - user logged out');
+            setUser(null);
+            return;
+          }
+          
+          // If we have tokens, try to refresh user data
+          await refreshUser();
+        } catch (error: any) {
+          if (__DEV__) console.error('❌ Error in token refresh callback:', error);
+          
+          // Check if this is a "user no longer exists" error
+          const errorCode = error?.response?.data?.errorCode;
+          const isUserNotFound = errorCode === 'APP-401-051' || 
+                               error?.response?.data?.message?.includes('User no longer exists');
+          
+          if (isUserNotFound) {
+            if (__DEV__) console.log('🚪 User no longer exists - forcing complete logout');
+            try {
+              await authService.logout();
+            } catch (logoutError) {
+              if (__DEV__) console.warn('Error during forced logout:', logoutError);
+            }
+          }
+          
+          // Force logout to prevent infinite loops
+          setUser(null);
+        }
+      }, 500);
+    });
+
+    // Cleanup callback on unmount
+    return () => {
+      clearTimeout(authTimeout);
+      httpClient.setTokenRefreshCallback(null);
+    };
   }, []);
 
   const checkAuthStatus = async () => {
     try {
       setIsBooting(true);
 
+      // Check if we have tokens first
+      const isAuthenticated = await authService.isAuthenticated();
+      if (!isAuthenticated) {
+        if (__DEV__) console.log('No auth tokens found');
+        setUser(null);
+        setIsBooting(false);
+        return;
+      }
+
       // If tokens exist, fetch current user
       const response = await authService.getCurrentUser();
+      if (__DEV__) {
+        console.log('Auth check response:', {
+          success: response.success,
+          status: response.status,
+          hasData: !!response.data,
+          hasUser: !!response.data?.user,
+          dataValue: response.data
+        });
+      }
+
       const isSuccess = response.success === true || response.status === 'success';
       if (isSuccess && response.data?.user) {
         setUser(convertApiUserToAppUser(response.data.user));
+        if (__DEV__) console.log('✅ User authenticated successfully');
       } else {
+        if (__DEV__) console.warn('Auth check failed: Invalid response data', {
+          isSuccess,
+          hasData: !!response.data,
+          hasUser: !!response.data?.user,
+          responseData: response.data
+        });
+        
+        // If the response indicates success but data is undefined/invalid,
+        // it might be a token issue - clear tokens and force re-authentication
+        if (isSuccess && !response.data?.user) {
+          if (__DEV__) console.log('🔄 Success response but no user data - clearing tokens');
+          await authService.logout();
+        }
+        
         setUser(null);
       }
     } catch (error) {
       if (__DEV__) console.warn('Auth check failed:', error);
+      
+      // If it's an authentication error, clear tokens
+      if ((error as any)?.statusCode === 401) {
+        if (__DEV__) console.log('🚪 Authentication error during check - clearing tokens');
+        try {
+          await authService.logout();
+        } catch (logoutError) {
+          if (__DEV__) console.warn('Error during logout:', logoutError);
+        }
+      }
+      
       setUser(null);
     } finally {
       setIsBooting(false);
@@ -207,13 +310,82 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshUser = async () => {
     try {
+      if (__DEV__) {
+        console.log('🔄 Refreshing user data...');
+      }
+      
+      // Add a small delay to ensure any token refresh operations are complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const response = await authService.getCurrentUser();
-      if ((response.success === true || response.status === 'success') && response.data?.user) {
-        setUser(convertApiUserToAppUser(response.data.user));
+      if (__DEV__) {
+        console.log('📋 Refresh user response:', {
+          success: response.success,
+          status: response.status,
+          hasData: !!response.data,
+          hasUser: !!response.data?.user,
+          dataValue: response.data
+        });
+      }
+      
+      const isSuccess = response.success === true || response.status === 'success';
+      if (isSuccess && response.data?.user) {
+        const appUser = convertApiUserToAppUser(response.data.user);
+        setUser(appUser);
+        if (__DEV__) {
+          console.log('✅ User data refreshed successfully:', appUser.name);
+        }
+      } else {
+        if (__DEV__) {
+          console.warn('⚠️ Refresh user failed: Invalid response data', {
+            isSuccess,
+            hasData: !!response.data,
+            hasUser: !!response.data?.user,
+            responseData: response.data
+          });
+        }
+        
+        // If the response indicates success but data is undefined/invalid,
+        // it might be a token issue - clear tokens and force re-authentication
+        if (isSuccess && !response.data?.user) {
+          if (__DEV__) console.log('🔄 Success response but no user data during refresh - clearing tokens');
+          try {
+            await authService.logout();
+          } catch (logoutError) {
+            if (__DEV__) console.warn('Error during logout in refresh:', logoutError);
+          }
+        }
+        
+        // Check if we still have valid tokens
+        const hasTokens = await authService.isAuthenticated();
+        if (!hasTokens) {
+          if (__DEV__) {
+            console.log('🚪 No valid tokens found, logging out user');
+          }
+        }
+        
+        setUser(null);
       }
     } catch (error) {
-      if (__DEV__) console.error('Refresh user error:', error);
+      if (__DEV__) console.error('❌ Refresh user error:', error);
+      
+      // If there's an authentication error, clear the user and tokens
+      if ((error as any)?.statusCode === 401) {
+        if (__DEV__) {
+          console.log('🚪 Authentication error during refresh, clearing user and tokens');
+        }
+        try {
+          await authService.logout();
+        } catch (logoutError) {
+          if (__DEV__) console.warn('Error during logout after auth error:', logoutError);
+        }
+        setUser(null);
+      }
     }
+  };
+
+  const recheckAuth = async () => {
+    await checkAuthStatus();
   };
 
   return (
@@ -226,6 +398,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         updateUserProfile,
         refreshUser,
+        recheckAuth,
         setUser,
         isBooting,
       }}

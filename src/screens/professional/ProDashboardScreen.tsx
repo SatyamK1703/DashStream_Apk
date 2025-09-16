@@ -17,7 +17,7 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-ico
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { ProStackParamList } from '../../../app/routes/ProfessionalNavigator';
-import { useProfessionalDashboard, useProfessionalJobActions, useProfessionalProfileActions } from '../../hooks/useProfessional';
+import { useProfessionalDashboardScreen, useProfessionalJobActions, useProfessionalProfileActions } from '../../hooks/useProfessional';
 
 type ProDashboardScreenNavigationProp = NativeStackNavigationProp<ProStackParamList, 'Dashboard'>;
 
@@ -50,13 +50,11 @@ const ProDashboardScreen = () => {
   // Use the dashboard hook that combines multiple API calls
   const {
     profile,
-    earnings,
-    performance,
-    upcomingJobs,
+    stats,
     isLoading,
     error,
-    refreshDashboard
-  } = useProfessionalDashboard();
+    refresh
+  } = useProfessionalDashboardScreen();
 
   // Professional actions
   const { toggleAvailability } = useProfessionalProfileActions();
@@ -91,7 +89,7 @@ const ProDashboardScreen = () => {
     try {
       await acceptJob(jobId);
       Alert.alert('Success', 'Job accepted successfully!');
-      refreshDashboard();
+      refresh();
     } catch (error) {
       Alert.alert('Error', 'Failed to accept job. Please try again.');
     }

@@ -71,7 +71,7 @@ class AdminService {
    */
   async getUserById(userId: string): Promise<ApiResponse<User>> {
     try {
-      return await httpClient.get(`${ENDPOINTS.ADMIN.USERS}/${userId}`);
+      return await httpClient.get(ENDPOINTS.ADMIN.USER_BY_ID(userId));
     } catch (error) {
       console.error('Get user by ID error:', error);
       throw error;
@@ -89,7 +89,7 @@ class AdminService {
     additionalInfo?: any;
   }): Promise<ApiResponse<User>> {
     try {
-      return await httpClient.post(ENDPOINTS.ADMIN.USERS, userData);
+      return await httpClient.post(ENDPOINTS.ADMIN.CREATE_USER, userData);
     } catch (error) {
       console.error('Create user error:', error);
       throw error;
@@ -101,7 +101,7 @@ class AdminService {
    */
   async updateUser(userId: string, userData: Partial<User>): Promise<ApiResponse<User>> {
     try {
-      return await httpClient.patch(`${ENDPOINTS.ADMIN.USERS}/${userId}`, userData);
+      return await httpClient.patch(ENDPOINTS.ADMIN.UPDATE_USER(userId), userData);
     } catch (error) {
       console.error('Update user error:', error);
       throw error;
@@ -113,7 +113,7 @@ class AdminService {
    */
   async deleteUser(userId: string): Promise<ApiResponse<void>> {
     try {
-      return await httpClient.delete(ENDPOINTS.ADMIN.USER_BY_ID(userId));
+      return await httpClient.delete(ENDPOINTS.ADMIN.DELETE_USER(userId));
     } catch (error) {
       console.error('Delete user error:', error);
       throw error;
@@ -149,7 +149,7 @@ class AdminService {
    */
   async updateBookingStatus(bookingId: string, status: string): Promise<ApiResponse<Booking>> {
     try {
-      return await httpClient.patch(`${ENDPOINTS.ADMIN.BOOKING_BY_ID(bookingId)}/status`, { status });
+      return await httpClient.patch(ENDPOINTS.ADMIN.UPDATE_BOOKING_STATUS(bookingId), { status });
     } catch (error) {
       console.error('Update booking status error:', error);
       throw error;
@@ -161,7 +161,7 @@ class AdminService {
    */
   async assignProfessional(bookingId: string, professionalId: string): Promise<ApiResponse<Booking>> {
     try {
-      return await httpClient.patch(`${ENDPOINTS.ADMIN.BOOKING_BY_ID(bookingId)}/assign`, { 
+      return await httpClient.patch(ENDPOINTS.ADMIN.ASSIGN_PROFESSIONAL(bookingId), { 
         professionalId 
       });
     } catch (error) {
@@ -175,9 +175,7 @@ class AdminService {
    */
   async cancelBooking(bookingId: string, reason?: string): Promise<ApiResponse<Booking>> {
     try {
-      return await httpClient.patch(`${ENDPOINTS.ADMIN.BOOKING_BY_ID(bookingId)}/cancel`, { 
-        reason 
-      });
+      return await httpClient.patch(ENDPOINTS.ADMIN.CANCEL_BOOKING(bookingId), { reason });
     } catch (error) {
       console.error('Cancel booking error:', error);
       throw error;
@@ -185,13 +183,101 @@ class AdminService {
   }
 
   /**
-   * Get all services with filters
+   * Get all services (Admin view)
    */
-  async getServices(filters?: AdminFilters): Promise<ApiResponse<Service[]>> {
+  async getServices(filters?: AdminFilters): Promise<ApiResponse<{ services: Service[]; pagination?: any }>> {
     try {
-      return await httpClient.get(ENDPOINTS.ADMIN.SERVICES, { params: filters });
+      if (__DEV__) {
+        console.log('adminService.getServices - Making request to:', ENDPOINTS.ADMIN.SERVICES, 'with filters:', filters);
+      }
+      
+      const response = await httpClient.get(ENDPOINTS.ADMIN.SERVICES, { params: filters });
+      
+      if (__DEV__) {
+        console.log('adminService.getServices - Raw response:', {
+          endpoint: ENDPOINTS.ADMIN.SERVICES,
+          filters,
+          response,
+          responseData: response.data,
+          dataType: typeof response.data,
+          isArray: Array.isArray(response.data),
+          dataLength: Array.isArray(response.data) ? response.data.length : 'N/A',
+          success: response.success,
+          status: response.status
+        });
+      }
+      
+      // Handle both array and object responses
+      if (Array.isArray(response.data)) {
+        const formattedResponse = {
+          ...response,
+          data: {
+            services: response.data,
+            pagination: response.meta?.pagination
+          }
+        };
+        
+        if (__DEV__) {
+          console.log('adminService.getServices - Formatted response (array):', formattedResponse);
+        }
+        
+        return formattedResponse;
+      }
+      
+      // If response.data has services property, use it directly
+      if (response.data && typeof response.data === 'object' && 'services' in response.data) {
+        if (__DEV__) {
+          console.log('adminService.getServices - Response already has services property:', response);
+        }
+        return response;
+      }
+      
+      // If response.data is an object but doesn't have services property, wrap it
+      if (response.data && typeof response.data === 'object') {
+        const wrappedResponse = {
+          ...response,
+          data: {
+            services: [response.data], // Single service as array
+            pagination: response.meta?.pagination
+          }
+        };
+        
+        if (__DEV__) {
+          console.log('adminService.getServices - Wrapped single service:', wrappedResponse);
+        }
+        
+        return wrappedResponse;
+      }
+      
+      // Fallback - return empty services array
+      const fallbackResponse = {
+        ...response,
+        data: {
+          services: [],
+          pagination: response.meta?.pagination
+        }
+      };
+      
+      if (__DEV__) {
+        console.log('adminService.getServices - Fallback response:', fallbackResponse);
+      }
+      
+      return fallbackResponse;
     } catch (error) {
-      console.error('Get services error:', error);
+      console.error('Get admin services error:', error);
+      
+      if (__DEV__) {
+        console.log('adminService.getServices - Detailed error:', {
+          error,
+          errorMessage: error?.message,
+          errorResponse: error?.response,
+          errorData: error?.response?.data,
+          errorStatus: error?.response?.status,
+          endpoint: ENDPOINTS.ADMIN.SERVICES,
+          fullUrl: `${ENDPOINTS.ADMIN.SERVICES}`
+        });
+      }
+      
       throw error;
     }
   }
@@ -199,17 +285,9 @@ class AdminService {
   /**
    * Create new service
    */
-  async createService(serviceData: {
-    name: string;
-    description: string;
-    price: number;
-    category: string;
-    duration: number;
-    features: string[];
-    isActive: boolean;
-  }): Promise<ApiResponse<Service>> {
+  async createService(serviceData: Partial<Service>): Promise<ApiResponse<Service>> {
     try {
-      return await httpClient.post(ENDPOINTS.ADMIN.SERVICES, serviceData);
+      return await httpClient.post(ENDPOINTS.ADMIN.CREATE_SERVICE, serviceData);
     } catch (error) {
       console.error('Create service error:', error);
       throw error;
@@ -221,7 +299,7 @@ class AdminService {
    */
   async updateService(serviceId: string, serviceData: Partial<Service>): Promise<ApiResponse<Service>> {
     try {
-      return await httpClient.patch(ENDPOINTS.ADMIN.SERVICE_BY_ID(serviceId), serviceData);
+      return await httpClient.patch(ENDPOINTS.ADMIN.UPDATE_SERVICE(serviceId), serviceData);
     } catch (error) {
       console.error('Update service error:', error);
       throw error;
@@ -233,7 +311,7 @@ class AdminService {
    */
   async deleteService(serviceId: string): Promise<ApiResponse<void>> {
     try {
-      return await httpClient.delete(ENDPOINTS.ADMIN.SERVICE_BY_ID(serviceId));
+      return await httpClient.delete(ENDPOINTS.ADMIN.DELETE_SERVICE(serviceId));
     } catch (error) {
       console.error('Delete service error:', error);
       throw error;
@@ -241,7 +319,7 @@ class AdminService {
   }
 
   /**
-   * Get all professionals with filters
+   * Get all professionals
    */
   async getProfessionals(filters?: AdminFilters): Promise<ApiResponse<Professional[]>> {
     try {
@@ -269,12 +347,12 @@ class AdminService {
    */
   async updateProfessionalVerification(
     professionalId: string, 
-    data: { isVerified: boolean; verificationNotes?: string }
+    verificationData: { isVerified: boolean; verificationNotes?: string }
   ): Promise<ApiResponse<Professional>> {
     try {
       return await httpClient.patch(
-        `${ENDPOINTS.ADMIN.PROFESSIONAL_BY_ID(professionalId)}/verification`, 
-        data
+        ENDPOINTS.ADMIN.VERIFY_PROFESSIONAL(professionalId), 
+        verificationData
       );
     } catch (error) {
       console.error('Update professional verification error:', error);
@@ -285,11 +363,25 @@ class AdminService {
   /**
    * Get admin statistics
    */
-  async getStats(filters?: { period: 'daily' | 'weekly' | 'monthly' }): Promise<ApiResponse<any>> {
+  async getStats(): Promise<ApiResponse<any>> {
     try {
-      return await httpClient.get(ENDPOINTS.ADMIN.STATS, { params: filters });
+      return await httpClient.get(ENDPOINTS.ADMIN.STATS);
     } catch (error) {
       console.error('Get admin stats error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get customers (users with customer role)
+   */
+  async getCustomers(filters?: AdminFilters): Promise<ApiResponse<User[]>> {
+    try {
+      return await httpClient.get(ENDPOINTS.ADMIN.USERS, { 
+        params: { ...filters, role: 'customer' } 
+      });
+    } catch (error) {
+      console.error('Get customers error:', error);
       throw error;
     }
   }
@@ -299,7 +391,7 @@ class AdminService {
    */
   async getNotifications(filters?: AdminFilters): Promise<ApiResponse<any[]>> {
     try {
-      return await httpClient.get(`${ENDPOINTS.ADMIN.DASHBOARD}/notifications`, { params: filters });
+      return await httpClient.get(ENDPOINTS.NOTIFICATIONS.ALL, { params: filters });
     } catch (error) {
       console.error('Get notifications error:', error);
       throw error;
@@ -309,11 +401,11 @@ class AdminService {
   /**
    * Mark notification as read
    */
-  async markNotificationRead(notificationId: string): Promise<ApiResponse<void>> {
+  async markNotificationAsRead(notificationId: string): Promise<ApiResponse<any>> {
     try {
-      return await httpClient.patch(`${ENDPOINTS.ADMIN.DASHBOARD}/notifications/${notificationId}/read`);
+      return await httpClient.patch(ENDPOINTS.NOTIFICATIONS.MARK_READ(notificationId));
     } catch (error) {
-      console.error('Mark notification read error:', error);
+      console.error('Mark notification as read error:', error);
       throw error;
     }
   }
@@ -321,29 +413,11 @@ class AdminService {
   /**
    * Mark all notifications as read
    */
-  async markAllNotificationsRead(): Promise<ApiResponse<void>> {
+  async markAllNotificationsAsRead(): Promise<ApiResponse<any>> {
     try {
-      return await httpClient.patch(`${ENDPOINTS.ADMIN.DASHBOARD}/notifications/mark-all-read`);
+      return await httpClient.patch(ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
     } catch (error) {
-      console.error('Mark all notifications read error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Send notification to users
-   */
-  async sendNotification(data: {
-    title: string;
-    message: string;
-    userIds?: string[];
-    userType?: 'all' | 'customers' | 'professionals';
-    priority?: 'low' | 'normal' | 'high';
-  }): Promise<ApiResponse<void>> {
-    try {
-      return await httpClient.post(`${ENDPOINTS.ADMIN.USERS}/send-notification`, data);
-    } catch (error) {
-      console.error('Send notification error:', error);
+      console.error('Mark all notifications as read error:', error);
       throw error;
     }
   }

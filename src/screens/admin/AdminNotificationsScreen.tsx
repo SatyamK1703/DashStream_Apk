@@ -69,7 +69,7 @@ const AdminNotificationsScreen = () => {
 
   const markAsRead = async (notificationId: string) => {
     try {
-      await adminService.markNotificationRead(notificationId);
+      await adminService.markNotificationAsRead(notificationId);
       setNotifications(prevNotifications =>
         prevNotifications.map(notif =>
           notif.id === notificationId ? { ...notif, isRead: true } : notif

@@ -20,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Import proper types and hooks
 import { ProStackParamList } from '../../../app/routes/ProfessionalNavigator';
-import { useProfessionalJobs, useProfessionalJobActions } from '../../hooks/useProfessional';
+import { useProfessionalJobsScreen, useProfessionalJobActions } from '../../hooks/useProfessional';
 
 type ProJobsScreenNavigationProp = NativeStackNavigationProp<ProStackParamList, 'Jobs'>;
 
@@ -45,58 +45,49 @@ interface Job {
   distance?: string;
 }
 
-type FilterStatus = 'all' | 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+type FilterStatus = 'all' | 'pending' | 'confirmed' | 'assigned' | 'in-progress' | 'completed' | 'cancelled' | 'rejected';
 
 const ProJobsScreen = () => {
   const navigation = useNavigation<ProJobsScreenNavigationProp>();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
-  const [activeFilter, setActiveFilter] = useState<FilterStatus>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // --- Data Fetching and Filtering ---
-  useEffect(() => {
-    const mockJobs: Job[] = [
-        { id: 'JOB123456', customerName: 'Priya Sharma', customerImage: 'https://randomuser.me/api/portraits/women/44.jpg', date: 'Today', time: '11:30 AM', address: '123 Main St, Koramangala', totalAmount: 998, status: 'upcoming', paymentStatus: 'paid' },
-        { id: 'JOB123457', customerName: 'Arjun Mehta', customerImage: 'https://randomuser.me/api/portraits/men/32.jpg', date: 'Today', time: '02:00 PM', address: '456 Park Ave, Indiranagar', totalAmount: 399, status: 'upcoming', paymentStatus: 'paid' },
-        { id: 'JOB123459', customerName: 'Rahul Singh', customerImage: 'https://randomuser.me/api/portraits/men/75.jpg', date: 'Yesterday', time: '03:30 PM', address: '101 Green Park, Whitefield', totalAmount: 998, status: 'completed', paymentStatus: 'paid' },
-        { id: 'JOB123461', customerName: 'Vikram Malhotra', customerImage: 'https://randomuser.me/api/portraits/men/45.jpg', date: '10 May 2023', time: '09:30 AM', address: '303 Royal Enclave, MG Road', totalAmount: 599, status: 'cancelled', paymentStatus: 'pending' },
-        { id: 'JOB123462', customerName: 'Meera Kapoor', customerImage: 'https://randomuser.me/api/portraits/women/33.jpg', date: 'Today', time: '09:00 AM', address: '404 Sunshine Apts, Jayanagar', totalAmount: 1797, status: 'ongoing', paymentStatus: 'paid' },
-    ];
-    setTimeout(() => {
-      setJobs(mockJobs);
-      setLoading(false);
-      setRefreshing(false);
-    }, 1000);
-  }, [refreshing]);
+  // Use the professional jobs hook
+  const {
+    jobs,
+    selectedStatus,
+    setSelectedStatus,
+    isLoading,
+    error,
+    refresh
+  } = useProfessionalJobsScreen();
 
-  useEffect(() => {
-    let result = jobs;
-    if (activeFilter !== 'all') {
-      result = result.filter(job => job.status === activeFilter);
-    }
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      result = result.filter(job =>
-        job.customerName.toLowerCase().includes(query) ||
-        job.id.toLowerCase().includes(query) ||
-        job.address.toLowerCase().includes(query)
-      );
-    }
-    setFilteredJobs(result);
-  }, [activeFilter, searchQuery, jobs]);
+  // Job actions hook
+  const { 
+    acceptJob, 
+    startJob, 
+    completeJob, 
+    cancelJob,
+    isLoading: isActionLoading 
+  } = useProfessionalJobActions();
+
+  // Filter jobs based on search query
+  const filteredJobs = jobs.filter(job => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase().trim();
+    return job.customerName.toLowerCase().includes(query) ||
+           job.id.toLowerCase().includes(query) ||
+           job.address.toLowerCase().includes(query);
+  });
   
-  const onRefresh = () => setRefreshing(true);
+  const onRefresh = refresh;
 
   // --- Render Functions ---
   const renderFilterButton = (label: string, value: FilterStatus) => (
     <TouchableOpacity
-      style={[styles.filterButton, activeFilter === value && styles.activeFilterButton]}
-      onPress={() => setActiveFilter(value)}
+      style={[styles.filterButton, selectedStatus === value && styles.activeFilterButton]}
+      onPress={() => setSelectedStatus(value)}
     >
-      <Text style={[styles.filterButtonText, activeFilter === value && styles.activeFilterButtonText]}>
+      <Text style={[styles.filterButtonText, selectedStatus === value && styles.activeFilterButtonText]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -104,11 +95,14 @@ const ProJobsScreen = () => {
 
   const renderJobItem = ({ item }: { item: Job }) => {
     const statusInfo = {
-      upcoming: { label: 'Upcoming', bg: colors.blue100, text: colors.blue800 },
-      ongoing: { label: 'Ongoing', bg: colors.amber100, text: colors.amber800 },
+      pending: { label: 'Pending', bg: colors.yellow100, text: colors.yellow800 },
+      confirmed: { label: 'Confirmed', bg: colors.blue100, text: colors.blue800 },
+      assigned: { label: 'Assigned', bg: colors.purple100, text: colors.purple800 },
+      'in-progress': { label: 'In Progress', bg: colors.amber100, text: colors.amber800 },
       completed: { label: 'Completed', bg: colors.green100, text: colors.green800 },
       cancelled: { label: 'Cancelled', bg: colors.red100, text: colors.red800 },
-    }[item.status];
+      rejected: { label: 'Rejected', bg: colors.gray100, text: colors.gray800 },
+    }[item.status] || { label: 'Unknown', bg: colors.gray100, text: colors.gray800 };
 
     return (
       <TouchableOpacity style={styles.jobCard} onPress={() => navigation.navigate('JobDetails', { jobId: item.id })}>
@@ -142,17 +136,17 @@ const ProJobsScreen = () => {
       <Ionicons name="calendar-outline" size={64} color={colors.gray300} />
       <Text style={styles.emptyTitle}>No jobs found</Text>
       <Text style={styles.emptySubtitle}>
-        {searchQuery.trim() ? `No jobs matching "${searchQuery}".` : `You have no ${activeFilter} jobs.`}
+        {searchQuery.trim() ? `No jobs matching "${searchQuery}".` : `You have no ${selectedStatus} jobs.`}
       </Text>
-      {(searchQuery.trim() || activeFilter !== 'all') && (
-        <TouchableOpacity style={styles.clearFilterButton} onPress={() => { setSearchQuery(''); setActiveFilter('all'); }}>
+      {(searchQuery.trim() || selectedStatus !== 'all') && (
+        <TouchableOpacity style={styles.clearFilterButton} onPress={() => { setSearchQuery(''); setSelectedStatus('all'); }}>
           <Text style={styles.clearFilterButtonText}>Clear Filters</Text>
         </TouchableOpacity>
       )}
     </View>
   );
   
-  if (loading && !refreshing) {
+  if (isLoading) {
     return <View style={styles.centeredScreen}><ActivityIndicator size="large" color={colors.primary} /></View>;
   }
 
@@ -177,8 +171,9 @@ const ProJobsScreen = () => {
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScrollView}>
           {renderFilterButton('All', 'all')}
-          {renderFilterButton('Upcoming', 'upcoming')}
-          {renderFilterButton('Ongoing', 'ongoing')}
+          {renderFilterButton('Pending', 'pending')}
+          {renderFilterButton('Confirmed', 'confirmed')}
+          {renderFilterButton('In Progress', 'in-progress')}
           {renderFilterButton('Completed', 'completed')}
           {renderFilterButton('Cancelled', 'cancelled')}
         </ScrollView>
@@ -191,7 +186,7 @@ const ProJobsScreen = () => {
         contentContainerStyle={styles.listContentContainer}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={renderEmptyList}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} colors={[colors.primary]} />}
       />
     </View>
   );
@@ -201,6 +196,7 @@ const colors = {
   primary: '#2563EB', white: '#FFFFFF', gray50: '#F9FAFB', gray100: '#F3F4F6', gray300: '#D1D5DB', gray400: '#9CA3AF',
   gray500: '#6B7280', gray700: '#374151', gray800: '#1F2937', red100: '#FEE2E2', red800: '#991B1B',
   blue100: '#DBEAFE', blue800: '#1E40AF', green100: '#D1FAE5', green800: '#065F46', amber100: '#FEF3C7', amber800: '#92400E',
+  yellow100: '#FEF3C7', yellow800: '#92400E', purple100: '#E9D5FF', purple800: '#6B21A8',
 };
 
 const styles = StyleSheet.create({

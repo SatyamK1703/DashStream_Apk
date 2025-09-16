@@ -32,9 +32,9 @@ const RootNavigator = () => {
   // ⬇️ Show splash/loader ONLY while restoring session at launch
   if (isBooting) {
     return (
-          <View style={styles.container}>
-      <ActivityIndicator size="large" color="#2563eb" />
-    </View>
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
     );
   }
 

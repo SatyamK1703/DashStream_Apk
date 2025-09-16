@@ -13,10 +13,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Import API utilities
+import httpClient from '../../services/httpClient';
+import { ENDPOINTS } from '../../config/env';
 
 interface ServiceFormData {
   id?: string;
@@ -41,7 +46,8 @@ interface AddEditServiceModalProps {
   isEditing: boolean;
   formData: ServiceFormData;
   onClose: () => void;
-  onSubmit: (service: any) => void;
+  onSubmit?: (service: any) => void; // Made optional since we'll handle API calls internally
+  onSuccess?: () => void; // Callback for successful API calls
 }
 
 const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
@@ -50,6 +56,7 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
   formData: initialFormData,
   onClose,
   onSubmit,
+  onSuccess,
 }) => {
   const defaultFormData: ServiceFormData = {
     title: '',
@@ -57,7 +64,7 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
     longDescription: '',
     price: '',
     discountPrice: '',
-    category: 'car wash', // Default to 'car wash' as per backend model
+    category: 'car wash',
     image: null,
     banner: null,
     duration: '',
@@ -75,6 +82,7 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof ServiceFormData, string>>>({});
   const [newFeature, setNewFeature] = useState('');
   const [newTag, setNewTag] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setFormData({
@@ -91,20 +99,56 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
     }
   };
 
+  const uploadImage = async (uri: string): Promise<string> => {
+    try {
+      const formData = new FormData();
+      formData.append('image', {
+        uri,
+        type: 'image/jpeg',
+        name: 'service-image.jpg',
+      } as any);
+
+      const response = await httpClient.post('/upload/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      return response.data.data?.url || response.data.url || uri;
+    } catch (error) {
+      console.warn('Image upload failed, using local URI:', error);
+      return uri; // Fallback to local URI if upload fails
+    }
+  };
+
   const pickImage = async (field: 'image' | 'banner') => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission Required', 'Please allow access to your photo library.');
       return;
     }
+    
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.8,
     });
+    
     if (!result.canceled) {
-      updateFormData(field, result.assets[0].uri);
+      const localUri = result.assets[0].uri;
+      
+      // Set local URI immediately for UI feedback
+      updateFormData(field, localUri);
+      
+      // Upload image in background (optional - can be done during form submission)
+      try {
+        const uploadedUri = await uploadImage(localUri);
+        updateFormData(field, uploadedUri);
+      } catch (error) {
+        // Keep local URI if upload fails - will be handled during submission
+        console.warn('Background image upload failed:', error);
+      }
     }
   };
 
@@ -161,26 +205,88 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (!validateForm()) return;
-    const serviceToSubmit = {
-      id: formData.id || `${Date.now()}`,
-      title: formData.title,
-      description: formData.description,
-      longDescription: formData.longDescription,
-      price: Number(formData.price),
-      discountPrice: formData.discountPrice ? Number(formData.discountPrice) : undefined,
-      category: formData.category,
-      image: formData.image || 'https://via.placeholder.com/300x200', // Provide default image if empty
-      banner: formData.banner || 'https://via.placeholder.com/600x300', // Provide default banner if empty
-      duration: formData.duration, // Keep as string as per model
-      vehicleType: formData.vehicleType || 'Both',
-      isActive: formData.isActive,
-      isPopular: formData.isPopular,
-      features: formData.features || [],
-      tags: formData.tags || [],
-    };
-    onSubmit(serviceToSubmit);
+  const handleSubmit = async () => {
+    if (!validateForm() || isSubmitting) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Prepare service data for API
+      const serviceData = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        longDescription: formData.longDescription.trim(),
+        price: Number(formData.price),
+        discountPrice: formData.discountPrice ? Number(formData.discountPrice) : undefined,
+        category: formData.category,
+        image: formData.image || 'https://via.placeholder.com/300x200',
+        banner: formData.banner || 'https://via.placeholder.com/600x300',
+        duration: formData.duration.trim(),
+        vehicleType: formData.vehicleType || 'Both',
+        isActive: formData.isActive,
+        isPopular: formData.isPopular,
+        features: formData.features || [],
+        tags: formData.tags || [],
+      };
+
+      let response;
+      
+      if (isEditing && formData.id) {
+        // Update existing service
+        response = await httpClient.patch(ENDPOINTS.SERVICES.UPDATE(formData.id), serviceData);
+        Alert.alert('Success', 'Service updated successfully!');
+      } else {
+        // Create new service
+        response = await httpClient.post(ENDPOINTS.SERVICES.CREATE, serviceData);
+        Alert.alert('Success', 'Service created successfully!');
+      }
+
+      // Call success callbacks
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+      if (onSubmit) {
+        onSubmit(response.data.data?.service || response.data.service);
+      }
+      
+      // Close modal after successful submission
+      onClose();
+      
+    } catch (error: any) {
+      console.error('Service submission error:', error);
+      
+      // Handle different types of errors
+      let errorMessage = 'An unexpected error occurred. Please try again.';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Show specific validation errors if available
+      if (error.response?.status === 400 && error.response?.data?.errors) {
+        const validationErrors = error.response.data.errors;
+        const newFormErrors: Partial<Record<keyof ServiceFormData, string>> = {};
+        
+        // Map backend validation errors to form fields
+        Object.keys(validationErrors).forEach(field => {
+          if (field in formData) {
+            newFormErrors[field as keyof ServiceFormData] = validationErrors[field];
+          }
+        });
+        
+        if (Object.keys(newFormErrors).length > 0) {
+          setFormErrors(newFormErrors);
+          errorMessage = 'Please fix the highlighted errors and try again.';
+        }
+      }
+      
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -447,10 +553,23 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
               </View>
 
               {/* Submit Button */}
-              <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-                <Text style={styles.submitButtonText}>
-                  {isEditing ? 'Update Service' : 'Add Service'}
-                </Text>
+              <TouchableOpacity 
+                style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]} 
+                onPress={handleSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <View style={styles.submitButtonContent}>
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <Text style={[styles.submitButtonText, { marginLeft: 8 }]}>
+                      {isEditing ? 'Updating...' : 'Creating...'}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.submitButtonText}>
+                    {isEditing ? 'Update Service' : 'Add Service'}
+                  </Text>
+                )}
               </TouchableOpacity>
             </ScrollView>
               </View>
@@ -530,6 +649,8 @@ modalContentContainer: {
   tagListItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginRight: 8, marginBottom: 8 },
   tagText: { marginRight: 4, color: '#4B5563' },
   submitButton: { backgroundColor: '#2563EB', paddingVertical: 14, borderRadius: 12, marginTop: 16 },
+  submitButtonDisabled: { backgroundColor: '#9CA3AF', opacity: 0.6 },
+  submitButtonContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   submitButtonText: { color: 'white', fontWeight: 'bold', textAlign: 'center', fontSize: 16 },
   errorText: { color: '#EF4444', fontSize: 12, marginTop: 4 },
   helperText: { color: '#6B7280', fontSize: 12, marginTop: 4 },

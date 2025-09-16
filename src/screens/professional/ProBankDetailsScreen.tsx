@@ -16,10 +16,11 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 
-// Mock types for navigation to make the component self-contained
-type ProStackParamList = {
-  BankDetails: undefined;
-};
+// Import proper types and hooks
+import { ProStackParamList } from '../../../app/routes/ProfessionalNavigator';
+import { useProfessionalProfile, useProfessionalProfileActions } from '../../hooks/useProfessional';
+import { useApi } from '../../hooks/useApi';
+import httpClient from '../../services/httpClient';
 
 type ProBankDetailsScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;
 
@@ -44,9 +45,21 @@ interface TaxInformation {
 
 const ProBankDetailsScreen = () => {
   const navigation = useNavigation<ProBankDetailsScreenNavigationProp>();
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'bank' | 'tax'>('bank');
+
+  // Use professional profile hooks
+  const { data: profile, isLoading: profileLoading, execute: refreshProfile } = useProfessionalProfile();
+  
+  // Bank details API hook
+  const { 
+    data: bankDetails, 
+    isLoading: bankLoading, 
+    execute: refreshBankDetails 
+  } = useApi(
+    () => httpClient.get('/professionals/bank-details'),
+    { showErrorAlert: false }
+  );
 
   // Bank account form state
   const [accountHolderName, setAccountHolderName] = useState('');
@@ -62,40 +75,28 @@ const ProBankDetailsScreen = () => {
   const [gstNumber, setGstNumber] = useState('');
   const [isGstRegistered, setIsGstRegistered] = useState(false);
 
-  // Mock data for existing bank accounts and tax info
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [taxInfo, setTaxInfo] = useState<TaxInformation | null>(null);
+  const isLoading = profileLoading || bankLoading;
 
-  // Effect to simulate fetching initial data
+  // Initialize form with existing data
   useEffect(() => {
-    setTimeout(() => {
-      const mockAccounts: BankAccount[] = [{
-        id: '1',
-        accountHolderName: 'Rahul Sharma',
-        accountNumber: '1234567890',
-        ifscCode: 'SBIN0001234',
-        bankName: 'State Bank of India',
-        accountType: 'savings',
-        isDefault: true,
-        isVerified: true
-      }];
-      const mockTaxInfo: TaxInformation = {
-        panNumber: 'ABCDE1234F',
-        gstNumber: '',
-        isGstRegistered: false
-      };
-
-      setBankAccounts(mockAccounts);
-      setTaxInfo(mockTaxInfo);
-
-      // Pre-fill tax information form
-      setPanNumber(mockTaxInfo.panNumber);
-      setGstNumber(mockTaxInfo.gstNumber || '');
-      setIsGstRegistered(mockTaxInfo.isGstRegistered);
-
-      setIsLoading(false);
-    }, 1000);
-  }, []);
+    if (bankDetails?.bankAccount) {
+      const account = bankDetails.bankAccount;
+      setAccountHolderName(account.accountHolderName || '');
+      setAccountNumber(account.accountNumber || '');
+      setConfirmAccountNumber(account.accountNumber || '');
+      setIfscCode(account.ifscCode || '');
+      setBankName(account.bankName || '');
+      setAccountType(account.accountType || 'savings');
+      setIsDefault(account.isDefault || true);
+    }
+    
+    if (bankDetails?.taxInfo) {
+      const tax = bankDetails.taxInfo;
+      setPanNumber(tax.panNumber || '');
+      setGstNumber(tax.gstNumber || '');
+      setIsGstRegistered(tax.isGstRegistered || false);
+    }
+  }, [bankDetails]);
 
   // Helper function to reset the bank form fields
   const resetBankForm = () => {
@@ -105,7 +106,7 @@ const ProBankDetailsScreen = () => {
     setIfscCode('');
     setBankName('');
     setAccountType('savings');
-    setIsDefault(bankAccounts.length === 0);
+    setIsDefault(true);
   };
 
   // --- Form Validation ---
@@ -136,61 +137,79 @@ const ProBankDetailsScreen = () => {
   };
 
   // --- Handlers ---
-  const handleAddBankAccount = () => {
+  const handleAddBankAccount = async () => {
     if (!validateBankForm()) return;
+    
     setIsSaving(true);
-    setTimeout(() => {
-      const newAccount: BankAccount = {
-        id: Date.now().toString(),
-        accountHolderName, accountNumber, ifscCode, bankName, accountType, isDefault,
-        isVerified: false
+    try {
+      const bankAccountData = {
+        accountHolderName,
+        accountNumber,
+        ifscCode,
+        bankName,
+        accountType,
+        isDefault
       };
-      let updatedAccounts = [...bankAccounts];
-      if (isDefault) {
-        updatedAccounts = updatedAccounts.map(acc => ({ ...acc, isDefault: false }));
-      }
-      setBankAccounts([...updatedAccounts, newAccount]);
+
+      await httpClient.post('/professionals/bank-details', bankAccountData);
       resetBankForm();
-      setIsSaving(false);
+      refreshBankDetails(); // Refresh the bank details
       Alert.alert('Success', 'Bank account added successfully.');
-    }, 1500);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add bank account. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDeleteBankAccount = (accountId: string) => {
-    Alert.alert('Delete Account', 'Are you sure?', [
+  const handleDeleteBankAccount = async (accountId: string) => {
+    Alert.alert('Delete Account', 'Are you sure you want to delete this bank account?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive', onPress: () => {
-          const updatedAccounts = bankAccounts.filter(acc => acc.id !== accountId);
-          if (updatedAccounts.length > 0 && bankAccounts.find(acc => acc.id === accountId)?.isDefault) {
-            updatedAccounts[0].isDefault = true;
+        text: 'Delete', 
+        style: 'destructive', 
+        onPress: async () => {
+          try {
+            await httpClient.delete(`/professionals/bank-details/${accountId}`);
+            refreshBankDetails();
+            Alert.alert('Success', 'Bank account deleted successfully.');
+          } catch (error) {
+            Alert.alert('Error', 'Failed to delete bank account. Please try again.');
           }
-          setBankAccounts(updatedAccounts);
-          Alert.alert('Success', 'Bank account deleted.');
         }
       }
     ]);
   };
 
-  const handleSetDefaultAccount = (accountId: string) => {
-    const updatedAccounts = bankAccounts.map(acc => ({ ...acc, isDefault: acc.id === accountId }));
-    setBankAccounts(updatedAccounts);
-    Alert.alert('Success', 'Default account updated.');
+  const handleSetDefaultAccount = async (accountId: string) => {
+    try {
+      await httpClient.patch(`/professionals/bank-details/${accountId}/set-default`);
+      refreshBankDetails();
+      Alert.alert('Success', 'Default account updated successfully.');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update default account. Please try again.');
+    }
   };
 
-  const handleSaveTaxInfo = () => {
+  const handleSaveTaxInfo = async () => {
     if (!validateTaxForm()) return;
+    
     setIsSaving(true);
-    setTimeout(() => {
-      const updatedTaxInfo: TaxInformation = {
+    try {
+      const taxData = {
         panNumber,
-        gstNumber: isGstRegistered ? gstNumber : undefined,
+        gstNumber: isGstRegistered ? gstNumber : '',
         isGstRegistered
       };
-      setTaxInfo(updatedTaxInfo);
+
+      await httpClient.patch('/professionals/tax-info', taxData);
+      refreshBankDetails(); // Refresh to get updated tax info
+      Alert.alert('Success', 'Tax information updated successfully.');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update tax information. Please try again.');
+    } finally {
       setIsSaving(false);
-      Alert.alert('Success', 'Tax information updated.');
-    }, 1500);
+    }
   };
 
   // --- Render Functions ---

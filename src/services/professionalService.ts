@@ -1,84 +1,163 @@
 import httpClient, { ApiResponse } from './httpClient';
 import { ENDPOINTS } from '../config/env';
-import { Booking, Professional } from '../types/api';
 
-// Professional-specific types
-export interface ProfessionalJob extends Booking {
-  distance?: string;
-  estimatedArrival?: string;
-  customerImage?: string;
-  customerRating?: number;
-  specialInstructions?: string;
+// Professional-specific types based on backend controller
+export interface ProfessionalJob {
+  id: string;
+  customerName: string;
+  customerImage: string;
+  date: string;
+  time: string;
+  address: string;
+  totalAmount: number;
+  status: 'pending' | 'confirmed' | 'assigned' | 'in-progress' | 'completed' | 'cancelled' | 'rejected';
+  paymentStatus: string;
+  serviceName: string;
+  createdAt: string;
 }
 
-export interface EarningsSummary {
-  today: number;
-  thisWeek: number;
-  thisMonth: number;
-  thisYear: number;
-  pendingPayout: number;
-  lastPayout?: {
-    amount: number;
-    date: string;
-    transactionId: string;
+export interface JobDetails {
+  id: string;
+  customer: {
+    id: string;
+    name: string;
+    phone: string;
+    email: string;
+    image: string;
   };
-  totalEarnings: number;
+  service: Array<{
+    id: string;
+    title: string;
+    description: string;
+    price: number;
+    duration: number;
+  }>;
+  scheduledDate: string;
+  scheduledTime: string;
+  address: {
+    name: string;
+    street: string;
+    city: string;
+    landmark: string;
+    pincode: string;
+    coordinates: {
+      lat: number;
+      lng: number;
+    };
+  };
+  status: string;
+  paymentStatus: string;
+  totalAmount: number;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface PerformanceMetrics {
+export interface ProfessionalProfile {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  profileImage?: {
+    url: string;
+  };
   rating: number;
-  totalJobs: number;
-  completedJobs: number;
-  cancelledJobs: number;
-  completionRate: number;
-  onTimeRate: number;
-  customerSatisfaction: number;
-  averageJobTime: number;
-  repeatCustomers: number;
-}
-
-export interface ProfessionalAvailability {
+  totalRatings: number;
   isAvailable: boolean;
-  workingHours: {
-    start: string;
-    end: string;
-  };
-  workingDays: string[];
-  serviceAreas: string[];
-  maxJobsPerDay: number;
+  status: string;
 }
 
-export interface JobFilters {
-  status?: 'pending' | 'accepted' | 'ongoing' | 'completed' | 'cancelled';
-  date?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  page?: number;
-  limit?: number;
+export interface DashboardStats {
+  jobCounts: {
+    pending: number;
+    confirmed: number;
+    assigned: number;
+    'in-progress': number;
+    completed: number;
+    cancelled: number;
+    rejected: number;
+    total: number;
+  };
+  earnings: {
+    total: number;
+    currency: string;
+  };
+  todayJobs: Array<{
+    id: string;
+    time: string;
+    status: string;
+    address: string;
+  }>;
+}
+
+export interface UpdateJobStatusData {
+  status: 'pending' | 'confirmed' | 'assigned' | 'in-progress' | 'completed' | 'cancelled' | 'rejected';
+}
+
+export interface UpdateProfileData {
+  specialization?: string;
+  experience?: number;
+  isAvailable?: boolean;
+  status?: string;
 }
 
 class ProfessionalService {
   /**
-   * Get professional profile
+   * Get professional jobs/bookings
    */
-  async getProfile(): Promise<ApiResponse<Professional>> {
+  async getJobs(): Promise<ApiResponse<ProfessionalJob[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.PROFESSIONALS.PROFILE);
+      return await httpClient.get(ENDPOINTS.PROFESSIONALS.JOBS);
     } catch (error) {
-      // Log error in development only
-      if (__DEV__) console.error('Get professional profile error:', error);
+      if (__DEV__) console.error('Get professional jobs error:', error);
       throw error;
     }
   }
 
   /**
-   * Get professional dashboard stats
+   * Get job details by ID
    */
-  async getDashboardStats(): Promise<ApiResponse<any>> {
+  async getJobDetails(jobId: string): Promise<ApiResponse<JobDetails>> {
+    try {
+      return await httpClient.get(ENDPOINTS.PROFESSIONALS.JOB_BY_ID(jobId));
+    } catch (error) {
+      if (__DEV__) console.error('Get job details error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update job status
+   */
+  async updateJobStatus(jobId: string, data: UpdateJobStatusData): Promise<ApiResponse<{ id: string; status: string }>> {
+    try {
+      return await httpClient.patch(ENDPOINTS.PROFESSIONALS.UPDATE_JOB_STATUS(jobId), data);
+    } catch (error) {
+      if (__DEV__) console.error('Update job status error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get dashboard statistics
+   */
+  async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
     try {
       return await httpClient.get(ENDPOINTS.PROFESSIONALS.DASHBOARD);
     } catch (error) {
-      console.error('Get dashboard stats error:', error);
+      if (__DEV__) console.error('Get dashboard stats error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get professional profile
+   */
+  async getProfile(): Promise<ApiResponse<ProfessionalProfile>> {
+    try {
+      return await httpClient.get(ENDPOINTS.PROFESSIONALS.PROFILE);
+    } catch (error) {
+      if (__DEV__) console.error('Get professional profile error:', error);
       throw error;
     }
   }
@@ -86,258 +165,82 @@ class ProfessionalService {
   /**
    * Update professional profile
    */
-  async updateProfile(data: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    bio?: string;
-    specializations?: string[];
-    experience?: number;
-    serviceAreas?: any[];
-    pricing?: any[];
-  }): Promise<ApiResponse<Professional>> {
+  async updateProfile(data: UpdateProfileData): Promise<ApiResponse<{
+    name: string;
+    isAvailable: boolean;
+    status: string;
+  }>> {
     try {
       return await httpClient.patch(ENDPOINTS.PROFESSIONALS.PROFILE, data);
     } catch (error) {
-      console.error('Update professional profile error:', error);
+      if (__DEV__) console.error('Update professional profile error:', error);
       throw error;
     }
+  }
+
+  /**
+   * Helper methods for job status updates
+   */
+  async acceptJob(jobId: string): Promise<ApiResponse<{ id: string; status: string }>> {
+    return this.updateJobStatus(jobId, { status: 'confirmed' });
+  }
+
+  async startJob(jobId: string): Promise<ApiResponse<{ id: string; status: string }>> {
+    return this.updateJobStatus(jobId, { status: 'in-progress' });
+  }
+
+  async completeJob(jobId: string): Promise<ApiResponse<{ id: string; status: string }>> {
+    return this.updateJobStatus(jobId, { status: 'completed' });
+  }
+
+  async cancelJob(jobId: string): Promise<ApiResponse<{ id: string; status: string }>> {
+    return this.updateJobStatus(jobId, { status: 'cancelled' });
+  }
+
+  async rejectJob(jobId: string): Promise<ApiResponse<{ id: string; status: string }>> {
+    return this.updateJobStatus(jobId, { status: 'rejected' });
   }
 
   /**
    * Toggle availability status
    */
-  async toggleAvailability(): Promise<ApiResponse<{ isAvailable: boolean }>> {
-    try {
-      return await httpClient.patch(ENDPOINTS.PROFESSIONALS.AVAILABILITY);
-    } catch (error) {
-      console.error('Toggle availability error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update availability settings
-   */
-  async updateAvailability(data: Partial<ProfessionalAvailability>): Promise<ApiResponse<ProfessionalAvailability>> {
-    try {
-      return await httpClient.put(ENDPOINTS.PROFESSIONALS.AVAILABILITY, data);
-    } catch (error) {
-      console.error('Update availability error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get professional jobs/bookings
-   */
-  async getJobs(filters?: JobFilters): Promise<ApiResponse<ProfessionalJob[]>> {
-    try {
-      return await httpClient.get(ENDPOINTS.PROFESSIONALS.JOBS, { params: filters });
-    } catch (error) {
-      console.error('Get jobs error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get job by ID
-   */
-  async getJobById(jobId: string): Promise<ApiResponse<ProfessionalJob>> {
-    try {
-      return await httpClient.get(`${ENDPOINTS.PROFESSIONALS.JOBS}/${jobId}`);
-    } catch (error) {
-      console.error('Get job by ID error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Accept job
-   */
-  async acceptJob(jobId: string, data?: { estimatedArrival?: string; notes?: string }): Promise<ApiResponse<ProfessionalJob>> {
-    try {
-      return await httpClient.patch(`${ENDPOINTS.PROFESSIONALS.JOBS}/${jobId}/accept`, data);
-    } catch (error) {
-      console.error('Accept job error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Start job
-   */
-  async startJob(jobId: string, data?: { startLocation?: { lat: number; lng: number }; notes?: string }): Promise<ApiResponse<ProfessionalJob>> {
-    try {
-      return await httpClient.patch(`${ENDPOINTS.PROFESSIONALS.JOBS}/${jobId}/start`, data);
-    } catch (error) {
-      console.error('Start job error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Complete job
-   */
-  async completeJob(jobId: string, data: {
-    completionNotes?: string;
-    beforeImages?: string[];
-    afterImages?: string[];
-    actualDuration?: number;
-    completionLocation?: { lat: number; lng: number };
-  }): Promise<ApiResponse<ProfessionalJob>> {
-    try {
-      return await httpClient.patch(`${ENDPOINTS.PROFESSIONALS.JOBS}/${jobId}/complete`, data);
-    } catch (error) {
-      console.error('Complete job error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Cancel job
-   */
-  async cancelJob(jobId: string, data: { reason: string; notes?: string }): Promise<ApiResponse<ProfessionalJob>> {
-    try {
-      return await httpClient.patch(`${ENDPOINTS.PROFESSIONALS.JOBS}/${jobId}/cancel`, data);
-    } catch (error) {
-      console.error('Cancel job error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get earnings summary
-   */
-  async getEarnings(filters?: {
-    period?: 'today' | 'week' | 'month' | 'year';
-    dateFrom?: string;
-    dateTo?: string;
-  }): Promise<ApiResponse<EarningsSummary>> {
-    try {
-      return await httpClient.get(ENDPOINTS.PROFESSIONALS.EARNINGS, { params: filters });
-    } catch (error) {
-      console.error('Get earnings error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get performance metrics
-   */
-  async getPerformanceMetrics(filters?: {
-    period?: 'week' | 'month' | 'quarter' | 'year';
-    dateFrom?: string;
-    dateTo?: string;
-  }): Promise<ApiResponse<PerformanceMetrics>> {
-    try {
-      return await httpClient.get(`${ENDPOINTS.PROFESSIONALS.EARNINGS}/performance`, { params: filters });
-    } catch (error) {
-      console.error('Get performance metrics error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update job location/status (for tracking)
-   */
-  async updateJobLocation(jobId: string, data: {
-    location: { lat: number; lng: number };
-    status?: string;
-    estimatedArrival?: string;
-  }): Promise<ApiResponse<void>> {
-    try {
-      return await httpClient.patch(`${ENDPOINTS.PROFESSIONALS.JOB_BY_ID(jobId)}/location`, data);
-    } catch (error) {
-      console.error('Update job location error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Submit verification documents
-   */
-  async submitVerification(data: {
-    identityDocument: string; // base64 or file path
-    addressProof: string;
-    professionalCertificates?: string[];
-    bankDetails?: {
-      accountNumber: string;
-      ifscCode: string;
-      accountHolderName: string;
-    };
-  }): Promise<ApiResponse<{ verificationId: string; status: string }>> {
-    try {
-      return await httpClient.post(ENDPOINTS.PROFESSIONALS.VERIFICATION, data);
-    } catch (error) {
-      console.error('Submit verification error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get verification status
-   */
-  async getVerificationStatus(): Promise<ApiResponse<{
-    status: 'pending' | 'approved' | 'rejected';
-    submittedAt?: string;
-    reviewedAt?: string;
-    rejectionReason?: string;
-    documents: any[];
+  async toggleAvailability(): Promise<ApiResponse<{
+    name: string;
+    isAvailable: boolean;
+    status: string;
   }>> {
     try {
-      return await httpClient.get(`${ENDPOINTS.PROFESSIONALS.VERIFICATION}/status`);
+      // Get current profile first to toggle availability
+      const profileResponse = await this.getProfile();
+      const currentAvailability = profileResponse.data.isAvailable;
+      
+      return await this.updateProfile({ isAvailable: !currentAvailability });
     } catch (error) {
-      console.error('Get verification status error:', error);
+      if (__DEV__) console.error('Toggle availability error:', error);
       throw error;
     }
   }
 
   /**
-   * Update service pricing
+   * Set availability status
    */
-  async updatePricing(data: {
-    serviceId: string;
-    price: number;
+  async setAvailability(isAvailable: boolean): Promise<ApiResponse<{
+    name: string;
     isAvailable: boolean;
-  }[]): Promise<ApiResponse<void>> {
-    try {
-      return await httpClient.put(`${ENDPOINTS.PROFESSIONALS.PROFILE}/pricing`, { pricing: data });
-    } catch (error) {
-      console.error('Update pricing error:', error);
-      throw error;
-    }
+    status: string;
+  }>> {
+    return this.updateProfile({ isAvailable });
   }
 
   /**
-   * Get nearby jobs (for job marketplace)
+   * Update professional status
    */
-  async getNearbyJobs(data: {
-    location: { lat: number; lng: number };
-    radius?: number; // in km
-    serviceTypes?: string[];
-  }): Promise<ApiResponse<ProfessionalJob[]>> {
-    try {
-      return await httpClient.post(`${ENDPOINTS.PROFESSIONALS.JOBS}/nearby`, data);
-    } catch (error) {
-      console.error('Get nearby jobs error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Request payout
-   */
-  async requestPayout(data: {
-    amount: number;
-    bankAccountId: string;
-  }): Promise<ApiResponse<{ payoutId: string; status: string; estimatedDate: string }>> {
-    try {
-      return await httpClient.post(`${ENDPOINTS.PROFESSIONALS.EARNINGS}/payout`, data);
-    } catch (error) {
-      console.error('Request payout error:', error);
-      throw error;
-    }
+  async updateStatus(status: string): Promise<ApiResponse<{
+    name: string;
+    isAvailable: boolean;
+    status: string;
+  }>> {
+    return this.updateProfile({ status });
   }
 }
 

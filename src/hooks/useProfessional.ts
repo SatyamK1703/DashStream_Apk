@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useApi, usePaginatedApi } from './useApi';
-import { professionalService, JobFilters } from '../services/professionalService';
+import { useApi } from './useApi';
+import { 
+  professionalService, 
+  ProfessionalJob, 
+  JobDetails, 
+  ProfessionalProfile, 
+  DashboardStats, 
+  UpdateJobStatusData, 
+  UpdateProfileData 
+} from '../services/professionalService';
 
 // Hook for professional profile
 export const useProfessionalProfile = () => {
@@ -13,9 +21,9 @@ export const useProfessionalProfile = () => {
 };
 
 // Hook for professional jobs
-export const useProfessionalJobs = (filters?: JobFilters) => {
-  return usePaginatedApi(
-    (params) => professionalService.getJobs({ ...filters, ...params }),
+export const useProfessionalJobs = () => {
+  return useApi(
+    () => professionalService.getJobs(),
     {
       showErrorAlert: false,
     }
@@ -25,7 +33,7 @@ export const useProfessionalJobs = (filters?: JobFilters) => {
 // Hook for single job details
 export const useProfessionalJob = (jobId: string | null) => {
   const api = useApi(
-    () => professionalService.getJobById(jobId!),
+    () => professionalService.getJobDetails(jobId!),
     {
       showErrorAlert: false,
     }
@@ -40,93 +48,22 @@ export const useProfessionalJob = (jobId: string | null) => {
   return api;
 };
 
-// Hook for earnings data
-export const useProfessionalEarnings = (filters?: {
-  period?: 'today' | 'week' | 'month' | 'year';
-  dateFrom?: string;
-  dateTo?: string;
-}) => {
+// Hook for dashboard stats
+export const useProfessionalDashboard = () => {
   return useApi(
-    () => professionalService.getEarnings(filters),
+    () => professionalService.getDashboardStats(),
     {
       showErrorAlert: false,
     }
   );
 };
 
-// Hook for performance metrics
-export const useProfessionalPerformance = (filters?: {
-  period?: 'week' | 'month' | 'quarter' | 'year';
-  dateFrom?: string;
-  dateTo?: string;
-}) => {
-  return useApi(
-    () => professionalService.getPerformanceMetrics(filters),
-    {
-      showErrorAlert: false,
-    }
-  );
-};
-
-// Hook for verification status
-export const useProfessionalVerification = () => {
-  return useApi(
-    () => professionalService.getVerificationStatus(),
-    {
-      showErrorAlert: false,
-    }
-  );
-};
-
-// Hook for nearby jobs
-export const useNearbyJobs = () => {
-  const [nearbyJobs, setNearbyJobs] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchNearbyJobs = async (data: {
-    location: { lat: number; lng: number };
-    radius?: number;
-    serviceTypes?: string[];
-  }) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await professionalService.getNearbyJobs(data);
-      setNearbyJobs(response.data || []);
-    } catch (error: any) {
-      console.error('Fetch nearby jobs error:', error);
-      const errorMessage = error.message || 'Failed to fetch nearby jobs';
-      setError(errorMessage);
-      setNearbyJobs([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return {
-    nearbyJobs,
-    fetchNearbyJobs,
-    isLoading,
-    error,
-  };
-};
-
-// Hook for profile actions
+// Hook for professional profile actions
 export const useProfessionalProfileActions = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const updateProfile = async (data: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    bio?: string;
-    specializations?: string[];
-    experience?: number;
-    serviceAreas?: any[];
-    pricing?: any[];
-  }) => {
+  const updateProfile = async (data: UpdateProfileData) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -158,15 +95,15 @@ export const useProfessionalProfileActions = () => {
     }
   };
 
-  const updateAvailability = async (data: any) => {
+  const setAvailability = async (isAvailable: boolean) => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await professionalService.updateAvailability(data);
+      const response = await professionalService.setAvailability(isAvailable);
       return response.data;
     } catch (error: any) {
-      console.error('Update availability error:', error);
-      const errorMessage = error.message || 'Failed to update availability';
+      console.error('Set availability error:', error);
+      const errorMessage = error.message || 'Failed to set availability';
       setError(errorMessage);
       throw error;
     } finally {
@@ -174,18 +111,15 @@ export const useProfessionalProfileActions = () => {
     }
   };
 
-  const updatePricing = async (data: {
-    serviceId: string;
-    price: number;
-    isAvailable: boolean;
-  }[]) => {
+  const updateStatus = async (status: string) => {
     try {
       setIsLoading(true);
       setError(null);
-      await professionalService.updatePricing(data);
+      const response = await professionalService.updateStatus(status);
+      return response.data;
     } catch (error: any) {
-      console.error('Update pricing error:', error);
-      const errorMessage = error.message || 'Failed to update pricing';
+      console.error('Update status error:', error);
+      const errorMessage = error.message || 'Failed to update status';
       setError(errorMessage);
       throw error;
     } finally {
@@ -196,8 +130,8 @@ export const useProfessionalProfileActions = () => {
   return {
     updateProfile,
     toggleAvailability,
-    updateAvailability,
-    updatePricing,
+    setAvailability,
+    updateStatus,
     isLoading,
     error,
   };
@@ -208,15 +142,15 @@ export const useProfessionalJobActions = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const acceptJob = async (jobId: string, data?: { estimatedArrival?: string; notes?: string }) => {
+  const updateJobStatus = async (jobId: string, status: UpdateJobStatusData['status']) => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await professionalService.acceptJob(jobId, data);
+      const response = await professionalService.updateJobStatus(jobId, { status });
       return response.data;
     } catch (error: any) {
-      console.error('Accept job error:', error);
-      const errorMessage = error.message || 'Failed to accept job';
+      console.error('Update job status error:', error);
+      const errorMessage = error.message || 'Failed to update job status';
       setError(errorMessage);
       throw error;
     } finally {
@@ -224,164 +158,43 @@ export const useProfessionalJobActions = () => {
     }
   };
 
-  const startJob = async (jobId: string, data?: { startLocation?: { lat: number; lng: number }; notes?: string }) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await professionalService.startJob(jobId, data);
-      return response.data;
-    } catch (error: any) {
-      console.error('Start job error:', error);
-      const errorMessage = error.message || 'Failed to start job';
-      setError(errorMessage);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+  const acceptJob = async (jobId: string) => {
+    return updateJobStatus(jobId, 'confirmed');
   };
 
-  const completeJob = async (jobId: string, data: {
-    completionNotes?: string;
-    beforeImages?: string[];
-    afterImages?: string[];
-    actualDuration?: number;
-    completionLocation?: { lat: number; lng: number };
-  }) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await professionalService.completeJob(jobId, data);
-      return response.data;
-    } catch (error: any) {
-      console.error('Complete job error:', error);
-      const errorMessage = error.message || 'Failed to complete job';
-      setError(errorMessage);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+  const startJob = async (jobId: string) => {
+    return updateJobStatus(jobId, 'in-progress');
   };
 
-  const cancelJob = async (jobId: string, data: { reason: string; notes?: string }) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await professionalService.cancelJob(jobId, data);
-      return response.data;
-    } catch (error: any) {
-      console.error('Cancel job error:', error);
-      const errorMessage = error.message || 'Failed to cancel job';
-      setError(errorMessage);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+  const completeJob = async (jobId: string) => {
+    return updateJobStatus(jobId, 'completed');
   };
 
-  const updateJobLocation = async (jobId: string, data: {
-    location: { lat: number; lng: number };
-    status?: string;
-    estimatedArrival?: string;
-  }) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      await professionalService.updateJobLocation(jobId, data);
-    } catch (error: any) {
-      console.error('Update job location error:', error);
-      const errorMessage = error.message || 'Failed to update job location';
-      setError(errorMessage);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+  const cancelJob = async (jobId: string) => {
+    return updateJobStatus(jobId, 'cancelled');
+  };
+
+  const rejectJob = async (jobId: string) => {
+    return updateJobStatus(jobId, 'rejected');
   };
 
   return {
+    updateJobStatus,
     acceptJob,
     startJob,
     completeJob,
     cancelJob,
-    updateJobLocation,
+    rejectJob,
     isLoading,
     error,
   };
 };
 
-// Hook for verification actions
-export const useProfessionalVerificationActions = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const submitVerification = async (data: {
-    identityDocument: string;
-    addressProof: string;
-    professionalCertificates?: string[];
-    bankDetails?: {
-      accountNumber: string;
-      ifscCode: string;
-      accountHolderName: string;
-    };
-  }) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await professionalService.submitVerification(data);
-      return response.data;
-    } catch (error: any) {
-      console.error('Submit verification error:', error);
-      const errorMessage = error.message || 'Failed to submit verification';
-      setError(errorMessage);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return {
-    submitVerification,
-    isLoading,
-    error,
-  };
-};
-
-// Hook for payout actions
-export const useProfessionalPayoutActions = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const requestPayout = async (data: {
-    amount: number;
-    bankAccountId: string;
-  }) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await professionalService.requestPayout(data);
-      return response.data;
-    } catch (error: any) {
-      console.error('Request payout error:', error);
-      const errorMessage = error.message || 'Failed to request payout';
-      setError(errorMessage);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return {
-    requestPayout,
-    isLoading,
-    error,
-  };
-};
-
-// Hook for dashboard data (combines multiple API calls)
-export const useProfessionalDashboard = () => {
+// Hook for combined dashboard data
+export const useProfessionalDashboardData = () => {
   const profileApi = useProfessionalProfile();
-  const earningsApi = useProfessionalEarnings({ period: 'today' });
-  const performanceApi = useProfessionalPerformance({ period: 'month' });
-  const jobsApi = useProfessionalJobs({ status: 'pending', limit: 5 });
+  const dashboardApi = useProfessionalDashboard();
+  const jobsApi = useProfessionalJobs();
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -393,8 +206,7 @@ export const useProfessionalDashboard = () => {
       
       await Promise.all([
         profileApi.execute(),
-        earningsApi.execute(),
-        performanceApi.execute(),
+        dashboardApi.execute(),
         jobsApi.execute(),
       ]);
     } catch (error: any) {
@@ -411,11 +223,61 @@ export const useProfessionalDashboard = () => {
 
   return {
     profile: profileApi.data,
-    earnings: earningsApi.data,
-    performance: performanceApi.data,
-    upcomingJobs: jobsApi.data,
-    isLoading: isLoading || profileApi.isLoading || earningsApi.isLoading || performanceApi.isLoading || jobsApi.isLoading,
-    error: error || profileApi.error || earningsApi.error || performanceApi.error || jobsApi.error,
+    dashboardStats: dashboardApi.data,
+    jobs: jobsApi.data,
+    isLoading: isLoading || profileApi.isLoading || dashboardApi.isLoading || jobsApi.isLoading,
+    error: error || profileApi.error || dashboardApi.error || jobsApi.error,
     refreshDashboard,
+  };
+};
+
+// Individual data hooks for specific screens
+export const useProfessionalJobsScreen = () => {
+  const jobsApi = useProfessionalJobs();
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+
+  const filteredJobs = jobsApi.data?.filter(job => 
+    selectedStatus === 'all' || job.status === selectedStatus
+  ) || [];
+
+  return {
+    jobs: filteredJobs,
+    allJobs: jobsApi.data || [],
+    selectedStatus,
+    setSelectedStatus,
+    isLoading: jobsApi.isLoading,
+    error: jobsApi.error,
+    refresh: jobsApi.execute,
+  };
+};
+
+export const useProfessionalEarningsScreen = () => {
+  const dashboardApi = useProfessionalDashboard();
+  
+  return {
+    earnings: dashboardApi.data?.earnings || { total: 0, currency: 'INR' },
+    isLoading: dashboardApi.isLoading,
+    error: dashboardApi.error,
+    refresh: dashboardApi.execute,
+  };
+};
+
+export const useProfessionalDashboardScreen = () => {
+  const profileApi = useProfessionalProfile();
+  const dashboardApi = useProfessionalDashboard();
+
+  const refreshAll = async () => {
+    await Promise.all([
+      profileApi.execute(),
+      dashboardApi.execute(),
+    ]);
+  };
+
+  return {
+    profile: profileApi.data,
+    stats: dashboardApi.data,
+    isLoading: profileApi.isLoading || dashboardApi.isLoading,
+    error: profileApi.error || dashboardApi.error,
+    refresh: refreshAll,
   };
 };

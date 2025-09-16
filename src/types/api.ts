@@ -98,20 +98,29 @@ export interface Booking {
 
 export interface Professional {
   _id: string;
-  user: User;
-  specializations: string[];
-  experience: number; // in years
+  name: string;
+  email: string;
+  phone: string;
+  profileImage?: {
+    url: string;
+  };
   rating: number;
-  reviewCount: number;
-  completedJobs: number;
+  totalRatings: number;
   isAvailable: boolean;
-  isVerified: boolean;
-  documents: {
+  status: string;
+  // Additional fields for extended professional profile
+  user?: User;
+  specializations?: string[];
+  experience?: number; // in years
+  reviewCount?: number;
+  completedJobs?: number;
+  isVerified?: boolean;
+  documents?: {
     type: 'identity' | 'address' | 'skill';
     url: string;
     verified: boolean;
   }[];
-  serviceAreas: {
+  serviceAreas?: {
     city: string;
     radius: number; // in km
     coordinates: {
@@ -119,7 +128,7 @@ export interface Professional {
       longitude: number;
     };
   }[];
-  pricing: {
+  pricing?: {
     service: string;
     rate: number;
     type: 'fixed' | 'hourly';
@@ -130,8 +139,8 @@ export interface Professional {
     accountHolderName: string;
     bankName: string;
   };
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Vehicle {

@@ -69,6 +69,16 @@ export const useApi = <T = any>(
           showErrorAlert
         );
 
+        if (__DEV__) {
+          console.log('useApi - Error caught:', {
+            originalError: error,
+            appError,
+            appErrorMessage: appError.message,
+            statusCode: appError.statusCode,
+            apiCallName: apiCall.name
+          });
+        }
+
         setState({
           data: null,
           loading: false,
@@ -124,18 +134,44 @@ export const usePaginatedApi = <T = any>(
     async (params: any = {}) => {
       if (!pagination.hasMore && pagination.page > 1) return;
 
+      if (__DEV__) {
+        console.log('usePaginatedApi - loadMore called:', {
+          params,
+          pagination,
+          currentData: allData
+        });
+      }
+
       const response = await baseApi.execute({
         ...params,
         page: pagination.page,
         limit: pagination.limit,
       });
 
+      if (__DEV__) {
+        console.log('usePaginatedApi - loadMore response:', {
+          response,
+          responseType: typeof response,
+          isArray: Array.isArray(response),
+          responseLength: Array.isArray(response) ? response.length : 'N/A'
+        });
+      }
+
       if (response) {
         const newData = Array.isArray(response) ? response : [];
         
-        setAllData(prev => 
-          pagination.page === 1 ? newData : [...prev, ...newData]
-        );
+        const updatedData = pagination.page === 1 ? newData : [...allData, ...newData];
+        
+        if (__DEV__) {
+          console.log('usePaginatedApi - Setting data:', {
+            previousLength: allData.length,
+            newDataLength: newData.length,
+            totalLength: updatedData.length,
+            isFirstPage: pagination.page === 1
+          });
+        }
+        
+        setAllData(updatedData);
 
         setPagination(prev => ({
           ...prev,
@@ -172,7 +208,7 @@ export const usePaginatedApi = <T = any>(
     });
   }, [baseApi]);
 
-  return {
+  const result = {
     data: allData,
     loading: baseApi.loading,
     error: baseApi.error,
@@ -181,6 +217,18 @@ export const usePaginatedApi = <T = any>(
     refresh,
     reset,
   };
+  
+  if (__DEV__) {
+    console.log('usePaginatedApi - Returning:', {
+      allData,
+      dataLength: allData?.length,
+      loading: baseApi.loading,
+      error: baseApi.error,
+      pagination
+    });
+  }
+  
+  return result;
 };
 
 // Hook for real-time updates

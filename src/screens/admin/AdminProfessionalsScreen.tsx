@@ -10,54 +10,48 @@ import {
   Image,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
-  Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
-import { useAdminProfessionals, useAdminProfessionalActions } from '../../hooks/useAdmin';
+import { useAdminProfessionals } from '../../hooks/useAdmin';
+import { adminService } from '../../services/adminService';
 
-
-// --- Helper Hook for Debouncing ---
-const useDebounce = (value, delay) => {
+// --- Debounce Hook ---
+const useDebounce = (value: string, delay: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-    return () => {
-      clearTimeout(handler);
-    };
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
   }, [value, delay]);
   return debouncedValue;
 };
 
-// --- Type Definitions ---
+// --- Types ---
 type AdminProfessionalsScreenNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 
 interface Professional {
   id: string;
-  _id?: string;
   name?: string;
-  phone?: string;
   email?: string;
-  rating?: number;
-  totalJobs?: number;
-  completedJobs?: number;
-  cancelledJobs?: number;
-  totalEarnings?: string;
+  phone?: string;
   status?: 'active' | 'inactive' | 'pending' | 'rejected';
   skills?: string[];
   joinedDate?: string;
   lastActive?: string;
   profileImage?: string;
+  rating?: number;
+  totalJobs?: number;
+  completedJobs?: number;
+  cancelledJobs?: number;
+  totalEarnings?: string;
   isVerified?: boolean;
 }
 
-// --- Memoized Card Component for Performance ---
-const ProfessionalCard = React.memo(({ item, navigation, getStatusStyles }) => {
+// --- Professional Card ---
+const ProfessionalCard = React.memo(({ item, navigation, getStatusStyles }: any) => {
   const lastActiveDate = new Date(item.lastActive || Date.now());
   const formattedLastActive = `${lastActiveDate.toLocaleDateString()} ${lastActiveDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   const statusStyles = getStatusStyles(item.status || 'inactive');
@@ -90,102 +84,54 @@ const ProfessionalCard = React.memo(({ item, navigation, getStatusStyles }) => {
           </View>
         </View>
         <View style={styles.cardStatsContainer}>
-            <View style={styles.cardStatItem}>
-              <Ionicons name="star" size={16} color="#F59E0B" />
-              <Text style={styles.cardStatText}>{(item.rating || 0).toFixed(1)}</Text>
-            </View>
-            <View style={styles.cardStatItem}>
-              <MaterialIcons name="work" size={16} color="#6B7280" />
-              <Text style={styles.cardStatText}>{item.totalJobs || 0} jobs</Text>
-            </View>
+          <View style={styles.cardStatItem}>
+            <Ionicons name="star" size={16} color="#F59E0B" />
+            <Text style={styles.cardStatText}>{(item.rating || 0).toFixed(1)}</Text>
+          </View>
+          <View style={styles.cardStatItem}>
+            <MaterialIcons name="work" size={16} color="#6B7280" />
+            <Text style={styles.cardStatText}>{item.totalJobs || 0} jobs</Text>
+          </View>
         </View>
         <View style={styles.cardFooter}>
-            <Text style={styles.cardLastActive}>Last active: {formattedLastActive}</Text>
+          <Text style={styles.cardLastActive}>Last active: {formattedLastActive}</Text>
         </View>
       </View>
     </TouchableOpacity>
   );
 });
 
-// --- Main Screen Component ---
+// --- Main Screen ---
 const AdminProfessionalsScreen = () => {
   const navigation = useNavigation<AdminProfessionalsScreenNavigationProp>();
-
-  // Filtering and Sorting State
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'pending' | 'rejected'>('all');
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  // API hooks
+  // Use the admin professionals hook
   const {
     data: professionals = [],
     loading,
     error,
-    loadMore,
-    refresh,
-    pagination,
+    refresh: fetchProfessionals,
+    loadMore
   } = useAdminProfessionals({
-    search: debouncedSearchQuery,
+    search: debouncedSearchQuery || undefined,
     status: statusFilter === 'all' ? undefined : statusFilter,
-    limit: 20,
   });
 
-  const { updateVerificationStatus } = useAdminProfessionalActions();
-
   useEffect(() => {
-    // Reset pagination and load first page when filters/search change
-    // Note: intentionally omit `refresh` from deps to avoid identity changes causing loops
-    refresh();
-  }, [debouncedSearchQuery, statusFilter]);
+    fetchProfessionals();
+  }, []);
 
   const onRefresh = useCallback(() => {
-    refresh();
-  }, [refresh]);
+    fetchProfessionals();
+  }, [fetchProfessionals]);
 
-  const filteredProfessionals = useMemo(() => {
-    if (!professionals || !Array.isArray(professionals)) {
-      return [];
-    }
-    
-    let filtered = [...professionals];
+  // Since filtering is handled by the API hook, we can use professionals directly
+  const filteredProfessionals = professionals;
 
-    // Sort the professionals locally since API provides filtered data based on search/status
-    filtered.sort((a, b) => {
-      let comparison = 0;
-      switch (sortBy) {
-        case 'name': 
-          comparison = (a.name || '').localeCompare(b.name || ''); 
-          break;
-        case 'rating': 
-          comparison = (b.rating || 0) - (a.rating || 0); 
-          break;
-        case 'jobs': 
-          comparison = (b.totalJobs || 0) - (a.totalJobs || 0); 
-          break;
-        case 'date': 
-          comparison = new Date(b.joinedDate || 0).getTime() - new Date(a.joinedDate || 0).getTime(); 
-          break;
-        default: 
-          comparison = (a.name || '').localeCompare(b.name || '');
-      }
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-
-    return filtered;
-  }, [professionals, sortBy, sortOrder]);
-
-  const handleSortChange = (sortField: string) => {
-    if (sortBy === sortField) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(sortField);
-      setSortOrder('asc');
-    }
-  };
-  
   const getStatusStyles = (status: Professional['status']) => {
     switch (status) {
       case 'active': return { badge: styles.statusBadgeActive, text: styles.statusTextActive };
@@ -196,21 +142,27 @@ const AdminProfessionalsScreen = () => {
     }
   };
 
-  const renderSortButton = (field: string, label: string) => (
-    <TouchableOpacity style={styles.sortButton} onPress={() => handleSortChange(field)}>
-      <Text style={[styles.sortText, sortBy === field && styles.sortTextActive]}>{label}</Text>
-      {sortBy === field && (
-        <Ionicons name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} size={16} color="#2563EB" style={styles.sortIcon} />
-      )}
-    </TouchableOpacity>
-  );
-
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />
         <Text style={styles.loadingText}>Loading professionals...</Text>
-      </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+        <Text style={styles.loadingText}>Failed to load professionals</Text>
+        <TouchableOpacity 
+          style={{ backgroundColor: '#2563EB', padding: 12, borderRadius: 8, marginTop: 16 }}
+          onPress={fetchProfessionals}
+        >
+          <Text style={{ color: 'white', fontWeight: '600' }}>Retry</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
     );
   }
 
@@ -219,59 +171,56 @@ const AdminProfessionalsScreen = () => {
       {/* Header */}
       <View style={styles.headerContainer}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color="#1F2937" />
+          <Ionicons name="arrow-back" size={24} color="#1F2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Professionals</Text>
-        <TouchableOpacity style={styles.headerButton} onPress={() => navigation.navigate('Notifications')}>
-            <Ionicons name="notifications-outline" size={24} color="#1F2937" />
-        </TouchableOpacity>
+        <View style={{ width: 24 }} /> {/* placeholder for spacing */}
       </View>
 
-      {/* Search and Filters */}
+      {/* Search + Filters */}
       <View style={styles.controlsContainer}>
         <View style={styles.searchBarContainer}>
-            <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
-            <TextInput
-                style={styles.searchInput}
-                placeholder="Search by name, ID, phone..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholderTextColor="#6B7280"
-            />
-            {searchQuery ? (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <Ionicons name="close-circle" size={20} color="#9CA3AF" />
-                </TouchableOpacity>
-            ) : null}
+          <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name, ID, phone..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#6B7280"
+          />
+          {searchQuery ? (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+          ) : null}
         </View>
+
         <View style={styles.filterBar}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {['all', 'active', 'inactive', 'pending', 'rejected'].map(status => (
-                <TouchableOpacity
+              <TouchableOpacity
                 key={status}
                 style={[styles.filterButton, statusFilter === status ? styles.filterButtonActive : styles.filterButtonInactive]}
-                onPress={() => setStatusFilter(status)}
-                >
-                <Text style={[styles.filterText, statusFilter === status ? styles.filterTextActive : styles.filterTextInactive, {textTransform: 'capitalize'}]}>{status}</Text>
-                </TouchableOpacity>
+                onPress={() => setStatusFilter(status as any)}
+              >
+                <Text style={[styles.filterText, statusFilter === status ? styles.filterTextActive : styles.filterTextInactive]}>
+                  {status}
+                </Text>
+              </TouchableOpacity>
             ))}
-            </ScrollView>
+          </ScrollView>
         </View>
       </View>
 
       <FlatList
         data={filteredProfessionals}
         renderItem={({ item }) => (
-            <ProfessionalCard
-                item={item}
-                navigation={navigation}
-                getStatusStyles={getStatusStyles}
-            />
+          <ProfessionalCard item={item} navigation={navigation} getStatusStyles={getStatusStyles} />
         )}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         contentContainerStyle={styles.listContentContainer}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#2563EB']} tintColor="#2563EB" />}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#2563EB']} />}
         ListEmptyComponent={
           <View style={styles.emptyListContainer}>
             <MaterialIcons name="person-search" size={60} color="#9CA3AF" />
@@ -280,247 +229,83 @@ const AdminProfessionalsScreen = () => {
           </View>
         }
       />
-      
-      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('AdminCreateProfessional')}>
-        <Ionicons name="add" size={28} color="white" />
-      </TouchableOpacity>
+      <TouchableOpacity 
+  style={styles.fab} 
+  onPress={() => navigation.navigate('AdminCreateProfessional')}
+>
+  <Ionicons name="add" size={28} color="white" />
+</TouchableOpacity>
     </SafeAreaView>
   );
 };
 
-// --- Updated Styles ---
+// --- Styles ---
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: 'white', // Changed to white for seamless look
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#F9FAFB',
-    },
-    loadingText: {
-        marginTop: 10,
-        fontSize: 16,
-        color: '#4B5563',
-    },
-    // New White Header
-    headerContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: 'white',
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
-    },
-    headerTitle: {
-        color: '#1F2937', // Black color for text
-        fontSize: 20,
-        fontWeight: 'bold',
-    },
-    headerButton: {
-        padding: 4,
-    },
-    // Container for Search and Filters
-    controlsContainer: {
-        paddingHorizontal: 16,
-        paddingTop: 8,
-        paddingBottom: 12,
-        backgroundColor: 'white',
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
-    },
-    // New Search Bar Style
-    searchBarContainer: {
-        backgroundColor: '#F3F4F6', // Light grey background
-        borderRadius: 10,
-        flexDirection: 'row',
-        alignItems: 'center',
-        height: 44,
-        paddingHorizontal: 12,
-    },
-    searchIcon: {
-        marginRight: 8,
-    },
-    searchInput: {
-        flex: 1,
-        color: '#1F2937',
-        fontSize: 16,
-    },
-    filterBar: {
-        marginTop: 16,
-    },
-    filterButton: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        marginRight: 8,
-    },
-    filterButtonActive: {
-        backgroundColor: '#2563EB',
-    },
-    filterButtonInactive: {
-        backgroundColor: '#E5E7EB',
-    },
-    filterText: {
-        fontWeight: '600',
-        fontSize: 14,
-    },
-    filterTextActive: {
-        color: 'white',
-    },
-    filterTextInactive: {
-        color: '#374151',
-    },
-    listContentContainer: {
-        paddingHorizontal: 16,
-        paddingTop: 16,
-        paddingBottom: 80, // Space for FAB
-        backgroundColor: '#F9FAFB' // List background
-    },
-    emptyListContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingTop: 80,
-        backgroundColor: '#F9FAFB'
-    },
-    emptyListText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#4B5563',
-        marginTop: 16,
-    },
-    emptyListSubText: {
-        fontSize: 14,
-        color: '#6B7280',
-        marginTop: 4,
-    },
-    fab: {
-        position: 'absolute',
-        bottom: 30,
-        right: 20,
-        backgroundColor: '#2563EB',
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        alignItems: 'center',
-        justifyContent: 'center',
-        elevation: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-    },
-    cardContainer: {
-        backgroundColor: 'white',
-        borderRadius: 12,
-        marginBottom: 16,
-        elevation: 1,
-        shadowColor: '#4B5563',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-    },
-    cardContent: {
-        padding: 16,
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    cardHeaderLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-        marginRight: 8,
-    },
-    cardAvatar: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-    },
-    cardAvatarPlaceholder: {
-        backgroundColor: '#E5E7EB',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    cardAvatarText: {
-        color: '#4B5563',
-        fontWeight: 'bold',
-        fontSize: 20,
-    },
-    cardInfo: {
-        marginLeft: 12,
-        flex: 1,
-    },
-    cardNameContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    cardName: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#1F2937',
-        flexShrink: 1,
-    },
-    cardVerifiedIcon: {
-        marginLeft: 6,
-    },
-    cardId: {
-        fontSize: 12,
-        color: '#6B7280',
-        marginTop: 2,
-    },
-    cardStatusBadge: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-        alignSelf: 'flex-start'
-    },
-    statusBadgeActive: { backgroundColor: '#D1FAE5' },
-    statusBadgeInactive: { backgroundColor: '#F3F4F6' },
-    statusBadgePending: { backgroundColor: '#FEF3C7' },
-    statusBadgeRejected: { backgroundColor: '#FEE2E2' },
-    cardStatusText: {
-        fontSize: 12,
-        fontWeight: '500',
-        textTransform: 'capitalize',
-    },
-    statusTextActive: { color: '#065F46' },
-    statusTextInactive: { color: '#374151' },
-    statusTextPending: { color: '#92400E' },
-    statusTextRejected: { color: '#991B1B' },
-    cardStatsContainer: {
-        marginTop: 16,
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-    },
-    cardStatItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginRight: 16,
-        marginBottom: 8,
-    },
-    cardStatText: {
-        color: '#374151',
-        marginLeft: 6,
-        fontSize: 13,
-    },
-    cardFooter: {
-        borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-        paddingTop: 12,
-        marginTop: 8,
-    },
-    cardLastActive: {
-        fontSize: 12,
-        color: '#6B7280',
-    },
+  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9FAFB' },
+  loadingText: { marginTop: 10, fontSize: 16, color: '#4B5563' },
+  headerContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#1F2937' },
+  headerButton: { padding: 4 },
+  controlsContainer: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  searchBarContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 10, paddingHorizontal: 12, height: 44 },
+  searchIcon: { marginRight: 8 },
+  searchInput: { flex: 1, fontSize: 16, color: '#1F2937' },
+  filterBar: { marginTop: 12 },
+  filterButton: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginRight: 8 },
+  filterButtonActive: { backgroundColor: '#2563EB' },
+  filterButtonInactive: { backgroundColor: '#E5E7EB' },
+  filterText: { fontWeight: '600', fontSize: 14 },
+  filterTextActive: { color: 'white' },
+  filterTextInactive: { color: '#374151' },
+  listContentContainer: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 80 },
+  emptyListContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
+  emptyListText: { fontSize: 18, fontWeight: '600', color: '#4B5563', marginTop: 16 },
+  emptyListSubText: { fontSize: 14, color: '#6B7280', marginTop: 4 },
+  cardContainer: { backgroundColor: 'white', borderRadius: 12, marginBottom: 16, elevation: 1, shadowColor: '#4B5563', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
+  cardContent: { padding: 16 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 },
+  cardAvatar: { width: 48, height: 48, borderRadius: 24 },
+  cardAvatarPlaceholder: { backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' },
+  cardAvatarText: { color: '#4B5563', fontWeight: 'bold', fontSize: 20 },
+  cardInfo: { marginLeft: 12, flex: 1 },
+  cardNameContainer: { flexDirection: 'row', alignItems: 'center' },
+  cardName: { fontSize: 16, fontWeight: 'bold', color: '#1F2937', flexShrink: 1 },
+  cardVerifiedIcon: { marginLeft: 6 },
+  cardId: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  cardStatusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
+  statusBadgeActive: { backgroundColor: '#D1FAE5' },
+  statusBadgeInactive: { backgroundColor: '#F3F4F6' },
+  statusBadgePending: { backgroundColor: '#FEF3C7' },
+  statusBadgeRejected: { backgroundColor: '#FEE2E2' },
+  cardStatusText: { fontSize: 12, fontWeight: '500', textTransform: 'capitalize' },
+  statusTextActive: { color: '#065F46' },
+  statusTextInactive: { color: '#374151' },
+  statusTextPending: { color: '#92400E' },
+  statusTextRejected: { color: '#991B1B' },
+  cardStatsContainer: { marginTop: 16, flexDirection: 'row', flexWrap: 'wrap' },
+  cardStatItem: { flexDirection: 'row', alignItems: 'center', marginRight: 16, marginBottom: 8 },
+  cardStatText: { color: '#374151', marginLeft: 6, fontSize: 13 },
+  cardFooter: { borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 12, marginTop: 8 },
+  cardLastActive: { fontSize: 12, color: '#6B7280' },
+   fab: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    backgroundColor: '#2563EB',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
 });
 
 export default AdminProfessionalsScreen;
+

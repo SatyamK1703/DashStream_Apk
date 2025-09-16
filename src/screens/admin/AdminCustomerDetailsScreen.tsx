@@ -22,6 +22,8 @@ import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
 import {Customer , Address , Vehicle ,Booking ,Note} from '../../types/AdminType';
 import { adminService } from '../../services';
 import { handleApiError } from '../../utils/errorHandler';
+import httpClient from '../../services/httpClient';
+import { ApiResponse } from '../../services/httpClient';
 
 type AdminCustomerDetailsRouteProp = RouteProp<AdminStackParamList, 'CustomerDetails'>;
 type AdminCustomerDetailsNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
@@ -36,12 +38,26 @@ const AdminCustomerDetailsScreen = () => {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'addresses' | 'vehicles' | 'notes'>('overview');
   const [newNote, setNewNote] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
   
   // Load customer from backend
   const loadCustomer = async () => {
     try {
       setLoading(true);
+      if (__DEV__) {
+        console.log('🔍 Loading customer details for ID:', customerId);
+      }
+      
       const res = await adminService.getUserById(customerId);
+      if (__DEV__) {
+        console.log('📋 Customer API response:', {
+          success: res.success,
+          status: res.status,
+          hasData: !!res.data,
+          dataKeys: res.data ? Object.keys(res.data) : []
+        });
+      }
+      
       const apiUser: any = (res as any)?.data?.user || (res as any)?.data;
 
       // Map addresses
@@ -62,7 +78,6 @@ const AdminCustomerDetailsScreen = () => {
         type: v.type || 'car',
         brand: v.make || v.brand || '',
         model: v.model || '',
-        image: v.image?.url || v.image || undefined,
       }));
 
       // Recent bookings if included in response (backend sends separate in details)
@@ -103,7 +118,26 @@ const AdminCustomerDetailsScreen = () => {
       };
 
       setCustomer(mapped);
+      if (__DEV__) {
+        console.log('✅ Customer loaded successfully:', mapped.name);
+      }
     } catch (error) {
+      if (__DEV__) {
+        console.error('❌ Failed to load customer:', error);
+      }
+      
+      // If it's a 401 error and we haven't retried yet, try once more after a short delay
+      if ((error as any)?.statusCode === 401 && retryCount < 1) {
+        if (__DEV__) {
+          console.log('🔄 Retrying customer load after auth error...');
+        }
+        setRetryCount(prev => prev + 1);
+        setTimeout(() => {
+          loadCustomer();
+        }, 1000);
+        return;
+      }
+      
       handleApiError(error, 'LoadCustomer');
       setCustomer(null);
     } finally {
@@ -112,6 +146,7 @@ const AdminCustomerDetailsScreen = () => {
   };
 
   useEffect(() => {
+    setRetryCount(0); // Reset retry count when customerId changes
     loadCustomer();
   }, [customerId]);
 
