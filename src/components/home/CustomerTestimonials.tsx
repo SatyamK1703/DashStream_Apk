@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet, Dimensions } from 'react-native';
-import { Video } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 
 const testimonials = [
   {
@@ -32,21 +32,26 @@ const CustomerTestimonials = () => {
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 16 }}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Video
-              source={{ uri: item.videoUri }}
-              style={styles.video}
-              resizeMode="cover"
-              isLooping
-              shouldPlay
-              isMuted
-            />
-            <View style={styles.overlay}>
-              <Text style={styles.name}>{item.name}</Text>
+        renderItem={({ item }) => {
+          const player = useVideoPlayer(item.videoUri, (player) => {
+            player.loop = true;
+            player.play();
+            player.muted = true;
+          });
+          return (
+            <View style={styles.card}>
+              <VideoView
+                style={styles.video}
+                player={player}
+                allowsFullscreen
+                allowsPictureInPicture
+              />
+              <View style={styles.overlay}>
+                <Text style={styles.name}>{item.name}</Text>
+              </View>
             </View>
-          </View>
-        )}
+          );
+        }}
       />
     </View>
   );

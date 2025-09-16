@@ -39,7 +39,7 @@ const HomeScreen = () => {
   const {
     data: activeOffersData,
     loading: offersLoading,
-    execute: fetchActiveOffers,
+    refresh: fetchActiveOffers,
     error: offersError,
   } = useActiveOffers({ limit: 5 });
 
