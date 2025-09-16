@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { ApiResponse, ApiError } from '../services/httpClient';
 import { handleApiError, retryOperation } from '../utils/errorHandler';
 import { useAuth } from '../context/AuthContext';
@@ -36,8 +36,12 @@ export const useApi = <T = any>(
     error: null,
   });
 
+  const isExecutingRef = useRef(false);
+
   const execute = useCallback(
     async (...args: any[]) => {
+      if (isExecutingRef.current) return state.data; // prevent concurrent duplicate calls
+      isExecutingRef.current = true;
       setState(prev => ({ ...prev, loading: true, error: null }));
 
       try {
@@ -48,17 +52,18 @@ export const useApi = <T = any>(
 
         const isSuccess = (response as any)?.success === true || (response as any)?.status === 'success';
         if (isSuccess) {
+          const payload = (response as any)?.data ?? (response as any);
           setState({
-            data: response.data,
+            data: payload,
             loading: false,
             error: null,
           });
 
           if (onSuccess) {
-            onSuccess(response.data);
+            onSuccess(payload);
           }
 
-          return response.data;
+          return payload;
         } else {
           throw response;
         }
@@ -95,9 +100,11 @@ export const useApi = <T = any>(
         }
 
         throw appError;
+      } finally {
+        isExecutingRef.current = false;
       }
     },
-    [apiCall, retries, retryDelay, showErrorAlert, onSuccess, onError, logout]
+    [apiCall, retries, retryDelay, showErrorAlert, onSuccess, onError, logout, state.data]
   );
 
   const reset = useCallback(() => {
@@ -128,7 +135,19 @@ export const usePaginatedApi = <T = any>(
   });
 
   const [allData, setAllData] = useState<T[]>([]);
+  const isLoadingPageRef = useRef(false);
   const baseApi = useApi(apiCall, options);
+
+  const normalizePaginated = (resp: any) => {
+    // Support various backend shapes
+    // 1) Array
+    if (Array.isArray(resp)) return { items: resp, total: resp.length };
+    // 2) Generic {items,total}
+    if (resp?.items) return { items: resp.items, total: resp.total ?? resp.items.length };
+    // 3) Bookings API: { bookings, totalCount, totalPages, currentPage, results }
+    if (resp?.bookings) return { items: resp.bookings, total: resp.totalCount ?? resp.bookings.length };
+    return { items: [], total: 0 };
+  };
 
   const loadMore = useCallback(
     async (params: any = {}) => {
@@ -183,6 +202,7 @@ export const usePaginatedApi = <T = any>(
         }));
       }
 
+      isLoadingPageRef.current = false;
       return response;
     },
     [baseApi, pagination]
@@ -192,6 +212,10 @@ export const usePaginatedApi = <T = any>(
     async (params: any = {}) => {
       setPagination(prev => ({ ...prev, page: 1, hasMore: true }));
       setAllData([]);
+      // ensure we don't collide with an ongoing load
+      while ((isLoadingPageRef as any).current) {
+        await new Promise(r => setTimeout(r, 50));
+      }
       return loadMore(params);
     },
     [loadMore]

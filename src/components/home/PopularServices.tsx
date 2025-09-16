@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, FlatList, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
@@ -36,26 +36,35 @@ const PopularServices = ({ services }: any) => {
         </TouchableOpacity>
       </View>
 
-      {/* Services Grid */}
-      <FlatList
-        data={services.slice(0, 6)} // Show only first 6 items
-        keyExtractor={(item) => item.id}
-        numColumns={3}
-        scrollEnabled={false}
-        columnWrapperStyle={styles.row}
-        renderItem={({ item }) => (
-          <TouchableOpacity 
-            style={styles.item} 
-            onPress={() => handlePress(item)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.iconContainer}>
-              <Image source={item.image} style={styles.icon} resizeMode="contain" />
+      {/* Services Grid without FlatList to avoid nested VirtualizedList in ScrollView */}
+      <View>
+        {services
+          .slice(0, 6)
+          .reduce((rows: any[], item: any, index: number) => {
+            if (index % 3 === 0) rows.push([]);
+            rows[rows.length - 1].push(item);
+            return rows;
+          }, [])
+          .map((row: any[], rowIndex: number) => (
+            <View key={rowIndex} style={styles.row}>
+              {row.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.item}
+                  onPress={() => handlePress(item)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.iconContainer}>
+                    <Image source={item.image} style={styles.icon} resizeMode="contain" />
+                  </View>
+                  <Text style={styles.label} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
-            <Text style={styles.label} numberOfLines={2}>{item.title}</Text>
-          </TouchableOpacity>
-        )}
-      />
+          ))}
+      </View>
     </View>
   );
 };

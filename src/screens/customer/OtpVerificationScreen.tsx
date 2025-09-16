@@ -1,5 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Keyboard, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Keyboard,
+  Platform,
+  NativeSyntheticEvent,
+  TextInputKeyPressEventData,
+} from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../app/routes/RootNavigator';
@@ -7,71 +19,126 @@ import { useAuth } from '../../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+// Types
 type OtpVerificationRouteProp = RouteProp<RootStackParamList, 'OtpVerification'>;
-type OtpVerificationNavigationProp = NativeStackNavigationProp<RootStackParamList, 'OtpVerification'>;
+type OtpVerificationNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'OtpVerification'
+>;
+
+const OTP_LENGTH = 4;
 
 const OtpVerificationScreen = () => {
-  const [otp, setOtp] = useState(['', '', '', '']);
+  const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const inputRefs = useRef<Array<TextInput | null>>([null, null, null, null]);
-  
+  const inputRefs = useRef<Array<TextInput | null>>(Array(OTP_LENGTH).fill(null));
+
   const navigation = useNavigation<OtpVerificationNavigationProp>();
   const route = useRoute<OtpVerificationRouteProp>();
   const { phone } = route.params;
   const { verifyOtp, isLoading, login } = useAuth();
 
+  // Countdown timer
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
+    let interval: ReturnType<typeof setInterval> | undefined;
     if (timer > 0) {
-      interval = setInterval(() => {
-        setTimer((prevTimer) => prevTimer - 1);
-      }, 1000);
+      interval = setInterval(() => setTimer((t) => t - 1), 1000);
     } else {
       setCanResend(true);
     }
-
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [timer]);
 
-  const handleOtpChange = (text: string, index: number) => {
-    if (text.length > 1) {
-      text = text[0];
+  // Auto-submit when all digits are filled
+  useEffect(() => {
+    const code = otp.join('');
+    if (code.length === OTP_LENGTH && !otp.includes('') && !isLoading) {
+      // Small debounce to allow UI focus to settle
+      const id = setTimeout(() => handleVerifyOtp(), 100);
+      return () => clearTimeout(id);
     }
+  }, [otp, isLoading]);
 
-    const newOtp = [...otp];
-    newOtp[index] = text;
-    setOtp(newOtp);
-
-    if (text && index < 3) {
-      inputRefs.current[index + 1]?.focus();
-      setActiveIndex(index + 1);
-    } else if (!text && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-      setActiveIndex(index - 1);
-    }
-  };
-
-  const handleFocus = (index: number) => {
+  const focusField = (index: number) => {
+    inputRefs.current[index]?.focus();
     setActiveIndex(index);
   };
 
-  const handleBlur = () => {
-    setActiveIndex(null);
+  // Handle input change including paste and digit restriction
+  const handleOtpChange = (text: string, index: number) => {
+    const digitsOnly = text.replace(/\D/g, '');
+
+    // If user cleared the field
+    if (digitsOnly.length === 0) {
+      setOtp((prev) => {
+        const updated = [...prev];
+        updated[index] = '';
+        return updated;
+      });
+      return;
+    }
+
+    // Handle paste or multiple characters
+    if (digitsOnly.length > 1) {
+      setOtp((prev) => {
+        const updated = [...prev];
+        let i = index;
+        for (let d of digitsOnly.split('').slice(0, OTP_LENGTH - index)) {
+          updated[i] = d;
+          i += 1;
+        }
+        return updated;
+      });
+      const nextIndex = Math.min(index + digitsOnly.length, OTP_LENGTH - 1);
+      focusField(nextIndex);
+      return;
+    }
+
+    // Single character entry
+    setOtp((prev) => {
+      const updated = [...prev];
+      updated[index] = digitsOnly;
+      return updated;
+    });
+
+    if (index < OTP_LENGTH - 1) {
+      focusField(index + 1);
+    }
   };
+
+  // Backspace navigation: if current empty, move to previous and clear it
+  const handleKeyPress = (
+    e: NativeSyntheticEvent<TextInputKeyPressEventData>,
+    index: number,
+  ) => {
+    if (e.nativeEvent.key === 'Backspace') {
+      if (otp[index] === '' && index > 0) {
+        setOtp((prev) => {
+          const updated = [...prev];
+          updated[index - 1] = '';
+          return updated;
+        });
+        focusField(index - 1);
+      }
+    }
+  };
+
+  const handleFocus = (index: number) => setActiveIndex(index);
+  const handleBlur = () => setActiveIndex(null);
 
   const handleVerifyOtp = async () => {
     Keyboard.dismiss();
     const otpString = otp.join('');
-    if (otpString.length !== 4) {
-      Alert.alert('Invalid OTP', 'Please enter a valid 4-digit OTP');
+    if (otpString.length !== OTP_LENGTH) {
+      Alert.alert('Invalid OTP', `Please enter a valid ${OTP_LENGTH}-digit OTP`);
       return;
     }
-
     const ok = await verifyOtp(phone, otpString);
     if (!ok) return;
   };
@@ -79,10 +146,9 @@ const OtpVerificationScreen = () => {
   const handleResendOtp = async () => {
     setTimer(30);
     setCanResend(false);
-    setOtp(['', '', '', '']);
-    inputRefs.current[0]?.focus();
-    setActiveIndex(0);
-    
+    setOtp(Array(OTP_LENGTH).fill(''));
+    focusField(0);
+
     try {
       await login(phone);
       Alert.alert('OTP Sent', 'A new OTP has been sent to your phone number.');
@@ -92,122 +158,128 @@ const OtpVerificationScreen = () => {
   };
 
   return (
-    <KeyboardAwareScrollView
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
-      enableOnAndroid={true}
-      extraScrollHeight={20}
-    >
-      <View style={styles.content}>
-        {/* Header with back button */}
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => navigation.goBack()}
-          disabled={isLoading}
-        >
-          <MaterialIcons name="arrow-back" size={28} color="#4e73df" />
-        </TouchableOpacity>
-
-        {/* Verification Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Verify Your Number</Text>
-          <Text style={styles.subtitle}>
-            Enter the 4-digit code sent to
-          </Text>
-          <Text style={styles.phoneText}>+{phone}</Text>
-        </View>
-
-        {/* OTP Input Container */}
-        <View style={styles.otpContainer}>
-          {otp.map((digit, index) => (
-            <TextInput
-              key={index}
-              ref={(ref) => {
-                inputRefs.current[index] = ref;
-              }}
-              style={[
-                styles.otpInput,
-                activeIndex === index && styles.activeOtpInput,
-                isLoading && styles.disabledInput
-              ]}
-              keyboardType="number-pad"
-              maxLength={1}
-              value={digit}
-              onChangeText={(text) => handleOtpChange(text, index)}
-              onFocus={() => handleFocus(index)}
-              onBlur={handleBlur}
-              editable={!isLoading}
-              selectTextOnFocus
-            />
-          ))}
-        </View>
-
-        {/* Verify Button */}
-        <TouchableOpacity
-          onPress={handleVerifyOtp}
-          disabled={isLoading || otp.join('').length !== 4}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={['#4e73df', '#224abe']}
-            style={[
-              styles.verifyButton,
-              (isLoading || otp.join('').length !== 4) && styles.disabledButton
-            ]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+    <SafeAreaView style={styles.safeArea} edges={['top', 'right', 'left']}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        enableOnAndroid
+        extraScrollHeight={20}
+      >
+        <View style={styles.content}>
+          {/* Header with back button */}
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            disabled={isLoading}
+            accessibilityLabel="Go back"
           >
-            {isLoading ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Text style={styles.verifyButtonText}>Verify & Continue</Text>
-            )}
-          </LinearGradient>
-        </TouchableOpacity>
+            <MaterialIcons name="arrow-back" size={28} color="#4e73df" />
+          </TouchableOpacity>
 
-        {/* Resend OTP Section */}
-        <View style={styles.resendContainer}>
-          <Text style={styles.resendText}>Didn't receive the code?</Text>
-          
-          {canResend ? (
-            <TouchableOpacity 
-              onPress={handleResendOtp} 
-              disabled={isLoading}
+          {/* Verification Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Verify Your Number</Text>
+            <Text style={styles.subtitle}>Enter the {OTP_LENGTH}-digit code sent to</Text>
+            <Text style={styles.phoneText}>+{phone}</Text>
+          </View>
+
+          {/* OTP Input Container */}
+          <View style={styles.otpContainer}>
+            {otp.map((digit, index) => (
+              <TextInput
+                key={index}
+                ref={(ref) => {
+                  inputRefs.current[index] = ref;
+                }}
+                style={[
+                  styles.otpInput,
+                  activeIndex === index && styles.activeOtpInput,
+                  isLoading && styles.disabledInput,
+                ]}
+                keyboardType={Platform.OS === 'ios' ? 'number-pad' : 'numeric'}
+                autoComplete="one-time-code"
+                textContentType="oneTimeCode"
+                maxLength={1}
+                value={digit}
+                onChangeText={(text) => handleOtpChange(text, index)}
+                onKeyPress={(e) => handleKeyPress(e, index)}
+                onFocus={() => handleFocus(index)}
+                onBlur={handleBlur}
+                editable={!isLoading}
+                selectTextOnFocus
+                importantForAutofill="yes"
+                returnKeyType="done"
+              />
+            ))}
+          </View>
+
+          {/* Verify Button */}
+          <TouchableOpacity
+            onPress={handleVerifyOtp}
+            disabled={isLoading || otp.join('').length !== OTP_LENGTH}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#4e73df', '#224abe']}
+              style={[
+                styles.verifyButton,
+                (isLoading || otp.join('').length !== OTP_LENGTH) && styles.disabledButton,
+              ]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
             >
-              <Text style={styles.resendLink}>Resend OTP</Text>
-            </TouchableOpacity>
-          ) : (
-            <Text style={styles.resendCountdown}>
-              Resend in <Text style={styles.resendCountdownBold}>{timer} seconds</Text>
-            </Text>
-          )}
+              {isLoading ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={styles.verifyButtonText}>Verify & Continue</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Resend OTP Section */}
+          <View style={styles.resendContainer}>
+            <Text style={styles.resendText}>Didn't receive the code?</Text>
+
+            {canResend ? (
+              <TouchableOpacity onPress={handleResendOtp} disabled={isLoading}>
+                <Text style={styles.resendLink}>Resend OTP</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.resendCountdown}>
+                Resend in <Text style={styles.resendCountdownBold}>{timer} seconds</Text>
+              </Text>
+            )}
+          </View>
         </View>
-      </View>
-    </KeyboardAwareScrollView>
+      </KeyboardAwareScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8f9fc',
+  },
   container: {
     flexGrow: 1,
-    backgroundColor: '#f8f9fc',
   },
   content: {
     flex: 1,
     padding: 24,
-    justifyContent: 'center',
-    marginTop: Platform.OS === 'ios' ? 40 : 20,
+    justifyContent: 'center', // centered layout per requirement
   },
   backButton: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 20,
-    left: 24,
+    top: 8,
+    left: 16,
     zIndex: 10,
     padding: 8,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 32,
+    paddingTop: Platform.OS === 'android' ? 8 : 0,
   },
   title: {
     fontSize: 28,
@@ -232,7 +304,7 @@ const styles = StyleSheet.create({
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 40,
+    marginBottom: 32,
     paddingHorizontal: 20,
   },
   otpInput: {
