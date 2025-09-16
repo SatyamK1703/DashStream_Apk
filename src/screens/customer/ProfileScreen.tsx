@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { useAuth } from '../../context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useUserProfile, useUpdateProfile, useNotificationPreferences } from '../../hooks';
+import { useUserProfile, useNotificationPreferences } from '../../hooks';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -45,8 +45,9 @@ const ProfileScreen = () => {
   
   // Update local state when preferences load
   useEffect(() => {
-    if (preferences) {
-      setLocalNotificationState(preferences.push || false);
+    if (preferences && typeof preferences === 'object') {
+      // preferences may be shaped differently depending on backend
+      setLocalNotificationState((preferences as any)?.push ?? false);
       // Location is typically handled by device permissions, but we can store preference
       setLocalLocationState(true);
     }
@@ -54,22 +55,34 @@ const ProfileScreen = () => {
 
   // Load data on mount
   useEffect(() => {
-    loadProfileData();
-  }, []);
+    (async () => {
+      try {
+        await Promise.all([
+          fetchProfile(),
+          refreshPreferences(),
+        ]);
+      } catch (e) {
+        console.error('Failed to load profile data:', e);
+      }
+    })();
+  }, [fetchProfile, refreshPreferences]);
 
-  const loadProfileData = async () => {
-    try {
-      await Promise.all([
-        fetchProfile(),
-        refreshPreferences(),
-      ]);
-    } catch (error) {
-      console.error('Failed to load profile data:', error);
+  // Show alert if profile loading produced an error
+  useEffect(() => {
+    if (profileError) {
+      console.error('Profile load error:', profileError);
+      Alert.alert(
+        'Error',
+        typeof profileError === 'string'
+          ? profileError
+          : (profileError as any)?.message || 'Failed to load profile'
+      );
     }
-  };
+  }, [profileError]);
 
   const handleRefresh = () => {
-    loadProfileData();
+    fetchProfile();
+    refreshPreferences();
   };
 
   const handleNotificationToggle = async (value: boolean) => {
@@ -78,11 +91,12 @@ const ProfileScreen = () => {
     if (preferences) {
       try {
         await updatePreferences({
-          ...preferences,
+          ...(preferences as any),
           push: value,
         });
       } catch (error) {
         // Revert on error
+        console.error(error);
         setLocalNotificationState(!value);
         Alert.alert('Error', 'Failed to update notification preferences');
       }
@@ -153,7 +167,7 @@ const ProfileScreen = () => {
       id: 'referrals',
       title: 'Refer & Earn',
       icon: 'gift-outline',
-      onPress: () => navigation.navigate('ReferAndEarn')
+      onPress: () => (navigation as any).navigate('ReferAndEarn')
     },
   ];
 
@@ -180,7 +194,7 @@ const ProfileScreen = () => {
       id: 'privacy',
       title: 'Privacy Policy',
       icon: 'shield-outline',
-      onPress: () => navigation.navigate('PrivacyPolicy')
+      onPress: () => (navigation as any).navigate('PrivacyPolicy')
     },
     {
       id: 'terms',
@@ -247,20 +261,20 @@ const ProfileScreen = () => {
               />
             )}
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>
-                {userProfile?.name || user?.name || 'User Name'}
-              </Text>
-              <Text style={styles.profileMeta}>
-                {userProfile?.phone || user?.phone || '+91 98765 43210'}
-              </Text>
-              <Text style={styles.profileMeta}>
-                {userProfile?.email || user?.email || 'user@example.com'}
-              </Text>
-              {userProfile?.dateOfBirth && (
-                <Text style={styles.profileMeta}>
-                  {new Date(userProfile.dateOfBirth).toLocaleDateString('en-IN')}
-                </Text>
-              )}
+                    <Text style={styles.profileName}>
+                      {userProfile?.name || user?.name || ''}
+                    </Text>
+                    <Text style={styles.profileMeta}>
+                      {userProfile?.phone || user?.phone || ''}
+                    </Text>
+                    <Text style={styles.profileMeta}>
+                      {userProfile?.email || user?.email || ''}
+                    </Text>
+              {userProfile && (userProfile as any).dateOfBirth && (
+                  <Text style={styles.profileMeta}>
+                    {new Date((userProfile as any).dateOfBirth as string).toLocaleDateString('en-IN')}
+                  </Text>
+                )}
             </View>
             <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
           </TouchableOpacity>
@@ -277,7 +291,7 @@ const ProfileScreen = () => {
               </View>
               <Text style={styles.settingText}>Push Notifications</Text>
             </View>
-            {preferencesLoading ? (
+            {(preferences === null || preferencesLoading) ? (
               <ActivityIndicator size="small" color="#2563eb" />
             ) : (
               <Switch
@@ -285,7 +299,7 @@ const ProfileScreen = () => {
                 thumbColor={localNotificationState ? '#2563eb' : '#f4f4f5'}
                 onValueChange={handleNotificationToggle}
                 value={localNotificationState}
-                disabled={preferencesLoading}
+                disabled={preferences === null || preferencesLoading}
               />
             )}
           </View>

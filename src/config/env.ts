@@ -112,6 +112,11 @@ export const ENDPOINTS = {
     ALL: '/notifications',
     MARK_READ: (id: string) => `/notifications/${id}/read`,
     MARK_ALL_READ: '/notifications/read-all',
+    DELETE: (id: string) => `/notifications/${id}`,
+    CLEAR_ALL: '/notifications/clear-all',
+    UNREAD_COUNT: '/notifications/unread-count',
+    PREFERENCES: '/notifications/preferences',
+    REGISTER_FCM: '/notifications/register-fcm',
   },
 
   // Memberships

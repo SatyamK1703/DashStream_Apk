@@ -14,7 +14,8 @@ class UserService {
    */
   async getUserProfile(): Promise<ApiResponse<User>> {
     try {
-      return await httpClient.get(ENDPOINTS.USERS.PROFILE);
+      // Use auth/me endpoint to fetch current authenticated user's profile
+      return await httpClient.get(ENDPOINTS.AUTH.ME);
     } catch (error) {
       console.error('Get user profile error:', error);
       throw error;
@@ -38,7 +39,10 @@ class UserService {
    */
   async updateProfileImage(imageFile: FormData): Promise<ApiResponse<User>> {
     try {
-      return await httpClient.uploadFile(ENDPOINTS.USERS.PROFILE_IMAGE, imageFile);
+      // Allow callers to pass a FormData and optional progress via the httpClient.uploadFile signature
+      // If callers need upload progress, they can call this method with a FormData that includes
+      // the file and use httpClient.uploadFile directly with an onUploadProgress handler.
+      return await httpClient.uploadFile(ENDPOINTS.USERS.PROFILE_IMAGE, imageFile as any);
     } catch (error) {
       console.error('Update profile image error:', error);
       throw error;

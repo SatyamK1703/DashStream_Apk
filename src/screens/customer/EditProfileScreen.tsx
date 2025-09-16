@@ -65,11 +65,17 @@ const EditProfileScreen = () => {
     if (!validateForm()) return;
     setIsLoading(true);
     try {
-      await updateUserProfile({ ...user, ...formData });
+      // Only send fields that changed to the API
+      const payload: any = {};
+      if (formData.name !== user?.name) payload.name = formData.name;
+      if (formData.email !== user?.email) payload.email = formData.email;
+      if (formData.profileImage && !formData.profileImage.startsWith('http')) payload.profileImage = formData.profileImage;
+
+      await updateUserProfile(payload);
       Alert.alert('Success', 'Your profile has been updated successfully', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to update profile. Please try again.');
     } finally {
       setIsLoading(false);

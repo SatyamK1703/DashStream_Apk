@@ -82,11 +82,28 @@ class OfferService {
     expiringSoon: Offer[];
   }>> {
     try {
-      return await httpClient.get('/offers/personalized');
-    } catch (error) {
+      const res = await httpClient.get('/offers/personalized');
+      // If server returned non-JSON HTML (like a 500 page), guard against it
+      if (!res || typeof res.data !== 'object') {
+        if (__DEV__) console.warn('Personalized offers returned unexpected shape, returning empty fallback');
+        return {
+          success: true,
+          status: 'success',
+          message: 'Personalized offers temporarily unavailable',
+          data: { recommended: [], trending: [], expiringSoon: [] },
+        } as ApiResponse<any>;
+      }
+
+      return res as ApiResponse<any>;
+    } catch (error: any) {
       console.error('Get personalized offers error:', error);
-      // ✅ Return empty array instead of throwing to prevent app crashes
-      return { success: true, data: [] };
+      // If this is an HTML response or 5xx, return a safe empty structure
+      return {
+        success: true,
+        status: 'success',
+        message: 'Personalized offers temporarily unavailable',
+        data: { recommended: [], trending: [], expiringSoon: [] },
+      } as ApiResponse<any>;
     }
   }
 
@@ -110,14 +127,14 @@ class OfferService {
     endDate?: string;
     page?: number;
     limit?: number;
-  }): Promise<ApiResponse<Array<{
+  }): Promise<ApiResponse<{
     id: string;
     offer: Offer;
     usedAt: string;
     discount: number;
     orderAmount: number;
     booking?: string;
-  }>>> {
+  }[]>> {
     try {
       return await httpClient.get('/offers/usage-history', { params });
     } catch (error) {

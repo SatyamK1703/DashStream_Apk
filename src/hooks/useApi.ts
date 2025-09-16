@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { ApiResponse, ApiError } from '../services/httpClient';
+import { ApiResponse } from '../services/httpClient';
 import { handleApiError, retryOperation } from '../utils/errorHandler';
 import { useAuth } from '../context/AuthContext';
 
@@ -104,7 +104,7 @@ export const useApi = <T = any>(
         isExecutingRef.current = false;
       }
     },
-    [apiCall, retries, retryDelay, showErrorAlert, onSuccess, onError, logout]
+    [apiCall, retries, retryDelay, showErrorAlert, onSuccess, onError, logout, state.data]
   );
 
   const reset = useCallback(() => {
@@ -124,7 +124,7 @@ export const useApi = <T = any>(
 
 // Specialized hook for paginated data
 export const usePaginatedApi = <T = any>(
-  apiCall: (params: any) => Promise<ApiResponse<T[]>>,
+  apiCall: (params: any) => Promise<ApiResponse<T> | ApiResponse<T[]> | any>,
   options: UseApiOptions = {}
 ) => {
   const [pagination, setPagination] = useState({
@@ -144,8 +144,22 @@ export const usePaginatedApi = <T = any>(
     if (Array.isArray(resp)) return { items: resp, total: resp.length };
     // 2) Generic {items,total}
     if (resp?.items) return { items: resp.items, total: resp.total ?? resp.items.length };
+    // 2b) { results, total }
+    if (resp?.results) return { items: resp.results, total: resp.total ?? resp.results.length };
+    // 2c) { services, results }
+    if (resp?.services) return { items: resp.services, total: resp.results ?? resp.services.length };
     // 3) Bookings API: { bookings, totalCount, totalPages, currentPage, results }
     if (resp?.bookings) return { items: resp.bookings, total: resp.totalCount ?? resp.bookings.length };
+    // 4) Notifications style: { notifications, unreadCount }
+    if (resp?.notifications) return { items: resp.notifications, total: resp.unreadCount ?? resp.notifications.length };
+    // 5) Paginated wrapper under data: { data: { items, total } } or { data: { results } }
+    if (resp?.data) {
+      const inner = resp.data;
+      if (Array.isArray(inner)) return { items: inner, total: inner.length };
+      if (inner?.items) return { items: inner.items, total: inner.total ?? inner.items.length };
+      if (inner?.results) return { items: inner.results, total: inner.total ?? inner.results.length };
+      if (inner?.services) return { items: inner.services, total: inner.total ?? inner.services.length };
+    }
     return { items: [], total: 0 };
   };
 
@@ -161,11 +175,13 @@ export const usePaginatedApi = <T = any>(
         });
       }
 
-      const response = await baseApi.execute({
+      const rawResponse = await baseApi.execute({
         ...params,
         page: pagination.page,
         limit: pagination.limit,
       });
+
+      const response = normalizePaginated(rawResponse);
 
       if (__DEV__) {
         console.log('usePaginatedApi - loadMore response:', {
@@ -177,8 +193,8 @@ export const usePaginatedApi = <T = any>(
       }
 
       if (response) {
-        const newData = Array.isArray(response) ? response : [];
-        
+        const newData = Array.isArray(response.items) ? response.items : response.items || [];
+
         const updatedData = pagination.page === 1 ? newData : [...allData, ...newData];
         
         if (__DEV__) {
@@ -205,7 +221,7 @@ export const usePaginatedApi = <T = any>(
       isLoadingPageRef.current = false;
       return response;
     },
-    [baseApi.execute, pagination, allData]
+    [baseApi, pagination, allData]
   );
 
   const refresh = useCallback(
@@ -230,7 +246,7 @@ export const usePaginatedApi = <T = any>(
       total: 0,
       hasMore: true,
     });
-  }, [baseApi.reset]);
+  }, [baseApi]);
 
   const result = {
     data: allData,
@@ -283,7 +299,7 @@ export const useRealtimeApi = <T = any>(
 
       return interval;
     },
-    [baseApi.execute, intervalMs]
+    [baseApi, intervalMs]
   );
 
   const stopRealtime = useCallback((interval: NodeJS.Timeout) => {

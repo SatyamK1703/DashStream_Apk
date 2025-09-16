@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,39 +17,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
+import { vehicleService } from '../../services/vehicleService';
+import type { Vehicle as ApiVehicle } from '../../types/api';
 
 type VehicleListScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
-
-// Mock data - replace with your actual data source
-const mockVehicles = [
-  {
-    id: '1',
-    type: 'car',
-    brand: 'Toyota',
-    model: 'Camry',
-    year: '2020',
-    licensePlate: 'ABC123',
-    image: 'https://example.com/car1.jpg'
-  },
-  {
-    id: '2',
-    type: 'motorcycle',
-    brand: 'Honda',
-    model: 'CBR500R',
-    year: '2019',
-    licensePlate: 'XYZ789',
-    image: 'https://example.com/bike1.jpg'
-  },
-  {
-    id: '3',
-    type: 'bicycle',
-    brand: 'Trek',
-    model: 'FX 2',
-    year: '2021',
-    licensePlate: null,
-    image: null
-  },
-];
 
 type Vehicle = {
   id: string;
@@ -65,8 +36,8 @@ type FilterOption = 'all' | 'car' | 'motorcycle' | 'bicycle';
 
 const VehicleListScreen = () => {
   const navigation = useNavigation<VehicleListScreenNavigationProp>();
-  const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
-  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>(mockVehicles);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterOption>('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -79,25 +50,7 @@ const VehicleListScreen = () => {
     fetchVehicles();
   }, []);
 
-  useEffect(() => {
-    filterAndSearchVehicles();
-  }, [vehicles, searchQuery, filter]);
-
-  const fetchVehicles = async () => {
-    setLoading(true);
-    try {
-      // Simulate API call
-      setTimeout(() => {
-        setVehicles(mockVehicles);
-        setLoading(false);
-      }, 1000);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to load vehicles');
-      setLoading(false);
-    }
-  };
-
-  const filterAndSearchVehicles = () => {
+  const filterAndSearchVehiclesCb = useCallback(() => {
     let result = vehicles;
     
     // Apply type filter
@@ -116,7 +69,37 @@ const VehicleListScreen = () => {
     }
     
     setFilteredVehicles(result);
+  }, [vehicles, searchQuery, filter]);
+
+  useEffect(() => {
+    filterAndSearchVehiclesCb();
+  }, [filterAndSearchVehiclesCb]);
+
+  const fetchVehicles = async () => {
+    setLoading(true);
+    try {
+      const resp = await vehicleService.getMyVehicles();
+      if (resp && resp.success && Array.isArray(resp.data)) {
+        const mapped = resp.data.map((v: Partial<ApiVehicle>) => ({
+          id: (v._id as string) || '',
+          type: (v as any).type || 'car',
+          brand: (v.make as string) || (v as any).brand || '',
+          model: (v.model as string) || '',
+          year: String((v as any).year || ''),
+          licensePlate: (v as any).licensePlate || null,
+          image: (v as any).image?.url || null,
+        }));
+        setVehicles(mapped);
+      } else {
+        setVehicles([]);
+      }
+      setLoading(false);
+    } catch {
+      Alert.alert('Error', 'Failed to load vehicles');
+      setLoading(false);
+    }
   };
+  // filtering is handled by the memoized callback defined above
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -130,11 +113,20 @@ const VehicleListScreen = () => {
   };
 
   const deleteVehicle = () => {
-    if (vehicleToDelete) {
-      setVehicles(vehicles.filter(v => v.id !== vehicleToDelete));
-      setDeleteModalVisible(false);
-      setVehicleToDelete(null);
-    }
+    (async () => {
+      if (!vehicleToDelete) return;
+      try {
+        setLoading(true);
+        await vehicleService.deleteVehicle(vehicleToDelete);
+        setVehicles(prev => prev.filter(v => v.id !== vehicleToDelete));
+        setDeleteModalVisible(false);
+        setVehicleToDelete(null);
+      } catch {
+        Alert.alert('Error', 'Failed to delete vehicle');
+      } finally {
+        setLoading(false);
+      }
+    })();
   };
 
   const getVehicleIcon = (type: Vehicle['type']) => {
