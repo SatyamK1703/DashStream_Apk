@@ -14,7 +14,8 @@ const PopularServices = ({ services }: any) => {
   const navigation = useNavigation<NavigationProp>();
 
   const handlePress = (service: any) => {
-    navigation.navigate('ServiceDetails', { serviceId: service.id });
+    // Pass a stable id and the whole service object so ServiceDetailsScreen can use either
+    navigation.navigate('ServiceDetails', { serviceId: service._id || service.id, service });
   };
 
   const handleSeeAll = () => {

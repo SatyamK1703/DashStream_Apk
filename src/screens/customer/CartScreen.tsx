@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, Alert, TextInput, StyleSheet } from 'react-native';
+import { useCart } from '../../context/CartContext';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,26 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 type CartScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
-// Mock cart data - in a real app, this would come from a cart context/state
-const initialCartItems = [
-  {
-    id: '1',
-    title: 'Basic Wash',
-    price: 499,
-    quantity: 1,
-    image: require('../../assets/images/image.png'),
-  },
-  {
-    id: '2',
-    title: 'Premium Wash',
-    price: 999,
-    quantity: 1,
-    image: require('../../assets/images/image.png'),
-  },
-];
-
 const CartScreen = () => {
-  const [cartItems, setCartItems] = useState(initialCartItems);
+  const { items: cartItems, removeItem, updateQuantity } = useCart();
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const navigation = useNavigation<CartScreenNavigationProp>();
@@ -37,15 +20,10 @@ const CartScreen = () => {
   const total = subtotal + deliveryFee - discount;
 
   const handleQuantityChange = (id: string, change: number) => {
-    setCartItems(prevItems =>
-      prevItems.map(item => {
-        if (item.id === id) {
-          const newQuantity = item.quantity + change;
-          return newQuantity > 0 ? { ...item, quantity: newQuantity } : item;
-        }
-        return item;
-      })
-    );
+    const item = cartItems.find(i => i.id === id);
+    if (!item) return;
+    const newQuantity = Math.max(1, item.quantity + change);
+    updateQuantity(id, newQuantity);
   };
 
   const handleRemoveItem = (id: string) => {
@@ -57,9 +35,7 @@ const CartScreen = () => {
         { 
           text: 'Remove', 
           style: 'destructive',
-          onPress: () => {
-            setCartItems(prevItems => prevItems.filter(item => item.id !== id));
-          }
+          onPress: () => removeItem(id)
         },
       ]
     );
@@ -104,7 +80,7 @@ const CartScreen = () => {
               resizeMode="contain" 
             />
             <Text style={styles.emptyTitle}>Your cart is empty</Text>
-            <Text style={styles.emptyDescription}>Looks like you haven't added any services to your cart yet</Text>
+            <Text style={styles.emptyDescription}>Looks like you haven&apos;t added any services to your cart yet</Text>
             <TouchableOpacity style={styles.browseButton} onPress={() => navigation.navigate('CustomerTabs')}>
               <Text style={styles.browseButtonText}>Browse Services</Text>
             </TouchableOpacity>

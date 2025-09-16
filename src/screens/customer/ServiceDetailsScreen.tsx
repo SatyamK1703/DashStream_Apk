@@ -1,24 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCart } from '../../context/CartContext';
 
-type ServiceDetailsRouteProp = RouteProp<CustomerStackParamList, 'ServiceDetails'>;
 type ServiceDetailsNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
+
+
 
 const ServiceDetailsScreen = () => {
   const [quantity, setQuantity] = useState(1);
+  const [serviceData, setServiceData] = useState<any | null>(null);
   const navigation = useNavigation<ServiceDetailsNavigationProp>();
-  const route = useRoute<ServiceDetailsRouteProp>();
-  const { serviceId } = route.params;
-  
-  const service = services[serviceId as keyof typeof services];
-  
-  if (!service) {
+  const route = useRoute<any>();
+  const { serviceId, service } = route.params || {};
+  const id = serviceId || service?._id || service?.id;
+
+  useEffect(() => {
+    if (!id) {
+      console.warn('ServiceDetails: missing service id or service object in route params');
+      return;
+    }
+    // fetch or set service using `id` (or use `service` directly if provided)
+    if (service) {
+      setServiceData(service);
+    } else {
+      // fetchServiceById should call the service API
+      const fetchServiceById = async (svcId: string) => {
+        try {
+          const { data } = await (await import('../../services')).serviceService.getServiceById(svcId);
+          setServiceData(data || null);
+        } catch (err) {
+          console.warn('Failed to fetch service by id', err);
+          setServiceData(null);
+        }
+      };
+
+      fetchServiceById(id);
+    }
+  }, [id, service]);
+
+  // Use local serviceData for rendering
+  const svc = serviceData as any;
+
+  const { addItem } = useCart();
+
+  if (!svc) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContainer}>
@@ -29,6 +60,17 @@ const ServiceDetailsScreen = () => {
   }
 
   const handleAddToCart = () => {
+    if (!svc) return;
+
+    addItem({
+      id: svc.id || svc._id,
+      title: svc.title,
+      price: svc.price || 0,
+      quantity,
+      image: typeof svc.image === 'string' ? { uri: svc.image } : svc.image,
+      meta: { vehicleType: svc.vehicleType }
+    });
+
     navigation.navigate('Cart');
   };
 
@@ -40,7 +82,7 @@ const ServiceDetailsScreen = () => {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header Image */}
       <View style={styles.headerImageWrapper}>
-        <Image source={service.image} style={styles.headerImage} resizeMode="cover" />
+  <Image source={typeof svc.image === 'string' ? { uri: svc.image } : svc.image} style={styles.headerImage} resizeMode="cover" />
         <TouchableOpacity style={[styles.headerButton, styles.leftButton]} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#2563eb" />
         </TouchableOpacity>
@@ -53,29 +95,29 @@ const ServiceDetailsScreen = () => {
         {/* Title and Rating */}
         <View style={styles.rowBetween}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>{service.title}</Text>
-            <Text style={styles.price}>₹{service.price}</Text>
+            <Text style={styles.title}>{svc.title}</Text>
+            <Text style={styles.price}>₹{svc.price}</Text>
           </View>
           <View style={styles.ratingBox}>
             <Ionicons name="star" size={16} color="#f59e0b" />
-            <Text style={styles.ratingText}>{service.rating}</Text>
-            <Text style={styles.reviewCount}>({service.reviewCount})</Text>
+            <Text style={styles.ratingText}>{svc.rating}</Text>
+            <Text style={styles.reviewCount}>({svc.reviewCount ?? svc.numReviews ?? 0})</Text>
           </View>
         </View>
 
         {/* Duration */}
         <View style={styles.durationRow}>
           <Ionicons name="time-outline" size={18} color="#64748b" />
-          <Text style={styles.durationText}>{service.duration}</Text>
+          <Text style={styles.durationText}>{svc.duration}</Text>
         </View>
 
         {/* Description */}
-        <Text style={styles.description}>{service.longDescription}</Text>
+  <Text style={styles.description}>{svc.longDescription || svc.description}</Text>
 
         {/* Features */}
-        <Text style={styles.sectionTitle}>What's Included</Text>
+  <Text style={styles.sectionTitle}>What&apos;s Included</Text>
         <View style={{ marginBottom: 24 }}>
-          {service.features.map((feature: string, index: number) => (
+          {(svc.features || []).map((feature: string, index: number) => (
             <View key={index} style={styles.featureRow}>
               <View style={styles.featureIcon}>
                 <Ionicons name="checkmark" size={16} color="#2563eb" />
@@ -100,7 +142,7 @@ const ServiceDetailsScreen = () => {
         {/* Total */}
         <View style={styles.rowBetween}>
           <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalPrice}>₹{service.price * quantity}</Text>
+          <Text style={styles.totalPrice}>₹{(svc.price || 0) * quantity}</Text>
         </View>
       </ScrollView>
 

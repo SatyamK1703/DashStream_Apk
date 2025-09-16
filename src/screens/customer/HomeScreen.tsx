@@ -34,7 +34,7 @@ const HomeScreen = () => {
     loading: servicesLoading,
     execute: fetchPopularServices,
     error: servicesError,
-  } = usePopularServices(8);
+  } = usePopularServices(6);
 
   const {
     data: activeOffersData,
@@ -86,7 +86,8 @@ const HomeScreen = () => {
 
   // Prepare data for components
   const offersToShow = activeOffersData || [];
-  const servicesToShow = popularServicesData || [];
+  // const servicesToShow = popularServicesData?.services || [];
+  const servicesToShow = Array.isArray(popularServicesData) ? popularServicesData : popularServicesData?.services || [];
 
   return (
     <View style={styles.container}>
