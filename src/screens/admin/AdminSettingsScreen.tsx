@@ -65,6 +65,22 @@ const AdminSettingsScreen = () => {
           <MaterialIcons name="chevron-right" size={28} color="#CBD5E0" />
         </TouchableOpacity>
 
+         <TouchableOpacity
+          style={styles.settingCard}
+          onPress={() => navigation.navigate("AdminOffer")}
+        >
+          <View style={styles.settingItemLeft}>
+            <FontAwesome5 name="map-marker-alt" size={22} color="#38A169" />
+            <View>
+              <Text style={styles.settingItemTitle}>Offers </Text>
+              <Text style={styles.settingItemSubtitle}>
+                Manage your offers
+              </Text>
+            </View>
+          </View>
+          <MaterialIcons name="chevron-right" size={28} color="#CBD5E0" />
+        </TouchableOpacity>
+
         {/* Set Services Area */}
         <TouchableOpacity
           style={styles.settingCard}
