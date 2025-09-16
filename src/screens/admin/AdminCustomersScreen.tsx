@@ -48,6 +48,8 @@ const AdminCustomersScreen = () => {
         search: searchQuery || undefined,
         status: statusFilter === 'all' ? undefined : statusFilter,
       });
+      console.log("response", response);
+
 
       // Handle response data structure
       const usersArray = Array.isArray(response.data) 

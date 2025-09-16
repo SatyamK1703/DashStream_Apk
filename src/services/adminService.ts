@@ -265,19 +265,6 @@ class AdminService {
       return fallbackResponse;
     } catch (error) {
       console.error('Get admin services error:', error);
-      
-      if (__DEV__) {
-        console.log('adminService.getServices - Detailed error:', {
-          error,
-          errorMessage: error?.message,
-          errorResponse: error?.response,
-          errorData: error?.response?.data,
-          errorStatus: error?.response?.status,
-          endpoint: ENDPOINTS.ADMIN.SERVICES,
-          fullUrl: `${ENDPOINTS.ADMIN.SERVICES}`
-        });
-      }
-      
       throw error;
     }
   }

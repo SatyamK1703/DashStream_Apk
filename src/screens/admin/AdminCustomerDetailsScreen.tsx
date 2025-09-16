@@ -419,10 +419,6 @@ const AdminCustomerDetailsScreen = () => {
           
           <TouchableOpacity 
             style={styles.manageButton}
-            // onPress={() => navigation.navigate('EditCustomer', { 
-            //   customerId: customer.id,
-            //   initialTab: 'membership'
-            // })}
           >
             <Text style={styles.manageButtonText}>Manage</Text>
           </TouchableOpacity>
@@ -535,22 +531,6 @@ const AdminCustomerDetailsScreen = () => {
               <Text style={[styles.adminActionText, styles.adminActionTextRed]}>Block</Text>
             </TouchableOpacity>
           )}
-          
-          {/* <TouchableOpacity 
-            style={[styles.adminActionButton, styles.adminActionButtonBlue]}
-            onPress={() => navigation.navigate('CreateBooking', { customerId: customer.id })}
-          >
-            <Ionicons name="add-circle-outline" size={18} color="#2563EB" />
-            <Text style={[styles.adminActionText, styles.adminActionTextBlue]}>Create Booking</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.adminActionButton, styles.adminActionButtonPurple]}
-            onPress={() => navigation.navigate('EditCustomer', { customerId: customer.id })}
-          >
-            <Ionicons name="create-outline" size={18} color="#8B5CF6" />
-            <Text style={[styles.adminActionText, styles.adminActionTextPurple]}>Edit Details</Text>
-          </TouchableOpacity> */}
         </View>
       </View>
     </ScrollView>

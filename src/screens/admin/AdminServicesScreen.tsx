@@ -5,7 +5,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
-  Text,StyleSheet
+  Text
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -104,20 +104,9 @@ const AdminServicesScreen = () => {
     refresh: fetchServices,
     loadMore
   } = useAdminServices();
-  console.log("useAdminServices",useAdminServices);
-  // Debug the actual data returned from hook
+
   useEffect(() => {
-    if (__DEV__) {
-      console.log('AdminServicesScreen - Hook data:', {
-        services,
-        servicesLength: services?.length,
-        servicesType: typeof services,
-        isArray: Array.isArray(services),
-        loading,
-        error,
-        firstService: services?.[0]
-      });
-    }
+  
   }, [services, loading, error]);
 
   const { execute: createService, loading: createLoading } = useCreateService();
@@ -127,17 +116,6 @@ const AdminServicesScreen = () => {
   const { data: categoriesData = [], execute: fetchCategories } = useServiceCategories();
 
   useEffect(() => {
-    if (__DEV__) {
-      console.log('AdminServicesScreen - Initial load, fetching categories');
-      console.log('AdminServicesScreen - Auth state:', {
-        isAuthenticated,
-        user,
-        userRole: user?.role,
-        userId: user?.id
-      });
-    }
-    // Services are auto-loaded by the useAdminServices hook
-    // Only need to load categories manually
     fetchCategories();
   }, []);
   
@@ -157,9 +135,6 @@ const AdminServicesScreen = () => {
 
   const onRefresh = async () => {
     try {
-      if (__DEV__) {
-        console.log('AdminServicesScreen - Manual refresh triggered');
-      }
       await fetchServices();
     } catch (error) {
       console.error('Refresh error:', error);
@@ -167,20 +142,9 @@ const AdminServicesScreen = () => {
   };
 
   const filterAndSortServices = () => {
-    if (__DEV__) {
-      console.log('AdminServicesScreen - filterAndSortServices called:', {
-        services,
-        servicesLength: services?.length,
-        isArray: Array.isArray(services),
-        searchQuery,
-        selectedCategory
-      });
-    }
+ 
     
     if (!services || !Array.isArray(services)) {
-      if (__DEV__) {
-        console.log('AdminServicesScreen - No valid services array, setting empty');
-      }
       setFilteredServices([]);
       return;
     }
@@ -221,16 +185,7 @@ const AdminServicesScreen = () => {
       }
       
       return sortOrder === 'asc' ? comparison : -comparison;
-    });
-    
-    if (__DEV__) {
-      console.log('AdminServicesScreen - Setting filtered services:', {
-        originalLength: services?.length,
-        filteredLength: filtered.length,
-        filtered: filtered.map(s => ({ id: s.id, title: s.title }))
-      });
-    }
-    
+    });   
     setFilteredServices(filtered);
   };
 
@@ -378,33 +333,16 @@ const AdminServicesScreen = () => {
           onSortOrderToggle={toggleSortOrder}
         />
       </View>
-
       {(!filteredServices || filteredServices.length === 0) ? (
         <>
-          {__DEV__ && (() => {
-            console.log('AdminServicesScreen - Rendering empty state:', {
-              filteredServices,
-              filteredServicesLength: filteredServices?.length,
-              loading,
-              error
-            });
-            return null;
-          })()}
+
           <EmptyState onAddService={handleAddService} />
         </>
       ) : (
         <>
-          {__DEV__ && (() => {
-            console.log('AdminServicesScreen - Rendering FlatList:', {
-              filteredServices,
-              filteredServicesLength: filteredServices?.length,
-              firstItem: filteredServices?.[0]
-            });
-            return null;
-          })()}
-          <FlatList
-            data={filteredServices}
-          keyExtractor={(item) => item.id}
+        <FlatList
+          data={filteredServices || []}
+          keyExtractor={(item) => item._id}
           renderItem={({ item }) => (
             <ServiceCard
               service={item}
@@ -422,6 +360,11 @@ const AdminServicesScreen = () => {
               colors={['#2563EB']}
             />
           }
+          ListEmptyComponent={() => (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ color: '#666', fontSize: 16 }}>No services to display</Text>
+            </View>
+          )}
         />
         </>
       )}

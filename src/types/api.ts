@@ -42,6 +42,7 @@ export interface Service {
   _id: string;
   name: string;
   description: string;
+  longDescription: string;
   category: string;
   subCategory?: string;
   basePrice: number;

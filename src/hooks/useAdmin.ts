@@ -4,126 +4,81 @@ import { adminService } from '../services/adminService';
 import { serviceService } from '../services/serviceService';
 import { Service, AdminFilters } from '../types/api';
 
-// Hook for fetching admin services with pagination
-// export const useAdminServices = (filters?: AdminFilters) => {
-//   const [initialized, setInitialized] = useState(false);
-  
-//   const baseHook = usePaginatedApi(
-//     async (params) => {
-//       const response = await adminService.getServices({ ...filters, ...params });
-//       if (__DEV__) {
-//         console.log('useAdminServices - API Response:', {
-//           response,
-//           dataType: typeof response.data,
-//           isArray: Array.isArray(response.data),
-//           services: response.data?.services,
-//           servicesLength: response.data?.services?.length
-//         });
-//       }
-      
-//       // Extract services array from response data
-//       return response.data?.services || [];
-//     },
-//     {
-//       showErrorAlert: false,
-//     }
-//   );
 
-//   // Auto-load data on mount
-//   useEffect(() => {
-//     if (!initialized && baseHook.refresh) {
-//       if (__DEV__) {
-//         console.log('useAdminServices - Auto-loading data on mount');
-//       }
-//       baseHook.refresh();
-//       setInitialized(true);
-//     } else if (__DEV__) {
-//       console.log('useAdminServices - Skipping auto-load:', {
-//         initialized,
-//         hasRefresh: !!baseHook.refresh
-//       });
-//     }
-//   }, [baseHook.refresh, initialized]);
 
-//   // Return enhanced hook with proper data handling
-//   const result = {
-//     ...baseHook,
-//     data: baseHook.data || [], // Ensure data is always an array
-//     refresh: baseHook.refresh || baseHook.loadMore, // Ensure refresh function is available
-//   };
-  
-//   if (__DEV__) {
-//     console.log('useAdminServices - Returning to component:', {
-//       data: result.data,
-//       dataLength: result.data?.length,
-//       loading: result.loading,
-//       error: result.error,
-//       hasRefresh: !!result.refresh
-//     });
-//   }
-  
-//   return result;
-// };
-export const useAdminServices = (filters?: AdminFilters) => {
-  const [initialized, setInitialized] = useState(false);
-  
-  const baseHook = usePaginatedApi(
-    async (params) => {
-      const response = await adminService.getServices({ ...filters, ...params });
+interface UseAdminServicesOptions {
+  filters?: AdminFilters;
+}
+export const useAdminServices = ({ filters }: UseAdminServicesOptions = {}) => {
+  const [data, setData] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<any>(null);
 
-      if (__DEV__) {
-        console.log('useAdminServices - API Response:', {
-          response,
-          dataType: typeof response.data,
-          isArray: Array.isArray(response.data),
-          services: response.data?.services,
-          servicesLength: response.data?.services?.length
-        });
-      }
+  const fetchServices = async () => {
+  setLoading(true);
+  setError(null);
 
-      // ✅ Normalize services
-      const services = (response.data?.services || []).map((s: any) => ({
-        id: s._id, // map MongoDB _id → id
-        title: s.title,
-        description: s.description,
-        longDescription: s.longDescription,
-        price: s.price,
-        discountPrice: s.discountPrice,
-        category: typeof s.category === 'object' ? s.category.name : s.category, // ensure string
-        image: s.image,
-        banner: s.banner,
-        duration: s.duration,
-        isActive: s.isActive,
-        isPopular: s.isPopular,
-        createdAt: s.createdAt,
-        updatedAt: s.updatedAt,
-        features: s.features || [],
-        tags: s.tags || []
-      }));
+  try {
+    const response = await adminService.getServices(filters);
+   
 
-      return services;
-    },
-    {
-      showErrorAlert: false,
+    // Handle both shapes: response.data.services OR response.services
+    const rawServices =
+      (response.data?.services && response.data.services.length > 0
+        ? response.data.services
+        : response.services) || [];
+
+    if (__DEV__) {
+      console.log("✅ Raw Services:", rawServices);
     }
-  );
 
-  // Auto-load data on mount
+    // Map raw services -> frontend-friendly shape
+    const services = rawServices.map((s: any) => ({
+      id: s._id?.toString() || s.id,
+      title: s.title,
+      description: s.description,
+      longDescription: s.longDescription || '',
+      price: s.price,
+      discountPrice: s.discountPrice ?? null,
+      category: s.category || 'other',
+      image: s.image || '',
+      banner: s.banner || '',
+      vehicleType: s.vehicleType || 'Both',
+      duration: s.duration || '60',
+      isActive: s.isActive ?? true,
+      isPopular: s.isPopular ?? false,
+      rating: s.rating ?? 5,
+      numReviews: s.numReviews ?? 0,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+      features: s.features || [],
+      tags: s.tags || [],
+      availableAreas: s.avaliableAreas || []
+    }));
+
+    setData(services);
+  } catch (err) {
+    console.error("❌ fetchServices error:", err);
+    setError(err);
+    setData([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
   useEffect(() => {
-    if (!initialized && baseHook.refresh) {
-      if (__DEV__) console.log('useAdminServices - Auto-loading data on mount');
-      baseHook.refresh();
-      setInitialized(true);
-    }
-  }, [baseHook.refresh, initialized]);
+    fetchServices();
+  }, [JSON.stringify(filters)]); // refetch when filters change
 
   return {
-    ...baseHook,
-    data: baseHook.data || [], // always return array
-    refresh: baseHook.refresh || baseHook.loadMore,
+    data,
+    loading,
+    error,
+    refresh: fetchServices,
   };
 };
-// Hook for creating a new service
+
 export const useCreateService = () => {
   return useApi(
     (serviceData: {

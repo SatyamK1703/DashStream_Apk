@@ -4,13 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 
 interface Service {
   id: string;
-  name: string;
+  title: string;
   description: string;
   price: number;
-  discountedPrice?: number;
+  discountPrice?: number;
   category: string;
   image: string;
-  duration: number;
+  duration: string;
   isActive: boolean;
   isPopular: boolean;
   createdAt: string;
@@ -66,12 +66,12 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
       
       <View style={cardStyles.content}>
         <View style={cardStyles.header}>
-          <Text style={cardStyles.title}>{service.name}</Text>
+          <Text style={cardStyles.title}>{service.title}</Text>
           <View style={cardStyles.priceContainer}>
-            {service.discountedPrice ? (
+            {service.discountPrice ? (
               <>
                 <Text style={cardStyles.originalPrice}>₹{service.price}</Text>
-                <Text style={cardStyles.discountedPrice}>₹{service.discountedPrice}</Text>
+                <Text style={cardStyles.discountedPrice}>₹{service.discountPrice}</Text>
               </>
             ) : (
               <Text style={cardStyles.regularPrice}>₹{service.price}</Text>
