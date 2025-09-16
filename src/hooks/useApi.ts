@@ -37,10 +37,11 @@ export const useApi = <T = any>(
   });
 
   const isExecutingRef = useRef(false);
+  const cachedDataRef = useRef<T | null>(null);
 
   const execute = useCallback(
     async (...args: any[]) => {
-      if (isExecutingRef.current) return state.data; // prevent concurrent duplicate calls
+      if (isExecutingRef.current) return cachedDataRef.current; // prevent concurrent duplicate calls
       isExecutingRef.current = true;
       setState(prev => ({ ...prev, loading: true, error: null }));
 
@@ -53,6 +54,7 @@ export const useApi = <T = any>(
         const isSuccess = (response as any)?.success === true || (response as any)?.status === 'success';
         if (isSuccess) {
           const payload = (response as any)?.data ?? (response as any);
+          cachedDataRef.current = payload;
           setState({
             data: payload,
             loading: false,
@@ -84,6 +86,7 @@ export const useApi = <T = any>(
           });
         }
 
+        cachedDataRef.current = null;
         setState({
           data: null,
           loading: false,
@@ -104,7 +107,7 @@ export const useApi = <T = any>(
         isExecutingRef.current = false;
       }
     },
-    [apiCall, retries, retryDelay, showErrorAlert, onSuccess, onError, logout, state.data]
+    [apiCall, retries, retryDelay, showErrorAlert, onSuccess, onError, logout]
   );
 
   const reset = useCallback(() => {
@@ -139,27 +142,29 @@ export const usePaginatedApi = <T = any>(
   const baseApi = useApi(apiCall, options);
 
   const normalizePaginated = (resp: any) => {
-    // Support various backend shapes
-    // 1) Array
+    // Common shapes we expect:
+    // - Direct array => items
+    // - { items, total }
+    // - { results, total }
+    // - { data: { items|results|... } }
+    if (!resp) return { items: [], total: 0 };
+
+    // Direct array
     if (Array.isArray(resp)) return { items: resp, total: resp.length };
-    // 2) Generic {items,total}
-    if (resp?.items) return { items: resp.items, total: resp.total ?? resp.items.length };
-    // 2b) { results, total }
-    if (resp?.results) return { items: resp.results, total: resp.total ?? resp.results.length };
-    // 2c) { services, results }
-    if (resp?.services) return { items: resp.services, total: resp.results ?? resp.services.length };
-    // 3) Bookings API: { bookings, totalCount, totalPages, currentPage, results }
-    if (resp?.bookings) return { items: resp.bookings, total: resp.totalCount ?? resp.bookings.length };
-    // 4) Notifications style: { notifications, unreadCount }
-    if (resp?.notifications) return { items: resp.notifications, total: resp.unreadCount ?? resp.notifications.length };
-    // 5) Paginated wrapper under data: { data: { items, total } } or { data: { results } }
-    if (resp?.data) {
-      const inner = resp.data;
-      if (Array.isArray(inner)) return { items: inner, total: inner.length };
-      if (inner?.items) return { items: inner.items, total: inner.total ?? inner.items.length };
-      if (inner?.results) return { items: inner.results, total: inner.total ?? inner.results.length };
-      if (inner?.services) return { items: inner.services, total: inner.total ?? inner.services.length };
+
+    // If the payload wraps actual payload in `data`, unwrap it
+    const payload = resp.data ?? resp;
+
+    // Prefer common keys in order
+    const items = payload.items ?? payload.results ?? payload.services ?? payload.bookings ?? payload.notifications;
+    if (Array.isArray(items)) {
+      const total = payload.total ?? payload.totalCount ?? (items.length);
+      return { items, total };
     }
+
+    // If payload itself is an array (defensive)
+    if (Array.isArray(payload)) return { items: payload, total: payload.length };
+
     return { items: [], total: 0 };
   };
 

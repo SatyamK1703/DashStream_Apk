@@ -83,9 +83,14 @@ class OfferService {
   }>> {
     try {
       const res = await httpClient.get('/offers/personalized');
-      // If server returned non-JSON HTML (like a 500 page), guard against it
-      if (!res || typeof res.data !== 'object') {
-        if (__DEV__) console.warn('Personalized offers returned unexpected shape, returning empty fallback');
+
+      // Defensive checks: some backends may return HTML/strings on error pages.
+      const isJsonLike = res && typeof res === 'object' && typeof res.data === 'object';
+
+      if (!isJsonLike) {
+        if (__DEV__) {
+          console.warn('Personalized offers returned unexpected shape:', typeof res, res);
+        }
         return {
           success: true,
           status: 'success',
@@ -94,7 +99,18 @@ class OfferService {
         } as ApiResponse<any>;
       }
 
-      return res as ApiResponse<any>;
+      // Ensure expected keys exist
+      const payload = res.data ?? {};
+      const recommended = Array.isArray(payload.recommended) ? payload.recommended : [];
+      const trending = Array.isArray(payload.trending) ? payload.trending : [];
+      const expiringSoon = Array.isArray(payload.expiringSoon) ? payload.expiringSoon : [];
+
+      return {
+        success: true,
+        status: 'success',
+        message: res.message || 'Personalized offers retrieved',
+        data: { recommended, trending, expiringSoon },
+      } as ApiResponse<any>;
     } catch (error: any) {
       console.error('Get personalized offers error:', error);
       // If this is an HTML response or 5xx, return a safe empty structure
