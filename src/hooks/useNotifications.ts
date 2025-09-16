@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApi, usePaginatedApi } from './useApi';
 import { notificationService } from '../services';
-import { Notification } from '../types/api';
+// ...existing code...
 
 // Hook for fetching notifications
 export const useNotifications = (filters?: {
@@ -128,8 +128,18 @@ export const useNotificationPreferences = () => {
   );
 
   useEffect(() => {
-    fetchApi.execute();
-  }, []);
+    // Fetch preferences but swallow permission errors so UI stays usable
+    (async () => {
+      try {
+        await fetchApi.execute();
+      } catch (err: any) {
+        // Log, but don't surface an alert for permission errors
+        if (__DEV__) console.warn('Failed to load notification preferences:', err);
+        // Ensure preferences is null so callers know it's unavailable
+        setPreferences(null);
+      }
+    })();
+  }, [fetchApi]);
 
   return {
     preferences,

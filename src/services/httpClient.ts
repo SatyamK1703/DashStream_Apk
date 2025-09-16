@@ -88,7 +88,9 @@ class HttpClient {
           console.log(`🔵 ${config.method?.toUpperCase()} ${config.url}`, {
             data: config.data,
             params: config.params,
-            hasAuth: !!config.headers?.Authorization
+            hasAuth: !!config.headers?.Authorization,
+            // Show small token preview for debugging
+            tokenPreview: config.headers?.Authorization ? String(config.headers?.Authorization).substring(0, 40) + '...' : null
           });
         }
 
@@ -329,6 +331,13 @@ class HttpClient {
 
   // Public methods
   async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    if (!url) {
+      if (__DEV__) {
+        console.error('httpClient.get called with invalid url:', url, { stack: new Error().stack });
+      }
+      throw new Error('httpClient.get: missing url');
+    }
+
     const response = await this.client.get<ApiResponse<T>>(url, config);
     return response.data;
   }
@@ -338,6 +347,13 @@ class HttpClient {
     data?: any,
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> {
+    if (!url) {
+      if (__DEV__) {
+        console.error('httpClient.post called with invalid url:', url, { stack: new Error().stack });
+      }
+      throw new Error('httpClient.post: missing url');
+    }
+
     const response = await this.client.post<ApiResponse<T>>(url, data, config);
     return response.data;
   }
@@ -347,6 +363,13 @@ class HttpClient {
     data?: any,
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> {
+    if (!url) {
+      if (__DEV__) {
+        console.error('httpClient.put called with invalid url:', url, { stack: new Error().stack });
+      }
+      throw new Error('httpClient.put: missing url');
+    }
+
     const response = await this.client.put<ApiResponse<T>>(url, data, config);
     return response.data;
   }
@@ -356,11 +379,25 @@ class HttpClient {
     data?: any,
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> {
+    if (!url) {
+      if (__DEV__) {
+        console.error('httpClient.patch called with invalid url:', url, { stack: new Error().stack });
+      }
+      throw new Error('httpClient.patch: missing url');
+    }
+
     const response = await this.client.patch<ApiResponse<T>>(url, data, config);
     return response.data;
   }
 
   async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    if (!url) {
+      if (__DEV__) {
+        console.error('httpClient.delete called with invalid url:', url, { stack: new Error().stack });
+      }
+      throw new Error('httpClient.delete: missing url');
+    }
+
     const response = await this.client.delete<ApiResponse<T>>(url, config);
     return response.data;
   }
@@ -371,6 +408,13 @@ class HttpClient {
     formData: FormData,
     onUploadProgress?: (progressEvent: any) => void
   ): Promise<ApiResponse<T>> {
+    if (!url) {
+      if (__DEV__) {
+        console.error('httpClient.uploadFile called with invalid url:', url, { stack: new Error().stack });
+      }
+      throw new Error('httpClient.uploadFile: missing url');
+    }
+
     const response = await this.client.post<ApiResponse<T>>(url, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',

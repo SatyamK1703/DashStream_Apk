@@ -365,41 +365,6 @@ const AddVehicleScreen = () => {
             />
             {errors.model && <Text style={styles.errorText}>{errors.model}</Text>}
 
-            <Text style={styles.label}>Year</Text>
-            <TouchableOpacity 
-              style={styles.pickerInput}
-              onPress={() => setShowYearPicker(true)}
-            >
-              <Text style={styles.pickerText}>{year}</Text>
-              <Ionicons name="chevron-down" size={20} color="#6B7280" />
-            </TouchableOpacity>
-
-            {vehicleType !== 'bicycle' && (
-              <>
-                <Text style={styles.label}>License Plate Number</Text>
-                <TextInput
-                  ref={licenseInputRef}
-                  style={[
-                    styles.input, 
-                    isFocused.licensePlate && styles.inputFocused,
-                    errors.licensePlate && styles.inputError
-                  ]}
-                  placeholder="e.g., MH 12 AB 3456"
-                  value={licensePlate}
-                  onChangeText={(text) => {
-                    setLicensePlate(text);
-                    setErrors({...errors, licensePlate: undefined});
-                  }}
-                  onFocus={() => handleFocus('licensePlate')}
-                  onBlur={() => handleBlur('licensePlate')}
-                  autoCapitalize="characters"
-                  returnKeyType="done"
-                  onSubmitEditing={() => Keyboard.dismiss()}
-                />
-                {errors.licensePlate && <Text style={styles.errorText}>{errors.licensePlate}</Text>}
-              </>
-            )}
-
             {/* Submit button is now inside the ScrollView with proper styling */}
             <View style={styles.submitButtonContainer}>
               <TouchableOpacity 

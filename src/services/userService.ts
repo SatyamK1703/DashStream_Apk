@@ -14,7 +14,8 @@ class UserService {
    */
   async getUserProfile(): Promise<ApiResponse<User>> {
     try {
-      return await httpClient.get(ENDPOINTS.USERS.PROFILE);
+      // Use auth/me endpoint to fetch current authenticated user's profile
+      return await httpClient.get(ENDPOINTS.AUTH.ME);
     } catch (error) {
       console.error('Get user profile error:', error);
       throw error;
