@@ -192,20 +192,7 @@ class AdminService {
       }
       
       const response = await httpClient.get(ENDPOINTS.ADMIN.SERVICES, { params: filters });
-      
-      if (__DEV__) {
-        console.log('adminService.getServices - Raw response:', {
-          endpoint: ENDPOINTS.ADMIN.SERVICES,
-          filters,
-          response,
-          responseData: response.data,
-          dataType: typeof response.data,
-          isArray: Array.isArray(response.data),
-          dataLength: Array.isArray(response.data) ? response.data.length : 'N/A',
-          success: response.success,
-          status: response.status
-        });
-      }
+
       
       // Handle both array and object responses
       if (Array.isArray(response.data)) {
@@ -258,9 +245,7 @@ class AdminService {
         }
       };
       
-      if (__DEV__) {
-        console.log('adminService.getServices - Fallback response:', fallbackResponse);
-      }
+     
       
       return fallbackResponse;
     } catch (error) {

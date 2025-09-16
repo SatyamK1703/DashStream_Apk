@@ -232,7 +232,7 @@ const ManageOffersScreen = () => {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header onBack={() => navigation.goBack()} onAdd={handleAddOffer} />
+        <Header title="Manage Offers" onBack={() => navigation.goBack()} onAdd={handleAddOffer} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2563EB" />
           <Text style={styles.loadingText}>Loading offers...</Text>
@@ -243,13 +243,14 @@ const ManageOffersScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header onBack={() => navigation.goBack()} onAdd={handleAddOffer} />
+      <Header title="Manage Offers" onBack={() => navigation.goBack()} onAdd={handleAddOffer} />
 
       <View style={styles.searchContainer}>
         <SearchBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onClear={() => setSearchQuery('')}
+          placeholder ="search offers"
         />
 
         <SortControls
@@ -264,7 +265,7 @@ const ManageOffersScreen = () => {
       </View>
 
       {(!filteredOffers || filteredOffers.length === 0) ? (
-        <EmptyState onAddService={handleAddOffer} />
+        <EmptyState placetext='Create Offers' title='No offers found.' description='Start creating offers and attract more customers!' onAddService={handleAddOffer} />
       ) : (
         <FlatList
           data={filteredOffers || []}

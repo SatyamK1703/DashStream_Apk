@@ -28,9 +28,7 @@ export const useAdminServices = ({ filters }: UseAdminServicesOptions = {}) => {
         ? response.data.services
         : response.services) || [];
 
-    if (__DEV__) {
-      console.log("✅ Raw Services:", rawServices);
-    }
+   
 
     // Map raw services -> frontend-friendly shape
     const services = rawServices.map((s: any) => ({

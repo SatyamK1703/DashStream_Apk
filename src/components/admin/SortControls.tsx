@@ -9,6 +9,7 @@ interface SortControlsProps {
   sortOrder: 'asc' | 'desc';
   onSortByChange: () => void;
   onSortOrderToggle: () => void;
+  input:string;
 }
 
 const SortControls: React.FC<SortControlsProps> = ({
@@ -16,12 +17,12 @@ const SortControls: React.FC<SortControlsProps> = ({
   sortBy,
   sortOrder,
   onSortByChange,
-  onSortOrderToggle
+  onSortOrderToggle,
 }) => {
   return (
     <View style={styles.sortContainer}>
       <Text style={styles.sortText}>
-        {itemCount} {itemCount === 1 ? 'service' : 'services'} found
+        {itemCount} found
       </Text>
       
       <View style={styles.sortButtonContainer}>

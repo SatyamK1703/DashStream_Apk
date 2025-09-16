@@ -243,10 +243,6 @@ class HttpClient {
 
         await this.setAuthTokens(newAccessToken, newRefreshToken);
 
-        if (__DEV__) {
-          console.log('✅ Token refreshed successfully');
-        }
-
         resolve(newAccessToken);
 
         // Notify callback AFTER resolving to ensure token is available
@@ -257,18 +253,10 @@ class HttpClient {
               this.onTokenRefreshCallback!();
             }, 100);
           } catch (callbackError) {
-            if (__DEV__) console.warn('Token refresh callback error:', callbackError);
+            console.error('Error executing onTokenRefreshCallback:', callbackError);
           }
         }
       } catch (err: any) {
-        if (__DEV__) {
-          console.error('❌ Token refresh failed:', {
-            message: err?.message || err,
-            status: err?.response?.status,
-            data: err?.response?.data,
-            errorCode: err?.response?.data?.errorCode
-          });
-        }
         
         await this.clearAuthTokens();
         
@@ -276,16 +264,6 @@ class HttpClient {
         const errorCode = err?.response?.data?.errorCode;
         const isUserNotFound = errorCode === 'APP-401-051' || 
                              err?.response?.data?.message?.includes('User no longer exists');
-        
-        if (isUserNotFound && this.onTokenRefreshCallback) {
-          if (__DEV__) console.log('🚪 User deleted - notifying auth context to logout');
-          // Notify the auth context that the user should be logged out
-          setTimeout(() => {
-            if (this.onTokenRefreshCallback) {
-              this.onTokenRefreshCallback();
-            }
-          }, 100);
-        }
         
         reject(err);
       } finally {

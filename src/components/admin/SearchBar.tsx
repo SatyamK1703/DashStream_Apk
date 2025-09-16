@@ -7,19 +7,21 @@ interface SearchBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onClear: () => void;
+  placeholder?:string;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ 
   searchQuery, 
   onSearchChange, 
-  onClear 
+  onClear,
+  placeholder
 }) => {
   return (
     <View style={styles.searchBar}>
       <Ionicons name="search" size={20} color="#9CA3AF" />
       <TextInput
         style={styles.searchInput}
-        placeholder="Search services..."
+        placeholder={placeholder}
         value={searchQuery}
         onChangeText={onSearchChange}
       />

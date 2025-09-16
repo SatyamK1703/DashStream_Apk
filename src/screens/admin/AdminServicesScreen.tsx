@@ -104,7 +104,7 @@ const AdminServicesScreen = () => {
     refresh: fetchServices,
     loadMore
   } = useAdminServices();
-
+ console.log("services    \n\n", services,"\n\n");
   useEffect(() => {
   
   }, [services, loading, error]);
@@ -120,16 +120,6 @@ const AdminServicesScreen = () => {
   }, []);
   
   useEffect(() => {
-    if (__DEV__) {
-      console.log('AdminServicesScreen - Services data:', {
-        services,
-        servicesLength: services?.length,
-        servicesType: typeof services,
-        isArray: Array.isArray(services),
-        loading,
-        error
-      });
-    }
     filterAndSortServices();
   }, [services, searchQuery, selectedCategory, sortBy, sortOrder]);
 
@@ -310,13 +300,14 @@ const AdminServicesScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header onBack={() => navigation.goBack()} onAdd={handleAddService} />
+      <Header title ="Manage Services" onBack={() => navigation.goBack()} onAdd={handleAddService} />
       
       <View style={styles.searchContainer}>
         <SearchBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onClear={() => setSearchQuery('')}
+          placeholder="search sercives..."
         />
         
         <CategoryFilter
@@ -331,6 +322,7 @@ const AdminServicesScreen = () => {
           sortOrder={sortOrder}
           onSortByChange={handleSortByChange}
           onSortOrderToggle={toggleSortOrder}
+          placetext="No Services Founds"
         />
       </View>
       {(!filteredServices || filteredServices.length === 0) ? (

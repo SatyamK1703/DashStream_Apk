@@ -7,12 +7,27 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  StyleSheet
+  StyleSheet,
+  Switch,
+  Image,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useCreateOffer, useUpdateOffer } from '../../hooks/adminOffers';
+import httpClient from '../../services/httpClient';
+
+interface ImageField {
+  localUri: string | null;
+  remoteUrl?: string;
+  isUploading: boolean;
+}
+
 interface AddEditOfferModalProps {
   visible: boolean;
   isEditing: boolean;
@@ -26,7 +41,7 @@ const AddEditOfferModal: React.FC<AddEditOfferModalProps> = ({
   isEditing,
   formData,
   onClose,
-  onSuccess
+  onSuccess,
 }) => {
   const [offerForm, setOfferForm] = useState({
     title: formData?.title || '',
@@ -39,7 +54,11 @@ const AddEditOfferModal: React.FC<AddEditOfferModalProps> = ({
     minOrderAmount: formData?.minOrderAmount?.toString() || '0',
     maxDiscountAmount: formData?.maxDiscountAmount?.toString() || '',
     isPromo: formData?.isPromo || false,
+    isActive: formData?.isActive ?? true,
     terms: formData?.terms || '',
+    image: formData?.image
+      ? { localUri: formData.image, remoteUrl: formData.image, isUploading: false }
+      : { localUri: null, isUploading: false },
   });
 
   const { execute: createOffer, loading: createLoading } = useCreateOffer();
@@ -49,15 +68,80 @@ const AddEditOfferModal: React.FC<AddEditOfferModalProps> = ({
     setOfferForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const uploadImage = async (uri: string): Promise<string> => {
+    const compressed = await ImageManipulator.manipulateAsync(uri, [], { compress: 0.7 });
+    const fileType = uri.split('.').pop() || 'jpg';
+
+    const form = new FormData();
+    form.append('image', {
+      uri: compressed.uri,
+      type: `image/${fileType}`,
+      name: `offer-image.${fileType}`,
+    } as any);
+
+    const response = await httpClient.post('/upload/image', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    return response.data.data?.url || response.data.url;
+  };
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Camera roll access is needed to upload an image.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      quality: 0.8,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    });
+
+    if (!result.canceled) {
+      const localUri = result.assets[0].uri;
+      updateForm('image', { localUri, isUploading: true });
+
+      try {
+        const remoteUrl = await uploadImage(localUri);
+        updateForm('image', { localUri, remoteUrl, isUploading: false });
+      } catch (error) {
+        console.error('Image upload failed:', error);
+        Alert.alert('Upload failed', 'Could not upload image. Please try again.');
+        updateForm('image', { localUri, isUploading: false });
+      }
+    }
+  };
+
+  const ensureUploaded = async (field: ImageField): Promise<string | null> => {
+    if (field.remoteUrl) return field.remoteUrl;
+    if (field.localUri && !field.remoteUrl) return await uploadImage(field.localUri);
+    return null;
+  };
+
   const handleSubmit = async () => {
     try {
       if (!offerForm.title || !offerForm.description) {
         Alert.alert('Validation', 'Title and description are required');
         return;
       }
+      if (offerForm.isPromo && !offerForm.offerCode) {
+        Alert.alert('Validation', 'Promo offers must have an offer code');
+        return;
+      }
+      if (offerForm.image.isUploading) {
+        Alert.alert('Please wait', 'Image is still uploading.');
+        return;
+      }
+
+      const imageUrl = offerForm.image.localUri
+        ? await ensureUploaded(offerForm.image)
+        : null;
 
       const payload = {
         ...offerForm,
+        image: imageUrl,
         discount: Number(offerForm.discount),
         minOrderAmount: Number(offerForm.minOrderAmount),
         maxDiscountAmount: offerForm.maxDiscountAmount
@@ -83,7 +167,10 @@ const AddEditOfferModal: React.FC<AddEditOfferModalProps> = ({
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
@@ -95,7 +182,10 @@ const AddEditOfferModal: React.FC<AddEditOfferModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* Title */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Title *</Text>
@@ -117,6 +207,44 @@ const AddEditOfferModal: React.FC<AddEditOfferModalProps> = ({
                 onChangeText={(v) => updateForm('description', v)}
                 placeholder="Enter offer description"
               />
+            </View>
+
+            {/* Image Upload */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Offer Image</Text>
+              {offerForm.image.localUri && (
+                <View>
+                  <Image
+                    source={{ uri: offerForm.image.localUri }}
+                    style={{
+                      width: '100%',
+                      height: 150,
+                      borderRadius: 10,
+                      marginBottom: 8,
+                    }}
+                    resizeMode="cover"
+                  />
+                  {offerForm.image.isUploading && (
+                    <ActivityIndicator
+                      style={{ position: 'absolute', top: '45%', left: '45%' }}
+                      size="large"
+                      color="#2563EB"
+                    />
+                  )}
+                </View>
+              )}
+              <TouchableOpacity
+                style={[
+                  styles.uploadButton,
+                  offerForm.image.isUploading && { opacity: 0.6 },
+                ]}
+                onPress={pickImage}
+                disabled={offerForm.image.isUploading}
+              >
+                <Text style={styles.uploadButtonText}>
+                  {offerForm.image.localUri ? 'Change Image' : 'Upload Image'}
+                </Text>
+              </TouchableOpacity>
             </View>
 
             {/* Discount */}
@@ -177,6 +305,37 @@ const AddEditOfferModal: React.FC<AddEditOfferModalProps> = ({
               />
             </View>
 
+            {/* Promo Toggle */}
+            <View style={styles.inputGroupRow}>
+              <Text style={styles.label}>Promo Offer</Text>
+              <Switch
+                value={offerForm.isPromo}
+                onValueChange={(val) => updateForm('isPromo', val)}
+              />
+            </View>
+
+            {/* Offer Code if Promo */}
+            {offerForm.isPromo && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Offer Code *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={offerForm.offerCode}
+                  onChangeText={(v) => updateForm('offerCode', v.toUpperCase())}
+                  placeholder="Enter promo code"
+                />
+              </View>
+            )}
+
+            {/* Active Toggle */}
+            <View style={styles.inputGroupRow}>
+              <Text style={styles.label}>Active</Text>
+              <Switch
+                value={offerForm.isActive}
+                onValueChange={(val) => updateForm('isActive', val)}
+              />
+            </View>
+
             {/* Terms */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Terms</Text>
@@ -191,9 +350,14 @@ const AddEditOfferModal: React.FC<AddEditOfferModalProps> = ({
 
             {/* Submit */}
             <TouchableOpacity
-              style={styles.submitButton}
+              style={[
+                styles.submitButton,
+                (createLoading || updateLoading || offerForm.image.isUploading) && {
+                  opacity: 0.7,
+                },
+              ]}
               onPress={handleSubmit}
-              disabled={createLoading || updateLoading}
+              disabled={createLoading || updateLoading || offerForm.image.isUploading}
             >
               <Text style={styles.submitButtonText}>
                 {createLoading || updateLoading
@@ -205,90 +369,121 @@ const AddEditOfferModal: React.FC<AddEditOfferModalProps> = ({
             </TouchableOpacity>
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
 
 export default AddEditOfferModal;
-export const styles = StyleSheet.create({
+
+const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
   },
   container: {
+    maxHeight: '90%',
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '90%',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111',
+    color: '#111827',
   },
   scrollContent: {
-    padding: 16,
+    paddingBottom: 24,
   },
   inputGroup: {
     marginBottom: 16,
+  },
+  inputGroupRow: {
+    marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   label: {
     fontSize: 14,
     fontWeight: '500',
     marginBottom: 6,
-    color: '#444',
+    color: '#374151',
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 16,
-    backgroundColor: '#fafafa',
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#111827',
+    backgroundColor: '#F9FAFB',
   },
   multiline: {
-    minHeight: 80,
+    height: 80,
     textAlignVertical: 'top',
+  },
+  uploadButton: {
+    borderWidth: 1,
+    borderColor: '#2563EB',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EFF6FF',
+  },
+  uploadButtonText: {
+    color: '#2563EB',
+    fontSize: 14,
+    fontWeight: '500',
   },
   row: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   typeButton: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#D1D5DB',
     borderRadius: 8,
     alignItems: 'center',
+    marginHorizontal: 4,
   },
   typeButtonActive: {
-    backgroundColor: '#2563EB',
     borderColor: '#2563EB',
+    backgroundColor: '#EFF6FF',
   },
   typeButtonText: {
     fontSize: 14,
-    color: '#444',
+    fontWeight: '500',
+    color: '#6B7280',
   },
   typeButtonTextActive: {
-    color: '#fff',
-    fontWeight: '600',
+    color: '#2563EB',
   },
   submitButton: {
+    marginTop: 20,
     backgroundColor: '#2563EB',
-    padding: 14,
     borderRadius: 10,
+    paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   submitButtonText: {
     color: '#fff',
