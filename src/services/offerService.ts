@@ -82,11 +82,44 @@ class OfferService {
     expiringSoon: Offer[];
   }>> {
     try {
-      return await httpClient.get('/offers/personalized');
-    } catch (error) {
+      const res = await httpClient.get('/offers/personalized');
+
+      // Defensive checks: some backends may return HTML/strings on error pages.
+      const isJsonLike = res && typeof res === 'object' && typeof res.data === 'object';
+
+      if (!isJsonLike) {
+        if (__DEV__) {
+          console.warn('Personalized offers returned unexpected shape:', typeof res, res);
+        }
+        return {
+          success: true,
+          status: 'success',
+          message: 'Personalized offers temporarily unavailable',
+          data: { recommended: [], trending: [], expiringSoon: [] },
+        } as ApiResponse<any>;
+      }
+
+      // Ensure expected keys exist
+      const payload = res.data ?? {};
+      const recommended = Array.isArray(payload.recommended) ? payload.recommended : [];
+      const trending = Array.isArray(payload.trending) ? payload.trending : [];
+      const expiringSoon = Array.isArray(payload.expiringSoon) ? payload.expiringSoon : [];
+
+      return {
+        success: true,
+        status: 'success',
+        message: res.message || 'Personalized offers retrieved',
+        data: { recommended, trending, expiringSoon },
+      } as ApiResponse<any>;
+    } catch (error: any) {
       console.error('Get personalized offers error:', error);
-      // ✅ Return empty array instead of throwing to prevent app crashes
-      return { success: true, data: [] };
+      // If this is an HTML response or 5xx, return a safe empty structure
+      return {
+        success: true,
+        status: 'success',
+        message: 'Personalized offers temporarily unavailable',
+        data: { recommended: [], trending: [], expiringSoon: [] },
+      } as ApiResponse<any>;
     }
   }
 
@@ -110,14 +143,14 @@ class OfferService {
     endDate?: string;
     page?: number;
     limit?: number;
-  }): Promise<ApiResponse<Array<{
+  }): Promise<ApiResponse<{
     id: string;
     offer: Offer;
     usedAt: string;
     discount: number;
     orderAmount: number;
     booking?: string;
-  }>>> {
+  }[]>> {
     try {
       return await httpClient.get('/offers/usage-history', { params });
     } catch (error) {

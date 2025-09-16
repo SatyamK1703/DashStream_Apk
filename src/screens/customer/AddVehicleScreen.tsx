@@ -17,12 +17,13 @@ import {
   Keyboard,
   Animated
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import * as ImagePicker from 'expo-image-picker';
+import { vehicleService } from '../../services/vehicleService';
 
 type AddVehicleScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 type AddVehicleScreenRouteProp = RouteProp<CustomerStackParamList, 'AddVehicle'>;
@@ -58,7 +59,7 @@ const yearOptions = Array.from({ length: 30 }, (_, i) => new Date().getFullYear(
 const AddVehicleScreen = () => {
   const navigation = useNavigation<AddVehicleScreenNavigationProp>();
   const route = useRoute<AddVehicleScreenRouteProp>();
-  const insets = useSafeAreaInsets();
+  // const insets = useSafeAreaInsets();
   const editMode = route.params?.vehicleId !== undefined;
   const vehicleToEdit = route.params?.vehicleData;
 
@@ -151,13 +152,44 @@ const AddVehicleScreen = () => {
     if (!validateForm()) return;
     
     setLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Build payload
+      const payload: any = {
+        type: vehicleType,
+        make: brand,
+        model,
+        year: Number(year),
+        color: 'unspecified',
+        licensePlate: licensePlate || undefined,
+      };
+
+      // If there's an image, upload it using FormData via httpClient
+      if (vehicleImage && vehicleImage.startsWith('file') || vehicleImage?.startsWith('content') || vehicleImage?.startsWith('http') === false) {
+        const filename = vehicleImage.split('/').pop() || 'vehicle.jpg';
+        const match = filename.match(/\.(\w+)$/);
+        const ext = match ? match[1].toLowerCase() : 'jpg';
+        const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+        const formData = new FormData();
+        // @ts-ignore
+        formData.append('image', { uri: vehicleImage, name: filename, type: mime });
+        // Upload image first via vehicle/create endpoint if backend supports multipart with create
+        // For edit mode, backend may expect separate image endpoint — we optimistically attach image in payload
+        // Add indicator that image was uploaded in payload (backend should provide image URL in response)
+        payload['imageForm'] = formData;
+      }
+
+      if (editMode && route.params?.vehicleId) {
+        await vehicleService.updateVehicle(route.params.vehicleId, payload);
+        Alert.alert('Success', 'Vehicle updated successfully', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+      } else {
+        await vehicleService.createVehicle(payload);
+        Alert.alert('Success', 'Vehicle added successfully', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to save vehicle. Please try again.');
+    } finally {
       setLoading(false);
-      const successMessage = editMode ? 'Vehicle updated successfully' : 'Vehicle added successfully';
-      Alert.alert('Success', successMessage, [{ text: 'OK', onPress: () => navigation.goBack() }]);
-    }, 1500);
+    }
   };
 
   const handleBrandChange = (text: string) => {

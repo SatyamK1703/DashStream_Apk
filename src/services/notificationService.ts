@@ -1,6 +1,12 @@
 import httpClient, { ApiResponse } from './httpClient';
 import { ENDPOINTS } from '../config/env';
 import { Notification } from '../types/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+
+const STORAGE_KEYS = {
+  NOTIF_PREFERENCES: '@DashStream:notification_preferences_local',
+};
 
 class NotificationService {
   /**
@@ -99,6 +105,12 @@ class NotificationService {
       return await httpClient.patch(ENDPOINTS.NOTIFICATIONS.PREFERENCES, preferences);
     } catch (error) {
       console.error('Update notification preferences error:', error);
+      // Persist locally so user's choice is not lost when server denies access
+      try {
+        await AsyncStorage.setItem(STORAGE_KEYS.NOTIF_PREFERENCES, JSON.stringify(preferences));
+      } catch (e) {
+        if (__DEV__) console.warn('Failed to persist notification preferences locally:', e);
+      }
       throw error;
     }
   }
@@ -117,8 +129,25 @@ class NotificationService {
   }>> {
     try {
       return await httpClient.get(ENDPOINTS.NOTIFICATIONS.PREFERENCES);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Get notification preferences error:', error);
+
+      // If server denies access (403) or preferences unavailable, try to return local fallback if present
+      try {
+        const local = await AsyncStorage.getItem(STORAGE_KEYS.NOTIF_PREFERENCES);
+        if (local) {
+          const parsed = JSON.parse(local);
+          return {
+            success: true,
+            status: 'success',
+            message: 'local-fallback',
+            data: parsed,
+          } as ApiResponse<any>;
+        }
+      } catch (e) {
+        if (__DEV__) console.warn('Failed to read local notification preferences:', e);
+      }
+
       throw error;
     }
   }
@@ -139,3 +168,28 @@ class NotificationService {
 // Export singleton instance
 export const notificationService = new NotificationService();
 export default notificationService;
+
+// Dev helper: produce a cURL command for reproducing the preferences request
+export const buildPreferencesCurl = async (): Promise<string> => {
+  try {
+    // Try secure key first (matches httpClient SECURE_KEYS)
+    let accessToken = null;
+    try {
+      accessToken = await SecureStore.getItemAsync('dashstream_access_token');
+    } catch (e) {
+      if (__DEV__) console.warn('SecureStore.getItemAsync failed in curl helper:', e);
+    }
+
+    // Fallback to AsyncStorage-stored token
+    if (!accessToken) accessToken = await AsyncStorage.getItem('@DashStream:access_token');
+
+    const base = (ENDPOINTS as any).__base || '';
+    const url = `${(base || '')}${ENDPOINTS.NOTIFICATIONS.PREFERENCES}`;
+    const headers = [] as string[];
+    if (accessToken) headers.push(`-H "Authorization: Bearer ${accessToken}"`);
+    headers.push('-H "Content-Type: application/json"');
+    return `curl -X GET ${headers.join(' ')} "${url}"`;
+  } catch {
+    return 'curl command could not be generated (dev)';
+  }
+};

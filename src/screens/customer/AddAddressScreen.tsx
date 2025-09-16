@@ -17,19 +17,10 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
+import { userService } from '../../services/userService';
+import { CreateAddressRequest } from '../../types/api';
 
-// ... your type definitions and constants stay the same
-interface AddressData {
-  id?: string;
-  type: 'home' | 'work' | 'other';
-  name: string;
-  address: string;
-  landmark?: string;
-  city: string;
-  state: string;
-  pincode: string;
-  isDefault: boolean;
-}
+
 
 const AddAddressScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
@@ -92,15 +83,37 @@ const AddAddressScreen = () => {
   const handleSubmit = () => {
     if (!validateForm()) return;
     setLoading(true);
-    //apicall
-    setTimeout(() => {
-      setLoading(false);
-      Alert.alert(
-        'Success',
-        editMode ? 'Address updated successfully' : 'Address added successfully',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
-    }, 1500);
+    (async () => {
+      try {
+        const payload: CreateAddressRequest = {
+          type: addressType,
+          title: name,
+          addressLine1: address,
+          addressLine2: landmark || undefined,
+          city,
+          state,
+          postalCode: pincode,
+          country: 'IN',
+          coordinates: {
+            latitude: 0,
+            longitude: 0,
+          },
+        };
+
+        if (editMode && addressToEdit?._id) {
+          await userService.updateAddress(addressToEdit._id, payload as any);
+          Alert.alert('Success', 'Address updated successfully', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+        } else {
+          await userService.createAddress(payload as any);
+          Alert.alert('Success', 'Address added successfully', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+        }
+      } catch (err) {
+        console.error('Address save failed', err);
+        Alert.alert('Error', 'Failed to save address. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    })();
   };
 
   return (

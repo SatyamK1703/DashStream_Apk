@@ -82,24 +82,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check if user is already authenticated on app launch
   useEffect(() => {
-    // Add a timeout to prevent infinite loading
+    // Run auth boot once on mount. Avoid depending on `isBooting` so
+    // rapid reloads won't repeatedly trigger the boot logic.
+    let mounted = true;
+
+    // Minimal visible loader duration to avoid flicker during fast reloads
+    const minLoaderMs = 400;
+    const bootStart = Date.now();
+
+    // Add a timeout to prevent infinite loading (10s), but still
+    // ensure the minimal loader time is respected when completing.
     const authTimeout = setTimeout(() => {
-      if (isBooting) {
+      if (mounted) {
         if (__DEV__) console.warn('⚠️ Auth check timeout - forcing boot completion');
         setIsBooting(false);
         setUser(null);
       }
-    }, 10000); // 10 second timeout
+    }, 10000);
 
-    checkAuthStatus().finally(() => {
-      clearTimeout(authTimeout);
-    });
-    
-    // Set up callback for token refresh events
-    httpClient.setTokenRefreshCallback(() => {
+    // Run the check and ensure loader is visible at least `minLoaderMs`
+    checkAuthStatus()
+      .catch((err) => {
+        if (__DEV__) console.warn('Auth boot failed:', err);
+      })
+      .finally(() => {
+        const elapsed = Date.now() - bootStart;
+        const remaining = Math.max(0, minLoaderMs - elapsed);
+        setTimeout(() => {
+          if (!mounted) return;
+          clearTimeout(authTimeout);
+          setIsBooting(false);
+        }, remaining);
+      });
+
+    // Only set token refresh callback once
+    const tokenRefreshHandler = () => {
       if (__DEV__) console.log('🔄 Token refresh event triggered...');
-      
-      // Check if we still have tokens after refresh attempt
+
+      // debounce to avoid multiple refresh attempts in quick succession
       setTimeout(async () => {
         try {
           const hasTokens = await authService.isAuthenticated();
@@ -108,17 +128,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(null);
             return;
           }
-          
+
           // If we have tokens, try to refresh user data
           await refreshUser();
         } catch (error: any) {
           if (__DEV__) console.error('❌ Error in token refresh callback:', error);
-          
-          // Check if this is a "user no longer exists" error
+
           const errorCode = error?.response?.data?.errorCode;
-          const isUserNotFound = errorCode === 'APP-401-051' || 
-                               error?.response?.data?.message?.includes('User no longer exists');
-          
+          const isUserNotFound = errorCode === 'APP-401-051' ||
+            error?.response?.data?.message?.includes('User no longer exists');
+
           if (isUserNotFound) {
             if (__DEV__) console.log('🚪 User no longer exists - forcing complete logout');
             try {
@@ -127,35 +146,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               if (__DEV__) console.warn('Error during forced logout:', logoutError);
             }
           }
-          
+
           // Force logout to prevent infinite loops
           setUser(null);
         }
       }, 500);
-    });
+    };
 
-    // Cleanup callback on unmount
+    httpClient.setTokenRefreshCallback(tokenRefreshHandler);
+
     return () => {
+      mounted = false;
       clearTimeout(authTimeout);
       httpClient.setTokenRefreshCallback(null);
     };
   }, []);
 
   const checkAuthStatus = async () => {
-    try {
-      setIsBooting(true);
+    // Implement a limited retry/backoff mechanism to avoid hammering the backend
+    const maxAttempts = 3;
+    let attempt = 0;
 
-      // Check if we have tokens first
-      const isAuthenticated = await authService.isAuthenticated();
-      if (!isAuthenticated) {
-        if (__DEV__) console.log('No auth tokens found');
-        setUser(null);
-        setIsBooting(false);
-        return;
-      }
+    // Throttle repeated 'no tokens' logs to once per 2s to avoid spamming during fast reloads
+    let lastNoTokenLogAt = 0;
 
-      // If tokens exist, fetch current user
-      const response = await authService.getCurrentUser();
+    const attemptFetch = async (): Promise<void> => {
+      attempt += 1;
+      try {
+        setIsBooting(true);
+
+        // Respect client-side rate-limit window if set by httpClient
+        // @ts-ignore - access internal guard timestamp
+        const rateLimitUntil = (httpClient as any).rateLimitUntil as number | null;
+        if (rateLimitUntil && Date.now() < rateLimitUntil) {
+          const wait = rateLimitUntil - Date.now();
+          if (__DEV__) console.warn('Auth boot waiting due to rate-limit until', new Date(rateLimitUntil).toISOString());
+          await new Promise((res) => setTimeout(res, wait));
+        }
+
+        // Check if we have tokens first
+        const isAuthenticated = await authService.isAuthenticated();
+        if (!isAuthenticated) {
+          if (__DEV__) {
+            const now = Date.now();
+            if (now - lastNoTokenLogAt > 2000) {
+              console.log('No auth tokens found');
+              lastNoTokenLogAt = now;
+            }
+          }
+          setUser(null);
+          setIsBooting(false);
+          return;
+        }
+
+        // If tokens exist, fetch current user
+        const response = await authService.getCurrentUser();
       if (__DEV__) {
         console.log('Auth check response:', {
           success: response.success,
@@ -167,43 +212,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const isSuccess = response.success === true || response.status === 'success';
-      if (isSuccess && response.data?.user) {
-        setUser(convertApiUserToAppUser(response.data.user));
-        if (__DEV__) console.log('✅ User authenticated successfully');
-      } else {
+        if (isSuccess && response.data?.user) {
+          setUser(convertApiUserToAppUser(response.data.user));
+          if (__DEV__) console.log('✅ User authenticated successfully');
+          return;
+        }
+
         if (__DEV__) console.warn('Auth check failed: Invalid response data', {
           isSuccess,
           hasData: !!response.data,
           hasUser: !!response.data?.user,
           responseData: response.data
         });
-        
-        // If the response indicates success but data is undefined/invalid,
-        // it might be a token issue - clear tokens and force re-authentication
+
+        // If the response indicates success but no user, logout and stop
         if (isSuccess && !response.data?.user) {
           if (__DEV__) console.log('🔄 Success response but no user data - clearing tokens');
           await authService.logout();
+          setUser(null);
+          setIsBooting(false);
+          return;
         }
-        
+
+        // If we reach here, it's a transient failure; decide whether to retry
+        if (attempt < maxAttempts) {
+          const backoff = Math.min(1000 * Math.pow(2, attempt - 1), 8000);
+          if (__DEV__) console.log(`Auth check attempt ${attempt} failed, retrying after ${backoff}ms`);
+          await new Promise((res) => setTimeout(res, backoff));
+          return attemptFetch();
+        }
+
+        // Exhausted attempts - degrade gracefully
         setUser(null);
-      }
-    } catch (error) {
-      if (__DEV__) console.warn('Auth check failed:', error);
-      
-      // If it's an authentication error, clear tokens
-      if ((error as any)?.statusCode === 401) {
-        if (__DEV__) console.log('🚪 Authentication error during check - clearing tokens');
-        try {
-          await authService.logout();
-        } catch (logoutError) {
-          if (__DEV__) console.warn('Error during logout:', logoutError);
+        setIsBooting(false);
+        return;
+      } catch (error: any) {
+        if (__DEV__) console.warn('Auth check failed (attempt):', error);
+
+        // If server responded with network error or 5xx, allow retry until maxAttempts
+        const status = error?.response?.status;
+        const isNetworkError = error?.status === 'network_error' || !status;
+
+        if (attempt < maxAttempts && (isNetworkError || (status >= 500 && status < 600))) {
+          const backoff = Math.min(1000 * Math.pow(2, attempt - 1), 8000);
+          if (__DEV__) console.log(`Network/server error during auth check, retrying attempt ${attempt + 1} after ${backoff}ms`);
+          await new Promise((res) => setTimeout(res, backoff));
+          return attemptFetch();
         }
+
+        // On auth-specific errors (401) or exhausted retries, clear tokens and stop
+        if (error?.response?.status === 401) {
+          if (__DEV__) console.log('🚪 Authentication error during check - clearing tokens');
+          try {
+            await authService.logout();
+          } catch (logoutError) {
+            if (__DEV__) console.warn('Error during logout:', logoutError);
+          }
+        }
+
+        setUser(null);
+        setIsBooting(false);
+        return;
       }
-      
-      setUser(null);
-    } finally {
-      setIsBooting(false);
-    }
+    };
+
+    return attemptFetch();
   };
 
   const login = async (phone: string) => {
@@ -277,26 +350,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateUserProfile = async (userData: Partial<User>) => {
     try {
       setIsLoading(true);
-      
-      // Send update request to API
-      const response = await userService.updateProfile({
-        name: userData.name,
-        email: userData.email,
-      });
-      
-      if (response.success && response.data) {
-        // ALWAYS use fresh data from API response - no local merging
+      // If a profile image was provided and it's a local URI (not an http(s) URL), upload it first
+      const isLocalImage =
+        typeof userData.profileImage === 'string' &&
+        !userData.profileImage.startsWith('http');
+
+      if (isLocalImage) {
         try {
-          const updatedUser = convertApiUserToAppUser(response.data);
-          setUser(updatedUser);
-        } catch (conversionError: any) {
-          if (__DEV__) console.error('User data conversion failed after update:', conversionError);
-          // If conversion fails, refresh user from API to maintain consistency
-          await refreshUser();
-          throw new Error('Profile updated but data format invalid');
+          const uri = userData.profileImage as string;
+          const filename = uri.split('/').pop() || 'profile.jpg';
+          const match = filename.match(/\.(\w+)$/);
+          const ext = match ? match[1].toLowerCase() : 'jpg';
+          const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+
+          const formData = new FormData();
+          // Form field name expected by backend is usually 'image' or 'file' - use 'image' here
+          // React Native FormData file object shape
+          // @ts-ignore - platform FormData file shape
+          formData.append('image', {
+            uri,
+            name: filename,
+            type: mime,
+          });
+
+          const imgResp = await userService.updateProfileImage(formData);
+          if (imgResp && imgResp.success && imgResp.data) {
+            try {
+              const updated = convertApiUserToAppUser(imgResp.data);
+              setUser(updated);
+            } catch (convErr: any) {
+              if (__DEV__) console.error('Conversion failed for image upload response:', convErr);
+              await refreshUser();
+              throw new Error('Profile image uploaded but server returned unexpected data');
+            }
+          } else {
+            throw new Error(imgResp?.message || 'Failed to upload profile image');
+          }
+        } catch (imgErr: any) {
+          if (__DEV__) console.error('Profile image upload failed:', imgErr);
+          // Surface the error to caller/UI
+          throw imgErr;
         }
-      } else {
-        throw new Error(response.message || 'Failed to update profile');
+      }
+
+      // Update textual fields (name/email) if provided
+      if (userData.name || userData.email) {
+        const response = await userService.updateProfile({
+          name: userData.name,
+          email: userData.email,
+        });
+
+        if (response && response.success && response.data) {
+          try {
+            const updatedUser = convertApiUserToAppUser(response.data);
+            setUser(updatedUser);
+          } catch (conversionError: any) {
+            if (__DEV__) console.error('User data conversion failed after update:', conversionError);
+            // If conversion fails, refresh user from API to maintain consistency
+            await refreshUser();
+            throw new Error('Profile updated but data format invalid');
+          }
+        } else {
+          throw new Error(response?.message || 'Failed to update profile');
+        }
       }
     } catch (error: any) {
       if (__DEV__) console.error('Update profile error:', error);

@@ -1,7 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useApi, usePaginatedApi } from './useApi';
 import { notificationService } from '../services';
-import { Notification } from '../types/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+type NotificationPreferences = {
+  booking: boolean;
+  payment: boolean;
+  offers: boolean;
+  general: boolean;
+  push: boolean;
+  email: boolean;
+  sms: boolean;
+} | null;
+
+const STORAGE_KEYS = {
+  NOTIF_PREFERENCES: '@DashStream:notification_preferences_local',
+};
 
 // Hook for fetching notifications
 export const useNotifications = (filters?: {
@@ -10,8 +24,20 @@ export const useNotifications = (filters?: {
 }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   
-  const api = usePaginatedApi(
-    (params) => notificationService.getNotifications({ ...filters, ...params }),
+  const api = usePaginatedApi<any>(
+    async (params) => {
+      const res = await notificationService.getNotifications({ ...filters, ...params });
+      const payload = (res as any)?.data ?? (res as any);
+      const notifications = payload?.notifications ?? payload ?? [];
+      // Return ApiResponse-shaped object where data is an array of notifications
+      return {
+        success: res.success,
+        status: res.status,
+        message: res.message,
+        data: notifications,
+        meta: res.meta,
+      } as any;
+    },
     {
       showErrorAlert: false,
       onSuccess: (data: any) => {
@@ -95,7 +121,7 @@ export const useClearAllNotifications = () => {
 
 // Hook for notification preferences
 export const useNotificationPreferences = () => {
-  const [preferences, setPreferences] = useState(null);
+  const [preferences, setPreferences] = useState<NotificationPreferences>(null);
   
   const fetchApi = useApi(
     () => notificationService.getPreferences(),
@@ -108,15 +134,7 @@ export const useNotificationPreferences = () => {
   );
 
   const updateApi = useApi(
-    (newPreferences: {
-      booking: boolean;
-      payment: boolean;
-      offers: boolean;
-      general: boolean;
-      push: boolean;
-      email: boolean;
-      sms: boolean;
-    }) => notificationService.updatePreferences(newPreferences),
+    (newPreferences: Exclude<NotificationPreferences, null>) => notificationService.updatePreferences(newPreferences),
     {
       showErrorAlert: true,
       onSuccess: (data) => {
@@ -128,14 +146,60 @@ export const useNotificationPreferences = () => {
   );
 
   useEffect(() => {
-    fetchApi.execute();
-  }, []);
+    // Fetch preferences but swallow permission errors so UI stays usable
+    (async () => {
+      try {
+        const res = await fetchApi.execute();
+        // If server returned a local-fallback marker, res may be the local data
+        if (res) {
+          setPreferences((res as any).data ?? null);
+          // persist locally so toggles remain consistent
+          try {
+            await AsyncStorage.setItem(STORAGE_KEYS.NOTIF_PREFERENCES, JSON.stringify((res as any).data ?? null));
+          } catch (e) {
+            if (__DEV__) console.warn('Failed to persist fetched notification preferences locally:', e);
+          }
+        }
+      } catch (err: any) {
+        // Log, but don't surface an alert for permission errors
+        if (__DEV__) console.warn('Failed to load notification preferences from server:', err);
+
+        // Try to load local fallback
+        try {
+          const localRaw = await AsyncStorage.getItem(STORAGE_KEYS.NOTIF_PREFERENCES);
+          if (localRaw) {
+            setPreferences(JSON.parse(localRaw));
+            return;
+          }
+        } catch (e) {
+          if (__DEV__) console.warn('Failed to read local notification preferences:', e);
+        }
+
+        // Ensure preferences is null so callers know it's unavailable
+        setPreferences(null);
+      }
+    })();
+  }, [fetchApi]);
 
   return {
     preferences,
     loading: fetchApi.loading || updateApi.loading,
     error: fetchApi.error || updateApi.error,
-    updatePreferences: updateApi.execute,
+    updatePreferences: async (p: Exclude<NotificationPreferences, null>) => {
+      // Update server, but always persist locally so UI stays in sync
+      try {
+        await updateApi.execute(p);
+      } catch (e) {
+        if (__DEV__) console.warn('Failed to update preferences on server, saved locally instead:', e);
+      }
+
+      try {
+        await AsyncStorage.setItem(STORAGE_KEYS.NOTIF_PREFERENCES, JSON.stringify(p));
+        setPreferences(p);
+      } catch (e) {
+        if (__DEV__) console.warn('Failed to persist preferences locally after update:', e);
+      }
+    },
     refreshPreferences: fetchApi.execute,
   };
 };

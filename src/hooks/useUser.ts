@@ -1,119 +1,81 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useApi } from './useApi';
 import { userService } from '../services';
-import { Address, CreateAddressRequest, User } from '../types/api';
+import { CreateAddressRequest, UpdateProfileRequest } from '../types/api';
 
 // Hook for fetching user profile
 export const useUserProfile = () => {
-  return useApi(
-    () => userService.getUserProfile(),
-    {
-      showErrorAlert: false,
-    }
-  );
+  const apiCall = useCallback(() => userService.getUserProfile(), []);
+  return useApi(apiCall, { showErrorAlert: false });
 };
 
 // Hook for updating user profile  
 export const useUpdateProfile = () => {
-  return useApi(
-    (profileData: Partial<User>) => userService.updateProfile(profileData),
-    {
-      showErrorAlert: true,
-    }
-  );
+  const apiCall = useCallback((profileData: UpdateProfileRequest) => userService.updateProfile(profileData), []);
+  return useApi(apiCall, { showErrorAlert: true });
 };
 
 // Hook for fetching user addresses
 export const useMyAddresses = () => {
-  return useApi(
-    () => userService.getMyAddresses(),
-    {
-      showErrorAlert: false,
-    }
-  );
+  const apiCall = useCallback(() => userService.getMyAddresses(), []);
+  return useApi(apiCall, { showErrorAlert: false });
 };
 
 // Hook for creating an address
 export const useCreateAddress = () => {
-  return useApi(
-    (addressData: CreateAddressRequest) => userService.createAddress(addressData),
-    {
-      showErrorAlert: true,
-    }
-  );
+  const apiCall = useCallback((addressData: CreateAddressRequest) => userService.createAddress(addressData), []);
+  return useApi(apiCall, { showErrorAlert: true });
 };
 
 // Hook for updating an address
 export const useUpdateAddress = () => {
-  return useApi(
-    (addressId: string, addressData: Partial<CreateAddressRequest>) => 
-      userService.updateAddress(addressId, addressData),
-    {
-      showErrorAlert: true,
-    }
-  );
+  const apiCall = useCallback((addressId: string, addressData: Partial<CreateAddressRequest>) =>
+    userService.updateAddress(addressId, addressData), []);
+  return useApi(apiCall, { showErrorAlert: true });
 };
 
 // Hook for deleting an address
 export const useDeleteAddress = () => {
-  return useApi(
-    (addressId: string) => userService.deleteAddress(addressId),
-    {
-      showErrorAlert: true,
-    }
-  );
+  const apiCall = useCallback((addressId: string) => userService.deleteAddress(addressId), []);
+  return useApi(apiCall, { showErrorAlert: true });
 };
 
 // Hook for setting default address
 export const useSetDefaultAddress = () => {
-  return useApi(
-    (addressId: string) => userService.setDefaultAddress(addressId),
-    {
-      showErrorAlert: true,
-    }
-  );
+  const apiCall = useCallback((addressId: string) => userService.setDefaultAddress(addressId), []);
+  return useApi(apiCall, { showErrorAlert: true });
 };
 
 // Hook for uploading profile image
 export const useUploadProfileImage = () => {
-  return useApi(
-    (imageFile: FormData) => userService.updateProfileImage(imageFile),
-    {
-      showErrorAlert: true,
-    }
-  );
+  const apiCall = useCallback((imageFile: FormData) => userService.updateProfileImage(imageFile), []);
+  return useApi(apiCall, { showErrorAlert: true });
 };
 
 // Hook for fetching professionals
 export const useProfessionals = () => {
-  return useApi(
-    (params?: {
-      location?: { latitude: number; longitude: number; radius?: number };
-      specializations?: string[];
-      minRating?: number;
-      sortBy?: 'rating' | 'distance' | 'experience';
-      page?: number;
-      limit?: number;
-    }) => userService.getProfessionals(params),
-    {
-      showErrorAlert: false,
-    }
-  );
+  const apiCall = useCallback((params?: {
+    location?: { latitude: number; longitude: number; radius?: number };
+    specializations?: string[];
+    minRating?: number;
+    sortBy?: 'rating' | 'distance' | 'experience';
+    page?: number;
+    limit?: number;
+  }) => userService.getProfessionals(params), []);
+  return useApi(apiCall, { showErrorAlert: false });
 };
 
 // Hook for professional details
 export const useProfessionalDetails = (professionalId: string | null) => {
-  const api = useApi(
-    () => userService.getProfessionalDetails(professionalId!),
-    {
-      showErrorAlert: false,
-    }
-  );
+  const apiCall = useCallback(() => userService.getProfessionalDetails(professionalId!), [professionalId]);
+  const api = useApi(apiCall, { showErrorAlert: false });
 
   useEffect(() => {
-    if (professionalId) {
+    if (professionalId && api.execute) {
+      // call execute but don't depend on `api` identity to avoid re-renders
       api.execute();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [professionalId]);
 
   return api;
@@ -121,25 +83,17 @@ export const useProfessionalDetails = (professionalId: string | null) => {
 
 // Professional-specific hooks
 export const useUpdateProfessionalProfile = () => {
-  return useApi(
-    (data: {
-      specializations?: string[];
-      experience?: number;
-      serviceAreas?: any[];
-      pricing?: any[];
-      bio?: string;
-    }) => userService.updateProfessionalProfile(data),
-    {
-      showErrorAlert: true,
-    }
-  );
+  const apiCall = useCallback((data: {
+    specializations?: string[];
+    experience?: number;
+    serviceAreas?: any[];
+    pricing?: any[];
+    bio?: string;
+  }) => userService.updateProfessionalProfile(data), []);
+  return useApi(apiCall, { showErrorAlert: true });
 };
 
 export const useToggleAvailability = () => {
-  return useApi(
-    () => userService.toggleAvailability(),
-    {
-      showErrorAlert: true,
-    }
-  );
+  const apiCall = useCallback(() => userService.toggleAvailability(), []);
+  return useApi(apiCall, { showErrorAlert: true });
 };

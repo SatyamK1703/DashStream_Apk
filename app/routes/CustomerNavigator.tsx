@@ -39,8 +39,9 @@ export type CustomerStackParamList = {
   Support: undefined;
   FAQ: undefined;
   Notifications: undefined;
-  AddAddress: undefined;
-  AddVehicle: undefined;
+  AddAddress: { addressId?: string; addressData?: any } | undefined;
+  AddVehicle: { vehicleId?: string; vehicleData?: any } | undefined;
+  VehicleDetails: { vehicleId: string; vehicleData?: any } | undefined;
   Membership: undefined;
   PaymentMethods: undefined;
   AboutUs :undefined;

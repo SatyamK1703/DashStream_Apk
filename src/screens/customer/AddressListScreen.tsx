@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Text,
   TouchableOpacity,
@@ -6,56 +6,51 @@ import {
   View,
   FlatList,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
+import { userService } from '../../services/userService';
+import { ApiResponse } from '../../services/httpClient';
+import { Address } from '../../types/api';
 
-// Mock Data - Replace this with your actual data fetching logic
-const MOCK_ADDRESSES = [
-  {
-    id: '1',
-    type: 'home',
-    name: 'Ananya Sharma',
-    address: 'Flat 501, Sunshine Apartments, MG Road',
-    city: 'Pune',
-    pincode: '411001',
-    isDefault: true,
-  },
-  {
-    id: '2',
-    type: 'work',
-    name: 'Ananya Sharma',
-    address: '8th Floor, Tech Park One, Hinjewadi Phase 2',
-    city: 'Pune',
-    landmark: 'near mall',
-    pincode: '411057',
-    isDefault: false,
-  },
-];
 
 const AddressListScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
-  const [addresses, setAddresses] = useState(MOCK_ADDRESSES);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const isFocused = useIsFocused();
 
-  // In a real app, you would fetch addresses when the screen is focused
-  // useEffect(() => {
-  //   if (isFocused) {
-  //     // fetchAddressesFromApi();
-  //   }
-  // }, [isFocused]);
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res: ApiResponse<Address[]> = await userService.getMyAddresses();
+        if (res && res.data) setAddresses(res.data as Address[]);
+      } catch (err: any) {
+        console.error('Failed to load addresses', err);
+        setError(err?.message || 'Failed to load addresses');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleEdit = (addressData) => {
+    if (isFocused) fetchAddresses();
+  }, [isFocused]);
+
+  const handleEdit = (addressData: Address) => {
     navigation.navigate('AddAddress', {
-      addressId: addressData.id,
-      addressData: addressData,
+      addressId: addressData._id,
+      addressData,
     });
   };
 
-  const handleDelete = (addressId) => {
+  const handleDelete = (addressId: string) => {
     Alert.alert(
       "Delete Address",
       "Are you sure you want to delete this address?",
@@ -63,9 +58,14 @@ const AddressListScreen = () => {
         { text: "Cancel", style: "cancel" },
         { 
           text: "Delete", 
-          onPress: () => {
-            setAddresses(prev => prev.filter(addr => addr.id !== addressId));
-            // In a real app, call your API to delete the address here
+          onPress: async () => {
+            try {
+              await userService.deleteAddress(addressId);
+              setAddresses(prev => prev.filter(addr => addr.id !== addressId));
+            } catch (err) {
+              console.error('Delete address failed', err);
+              Alert.alert('Error', 'Failed to delete address. Please try again.');
+            }
           },
           style: "destructive" 
         },
@@ -73,7 +73,7 @@ const AddressListScreen = () => {
     );
   };
 
-  const renderAddress = ({ item }) => (
+  const renderAddress = ({ item }: { item: Address }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.iconContainer}>
@@ -89,9 +89,9 @@ const AddressListScreen = () => {
         </View>
       </View>
       <View style={styles.cardBody}>
-        <Text style={styles.addressName}>{item.name}</Text>
-        <Text style={styles.addressText}>{item.address}</Text>
-        <Text style={styles.addressText}>{`${item.city}, ${item.state} - ${item.pincode}`}</Text>
+        <Text style={styles.addressName}>{item.title}</Text>
+        <Text style={styles.addressText}>{item.addressLine1}</Text>
+        <Text style={styles.addressText}>{`${item.city}, ${item.state} - ${item.postalCode}`}</Text>
       </View>
       <View style={styles.cardFooter}>
         <TouchableOpacity style={styles.actionButton} onPress={() => handleEdit(item)}>
@@ -116,18 +116,29 @@ const AddressListScreen = () => {
         <Text style={styles.headerTitle}>My Addresses</Text>
       </View>
 
-      <FlatList
-        data={addresses}
-        renderItem={renderAddress}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-        ListEmptyComponent={() => (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No addresses found.</Text>
-            <Text style={styles.emptySubText}>Add a new address to get started.</Text>
-          </View>
-        )}
-      />
+      {loading ? (
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator size="large" color="#2563EB" />
+        </View>
+      ) : error ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Failed to load addresses.</Text>
+          <Text style={styles.emptySubText}>{error}</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={addresses}
+          renderItem={renderAddress}
+          keyExtractor={(item) => String((item as any)._id || '')}
+          contentContainerStyle={styles.listContainer}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No addresses found.</Text>
+              <Text style={styles.emptySubText}>Add a new address to get started.</Text>
+            </View>
+          )}
+        />
+      )}
 
       {/* Add New Address Button */}
       <TouchableOpacity 
