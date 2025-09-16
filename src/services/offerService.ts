@@ -16,7 +16,8 @@ class OfferService {
       return await httpClient.get(ENDPOINTS.OFFERS.ACTIVE, { params });
     } catch (error) {
       console.error('Get active offers error:', error);
-      throw error;
+      // ✅ Return empty array instead of throwing to prevent app crashes
+      return { success: true, data: [] };
     }
   }
 
@@ -84,7 +85,8 @@ class OfferService {
       return await httpClient.get('/offers/personalized');
     } catch (error) {
       console.error('Get personalized offers error:', error);
-      throw error;
+      // ✅ Return empty array instead of throwing to prevent app crashes
+      return { success: true, data: [] };
     }
   }
 

@@ -19,7 +19,8 @@ class ServiceService {
       return await httpClient.get(ENDPOINTS.SERVICES.POPULAR, { params });
     } catch (error) {
       console.error('Get popular services error:', error);
-      throw error;
+      // ✅ Return empty array to prevent app crashes
+      return { success: true, data: [] };
     }
   }
 

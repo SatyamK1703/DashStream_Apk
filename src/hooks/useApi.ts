@@ -104,7 +104,7 @@ export const useApi = <T = any>(
         isExecutingRef.current = false;
       }
     },
-    [apiCall, retries, retryDelay, showErrorAlert, onSuccess, onError, logout, state.data]
+    [apiCall, retries, retryDelay, showErrorAlert, onSuccess, onError, logout]
   );
 
   const reset = useCallback(() => {
@@ -205,7 +205,7 @@ export const usePaginatedApi = <T = any>(
       isLoadingPageRef.current = false;
       return response;
     },
-    [baseApi, pagination]
+    [baseApi.execute, pagination, allData]
   );
 
   const refresh = useCallback(
@@ -230,7 +230,7 @@ export const usePaginatedApi = <T = any>(
       total: 0,
       hasMore: true,
     });
-  }, [baseApi]);
+  }, [baseApi.reset]);
 
   const result = {
     data: allData,
@@ -283,7 +283,7 @@ export const useRealtimeApi = <T = any>(
 
       return interval;
     },
-    [baseApi, intervalMs]
+    [baseApi.execute, intervalMs]
   );
 
   const stopRealtime = useCallback((interval: NodeJS.Timeout) => {

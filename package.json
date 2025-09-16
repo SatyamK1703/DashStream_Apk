@@ -36,8 +36,8 @@
     "lodash": "^4.17.21",
     "lucide-react-native": "^0.536.0",
     "nativewind": "latest",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
     "react-hook-form": "^7.61.1",
     "react-native": "0.81.4",
     "react-native-async-storage": "^0.0.1",
@@ -56,21 +56,25 @@
     "react-native-svg": "15.12.1",
     "react-native-vector-icons": "^10.3.0",
     "react-native-video": "^6.16.1",
-    "react-native-web": "^0.21.0",
-    "typescript": "~5.9.2"
+    "react-native-web": "^0.21.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
-    "@types/react": "^19.1.10",
+    "@types/react": "~19.1.10",
     "@types/react-native": "^0.72.8",
     "eslint": "^9.25.1",
-    "eslint-config-expo": "^9.2.0",
+    "eslint-config-expo": "~10.0.0",
     "eslint-config-prettier": "^10.1.2",
     "prettier": "^3.2.5",
     "prettier-plugin-tailwindcss": "^0.5.11",
     "tailwindcss": "^3.4.0",
-    "typescript": "~5.8.3"
+    "typescript": "~5.9.2"
   },
   "main": "node_modules/expo/AppEntry.js",
-  "private": true
+  "private": true,
+  "overrides": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "@types/react": "~19.1.10"
+  }
 }

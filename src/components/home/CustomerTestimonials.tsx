@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, FlatList, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 
 const testimonials = [
@@ -22,37 +22,43 @@ const testimonials = [
 
 const ITEM_WIDTH = Dimensions.get('window').width * 0.4;
 
+// ✅ FIXED: Separate component that uses hook at top level
+const TestimonialItem = ({ item }) => {
+  const player = useVideoPlayer(item.videoUri, (player) => {
+    player.loop = true;
+    player.play();
+    player.muted = true;
+  });
+
+  return (
+    <View style={styles.card}>
+      <VideoView
+        style={styles.video}
+        player={player}
+        allowsFullscreen
+        allowsPictureInPicture
+      />
+      <View style={styles.overlay}>
+        <Text style={styles.name}>{item.name}</Text>
+      </View>
+    </View>
+  );
+};
+
 const CustomerTestimonials = () => {
   return (
     <View style={{ marginVertical: 10 }}>
       <Text style={styles.title}>Customer Testimonials</Text>
-      <FlatList
+      {/* ✅ FIXED: Replace FlatList with horizontal ScrollView to avoid VirtualizedList nesting */}
+      <ScrollView 
         horizontal
-        data={testimonials}
         showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 16 }}
-        renderItem={({ item }) => {
-          const player = useVideoPlayer(item.videoUri, (player) => {
-            player.loop = true;
-            player.play();
-            player.muted = true;
-          });
-          return (
-            <View style={styles.card}>
-              <VideoView
-                style={styles.video}
-                player={player}
-                allowsFullscreen
-                allowsPictureInPicture
-              />
-              <View style={styles.overlay}>
-                <Text style={styles.name}>{item.name}</Text>
-              </View>
-            </View>
-          );
-        }}
-      />
+      >
+        {testimonials.map((item) => (
+          <TestimonialItem key={item.id} item={item} />
+        ))}
+      </ScrollView>
     </View>
   );
 };

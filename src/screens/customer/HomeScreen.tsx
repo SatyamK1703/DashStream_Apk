@@ -114,11 +114,13 @@ const HomeScreen = () => {
         />
         
         {/* Show popular services with API data */}
-        <PopularServices 
-          services={servicesToShow} 
-          loading={servicesLoading}
-          error={servicesError}
-        />
+        {!servicesLoading && (
+          <PopularServices 
+            services={servicesToShow} 
+            loading={servicesLoading}
+            error={servicesError}
+          />
+        )}
         
         <PromoBanner onPress={() => navigation.navigate('Membership')} />
         <CustomerTestimonials/>

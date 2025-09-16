@@ -21,6 +21,14 @@ const PopularServices = ({ services }: any) => {
     navigation.navigate('AllServices'); // Assuming you have an 'AllServices' screen
   };
 
+  // ✅ Safety check for services data
+  const safeServices = services && Array.isArray(services) ? services : [];
+  
+  // Don't render if no services
+  if (safeServices.length === 0) {
+    return null; // or return a loading/empty state component
+  }
+
   return (
     <View style={styles.container}>
       {/* Header with title and See All */}
@@ -38,7 +46,8 @@ const PopularServices = ({ services }: any) => {
 
       {/* Services Grid without FlatList to avoid nested VirtualizedList in ScrollView */}
       <View>
-        {services
+        {/* ✅ FIXED: Use safeServices to prevent errors */}
+        {safeServices
           .slice(0, 6)
           .reduce((rows: any[], item: any, index: number) => {
             if (index % 3 === 0) rows.push([]);

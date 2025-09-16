@@ -68,8 +68,12 @@ export const useAdminServices = ({ filters }: UseAdminServicesOptions = {}) => {
 
 
   useEffect(() => {
-    fetchServices();
-  }, [JSON.stringify(filters)]); // refetch when filters change
+    if (!initialized && baseHook.refresh) {
+      if (__DEV__) console.log('useAdminServices - Auto-loading data on mount');
+      baseHook.refresh();
+      setInitialized(true);
+    }
+  }, [baseHook.refresh, initialized]);
 
   return {
     data,

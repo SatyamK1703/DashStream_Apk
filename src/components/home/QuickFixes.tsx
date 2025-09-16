@@ -34,21 +34,27 @@ const QuickFixes = () => {
 
     <View style={{ marginTop: 20 }}>
       <Text style={styles.title}>Common Problems Quick Fixes</Text>
-      <FlatList
-        data={fixes}
-        numColumns={3}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card} onPress={handleSeeAll}>
-            <Image source={item.image} style={styles.image} resizeMode="cover" />
-            <View style={styles.labelWrapper}>
-              <Text style={styles.label}>{item.label} →</Text>
+      {/* ✅ FIXED: Replace FlatList with View to avoid VirtualizedList nesting */}
+      <View style={{ paddingHorizontal: 16 }}>
+        {fixes
+          .reduce((rows: any[], item: any, index: number) => {
+            if (index % 3 === 0) rows.push([]);
+            rows[rows.length - 1].push(item);
+            return rows;
+          }, [])
+          .map((row: any[], rowIndex: number) => (
+            <View key={rowIndex} style={styles.row}>
+              {row.map((item) => (
+                <TouchableOpacity key={item.id} style={styles.card} onPress={handleSeeAll}>
+                  <Image source={item.image} style={styles.image} resizeMode="cover" />
+                  <View style={styles.labelWrapper}>
+                    <Text style={styles.label}>{item.label} →</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
             </View>
-          </TouchableOpacity>
-        )}
-      />
+          ))}
+      </View>
     </View>
   );
 };
@@ -61,6 +67,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   row: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
   },

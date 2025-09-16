@@ -41,7 +41,7 @@ export const useOfferDetails = (offerId: string | null) => {
     if (offerId) {
       api.execute();
     }
-  }, [offerId]);
+  }, [offerId, api.execute]);
 
   return api;
 };
