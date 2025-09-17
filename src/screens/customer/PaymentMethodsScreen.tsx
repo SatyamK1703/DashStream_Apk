@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -25,43 +25,113 @@ type PaymentMethodsScreenNavigationProp = NativeStackNavigationProp<CustomerStac
 const PaymentMethodsScreen: React.FC = () => {
   const navigation = useNavigation<PaymentMethodsScreenNavigationProp>();
 
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([
-    {
-      id: '1',
-      type: 'card',
-      name: 'HDFC Bank Credit Card',
-      details: '•••• •••• •••• 4567',
-      icon: 'card-outline',
-      isDefault: true
-    },
-    {
-      id: '2',
-      type: 'upi',
-      name: 'Google Pay',
-      details: 'user@okicici',
-      icon: 'phone-portrait-outline',
-      isDefault: false
-    },
-    {
-      id: '3',
-      type: 'wallet',
-      name: 'Paytm Wallet',
-      details: '+91 98765 43210',
-      icon: 'wallet-outline',
-      isDefault: false
-    }
-  ]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showAddCardModal, setShowAddCardModal] = useState(false);
   const [showAddUpiModal, setShowAddUpiModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // API functions
+  const fetchPaymentMethods = async () => {
+    try {
+      // TODO: Replace with actual API endpoint
+      const response = await fetch('/api/payment-methods', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          // Add authentication headers as needed
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch payment methods');
+      }
+
+      const data = await response.json();
+      return data.paymentMethods || [];
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
+      throw error;
+    }
+  };
+
+  const deletePaymentMethodAPI = async (id: string) => {
+    try {
+      // TODO: Replace with actual API endpoint
+      const response = await fetch(`/api/payment-methods/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          // Add authentication headers as needed
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete payment method');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting payment method:', error);
+      throw error;
+    }
+  };
+
+  const setDefaultPaymentMethodAPI = async (id: string) => {
+    try {
+      // TODO: Replace with actual API endpoint
+      const response = await fetch(`/api/payment-methods/${id}/set-default`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          // Add authentication headers as needed
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to set default payment method');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error setting default payment method:', error);
+      throw error;
+    }
+  };
+
+  // Load payment methods on component mount
+  useEffect(() => {
+    const loadPaymentMethods = async () => {
+      try {
+        const methods = await fetchPaymentMethods();
+        setPaymentMethods(methods);
+      } catch (error) {
+        console.error('Failed to load payment methods:', error);
+        setPaymentMethods([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPaymentMethods();
+  }, []);
+
   // Handlers
-  const handleSetDefault = (id: string) => {
-    setPaymentMethods((methods) =>
-      methods.map((method) => ({ ...method, isDefault: method.id === id }))
-    );
+  const handleSetDefault = async (id: string) => {
+    try {
+      setLoading(true);
+      await setDefaultPaymentMethodAPI(id);
+      setPaymentMethods((methods) =>
+        methods.map((method) => ({ ...method, isDefault: method.id === id }))
+      );
+      Alert.alert('Success', 'Default payment method updated');
+    } catch (error) {
+      console.error('Error setting default payment method:', error);
+      Alert.alert('Error', 'Failed to set default payment method');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteMethod = (id: string) => {
@@ -70,30 +140,51 @@ const PaymentMethodsScreen: React.FC = () => {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => {
-          setDeletingId(id);
-          setLoading(true);
-          setTimeout(() => {
+        onPress: async () => {
+          try {
+            setDeletingId(id);
+            await deletePaymentMethodAPI(id);
             setPaymentMethods((methods) => methods.filter((method) => method.id !== id));
-            setLoading(false);
-            setDeletingId(null);
             Alert.alert('Success', 'Payment method deleted successfully');
-          }, 1000);
+          } catch (error) {
+            console.error('Error deleting payment method:', error);
+            Alert.alert('Error', 'Failed to delete payment method');
+          } finally {
+            setDeletingId(null);
+          }
         }
       }
     ]);
   };
 
-  const handleAddCardSuccess = (newCard: PaymentMethod) => {
-    setPaymentMethods((methods) => [...methods, newCard]);
-    setShowAddCardModal(false);
-    Alert.alert('Success', 'Card added successfully');
+  const handleAddCardSuccess = async (newCard: PaymentMethod) => {
+    try {
+      // Refresh the payment methods list to get updated data from server
+      const methods = await fetchPaymentMethods();
+      setPaymentMethods(methods);
+      setShowAddCardModal(false);
+      Alert.alert('Success', 'Card added successfully');
+    } catch (error) {
+      // Fallback to local update if refresh fails
+      setPaymentMethods((methods) => [...methods, newCard]);
+      setShowAddCardModal(false);
+      Alert.alert('Success', 'Card added successfully');
+    }
   };
 
-  const handleAddUpiSuccess = (newUpi: PaymentMethod) => {
-    setPaymentMethods((methods) => [...methods, newUpi]);
-    setShowAddUpiModal(false);
-    Alert.alert('Success', 'UPI ID added successfully');
+  const handleAddUpiSuccess = async (newUpi: PaymentMethod) => {
+    try {
+      // Refresh the payment methods list to get updated data from server
+      const methods = await fetchPaymentMethods();
+      setPaymentMethods(methods);
+      setShowAddUpiModal(false);
+      Alert.alert('Success', 'UPI ID added successfully');
+    } catch (error) {
+      // Fallback to local update if refresh fails
+      setPaymentMethods((methods) => [...methods, newUpi]);
+      setShowAddUpiModal(false);
+      Alert.alert('Success', 'UPI ID added successfully');
+    }
   };
 
   const renderPaymentMethodItem = ({ item }: { item: PaymentMethod }) => (

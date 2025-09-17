@@ -296,12 +296,9 @@ export interface CreateBookingRequest {
 
 export interface CreateVehicleRequest {
   type: 'car' | 'motorcycle' | 'truck' | 'van';
-  make: string;
+  brand: string;
   model: string;
-  year: number;
-  color: string;
-  licensePlate: string;
-  fuelType: 'petrol' | 'diesel' | 'electric' | 'hybrid';
+ 
 }
 
 export interface SearchParams {

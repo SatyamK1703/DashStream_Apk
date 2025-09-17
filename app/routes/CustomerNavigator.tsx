@@ -27,6 +27,9 @@ import VehicleListScreen from '~/screens/customer/VehicleListScreen';
 import AddressListScreen from '~/screens/customer/AddressListScreen';
 import ReferAndEarnScreen from '~/screens/customer/ReferAndEarnScreen';
 import PrivacyPolicyScreen from '~/screens/customer/PrivacyPolicyScreen';
+import AddVehicleScreen from '~/screens/customer/AddVehicleScreen';
+import AddAddressScreen from '~/screens/customer/AddAddressScreen';
+import PaymentMethodsScreen from '~/screens/customer/PaymentMethodsScreen';
 
 // Define the customer stack param list
 export type CustomerStackParamList = {
@@ -153,10 +156,10 @@ const CustomerNavigator = () => {
       <Stack.Screen name="Support" component={SupportScreen} />
       <Stack.Screen name="FAQ" component={FAQScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
-      <Stack.Screen name="AddAddress" component={require('../../src/screens/customer/AddAddressScreen').default} />
-      <Stack.Screen name="AddVehicle" component={require('../../src/screens/customer/AddVehicleScreen').default} />
-      <Stack.Screen name="Membership" component={require('../../src/screens/customer/MembershipScreen').default} />
-      <Stack.Screen name="PaymentMethods" component={require('../../src/screens/customer/PaymentMethodsScreen').default} />
+      <Stack.Screen name="AddAddress" component={AddAddressScreen} />
+      <Stack.Screen name="AddVehicle" component={AddVehicleScreen} />
+      <Stack.Screen name="Membership" component={MembershipScreen} />
+      <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
       <Stack.Screen name="AboutUs" component={AboutUsScreen}/>
       <Stack.Screen name="LocationPicker" component={LocationPickerScreen} />
       <Stack.Screen name="AllServices" component={AllServicesScreen} />

@@ -146,10 +146,10 @@ const ProfileScreen = () => {
       onPress: () => navigation.navigate('VehicleList')
     },
     {
-      id:'History',
-      title:'Order History',
-      icon:'time-outline',
-      onPress:()=> navigation.navigate('OrderHistory')
+      id: 'history',
+      title: 'Order History',
+      icon: 'time-outline',
+      onPress: () => navigation.navigate('OrderHistory')
     },
     {
       id: 'payments',

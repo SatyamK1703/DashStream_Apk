@@ -102,7 +102,7 @@ export const ENDPOINTS = {
 
   // Vehicles
   VEHICLES: {
-    MY_VEHICLES: '/vehicles/my-vehicles',
+    MY_VEHICLES: '/vehicles',
     CREATE: '/vehicles',
     UPDATE: (id: string) => `/vehicles/${id}`,
     DELETE: (id: string) => `/vehicles/${id}`,

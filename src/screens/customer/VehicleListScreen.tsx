@@ -174,10 +174,18 @@ const VehicleListScreen = () => {
       <View style={styles.vehicleActions}>
         <TouchableOpacity 
           style={styles.actionButton}
-          onPress={() => navigation.navigate('AddVehicle', { 
-            vehicleId: item.id, 
-            vehicleData: item 
-          })}
+          onPress={() => {
+            console.log('✏️ Navigating to edit vehicle:', item.id);
+            try {
+              navigation.navigate('AddVehicle', { 
+                vehicleId: item.id, 
+                vehicleData: item 
+              });
+            } catch (error) {
+              console.error('Navigation error for edit:', error);
+              Alert.alert('Error', 'Unable to open Edit Vehicle screen');
+            }
+          }}
         >
           <Ionicons name="pencil" size={20} color="#4F46E5" />
         </TouchableOpacity>
@@ -200,7 +208,15 @@ const VehicleListScreen = () => {
       </Text>
       <TouchableOpacity 
         style={styles.addFirstVehicleButton}
-        onPress={() => navigation.navigate('AddVehicle')}
+        onPress={() => {
+          console.log('🚗 Navigating to AddVehicle screen from empty state...');
+          try {
+            navigation.navigate('AddVehicle');
+          } catch (error) {
+            console.error('Navigation error from empty state:', error);
+            Alert.alert('Error', 'Unable to open Add Vehicle screen');
+          }
+        }}
       >
         <Text style={styles.addFirstVehicleText}>Add Your First Vehicle</Text>
       </TouchableOpacity>
@@ -209,6 +225,7 @@ const VehicleListScreen = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['right', 'left', 'top']}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -219,49 +236,21 @@ const VehicleListScreen = () => {
         <Text style={styles.headerTitle}>My Vehicles</Text>
         <TouchableOpacity 
           style={styles.addButton}
-          onPress={() => navigation.navigate('AddVehicle')}
+          onPress={() => {
+            console.log('🚗 Navigating to AddVehicle screen...');
+            try {
+              navigation.navigate('AddVehicle');
+            } catch (error) {
+              console.error('Navigation error:', error);
+              Alert.alert('Error', 'Unable to open Add Vehicle screen');
+            }
+          }}
         >
           <Ionicons name="add" size={24} color="#4F46E5" />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search vehicles..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color="#6B7280" />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.filterContainer}>
-        <Text style={styles.filterLabel}>Filter by:</Text>
-        <View style={styles.filterOptions}>
-          {(['all', 'car', 'motorcycle', 'bicycle'] as FilterOption[]).map(option => (
-            <TouchableOpacity
-              key={option}
-              style={[styles.filterOption, filter === option && styles.filterOptionSelected]}
-              onPress={() => setFilter(option)}
-            >
-              <Text style={[
-                styles.filterOptionText,
-                filter === option && styles.filterOptionTextSelected
-              ]}>
-                {option === 'all' ? 'All' : option.charAt(0).toUpperCase() + option.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
+      {/* Content */}
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#4F46E5" />
@@ -273,6 +262,48 @@ const VehicleListScreen = () => {
           renderItem={renderVehicleItem}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
+          ListHeaderComponent={
+            <>
+              {/* Search Container */}
+              <View style={styles.searchContainer}>
+                <View style={styles.searchInputContainer}>
+                  <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search vehicles..."
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                      <Ionicons name="close-circle" size={20} color="#6B7280" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+
+              {/* Filter Container */}
+              <View style={styles.filterContainer}>
+                <Text style={styles.filterLabel}>Filter by:</Text>
+                <View style={styles.filterOptions}>
+                  {(['all', 'car', 'motorcycle', 'bicycle'] as FilterOption[]).map(option => (
+                    <TouchableOpacity
+                      key={option}
+                      style={[styles.filterOption, filter === option && styles.filterOptionSelected]}
+                      onPress={() => setFilter(option)}
+                    >
+                      <Text style={[
+                        styles.filterOptionText,
+                        filter === option && styles.filterOptionTextSelected
+                      ]}>
+                        {option === 'all' ? 'All' : option.charAt(0).toUpperCase() + option.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </>
+          }
           ListEmptyComponent={renderEmptyState}
           refreshControl={
             <RefreshControl
