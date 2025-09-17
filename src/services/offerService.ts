@@ -82,34 +82,35 @@ class OfferService {
     expiringSoon: Offer[];
   }>> {
     try {
-      const res = await httpClient.get('/offers/personalized');
+      const res = await httpClient.get('/offers');
+      // Normalize various possible server shapes into the expected object
+      const payload = (res && (res.data ?? res)) || {};
 
-      // Defensive checks: some backends may return HTML/strings on error pages.
-      const isJsonLike = res && typeof res === 'object' && typeof res.data === 'object';
+      const recommended = Array.isArray(payload.recommended)
+        ? payload.recommended
+        : Array.isArray(payload.recommendations)
+        ? payload.recommendations
+        : Array.isArray(payload.items)
+        ? payload.items
+        : [];
 
-      if (!isJsonLike) {
-        if (__DEV__) {
-          console.warn('Personalized offers returned unexpected shape:', typeof res, res);
-        }
-        return {
-          success: true,
-          status: 'success',
-          message: 'Personalized offers temporarily unavailable',
-          data: { recommended: [], trending: [], expiringSoon: [] },
-        } as ApiResponse<any>;
-      }
+      const trending = Array.isArray(payload.trending)
+        ? payload.trending
+        : Array.isArray(payload.popular)
+        ? payload.popular
+        : [];
 
-      // Ensure expected keys exist
-      const payload = res.data ?? {};
-      const recommended = Array.isArray(payload.recommended) ? payload.recommended : [];
-      const trending = Array.isArray(payload.trending) ? payload.trending : [];
-      const expiringSoon = Array.isArray(payload.expiringSoon) ? payload.expiringSoon : [];
+      const expiringSoon = Array.isArray(payload.expiringSoon)
+        ? payload.expiringSoon
+        : Array.isArray(payload.expiring)
+        ? payload.expiring
+        : [];
 
       return {
         success: true,
         status: 'success',
         message: res.message || 'Personalized offers retrieved',
-        data: { recommended, trending, expiringSoon },
+        data: res,
       } as ApiResponse<any>;
     } catch (error: any) {
       console.error('Get personalized offers error:', error);
@@ -118,7 +119,7 @@ class OfferService {
         success: true,
         status: 'success',
         message: 'Personalized offers temporarily unavailable',
-        data: { recommended: [], trending: [], expiringSoon: [] },
+        data: error.response?.status === 403 
       } as ApiResponse<any>;
     }
   }

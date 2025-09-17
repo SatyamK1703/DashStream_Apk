@@ -114,7 +114,7 @@ export const API_ENDPOINTS = {
     DETAILS: (id: string) => `/offers/${id}`,
     STATS: (id: string) => `/offers/${id}/stats`,
     APPLY: '/offers/apply',
-    PERSONALIZED: '/offers/personalized',
+    PERSONALIZED: '/offers',
     USAGE_HISTORY: '/offers/usage-history',
   },
 

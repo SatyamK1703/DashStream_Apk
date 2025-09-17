@@ -48,6 +48,7 @@ const HomeScreen = () => {
     loading: personalizedLoading,
     execute: fetchPersonalizedOffers,
   } = usePersonalizedOffers();
+  console.log("\n\n\n\n\n\n\n\npersonalizedOffersData",personalizedOffersData,"\n\n\n\n\n");
 
   // Track loading state for refresh control
   const isRefreshing = servicesLoading || offersLoading || personalizedLoading;
@@ -86,8 +87,35 @@ const HomeScreen = () => {
 
   // Prepare data for components
   const offersToShow = activeOffersData || [];
+  // Prefer personalized recommended > trending, then fallback to active offers
+  const personalized = (personalizedOffersData ?? {}) as any;
+  const personalizedArray = Array.isArray(personalized)
+    ? (personalized as any[])
+    : Array.isArray(personalized.offers)
+    ? (personalized.recommended as any[])
+    : Array.isArray(personalized.trending)
+    ? (personalized.trending as any[])
+    : [];
+
+    console.log("personalizedArray",personalized);
+
+  const mapOfferImage = (offer: any) => {
+    // OfferCarousel expects `item.image` to be a source for Image.
+    const img = offer?.image || offer?.imageUrl || offer?.thumbnail;
+    const imageSource = typeof img === 'string' && img.length > 0 ? { uri: img } : img || require('../../../assets/1.png');
+    return { ...offer, image: imageSource };
+  };
+
+  const carouselOffers = (Array.isArray(personalizedArray) && personalizedArray.length > 0
+    ? personalizedArray
+    : offersToShow
+  ).map(mapOfferImage);
   // const servicesToShow = popularServicesData?.services || [];
-  const servicesToShow = Array.isArray(popularServicesData) ? popularServicesData : popularServicesData?.services || [];
+  const servicesToShow = Array.isArray(popularServicesData)
+    ? popularServicesData
+    : Array.isArray((popularServicesData as any)?.services)
+    ? (popularServicesData as any).services
+    : [];
 
   return (
     <View style={styles.container}>
@@ -107,7 +135,7 @@ const HomeScreen = () => {
       >
         {/* Show offers carousel with API data */}
         <OffersCarousel
-          offers={offersToShow}
+          offers={carouselOffers}
           currentIndex={currentOfferIndex}
           setCurrentIndex={setCurrentOfferIndex}
           loading={offersLoading}
