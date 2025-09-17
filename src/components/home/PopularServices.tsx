@@ -24,7 +24,7 @@ const PopularServices = ({ services }: any) => {
 
   // ✅ Safety check for services data
   const safeServices = services && Array.isArray(services) ? services : [];
-  
+
   // Don't render if no services
   if (safeServices.length === 0) {
     return null; // or return a loading/empty state component
@@ -45,33 +45,37 @@ const PopularServices = ({ services }: any) => {
         </TouchableOpacity>
       </View>
 
-      {/* Services Grid without FlatList to avoid nested VirtualizedList in ScrollView */}
+      {/* Services Grid (2 columns) */}
       <View>
-        {/* ✅ FIXED: Use safeServices to prevent errors */}
-        {safeServices
-          .slice(0, 6)
-          .reduce((rows: any[], item: any, index: number) => {
-            if (index % 3 === 0) rows.push([]);
+        {safeServices.slice(0, 6).reduce((rows: any[], item: any, index: number) => {
+            if (index % 2 === 0) rows.push([]);
             rows[rows.length - 1].push(item);
             return rows;
           }, [])
           .map((row: any[], rowIndex: number) => (
-            <View key={rowIndex} style={styles.row}>
-              {row.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.item}
-                  onPress={() => handlePress(item)}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.iconContainer}>
-                    <Image source={item.image} style={styles.icon} resizeMode="contain" />
-                  </View>
-                  <Text style={styles.label} numberOfLines={2}>
-                    {item.title}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <View key={rowIndex} style={styles.rowTwoCol}>
+              {row.map((item: any, colIndex: number) => {
+                // Normalize image source: accept string urls or local sources
+                let imageSrc: any = item.image || item.imageUrl || item.thumbnail;
+                if (typeof imageSrc === 'string' && imageSrc.length > 0) imageSrc = { uri: imageSrc };
+                if (!imageSrc) imageSrc = require('../../../assets/1.png');
+
+                return (
+                  <TouchableOpacity
+                    key={item._id || item.id || `${rowIndex}-${colIndex}`}
+                    style={styles.itemTwoCol}
+                    onPress={() => handlePress(item)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.iconContainer}>
+                      <Image source={imageSrc} style={styles.icon} resizeMode="cover" />
+                    </View>
+                    <Text style={styles.label} numberOfLines={2}>
+                      {item.title || item.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           ))}
       </View>
@@ -120,11 +124,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 8,
   },
+  rowTwoCol: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
   item: {
     width: ITEM_WIDTH,
     alignItems: 'center',
     marginBottom: 16,
     padding: 8,
+    borderRadius: 12,
+    backgroundColor: '#f9fafb',
+  },
+  itemTwoCol: {
+    width: (width - 48) / 2,
+    alignItems: 'center',
+    marginBottom: 8,
+    padding: 12,
     borderRadius: 12,
     backgroundColor: '#f9fafb',
   },
@@ -138,8 +155,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   icon: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
   },
   label: {
     fontSize: 13,

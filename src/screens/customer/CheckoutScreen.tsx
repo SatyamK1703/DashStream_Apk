@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCart } from '../../context/CartContext';
+import { useCreateBooking } from '../../hooks/useBookings';
+import { useCreatePaymentOrder, usePaymentMethods } from '../../hooks/usePayments';
+import { ENDPOINTS } from '../../config/env';
 
 type CheckoutScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -27,49 +31,29 @@ interface PaymentMethod {
   icon: string;
 }
 
-// Mock data
-const savedAddresses: AddressOption[] = [
-  {
-    id: '1',
-    title: 'Home',
-    address: '123 Main Street, Apartment 4B, Mumbai, 400001',
-    isDefault: true,
-  },
-  {
-    id: '2',
-    title: 'Office',
-    address: 'Tech Park, Building C, Floor 5, Bengaluru, 560001',
-    isDefault: false,
-  },
-];
 
-const timeSlots: TimeSlot[] = [
-  { id: '1', time: '09:00 AM', available: true },
-  { id: '2', time: '10:00 AM', available: true },
-  { id: '3', time: '11:00 AM', available: false },
-  { id: '4', time: '12:00 PM', available: true },
-  { id: '5', time: '01:00 PM', available: true },
-  { id: '6', time: '02:00 PM', available: false },
-  { id: '7', time: '03:00 PM', available: true },
-  { id: '8', time: '04:00 PM', available: true },
-  { id: '9', time: '05:00 PM', available: true },
-];
-
-const paymentMethods: PaymentMethod[] = [
-  { id: '1', name: 'Credit/Debit Card', icon: 'card-outline' },
-  { id: '2', name: 'UPI', icon: 'wallet-outline' },
-  { id: '3', name: 'Cash on Delivery', icon: 'cash-outline' },
-];
 
 const CheckoutScreen = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
-  const [selectedAddress, setSelectedAddress] = useState(savedAddresses[0].id);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(paymentMethods[0].id);
   const [isLoading, setIsLoading] = useState(false);
   const [specialInstructions, setSpecialInstructions] = useState('');
-  
   const navigation = useNavigation<CheckoutScreenNavigationProp>();
+
+  const { items: cartItems, clear } = useCart();
+  const createBookingApi = useCreateBooking();
+  const createOrderApi = useCreatePaymentOrder();
+
+  // Derive address from user's saved addresses via profile (not implemented here).
+  // For now, use a simple fallback address object.
+  const [addresses, setAddresses] = useState<AddressOption[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+  useEffect(() => {
+    // TODO: replace with real user addresses API; keep no mock data long-term
+    const fallback = [{ id: 'default', title: 'Home', address: 'Default Address', isDefault: true }];
+    setAddresses(fallback);
+    setSelectedAddress(fallback[0].id);
+  }, []);
 
   // Generate dates for the next 7 days
   const dates = Array.from({ length: 7 }, (_, i) => {
@@ -86,25 +70,74 @@ const CheckoutScreen = () => {
     setSelectedDate(date);
     setSelectedTimeSlot(null); // Reset time slot when date changes
   };
+  // generate simple hourly time slots
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  useEffect(() => {
+    const slots: TimeSlot[] = [];
+    for (let h = 9; h <= 17; h++) {
+      const label = `${h}:00 ${h < 12 ? 'AM' : h === 12 ? 'PM' : 'PM'}`;
+      slots.push({ id: `${h}`, time: label, available: true });
+    }
+    setTimeSlots(slots);
+  }, []);
 
-  const handlePlaceOrder = () => {
+  // Payment methods from API
+  const paymentMethodsApi = usePaymentMethods();
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  useEffect(() => {
+    if (paymentMethodsApi.data && Array.isArray(paymentMethodsApi.data)) {
+      const methods = paymentMethodsApi.data as any[];
+      if (methods.length > 0) setSelectedPaymentMethod(methods[0].id);
+    }
+  }, [paymentMethodsApi.data]);
+  const handlePlaceOrder = async () => {
     if (!selectedTimeSlot) {
       Alert.alert('Select Time', 'Please select a time slot for your service.');
       return;
     }
 
+    if (!cartItems || cartItems.length === 0) {
+      Alert.alert('Empty Cart', 'Your cart is empty. Add services before placing an order.');
+      return;
+    }
+
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Create booking on backend
+      const bookingPayload = {
+        service: cartItems.map(i => i.id),
+        scheduledDate: selectedDate.toISOString(),
+        scheduledTime: selectedTimeSlot,
+        location: {
+          address: addresses.find(a => a.id === selectedAddress)?.address || 'Default Address',
+          name: addresses.find(a => a.id === selectedAddress)?.title || 'Home',
+          city: '',
+          pincode: ''
+        },
+        price: cartItems.reduce((s, it) => s + it.price * it.quantity, 0),
+        totalAmount: cartItems.reduce((s, it) => s + it.price * it.quantity, 0),
+        notes: specialInstructions,
+        additionalServices: []
+      };
+
+      const bookingRes = await createBookingApi.execute(bookingPayload);
+      const bookingId = bookingRes?.data?.booking?._id || bookingRes?.data?._id || bookingRes?.data?.bookingId;
+
+      // Create payment order (Razorpay)
+      const amount = bookingPayload.totalAmount;
+      const orderRes = await createOrderApi.execute({ bookingId, amount });
+
+      // Navigate to booking confirmation (only bookingId required by route)
+      navigation.navigate('BookingConfirmation', { bookingId });
+
+      // Optionally clear cart
+  clear && clear();
+    } catch (error: any) {
+      console.error('Place order error:', error);
+      Alert.alert('Error', error?.message || 'Failed to place order.');
+    } finally {
       setIsLoading(false);
-      navigation.navigate('BookingConfirmation', { 
-        bookingId: 'BK' + Math.floor(Math.random() * 10000000),
-        date: selectedDate,
-        timeSlot: timeSlots.find(slot => slot.id === selectedTimeSlot)?.time || '',
-        address: savedAddresses.find(addr => addr.id === selectedAddress)?.address || ''
-      });
-    }, 1500);
+    }
   };
 
   const handleAddNewAddress = () => {
@@ -177,13 +210,13 @@ const CheckoutScreen = () => {
               </TouchableOpacity>
             </View>
 
-            {savedAddresses.map((address) => {
+            {addresses.map((address) => {
               const isSelected = selectedAddress === address.id;
               return (
                 <TouchableOpacity
                   key={address.id}
                   style={[styles.addressBox, isSelected && styles.addressSelected]}
-                  onPress={() => setSelectedAddress(address.id)}
+                    onPress={() => setSelectedAddress(address.id)}
                 >
                   <View style={styles.addressTopRow}>
                     <Text style={styles.addressTitle}>{address.title}</Text>
@@ -214,30 +247,50 @@ const CheckoutScreen = () => {
           {/* Payment Method */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Payment Method</Text>
-            {paymentMethods.map((method) => {
-              const isSelected = selectedPaymentMethod === method.id;
-              return (
-                <TouchableOpacity
-                  key={method.id}
-                  style={[styles.paymentMethod, isSelected && styles.addressSelected]}
-                  onPress={() => setSelectedPaymentMethod(method.id)}
-                >
-                  <View style={styles.paymentIconBox}>
-                    <Ionicons name={method.icon} size={20} color="#2563eb" />
-                  </View>
-                  <Text style={styles.addressTitle}>{method.name}</Text>
-                </TouchableOpacity>
-              );
-            })}
+            {paymentMethodsApi.data && Array.isArray(paymentMethodsApi.data) ? (
+              (paymentMethodsApi.data as any[]).map((method) => {
+                const isSelected = selectedPaymentMethod === method.id;
+                return (
+                  <TouchableOpacity
+                    key={method.id}
+                    style={[styles.paymentMethod, isSelected && styles.addressSelected]}
+                    onPress={() => setSelectedPaymentMethod(method.id)}
+                  >
+                    <View style={styles.paymentIconBox}>
+                      <Ionicons name={method.icon || 'card-outline'} size={20} color="#2563eb" />
+                    </View>
+                    <Text style={styles.addressTitle}>{method.name}</Text>
+                  </TouchableOpacity>
+                );
+              })
+            ) : (
+              <Text style={styles.grayText}>Loading payment methods...</Text>
+            )}
           </View>
 
           {/* Order Summary */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Order Summary</Text>
-            <View style={styles.summaryRow}><Text style={styles.grayText}>Subtotal</Text><Text style={styles.summaryValue}>₹1,498</Text></View>
-            <View style={styles.summaryRow}><Text style={styles.grayText}>Delivery Fee</Text><Text style={styles.summaryValue}>₹49</Text></View>
-            <View style={styles.summaryRow}><Text style={styles.greenText}>Discount</Text><Text style={styles.greenText}>-₹150</Text></View>
-            <View style={styles.totalRow}><Text style={styles.totalText}>Total</Text><Text style={styles.totalPrimary}>₹1,397</Text></View>
+            {cartItems && (
+              <>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.grayText}>Subtotal</Text>
+                  <Text style={styles.summaryValue}>₹{cartItems.reduce((s, it) => s + it.price * it.quantity, 0)}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.grayText}>Delivery Fee</Text>
+                  <Text style={styles.summaryValue}>₹49</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.greenText}>Discount</Text>
+                  <Text style={styles.greenText}>-₹0</Text>
+                </View>
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalText}>Total</Text>
+                  <Text style={styles.totalPrimary}>₹{cartItems.reduce((s, it) => s + it.price * it.quantity, 0) + 49}</Text>
+                </View>
+              </>
+            )}
           </View>
         </ScrollView>
 
