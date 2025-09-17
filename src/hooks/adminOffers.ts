@@ -11,8 +11,10 @@ export const useAdminOffers = () => {
   const fetchOffers = async () => {
     try {
       setLoading(true);
-      const { data } = await httpClient.get(ENDPOINTS.OFFERS.LIST);
-      setData(data || []);
+      const resp = await httpClient.get(ENDPOINTS.OFFERS.ALL);
+      // Backend returns { status, results, totalCount, offers, ... }
+      const items = (resp as any)?.offers || (resp as any)?.data?.offers || (resp as any)?.data || [];
+      setData(Array.isArray(items) ? items : []);
     } catch (err) {
       setError(err);
       console.error('Fetch offers error:', err);
@@ -33,8 +35,9 @@ export const useCreateOffer = () => {
   const execute = async (offerData: any) => {
     setLoading(true);
     try {
-      const { data } = await httpClient.post(ENDPOINTS.OFFERS.CREATE, offerData);
-      return data;
+      const resp = await httpClient.post(ENDPOINTS.OFFERS.ALL, offerData);
+      // Backend returns { status, data: { offer } }
+      return (resp as any)?.data?.offer || (resp as any)?.offer || resp;
     } finally {
       setLoading(false);
     }
@@ -47,8 +50,9 @@ export const useUpdateOffer = () => {
   const execute = async (id: string, offerData: any) => {
     setLoading(true);
     try {
-      const { data } = await httpClient.put(`${ENDPOINTS.OFFERS.UPDATE}/${id}`, offerData);
-      return data;
+      const resp = await httpClient.patch(ENDPOINTS.OFFERS.BY_ID(id), offerData);
+      // Backend returns { status, data: { offer } }
+      return (resp as any)?.data?.offer || (resp as any)?.offer || resp;
     } finally {
       setLoading(false);
     }
@@ -61,7 +65,7 @@ export const useDeleteOffer = () => {
   const execute = async (id: string) => {
     setLoading(true);
     try {
-      await httpClient.delete(`${ENDPOINTS.OFFERS.DELETE}/${id}`);
+      await httpClient.delete(ENDPOINTS.OFFERS.BY_ID(id));
     } finally {
       setLoading(false);
     }
@@ -74,8 +78,12 @@ export const useToggleOfferStatus = () => {
   const execute = async (id: string, isActive: boolean) => {
     setLoading(true);
     try {
-      const { data } = await httpClient.patch(`${ENDPOINTS.OFFERS.TOGGLE}/${id}`, { isActive });
-      return data;
+      // Backend has separate endpoints for activate/deactivate
+      const url = isActive
+        ? `${ENDPOINTS.OFFERS.BY_ID(id)}/activate`
+        : `${ENDPOINTS.OFFERS.BY_ID(id)}/deactivate`;
+      const resp = await httpClient.patch(url);
+      return (resp as any)?.data?.offer || (resp as any)?.offer || resp;
     } finally {
       setLoading(false);
     }

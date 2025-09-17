@@ -52,7 +52,7 @@ interface Offer {
 }
 
 interface OfferFormData {
-  id?: string;
+  _id?: string;
   title: string;
   description: string;
   discount: string;
@@ -97,6 +97,7 @@ const ManageOffersScreen = () => {
   const { execute: updateOffer } = useUpdateOffer();
   const { execute: deleteOffer } = useDeleteOffer();
   const { execute: toggleStatus } = useToggleOfferStatus();
+  const [modalKey, setModalKey] = useState(0);
 
   useEffect(() => {
     filterAndSortOffers();
@@ -160,10 +161,7 @@ const ManageOffersScreen = () => {
       const offer = offers.find((o) => o._id === offerId);
       if (!offer) return;
 
-      await toggleStatus({
-        offerId,
-        isActive: !offer.isActive,
-      });
+      await toggleStatus(offerId, !offer.isActive);
 
       await fetchOffers();
     } catch (error) {
@@ -191,7 +189,7 @@ const ManageOffersScreen = () => {
   const handleEditOffer = (offer: Offer) => {
     setIsEditing(true);
     setFormData({
-      id: offer._id,
+      _id: offer._id,
       title: offer.title,
       description: offer.description,
       discount: offer.discount.toString(),
@@ -202,6 +200,7 @@ const ManageOffersScreen = () => {
       offerCode: offer.offerCode,
       usageLimit: offer.usageLimit?.toString() || '',
     });
+    setModalKey((k) => k + 1); // force modal to re-mount with new formData
     setShowAddEditModal(true);
   };
 
@@ -294,6 +293,7 @@ const ManageOffersScreen = () => {
       )}
 
       <AddEditOfferModal
+        key={modalKey}
         visible={showAddEditModal}
         isEditing={isEditing}
         formData={formData}

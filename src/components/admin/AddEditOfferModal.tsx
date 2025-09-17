@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import {
   Modal,
   View,
@@ -18,6 +18,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Ionicons } from '@expo/vector-icons';
+
 
 import { useCreateOffer, useUpdateOffer } from '../../hooks/adminOffers';
 import httpClient from '../../services/httpClient';
@@ -43,23 +44,79 @@ const AddEditOfferModal: React.FC<AddEditOfferModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  // const [offerForm, setOfferForm] = useState({
+  //   title: formData?.title || '',
+  //   description: formData?.description || '',
+  //   discount: formData?.discount?.toString() || '',
+  //   discountType: formData?.discountType || 'percentage',
+  //   validFrom: formData?.validFrom ? new Date(formData.validFrom) : new Date(),
+  //   validUntil: formData?.validUntil ? new Date(formData.validUntil) : new Date(),
+  //   offerCode: formData?.offerCode || '',
+  //   minOrderAmount: formData?.minOrderAmount?.toString() || '0',
+  //   maxDiscountAmount: formData?.maxDiscountAmount?.toString() || '',
+  //   isPromo: formData?.isPromo || false,
+  //   isActive: formData?.isActive ?? true,
+  //   terms: formData?.terms || '',
+  //   image: formData?.image
+  //     ? { localUri: formData.image, remoteUrl: formData.image, isUploading: false }
+  //     : { localUri: null, isUploading: false },
+  // });
   const [offerForm, setOfferForm] = useState({
-    title: formData?.title || '',
-    description: formData?.description || '',
-    discount: formData?.discount?.toString() || '',
-    discountType: formData?.discountType || 'percentage',
-    validFrom: formData?.validFrom ? new Date(formData.validFrom) : new Date(),
-    validUntil: formData?.validUntil ? new Date(formData.validUntil) : new Date(),
-    offerCode: formData?.offerCode || '',
-    minOrderAmount: formData?.minOrderAmount?.toString() || '0',
-    maxDiscountAmount: formData?.maxDiscountAmount?.toString() || '',
-    isPromo: formData?.isPromo || false,
-    isActive: formData?.isActive ?? true,
-    terms: formData?.terms || '',
-    image: formData?.image
-      ? { localUri: formData.image, remoteUrl: formData.image, isUploading: false }
-      : { localUri: null, isUploading: false },
-  });
+  title: '',
+  description: '',
+  discount: '',
+  discountType: 'percentage',
+  validFrom: new Date(),
+  validUntil: new Date(),
+  offerCode: '',
+  minOrderAmount: '0',
+  maxDiscountAmount: '',
+  isPromo: false,
+  isActive: true,
+  terms: '',
+  image: { localUri: null, isUploading: false },
+});
+
+useEffect(() => {
+  if (visible) {
+    if (isEditing && formData) {
+      setOfferForm({
+        title: formData?.title || '',
+        description: formData?.description || '',
+        discount: formData?.discount?.toString() || '',
+        discountType: formData?.discountType || 'percentage',
+        validFrom: formData?.validFrom ? new Date(formData.validFrom) : new Date(),
+        validUntil: formData?.validUntil ? new Date(formData.validUntil) : new Date(),
+        offerCode: formData?.offerCode || '',
+        minOrderAmount: formData?.minOrderAmount?.toString() || '0',
+        maxDiscountAmount: formData?.maxDiscountAmount?.toString() || '',
+        isPromo: formData?.isPromo || false,
+        isActive: formData?.isActive ?? true,
+        terms: formData?.terms || '',
+        image: formData?.image
+          ? { localUri: formData.image, remoteUrl: formData.image, isUploading: false }
+          : { localUri: null, isUploading: false },
+      });
+    } else {
+      // reset to blank when adding new
+      setOfferForm({
+        title: '',
+        description: '',
+        discount: '',
+        discountType: 'percentage',
+        validFrom: new Date(),
+        validUntil: new Date(),
+        offerCode: '',
+        minOrderAmount: '0',
+        maxDiscountAmount: '',
+        isPromo: false,
+        isActive: true,
+        terms: '',
+        image: { localUri: null, isUploading: false },
+      });
+    }
+  }
+}, [visible, isEditing, formData]);
 
   const { execute: createOffer, loading: createLoading } = useCreateOffer();
   const { execute: updateOffer, loading: updateLoading } = useUpdateOffer();

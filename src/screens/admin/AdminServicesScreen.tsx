@@ -104,7 +104,6 @@ const AdminServicesScreen = () => {
     refresh: fetchServices,
     loadMore
   } = useAdminServices();
- console.log("services    \n\n", services,"\n\n");
   useEffect(() => {
   
   }, [services, loading, error]);
