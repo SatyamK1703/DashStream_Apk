@@ -26,6 +26,18 @@ interface TimeSlot {
 
 // ...existing types
 
+// Debug utility for Razorpay module structure
+const debugRazorpayModule = (mod: any) => {
+  console.log('=== Razorpay Module Debug ===');
+  console.log('Module:', mod);
+  console.log('Module keys:', Object.keys(mod || {}));
+  console.log('Has default:', !!mod?.default);
+  console.log('Default keys:', mod?.default ? Object.keys(mod.default) : 'N/A');
+  console.log('Direct open function:', typeof mod?.open);
+  console.log('Default open function:', typeof mod?.default?.open);
+  console.log('RazorpayCheckout property:', typeof mod?.RazorpayCheckout);
+  console.log('=============================');
+};
 
 
 const CheckoutScreen = () => {
@@ -40,15 +52,31 @@ const CheckoutScreen = () => {
   const createOrderApi = useCreatePaymentOrder();
   const verifyPaymentApi = useVerifyPayment();
 
-  // Derive address from user's saved addresses via profile (not implemented here).
-  // For now, use a simple fallback address object.
+  // Address management
   const [addresses, setAddresses] = useState<AddressOption[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+  const [addressesLoading, setAddressesLoading] = useState(true);
+  
   useEffect(() => {
-    // TODO: replace with real user addresses API; keep no mock data long-term
-    const fallback = [{ id: 'default', title: 'Home', address: 'Default Address', isDefault: true }];
-    setAddresses(fallback);
-    setSelectedAddress(fallback[0].id);
+    const loadAddresses = async () => {
+      try {
+        setAddressesLoading(true);
+        // TODO: Replace with actual API call to load user addresses
+        // const userAddresses = await userService.getAddresses();
+        
+        // For now, use fallback address
+        const fallback = [{ id: 'default', title: 'Home', address: 'Default Address', isDefault: true }];
+        setAddresses(fallback);
+        if (fallback.length > 0) setSelectedAddress(fallback[0].id);
+      } catch (error) {
+        console.error('Failed to load addresses:', error);
+        setAddresses([]);
+      } finally {
+        setAddressesLoading(false);
+      }
+    };
+    
+    loadAddresses();
   }, []);
 
   // Generate dates for the next 7 days
@@ -80,15 +108,94 @@ const CheckoutScreen = () => {
   // Payment methods from API
   const paymentMethodsApi = usePaymentMethods();
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  
+  // Load payment methods on component mount
   useEffect(() => {
+    console.log('Loading payment methods...');
+    paymentMethodsApi.execute();
+    
+    // Add timeout to show fallback methods if API takes too long
+    const timeout = setTimeout(() => {
+      if (paymentMethodsApi.loading && (!paymentMethodsApi.data || paymentMethodsApi.data.length === 0)) {
+        console.log('Payment methods API timeout, using fallback methods');
+        const fallbackMethods = [
+          {
+            id: 'razorpay',
+            name: 'Razorpay (All Methods)',
+            details: 'Cards, UPI, Wallets, Net Banking',
+            icon: 'card-outline',
+            type: 'razorpay',
+            isDefault: true
+          }
+        ];
+        
+        // Force update the API state
+        paymentMethodsApi.data = fallbackMethods;
+        paymentMethodsApi.loading = false;
+        setSelectedPaymentMethod(fallbackMethods[0].id);
+      }
+    }, 5000); // 5 second timeout
+    
+    return () => clearTimeout(timeout);
+  }, []);
+  
+  // Set default payment method when data loads
+  useEffect(() => {
+    console.log('Payment methods API response:', {
+      data: paymentMethodsApi.data,
+      loading: paymentMethodsApi.loading,
+      error: paymentMethodsApi.error
+    });
+    
     if (paymentMethodsApi.data && Array.isArray(paymentMethodsApi.data)) {
       const methods = paymentMethodsApi.data as any[];
-      if (methods.length > 0) setSelectedPaymentMethod(methods[0].id);
+      if (methods.length > 0 && !selectedPaymentMethod) {
+        setSelectedPaymentMethod(methods[0].id);
+      }
     }
-  }, [paymentMethodsApi.data]);
+    
+    // If API fails, add fallback payment methods for development
+    if (paymentMethodsApi.error && (!paymentMethodsApi.data || paymentMethodsApi.data.length === 0)) {
+      console.log('Using fallback payment methods due to API error');
+      const fallbackMethods = [
+        {
+          id: 'razorpay',
+          name: 'Razorpay (All Methods)',
+          details: 'Cards, UPI, Wallets, Net Banking',
+          icon: 'card-outline',
+          type: 'razorpay',
+          isDefault: true
+        },
+        {
+          id: 'upi',
+          name: 'UPI',
+          details: 'Pay using UPI',
+          icon: 'phone-portrait-outline',
+          type: 'upi',
+          isDefault: false
+        }
+      ];
+      
+      // Simulate API response structure
+      paymentMethodsApi.data = fallbackMethods;
+      if (!selectedPaymentMethod) {
+        setSelectedPaymentMethod(fallbackMethods[0].id);
+      }
+    }
+  }, [paymentMethodsApi.data, paymentMethodsApi.loading, paymentMethodsApi.error, selectedPaymentMethod]);
   const handlePlaceOrder = async () => {
     if (!selectedTimeSlot) {
       Alert.alert('Select Time', 'Please select a time slot for your service.');
+      return;
+    }
+
+    if (!selectedAddress) {
+      Alert.alert('Select Address', 'Please select a service address to continue.');
+      return;
+    }
+
+    if (!selectedPaymentMethod) {
+      Alert.alert('Select Payment Method', 'Please select a payment method to continue.');
       return;
     }
 
@@ -143,6 +250,11 @@ const CheckoutScreen = () => {
       console.log('💳 Extracted key:', key);
 
       // If possible, dynamically import Razorpay SDK and open native checkout
+      // TROUBLESHOOTING: If you get "Cannot read property 'open' of null" errors:
+      // 1. Ensure react-native-razorpay is properly installed: npm install react-native-razorpay
+      // 2. For Expo projects: Add to app.json plugins: ["react-native-razorpay"]
+      // 3. For bare React Native: run 'cd ios && pod install' (iOS) or rebuild (Android)
+      // 4. Clear Metro cache: npx react-native start --reset-cache
       if (!order || !key) {
         // Backend didn't return order/key as expected — proceed to confirmation and rely on server-side webhooks
         Alert.alert('Payment info missing', 'Could not start payment. Booking has been created and will be updated once payment is confirmed.');
@@ -155,12 +267,42 @@ const CheckoutScreen = () => {
           try {
             // dynamic import - will fail if the library isn't installed
             const mod = await import('react-native-razorpay');
-            RazorpayCheckout = mod && (mod.default || mod);
-          } catch {
-            RazorpayCheckout = null;
+            debugRazorpayModule(mod);
+            
+            // Try multiple ways to get the RazorpayCheckout
+            if (mod && typeof mod.default === 'object' && typeof mod.default.open === 'function') {
+              RazorpayCheckout = mod.default;
+            } else if (mod && typeof mod.open === 'function') {
+              RazorpayCheckout = mod;
+            } else if (mod && mod.RazorpayCheckout && typeof mod.RazorpayCheckout.open === 'function') {
+              RazorpayCheckout = mod.RazorpayCheckout;
+            } else if (mod && mod.default && typeof mod.default === 'function') {
+              // Some libraries export the main function as default
+              RazorpayCheckout = { open: mod.default };
+            } else {
+              console.warn('Razorpay module structure:', Object.keys(mod || {}));
+              RazorpayCheckout = null;
+            }
+          } catch (importError) {
+            console.error('Razorpay dynamic import error:', importError);
+            
+            // Fallback: try static import (this will only work if the library is properly linked)
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-var-requires
+              const RazorpayStatic = require('react-native-razorpay');
+              if (RazorpayStatic && typeof RazorpayStatic.open === 'function') {
+                RazorpayCheckout = RazorpayStatic;
+              } else if (RazorpayStatic && RazorpayStatic.default && typeof RazorpayStatic.default.open === 'function') {
+                RazorpayCheckout = RazorpayStatic.default;
+              }
+            } catch (staticImportError) {
+              console.error('Razorpay static import also failed:', staticImportError);
+            }
+            
+            RazorpayCheckout = RazorpayCheckout || null;
           }
 
-          if (RazorpayCheckout) {
+          if (RazorpayCheckout && typeof RazorpayCheckout.open === 'function') {
             const options = {
               description: 'Payment for booking ' + bookingId,
               currency: order.currency || 'INR',
@@ -176,7 +318,15 @@ const CheckoutScreen = () => {
               theme: { color: '#2563eb' }
             };
 
+            console.log('Opening Razorpay checkout with options:', options);
+            
+            // Final safety check before calling open
+            if (!RazorpayCheckout || typeof RazorpayCheckout.open !== 'function') {
+              throw new Error('Razorpay checkout function is not available');
+            }
+            
             const paymentResult = await RazorpayCheckout.open(options);
+            console.log('Razorpay payment result:', paymentResult);
 
             // paymentResult contains: razorpay_payment_id, razorpay_order_id, razorpay_signature
             const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = paymentResult;
@@ -219,7 +369,23 @@ const CheckoutScreen = () => {
           }
         } catch (err: any) {
           console.error('Razorpay checkout error:', err);
-          Alert.alert('Payment failed', err?.message || 'Payment was not completed.');
+          
+          // Handle specific Razorpay errors
+          let errorMessage = 'Payment was not completed.';
+          
+          if (err?.code === 'payment_cancelled') {
+            errorMessage = 'Payment was cancelled by user.';
+          } else if (err?.code === 'payment_failed') {
+            errorMessage = 'Payment failed. Please try again.';
+          } else if (err?.code === 'network_error') {
+            errorMessage = 'Network error. Please check your connection and try again.';
+          } else if (err?.message?.includes('Cannot read property \'open\' of null')) {
+            errorMessage = 'Payment system is not properly configured. Please try again or contact support.';
+          } else if (err?.message) {
+            errorMessage = err.message;
+          }
+          
+          Alert.alert('Payment Error', errorMessage);
         }
       }
       
@@ -232,7 +398,27 @@ const CheckoutScreen = () => {
   };
 
   const handleAddNewAddress = () => {
-    navigation.navigate('AddAddress')
+    try {
+      console.log('Add New Address button pressed');
+      console.log('Navigation object:', navigation);
+      console.log('Attempting to navigate to AddAddress screen');
+      navigation.navigate('AddAddress');
+      console.log('Navigation call completed');
+    } catch (error) {
+      console.error('Navigation error:', error);
+      Alert.alert('Navigation Error', 'Failed to navigate to Add Address screen');
+    }
+  };
+  
+  const handleAddPaymentMethod = () => {
+    try {
+      console.log('Add New Payment Method button pressed');
+      navigation.navigate('PaymentMethods');
+      console.log('Navigated to PaymentMethods screen');
+    } catch (error) {
+      console.error('Payment methods navigation error:', error);
+      Alert.alert('Navigation Error', 'Failed to navigate to Payment Methods screen');
+    }
   };
 
   return (
@@ -296,31 +482,46 @@ const CheckoutScreen = () => {
           <View style={styles.section}>
             <View style={styles.addressHeader}>
               <Text style={styles.sectionTitle}>Service Address</Text>
-              <TouchableOpacity onPress={handleAddNewAddress}>
+              <TouchableOpacity 
+                onPress={handleAddNewAddress}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.linkText}>+ Add New</Text>
               </TouchableOpacity>
             </View>
 
-            {addresses.map((address) => {
-              const isSelected = selectedAddress === address.id;
-              return (
-                <TouchableOpacity
-                  key={address.id}
-                  style={[styles.addressBox, isSelected && styles.addressSelected]}
+            {addressesLoading ? (
+              <Text style={styles.grayText}>Loading addresses...</Text>
+            ) : addresses.length > 0 ? (
+              addresses.map((address) => {
+                const isSelected = selectedAddress === address.id;
+                return (
+                  <TouchableOpacity
+                    key={address.id}
+                    style={[styles.addressBox, isSelected && styles.addressSelected]}
                     onPress={() => setSelectedAddress(address.id)}
-                >
-                  <View style={styles.addressTopRow}>
-                    <Text style={styles.addressTitle}>{address.title}</Text>
-                    {address.isDefault && (
-                      <View style={styles.defaultBadge}>
-                        <Text style={styles.defaultBadgeText}>Default</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.addressText}>{address.address}</Text>
+                  >
+                    <View style={styles.addressTopRow}>
+                      <Text style={styles.addressTitle}>{address.title}</Text>
+                      {address.isDefault && (
+                        <View style={styles.defaultBadge}>
+                          <Text style={styles.defaultBadgeText}>Default</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.addressText}>{address.address}</Text>
+                  </TouchableOpacity>
+                );
+              })
+            ) : (
+              <View style={styles.emptyPaymentContainer}>
+                <Text style={styles.grayText}>No saved addresses found</Text>
+                <TouchableOpacity onPress={handleAddNewAddress} style={styles.addPaymentButton}>
+                  <Text style={styles.addPaymentText}>Add Address</Text>
                 </TouchableOpacity>
-              );
-            })}
+              </View>
+            )}
           </View>
 
           {/* Special Instructions */}
@@ -337,8 +538,27 @@ const CheckoutScreen = () => {
 
           {/* Payment Method */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Payment Method</Text>
-            {paymentMethodsApi.data && Array.isArray(paymentMethodsApi.data) ? (
+            <View style={styles.addressHeader}>
+              <Text style={styles.sectionTitle}>Payment Method</Text>
+              <TouchableOpacity 
+                onPress={handleAddPaymentMethod}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.linkText}>+ Add New</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {paymentMethodsApi.loading ? (
+              <Text style={styles.grayText}>Loading payment methods...</Text>
+            ) : paymentMethodsApi.error ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>Failed to load payment methods</Text>
+                <TouchableOpacity onPress={() => paymentMethodsApi.execute()} style={styles.retryButton}>
+                  <Text style={styles.linkText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : paymentMethodsApi.data && Array.isArray(paymentMethodsApi.data) && paymentMethodsApi.data.length > 0 ? (
               (paymentMethodsApi.data as any[]).map((method) => {
                 const isSelected = selectedPaymentMethod === method.id;
                 return (
@@ -350,12 +570,21 @@ const CheckoutScreen = () => {
                     <View style={styles.paymentIconBox}>
                       <Ionicons name={method.icon || 'card-outline'} size={20} color="#2563eb" />
                     </View>
-                    <Text style={styles.addressTitle}>{method.name}</Text>
+                    <View style={styles.paymentMethodInfo}>
+                      <Text style={styles.addressTitle}>{method.name}</Text>
+                      {method.details && <Text style={styles.addressSubtitle}>{method.details}</Text>}
+                    </View>
+                    {method.isDefault && <Text style={styles.defaultBadge}>Default</Text>}
                   </TouchableOpacity>
                 );
               })
             ) : (
-              <Text style={styles.grayText}>Loading payment methods...</Text>
+              <View style={styles.emptyPaymentContainer}>
+                <Text style={styles.grayText}>No payment methods found</Text>
+                <TouchableOpacity onPress={handleAddPaymentMethod} style={styles.addPaymentButton}>
+                  <Text style={styles.addPaymentText}>Add Payment Method</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 
@@ -604,5 +833,46 @@ const styles = StyleSheet.create({
     color: '#fff', 
     fontWeight: '600', 
     fontSize: 16 
+  },
+  errorContainer: {
+    padding: 12,
+    backgroundColor: '#fef2f2',
+    borderRadius: 12,
+    marginBottom: 12
+  },
+  errorText: {
+    color: '#dc2626',
+    fontSize: 14,
+    marginBottom: 8
+  },
+  retryButton: {
+    alignSelf: 'flex-start'
+  },
+  paymentMethodInfo: {
+    flex: 1,
+    marginLeft: 8
+  },
+  addressSubtitle: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2
+  },
+  emptyPaymentContainer: {
+    padding: 16,
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    borderRadius: 12
+  },
+  addPaymentButton: {
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#2563eb',
+    borderRadius: 8
+  },
+  addPaymentText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14
   }
 });
