@@ -17,11 +17,16 @@ declare module 'react-native-razorpay' {
     };
   }
 
-  class Razorpay {
-    constructor(options?: any);
-    open(options?: RazorpayOptions): Promise<any>;
+  interface RazorpayResponse {
+    razorpay_payment_id: string;
+    razorpay_order_id: string;
+    razorpay_signature: string;
   }
 
-  const exported: any;
-  export default exported;
+  interface RazorpayCheckout {
+    open(options: RazorpayOptions): Promise<RazorpayResponse>;
+  }
+
+  const RazorpayCheckout: RazorpayCheckout;
+  export default RazorpayCheckout;
 }

@@ -117,14 +117,30 @@ const CheckoutScreen = () => {
       };
 
       const bookingRes = await createBookingApi.execute(bookingPayload);
-      const bookingId = bookingRes?.data?.booking?._id || bookingRes?.data?._id || bookingRes?.data?.bookingId;
+      const bookingId = bookingRes?.booking?._id || bookingRes?.data?.booking?._id || bookingRes?.data?._id || bookingRes?.data?.bookingId;
+
+      if (!bookingId) {
+        console.error('Failed to extract booking ID from response:', bookingRes);
+        Alert.alert('Error', 'Failed to create booking. Please try again.');
+        return;
+      }
+
+      console.log('✅ Booking created successfully with ID:', bookingId);
 
       // Create payment order (Razorpay)
       const amount = bookingPayload.totalAmount;
-      const orderRes = await createOrderApi.execute({ bookingId, amount });
+      const orderRes = await createOrderApi.execute({ 
+        bookingId, 
+        amount
+      });
+
+      console.log('💳 Payment order response:', orderRes);
 
       const order = orderRes?.order ?? orderRes?.data?.order ?? orderRes?.data?.order_id ?? orderRes?.data;
       const key = orderRes?.key ?? orderRes?.data?.key ?? orderRes?.data?.key_id;
+
+      console.log('💳 Extracted order:', order);
+      console.log('💳 Extracted key:', key);
 
       // If possible, dynamically import Razorpay SDK and open native checkout
       if (!order || !key) {
@@ -135,19 +151,18 @@ const CheckoutScreen = () => {
         clear && clear();
       } else {
         try {
-          let RZP: any = null;
+          let RazorpayCheckout: any = null;
           try {
             // dynamic import - will fail if the library isn't installed
             const mod = await import('react-native-razorpay');
-            RZP = mod && (mod.default || mod);
+            RazorpayCheckout = mod && (mod.default || mod);
           } catch {
-            RZP = null;
+            RazorpayCheckout = null;
           }
 
-          if (RZP) {
+          if (RazorpayCheckout) {
             const options = {
               description: 'Payment for booking ' + bookingId,
-              image: undefined,
               currency: order.currency || 'INR',
               key: key,
               amount: order.amount || Math.round(amount * 100), // in paise
@@ -161,8 +176,7 @@ const CheckoutScreen = () => {
               theme: { color: '#2563eb' }
             };
 
-            const rzp = new RZP(options);
-            const paymentResult = await rzp.open();
+            const paymentResult = await RazorpayCheckout.open(options);
 
             // paymentResult contains: razorpay_payment_id, razorpay_order_id, razorpay_signature
             const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = paymentResult;

@@ -10,8 +10,9 @@ export const useCreatePaymentOrder = () => {
       bookingId: string;
       amount: number;
       currency?: string;
-      paymentMethod: 'card' | 'upi' | 'wallet' | 'netbanking';
+      paymentMethod?: 'card' | 'upi' | 'wallet' | 'netbanking'; // Made optional to match backend
       saveCard?: boolean;
+      notes?: any;
     }) => paymentService.createOrder(data),
     {
       showErrorAlert: true,
