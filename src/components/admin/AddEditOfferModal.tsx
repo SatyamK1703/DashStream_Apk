@@ -44,23 +44,6 @@ const AddEditOfferModal: React.FC<AddEditOfferModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  // const [offerForm, setOfferForm] = useState({
-  //   title: formData?.title || '',
-  //   description: formData?.description || '',
-  //   discount: formData?.discount?.toString() || '',
-  //   discountType: formData?.discountType || 'percentage',
-  //   validFrom: formData?.validFrom ? new Date(formData.validFrom) : new Date(),
-  //   validUntil: formData?.validUntil ? new Date(formData.validUntil) : new Date(),
-  //   offerCode: formData?.offerCode || '',
-  //   minOrderAmount: formData?.minOrderAmount?.toString() || '0',
-  //   maxDiscountAmount: formData?.maxDiscountAmount?.toString() || '',
-  //   isPromo: formData?.isPromo || false,
-  //   isActive: formData?.isActive ?? true,
-  //   terms: formData?.terms || '',
-  //   image: formData?.image
-  //     ? { localUri: formData.image, remoteUrl: formData.image, isUploading: false }
-  //     : { localUri: null, isUploading: false },
-  // });
   const [offerForm, setOfferForm] = useState({
   title: '',
   description: '',

@@ -21,6 +21,7 @@ import AdminProfileScreen from '../../src/screens/admin/AdminProfileScreen';
 import AdminNotificationsScreen from '../../src/screens/admin/AdminNotificationsScreen';
 import TrackBookingScreen from '../../src/screens/customer/TrackBookingScreen';
 import ManageOffersScreen from '~/screens/admin/AdminOffersScreen';
+import OfferStatsScreen from '~/screens/admin/AdminOfferStatsScreen';
 
 // Define the admin stack param list
 export type AdminStackParamList = {
@@ -41,7 +42,8 @@ export type AdminStackParamList = {
   AdminProfile: undefined;
   AdminNotifications: undefined;
   TrackBooking: { bookingId: string };
-  AdminOffer:undefined;
+  AdminOffer: undefined;
+  AdminOfferStats: { offerId: string; offerTitle: string };
 };
 
 // Define the admin tab param list
@@ -132,6 +134,7 @@ const AdminNavigator = () => {
       <Stack.Screen name="AdminNotifications" component={AdminNotificationsScreen} />
       <Stack.Screen name="TrackBooking" component={TrackBookingScreen} />
       <Stack.Screen name="AdminOffer" component={ManageOffersScreen}/>
+      <Stack.Screen name="AdminOfferStats" component={OfferStatsScreen}/>
     </Stack.Navigator>
   );
 };

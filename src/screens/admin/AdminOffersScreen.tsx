@@ -204,6 +204,13 @@ const ManageOffersScreen = () => {
     setShowAddEditModal(true);
   };
 
+  const handleViewStats = (offer: Offer) => {
+    navigation.navigate('AdminOfferStats', {
+      offerId: offer._id,
+      offerTitle: offer.title,
+    });
+  };
+
   const handleDeleteOffer = (offerId: string) => {
     Alert.alert(
       'Delete Offer',
@@ -276,6 +283,7 @@ const ManageOffersScreen = () => {
               discount={item.discount}
               discountType={item.discountType}
               validUntil={item.validUntil}
+              onStats={() => handleViewStats(item)}
               onEdit={() => handleEditOffer(item)}
               onDelete={() => handleDeleteOffer(item._id)}
             />

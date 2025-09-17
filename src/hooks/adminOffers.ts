@@ -12,7 +12,6 @@ export const useAdminOffers = () => {
     try {
       setLoading(true);
       const resp = await httpClient.get(ENDPOINTS.OFFERS.ALL);
-      // Backend returns { status, results, totalCount, offers, ... }
       const items = (resp as any)?.offers || (resp as any)?.data?.offers || (resp as any)?.data || [];
       setData(Array.isArray(items) ? items : []);
     } catch (err) {
@@ -89,4 +88,32 @@ export const useToggleOfferStatus = () => {
     }
   };
   return { execute, loading };
+};
+
+export const useOfferStats = (offerId: string) => {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<any>(null);
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      const resp = await httpClient.get(ENDPOINTS.OFFERS.STATS(offerId));
+      // Backend returns { status, data: { offer, usageHistory, topUsers, totalRevenue, totalSavings } }
+      setData((resp as any)?.data || resp);
+    } catch (err) {
+      setError(err);
+      console.error('Fetch offer stats error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (offerId) {
+      fetchStats();
+    }
+  }, [offerId]);
+
+  return { data, loading, error, refresh: fetchStats };
 };

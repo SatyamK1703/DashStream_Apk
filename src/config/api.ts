@@ -112,6 +112,7 @@ export const API_ENDPOINTS = {
     ACTIVE: '/offers/active',
     ALL: '/offers',
     DETAILS: (id: string) => `/offers/${id}`,
+    STATS: (id: string) => `/offers/${id}/stats`,
     APPLY: '/offers/apply',
     PERSONALIZED: '/offers/personalized',
     USAGE_HISTORY: '/offers/usage-history',

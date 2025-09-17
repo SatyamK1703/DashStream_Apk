@@ -96,6 +96,7 @@ export const ENDPOINTS = {
     ALL: '/offers',
     ACTIVE: '/offers/active',
     BY_ID: (id: string) => `/offers/${id}`,
+    STATS: (id: string) => `/offers/${id}/stats`,
     APPLY: '/offers/apply',
   },
 

@@ -11,6 +11,7 @@ interface OfferCardProps {
   validUntil: string;
   onEdit?: () => void;
   onDelete?: () => void;
+  onStats?: () => void;
 }
 
 const OfferCard: React.FC<OfferCardProps> = ({
@@ -21,13 +22,20 @@ const OfferCard: React.FC<OfferCardProps> = ({
   validUntil,
   onEdit,
   onDelete,
+  onStats,
 }) => {
   return (
+  <TouchableOpacity onPress={onStats}>
    <View style={styles.card}>
       {/* Header */}
       <View style={styles.headerRow}>
         <Text style={styles.title}>{title}</Text>
         <View style={styles.actionRow}>
+          {onStats && (
+            <TouchableOpacity onPress={onStats} style={styles.iconButton}>
+              <Ionicons name="analytics-outline" size={18} color="#059669" />
+            </TouchableOpacity>
+          )}
           {onEdit && (
             <TouchableOpacity onPress={onEdit} style={styles.iconButton}>
               <Ionicons name="create-outline" size={18} color="#2563EB" />
@@ -58,7 +66,7 @@ const OfferCard: React.FC<OfferCardProps> = ({
         </Text>
       </View>
     </View>
-    
+    </TouchableOpacity>
 
   );
 };
