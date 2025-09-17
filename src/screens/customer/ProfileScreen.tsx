@@ -105,8 +105,7 @@ const ProfileScreen = () => {
 
   const handleLocationToggle = (value: boolean) => {
     setLocalLocationState(value);
-    // Here you would typically handle location permissions
-    // For now, we'll just update the local state
+   
   };
 
   const handleLogout = () => {

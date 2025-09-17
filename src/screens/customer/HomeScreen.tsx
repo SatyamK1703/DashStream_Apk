@@ -14,7 +14,7 @@ import Footer from '~/components/home/FooterMain';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Import API hooks
-import { usePopularServices, useActiveOffers, usePersonalizedOffers } from '../../hooks';
+import { usePopularServices, useActiveOffers} from '../../hooks';
 
 
 interface PromoBannerProps {
@@ -35,7 +35,7 @@ const HomeScreen = () => {
     execute: fetchPopularServices,
     error: servicesError,
   } = usePopularServices(6);
-
+ 
   const {
     data: activeOffersData,
     loading: offersLoading,
@@ -43,15 +43,9 @@ const HomeScreen = () => {
     error: offersError,
   } = useActiveOffers({ limit: 5 });
 
-  const {
-    data: personalizedOffersData,
-    loading: personalizedLoading,
-    execute: fetchPersonalizedOffers,
-  } = usePersonalizedOffers();
-  console.log("\n\n\n\n\n\n\n\npersonalizedOffersData",personalizedOffersData,"\n\n\n\n\n");
 
   // Track loading state for refresh control
-  const isRefreshing = servicesLoading || offersLoading || personalizedLoading;
+  const isRefreshing = servicesLoading || offersLoading ;
 
   // Load initial data
   useEffect(() => {
@@ -74,7 +68,6 @@ const HomeScreen = () => {
       await Promise.all([
         fetchPopularServices(),
         fetchActiveOffers(),
-        fetchPersonalizedOffers(),
       ]);
     } catch (error) {
       console.error('Failed to load home data:', error);
@@ -88,16 +81,7 @@ const HomeScreen = () => {
   // Prepare data for components
   const offersToShow = activeOffersData || [];
   // Prefer personalized recommended > trending, then fallback to active offers
-  const personalized = (personalizedOffersData ?? {}) as any;
-  const personalizedArray = Array.isArray(personalized)
-    ? (personalized as any[])
-    : Array.isArray(personalized.offers)
-    ? (personalized.recommended as any[])
-    : Array.isArray(personalized.trending)
-    ? (personalized.trending as any[])
-    : [];
-
-    console.log("personalizedArray",personalized);
+ 
 
   const mapOfferImage = (offer: any) => {
     // OfferCarousel expects `item.image` to be a source for Image.
@@ -106,10 +90,8 @@ const HomeScreen = () => {
     return { ...offer, image: imageSource };
   };
 
-  const carouselOffers = (Array.isArray(personalizedArray) && personalizedArray.length > 0
-    ? personalizedArray
-    : offersToShow
-  ).map(mapOfferImage);
+  const carouselOffers = offersToShow.map(mapOfferImage);
+
   // const servicesToShow = popularServicesData?.services || [];
   const servicesToShow = Array.isArray(popularServicesData)
     ? popularServicesData

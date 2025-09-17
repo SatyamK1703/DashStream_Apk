@@ -15,7 +15,7 @@ export const useActiveOffers = (filters?: {
     }
   );
 };
-
+console.log('useActiveOffers', useActiveOffers);
 // Hook for fetching all offers
 export const useAllOffers = (filters?: {
   status?: 'active' | 'inactive' | 'expired';

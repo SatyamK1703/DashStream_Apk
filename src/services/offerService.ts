@@ -3,9 +3,7 @@ import { ENDPOINTS } from '../config/env';
 import { Offer } from '../types/api';
 
 class OfferService {
-  /**
-   * Get all active offers
-   */
+
   async getActiveOffers(params?: {
     category?: string;
     minOrderValue?: number;
@@ -13,17 +11,15 @@ class OfferService {
     limit?: number;
   }): Promise<ApiResponse<Offer[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.OFFERS.ACTIVE, { params });
+        return await httpClient.get(ENDPOINTS.OFFERS.ACTIVE, { params });
     } catch (error) {
       console.error('Get active offers error:', error);
-      // ✅ Return empty array instead of throwing to prevent app crashes
+
       return { success: true, data: [] };
     }
   }
 
-  /**
-   * Get all offers (including inactive ones)
-   */
+
   async getAllOffers(params?: {
     status?: 'active' | 'inactive' | 'expired';
     page?: number;
@@ -37,9 +33,7 @@ class OfferService {
     }
   }
 
-  /**
-   * Get offer by ID
-   */
+ 
   async getOfferById(offerId: string): Promise<ApiResponse<Offer>> {
     try {
       return await httpClient.get(ENDPOINTS.OFFERS.BY_ID(offerId));
@@ -49,9 +43,7 @@ class OfferService {
     }
   }
 
-  /**
-   * Apply offer code
-   */
+  
   async applyOffer(data: {
     code: string;
     amount: number;
