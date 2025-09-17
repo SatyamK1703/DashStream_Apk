@@ -7,8 +7,7 @@ import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCart } from '../../context/CartContext';
 import { useCreateBooking } from '../../hooks/useBookings';
-import { useCreatePaymentOrder, usePaymentMethods } from '../../hooks/usePayments';
-import { ENDPOINTS } from '../../config/env';
+import { useCreatePaymentOrder, usePaymentMethods, useVerifyPayment } from '../../hooks/usePayments';
 
 type CheckoutScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -25,11 +24,7 @@ interface TimeSlot {
   available: boolean;
 }
 
-interface PaymentMethod {
-  id: string;
-  name: string;
-  icon: string;
-}
+// ...existing types
 
 
 
@@ -43,6 +38,7 @@ const CheckoutScreen = () => {
   const { items: cartItems, clear } = useCart();
   const createBookingApi = useCreateBooking();
   const createOrderApi = useCreatePaymentOrder();
+  const verifyPaymentApi = useVerifyPayment();
 
   // Derive address from user's saved addresses via profile (not implemented here).
   // For now, use a simple fallback address object.
@@ -127,11 +123,92 @@ const CheckoutScreen = () => {
       const amount = bookingPayload.totalAmount;
       const orderRes = await createOrderApi.execute({ bookingId, amount });
 
-      // Navigate to booking confirmation (only bookingId required by route)
-      navigation.navigate('BookingConfirmation', { bookingId });
+      const order = orderRes?.order ?? orderRes?.data?.order ?? orderRes?.data?.order_id ?? orderRes?.data;
+      const key = orderRes?.key ?? orderRes?.data?.key ?? orderRes?.data?.key_id;
 
-      // Optionally clear cart
-  clear && clear();
+      // If possible, dynamically import Razorpay SDK and open native checkout
+      if (!order || !key) {
+        // Backend didn't return order/key as expected — proceed to confirmation and rely on server-side webhooks
+        Alert.alert('Payment info missing', 'Could not start payment. Booking has been created and will be updated once payment is confirmed.');
+        navigation.navigate('BookingConfirmation', { bookingId });
+        // clear cart since booking was created and user is on confirmation
+        clear && clear();
+      } else {
+        try {
+          let RZP: any = null;
+          try {
+            // dynamic import - will fail if the library isn't installed
+            const mod = await import('react-native-razorpay');
+            RZP = mod && (mod.default || mod);
+          } catch {
+            RZP = null;
+          }
+
+          if (RZP) {
+            const options = {
+              description: 'Payment for booking ' + bookingId,
+              image: undefined,
+              currency: order.currency || 'INR',
+              key: key,
+              amount: order.amount || Math.round(amount * 100), // in paise
+              name: 'DashStream',
+              order_id: order.id || order.order_id,
+              prefill: {
+                name: '',
+                email: '',
+                contact: ''
+              },
+              theme: { color: '#2563eb' }
+            };
+
+            const rzp = new RZP(options);
+            const paymentResult = await rzp.open();
+
+            // paymentResult contains: razorpay_payment_id, razorpay_order_id, razorpay_signature
+            const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = paymentResult;
+
+            // Verify payment on backend with retries (network or webhook race conditions possible)
+            const verifyPayload = {
+              orderId: razorpay_order_id || order.id,
+              paymentId: razorpay_payment_id,
+              signature: razorpay_signature,
+              bookingId
+            };
+
+            const verifyWithRetry = async (attempts = 3, delayMs = 1000) => {
+              for (let i = 0; i < attempts; i++) {
+                try {
+                  await verifyPaymentApi.execute(verifyPayload);
+                  return true;
+                } catch (e: any) {
+                  console.warn(`verify attempt ${i + 1} failed`, e?.message || e);
+                  if (i < attempts - 1) await new Promise(res => setTimeout(res, delayMs * (i + 1)));
+                }
+              }
+              return false;
+            };
+
+            const verified = await verifyWithRetry();
+            if (!verified) {
+              Alert.alert('Payment verification pending', 'Payment succeeded but verification failed. We will update your booking once verification succeeds.');
+            }
+
+            // Navigate to confirmation after successful verification
+            navigation.navigate('BookingConfirmation', { bookingId });
+            // clear cart now that booking/payment succeeded
+            clear && clear();
+          } else {
+            // SDK not available: fallback
+            Alert.alert('Razorpay SDK not installed', 'Payment SDK is not available in this build. Complete payment flow via server/webhooks.');
+            navigation.navigate('BookingConfirmation', { bookingId });
+            clear && clear();
+          }
+        } catch (err: any) {
+          console.error('Razorpay checkout error:', err);
+          Alert.alert('Payment failed', err?.message || 'Payment was not completed.');
+        }
+      }
+      
     } catch (error: any) {
       console.error('Place order error:', error);
       Alert.alert('Error', error?.message || 'Failed to place order.');

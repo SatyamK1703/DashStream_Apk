@@ -82,25 +82,27 @@ export class StorageManager {
 
   static async getAllKeys(): Promise<string[]> {
     try {
-      return await AsyncStorage.getAllKeys();
+      const keys = await AsyncStorage.getAllKeys();
+      return Array.isArray(keys) ? [...keys] : [];
     } catch (error) {
       console.error('Error getting all keys:', error);
       return [];
     }
   }
 
-  static async multiGet(keys: string[]): Promise<Array<[string, string | null]>> {
+  static async multiGet(keys: string[]): Promise<[string, string | null][]> {
     try {
-      return await AsyncStorage.multiGet(keys);
+      const result = await AsyncStorage.multiGet(keys as readonly string[]);
+      return result.map(([k, v]) => [k, v]);
     } catch (error) {
       console.error('Error getting multiple items:', error);
       return [];
     }
   }
 
-  static async multiSet(keyValuePairs: Array<[string, string]>): Promise<void> {
+  static async multiSet(keyValuePairs: [string, string][]): Promise<void> {
     try {
-      await AsyncStorage.multiSet(keyValuePairs);
+      await AsyncStorage.multiSet(keyValuePairs as [string, string][]);
     } catch (error) {
       console.error('Error setting multiple items:', error);
       throw error;
@@ -231,6 +233,7 @@ export class CacheManager {
       
       return Date.now() - cacheItem.timestamp > cacheItem.ttl;
     } catch (error) {
+      console.error('Error checking expiration:', error);
       return true;
     }
   }
@@ -254,30 +257,8 @@ export class CacheManager {
 // App settings management
 export class SettingsManager {
   private static readonly SETTINGS_KEY = '@app_settings';
-
-  interface AppSettings {
-    theme: 'light' | 'dark' | 'auto';
-    language: string;
-    notifications: {
-      push: boolean;
-      email: boolean;
-      sms: boolean;
-    };
-    location: {
-      enabled: boolean;
-      precision: 'high' | 'medium' | 'low';
-    };
-    privacy: {
-      analytics: boolean;
-      crashReporting: boolean;
-    };
-    developer: {
-      debugMode: boolean;
-      showLogs: boolean;
-    };
-  }
-
-  private static defaultSettings: SettingsManager.AppSettings = {
+  // AppSettings is defined at module level (see above)
+  private static defaultSettings: AppSettings = {
     theme: 'auto',
     language: 'en',
     notifications: {
@@ -294,17 +275,17 @@ export class SettingsManager {
       crashReporting: true,
     },
     developer: {
-      debugMode: __DEV__,
-      showLogs: __DEV__,
+      debugMode: typeof __DEV__ !== 'undefined' ? __DEV__ : false,
+      showLogs: typeof __DEV__ !== 'undefined' ? __DEV__ : false,
     },
   };
 
-  static async getSettings(): Promise<SettingsManager.AppSettings> {
-    const settings = await StorageManager.getItem<SettingsManager.AppSettings>(this.SETTINGS_KEY);
+  static async getSettings(): Promise<AppSettings> {
+    const settings = await StorageManager.getItem<AppSettings>(this.SETTINGS_KEY);
     return settings ? { ...this.defaultSettings, ...settings } : this.defaultSettings;
   }
 
-  static async updateSettings(updates: Partial<SettingsManager.AppSettings>): Promise<void> {
+  static async updateSettings(updates: Partial<AppSettings>): Promise<void> {
     const currentSettings = await this.getSettings();
     const newSettings = { ...currentSettings, ...updates };
     await StorageManager.setItem(this.SETTINGS_KEY, newSettings);
@@ -314,21 +295,40 @@ export class SettingsManager {
     await StorageManager.setItem(this.SETTINGS_KEY, this.defaultSettings);
   }
 
-  static async getSetting<K extends keyof SettingsManager.AppSettings>(
-    key: K
-  ): Promise<SettingsManager.AppSettings[K]> {
+  static async getSetting<K extends keyof AppSettings>(key: K): Promise<AppSettings[K]> {
     const settings = await this.getSettings();
     return settings[key];
   }
 
-  static async setSetting<K extends keyof SettingsManager.AppSettings>(
-    key: K,
-    value: SettingsManager.AppSettings[K]
-  ): Promise<void> {
+  static async setSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]): Promise<void> {
     const currentSettings = await this.getSettings();
-    currentSettings[key] = value;
+    // mutate then persist
+    (currentSettings as any)[key] = value;
     await StorageManager.setItem(this.SETTINGS_KEY, currentSettings);
   }
+}
+
+// Define AppSettings at module scope so it can be referenced by the SettingsManager
+interface AppSettings {
+  theme: 'light' | 'dark' | 'auto';
+  language: string;
+  notifications: {
+    push: boolean;
+    email: boolean;
+    sms: boolean;
+  };
+  location: {
+    enabled: boolean;
+    precision: 'high' | 'medium' | 'low';
+  };
+  privacy: {
+    analytics: boolean;
+    crashReporting: boolean;
+  };
+  developer: {
+    debugMode: boolean;
+    showLogs: boolean;
+  };
 }
 
 // Data migration utilities
