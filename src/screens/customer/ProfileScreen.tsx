@@ -53,7 +53,7 @@ const ProfileScreen = () => {
     }
   }, [preferences]);
 
-  // Load data on mount
+  // Load data on mount - run only once
   useEffect(() => {
     (async () => {
       try {
@@ -65,7 +65,8 @@ const ProfileScreen = () => {
         console.error('Failed to load profile data:', e);
       }
     })();
-  }, [fetchProfile, refreshPreferences]);
+  }, []); // ✅ Empty dependency array - run only on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 
   // Show alert if profile loading produced an error
   useEffect(() => {
@@ -166,7 +167,7 @@ const ProfileScreen = () => {
       id: 'referrals',
       title: 'Refer & Earn',
       icon: 'gift-outline',
-      onPress: () => (navigation as any).navigate('ReferAndEarn')
+      onPress: () => navigation.navigate('ReferAndEarn')
     },
   ];
 
@@ -193,7 +194,7 @@ const ProfileScreen = () => {
       id: 'privacy',
       title: 'Privacy Policy',
       icon: 'shield-outline',
-      onPress: () => (navigation as any).navigate('PrivacyPolicy')
+      onPress: () => navigation.navigate('PrivacyPolicy')
     },
     {
       id: 'terms',
@@ -203,11 +204,20 @@ const ProfileScreen = () => {
     },
   ];
 
+  const handleMenuPress = (item: any) => {
+    try {
+      item.onPress();
+    } catch (error) {
+      console.error('Navigation error:', error);
+      Alert.alert('Error', 'Unable to open this section. Please try again.');
+    }
+  };
+
   const renderMenuItem = (item: any) => (
     <TouchableOpacity 
       key={item.id}
       style={styles.menuItem}
-      onPress={item.onPress}
+      onPress={() => handleMenuPress(item)}
     >
       <View style={styles.menuIconContainer}>
         <Ionicons name={item.icon} size={20} color="#2563eb" />

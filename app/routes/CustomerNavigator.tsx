@@ -25,6 +25,8 @@ import TermsAndConditions from '~/screens/customer/TermsAndConditions';
 import MembershipScreen from '~/screens/customer/MembershipScreen';
 import VehicleListScreen from '~/screens/customer/VehicleListScreen';
 import AddressListScreen from '~/screens/customer/AddressListScreen';
+import ReferAndEarnScreen from '~/screens/customer/ReferAndEarnScreen';
+import PrivacyPolicyScreen from '~/screens/customer/PrivacyPolicyScreen';
 
 // Define the customer stack param list
 export type CustomerStackParamList = {
@@ -51,6 +53,8 @@ export type CustomerStackParamList = {
   TermsAndConditions:undefined;
   VehicleList:undefined;
   AddressList:undefined;
+  ReferAndEarn:undefined;
+  PrivacyPolicy:undefined;
 };
 
 // Define the customer tab param list
@@ -160,7 +164,8 @@ const CustomerNavigator = () => {
       <Stack.Screen name='TermsAndConditions' component={TermsAndConditions}/>
       <Stack.Screen name='VehicleList' component={VehicleListScreen}/>
       <Stack.Screen name='AddressList' component={AddressListScreen}/>
-
+      <Stack.Screen name='ReferAndEarn' component={ReferAndEarnScreen}/>
+      <Stack.Screen name='PrivacyPolicy' component={PrivacyPolicyScreen}/>
 
     </Stack.Navigator>
   );

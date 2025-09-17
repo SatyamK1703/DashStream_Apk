@@ -179,7 +179,7 @@ export const useNotificationPreferences = () => {
         setPreferences(null);
       }
     })();
-  }, [fetchApi]);
+  }, []); // ✅ Run only on mount
 
   return {
     preferences,
