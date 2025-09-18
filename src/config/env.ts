@@ -20,7 +20,7 @@ const ENV = {
   },
   production: {
     API_URL: 'https://dash-stream-apk-backend.vercel.app/api',
-    WS_URL: 'https://dashboard.razorpay.com/app/webhooks/RIhOTtZLsn5SIE',
+    WS_URL: 'https://dashsteam.com/app',
     GOOGLE_MAPS_API_KEY: 'AIzaSyDnvD-g_1JwFU6d4AExl70f_h9FICdeons',
     RAZORPAY_KEY_ID: 'rzp_live_REERfmRqrw93oG',
   }

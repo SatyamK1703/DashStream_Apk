@@ -8,7 +8,15 @@ interface UseApiState<T> {
   loading: boolean;
   error: string | null;
 }
-
+interface UsePaginatedApiResult<T> {
+  data: T[];
+  loading: boolean;
+  error: any;
+  pagination: PaginatedState;
+  loadMore: (params?: any) => Promise<{ items: T[]; total: number } | undefined>;
+  refresh: (params?: any) => Promise<{ items: T[]; total: number } | undefined>;
+  reset: () => void;
+}
 interface UseApiOptions {
   showErrorAlert?: boolean;
   retries?: number;
@@ -126,11 +134,14 @@ export const useApi = <T = any>(
 };
 
 // Specialized hook for paginated data
+
+
 export const usePaginatedApi = <T = any>(
-  apiCall: (params: any) => Promise<ApiResponse<T> | ApiResponse<T[]> | any>,
-  options: UseApiOptions = {}
-) => {
-  const [pagination, setPagination] = useState({
+  apiCall: (params: any) => Promise<any>,
+  options: UseApiOptions = {},
+  normalize?: (resp: any) => { items: T[]; total: number }
+): UsePaginatedApiResult<T> => {
+  const [pagination, setPagination] = useState<PaginatedState>({
     page: 1,
     limit: 10,
     total: 0,
@@ -139,142 +150,211 @@ export const usePaginatedApi = <T = any>(
 
   const [allData, setAllData] = useState<T[]>([]);
   const isLoadingPageRef = useRef(false);
-  const baseApi = useApi(apiCall, options);
 
-  const normalizePaginated = (resp: any) => {
-    // Common shapes we expect:
-    // - Direct array => items
-    // - { items, total }
-    // - { results, total }
-    // - { data: { items|results|... } }
+  const defaultNormalizer = (resp: any) => {
     if (!resp) return { items: [], total: 0 };
-
-    // Direct array
-    if (Array.isArray(resp)) return { items: resp, total: resp.length };
-
-    // If the payload wraps actual payload in `data`, unwrap it
     const payload = resp.data ?? resp;
-
-    // Prefer common keys in order
-    const items = payload.items ?? payload.results ?? payload.services ?? payload.bookings ?? payload.notifications;
-    if (Array.isArray(items)) {
-      const total = payload.total ?? payload.totalCount ?? (items.length);
-      return { items, total };
-    }
-
-    // If payload itself is an array (defensive)
-    if (Array.isArray(payload)) return { items: payload, total: payload.length };
-
-    return { items: [], total: 0 };
+    const items = Array.isArray(payload) ? payload : payload.items ?? [];
+    const total = payload.total ?? payload.totalCount ?? items.length;
+    return { items, total };
   };
+
+  const normalizeResponse = normalize ?? defaultNormalizer;
 
   const loadMore = useCallback(
     async (params: any = {}) => {
-      if (!pagination.hasMore && pagination.page > 1) return;
+      if (isLoadingPageRef.current || !pagination.hasMore) return;
+      isLoadingPageRef.current = true;
 
-      if (__DEV__) {
-        console.log('usePaginatedApi - loadMore called:', {
-          params,
-          pagination,
-          currentData: allData
-        });
-      }
-
-      const rawResponse = await baseApi.execute({
+      const rawResponse = await apiCall({
         ...params,
         page: pagination.page,
         limit: pagination.limit,
       });
 
-      const response = normalizePaginated(rawResponse);
+      const { items: newItems, total } = normalizeResponse(rawResponse);
 
-      if (__DEV__) {
-        console.log('usePaginatedApi - loadMore response:', {
-          response,
-          responseType: typeof response,
-          isArray: Array.isArray(response),
-          responseLength: Array.isArray(response) ? response.length : 'N/A'
-        });
-      }
-
-      if (response) {
-        const newData = Array.isArray(response.items) ? response.items : response.items || [];
-
-        const updatedData = pagination.page === 1 ? newData : [...allData, ...newData];
-        
-        if (__DEV__) {
-          console.log('usePaginatedApi - Setting data:', {
-            previousLength: allData.length,
-            newDataLength: newData.length,
-            totalLength: updatedData.length,
-            isFirstPage: pagination.page === 1
-          });
-        }
-        
-        setAllData(updatedData);
-
-        setPagination(prev => ({
-          ...prev,
-          page: prev.page + 1,
-          hasMore: newData.length === prev.limit,
-          total: newData.length < prev.limit 
-            ? (prev.page - 1) * prev.limit + newData.length
-            : prev.total,
-        }));
-      }
+      setAllData(prev => (pagination.page === 1 ? newItems : [...prev, ...newItems]));
+      setPagination(prev => ({
+        ...prev,
+        page: prev.page + 1,
+        total,
+        hasMore: prev.page * prev.limit < total,
+      }));
 
       isLoadingPageRef.current = false;
-      return response;
+      return { items: newItems, total };
     },
-    [baseApi, pagination, allData]
+    [apiCall, normalizeResponse, pagination.page, pagination.limit, pagination.hasMore]
   );
 
   const refresh = useCallback(
     async (params: any = {}) => {
       setPagination(prev => ({ ...prev, page: 1, hasMore: true }));
       setAllData([]);
-      // ensure we don't collide with an ongoing load
-      while ((isLoadingPageRef as any).current) {
-        await new Promise(r => setTimeout(r, 50));
-      }
+      while (isLoadingPageRef.current) await new Promise(r => setTimeout(r, 50));
       return loadMore(params);
     },
     [loadMore]
   );
 
   const reset = useCallback(() => {
-    baseApi.reset();
     setAllData([]);
-    setPagination({
-      page: 1,
-      limit: 10,
-      total: 0,
-      hasMore: true,
-    });
-  }, [baseApi]);
+    setPagination({ page: 1, limit: 10, total: 0, hasMore: true });
+  }, []);
 
-  const result = {
+  return {
     data: allData,
-    loading: baseApi.loading,
-    error: baseApi.error,
+    loading: isLoadingPageRef.current,
+    error: null,
     pagination,
     loadMore,
     refresh,
     reset,
   };
-  
-  if (__DEV__) {
-    console.log('usePaginatedApi - Returning:', {
-      allData,
-      dataLength: allData?.length,
-      loading: baseApi.loading,
-      error: baseApi.error,
-      pagination
-    });
-  }
-  
-  return result;
 };
+
+// export const usePaginatedApi = <T = any>(
+//   apiCall: (params: any) => Promise<ApiResponse<T> | ApiResponse<T[]> | any>,
+//   options: UseApiOptions = {}
+// ) => {
+//   const [pagination, setPagination] = useState({
+//     page: 1,
+//     limit: 10,
+//     total: 0,
+//     hasMore: true,
+//   });
+
+//   const [allData, setAllData] = useState<T[]>([]);
+//   const isLoadingPageRef = useRef(false);
+//   const baseApi = useApi(apiCall, options);
+
+//   const normalizePaginated = (resp: any) => {
+  
+//     if (!resp) return { items: [], total: 0 };
+
+//     // Direct array
+//     if (Array.isArray(resp)) return { items: resp, total: resp.length };
+
+//     const payload = resp.data ?? resp;
+//     const items = payload.items ?? payload.results ?? payload.services ?? payload.bookings ?? payload.notifications??payload.offers;
+//     if (Array.isArray(items)) {
+//       const total = payload.total ?? payload.totalCount ?? (items.length);
+//       return { items, total };
+//     }
+
+//     // If payload itself is an array (defensive)
+//     if (Array.isArray(payload)) return { items: payload, total: payload.length };
+
+//     return { items: [], total: 0 };
+//   };
+
+//   const loadMore = useCallback(
+//     async (params: any = {}) => {
+//       if (!pagination.hasMore && pagination.page > 1) return;
+//       if (__DEV__) {
+//         console.log('usePaginatedApi - loadMore called:', {
+//           params,
+//           pagination,
+//           currentData: allData
+//         });
+//       }
+
+//       const rawResponse = await baseApi.execute({
+//         ...params,
+//         page: pagination.page,
+//         limit: pagination.limit,
+//       });
+
+//       const response = normalizePaginated(rawResponse);
+
+//       if (__DEV__) {
+//         console.log('usePaginatedApi - loadMore response:', {
+//           response,
+//           responseType: typeof response,
+//           isArray: Array.isArray(response),
+//           responseLength: Array.isArray(response) ? response.length : 'N/A'
+//         });
+//       }
+
+//       if (response) {
+//         const newData = Array.isArray(response.items) ? response.items : response.items || [];
+
+//         const updatedData = pagination.page === 1 ? newData : [...allData, ...newData];
+        
+//         if (__DEV__) {
+//           console.log('usePaginatedApi - Setting data:', {
+//             previousLength: allData.length,
+//             newDataLength: newData.length,
+//             totalLength: updatedData.length,
+//             isFirstPage: pagination.page === 1
+//           });
+//         }
+        
+//         setAllData(updatedData);
+
+//         setPagination(prev => ({
+//           ...prev,
+//           page: prev.page + 1,
+//           hasMore: newData.length === prev.limit,
+//           total: newData.length < prev.limit 
+//             ? (prev.page - 1) * prev.limit + newData.length
+//             : prev.total,
+//         }));
+//       }
+
+//       isLoadingPageRef.current = false;
+//       return response;
+//     },
+//     [baseApi, pagination, allData]
+//   );
+
+//   const refresh = useCallback(
+//     async (params: any = {}) => {
+//       setPagination(prev => ({ ...prev, page: 1, hasMore: true }));
+//       setAllData([]);
+//       // ensure we don't collide with an ongoing load
+//       while ((isLoadingPageRef as any).current) {
+//         await new Promise(r => setTimeout(r, 50));
+//       }
+//       return loadMore(params);
+//     },
+//     [loadMore]
+//   );
+
+//   const reset = useCallback(() => {
+//     baseApi.reset();
+//     setAllData([]);
+//     setPagination({
+//       page: 1,
+//       limit: 10,
+//       total: 0,
+//       hasMore: true,
+//     });
+//   }, [baseApi]);
+
+//   const result = {
+//     data: allData,
+//     loading: baseApi.loading,
+//     error: baseApi.error,
+//     pagination,
+//     loadMore,
+//     refresh,
+//     reset,
+//   };
+  
+//   if (__DEV__) {
+//     console.log('usePaginatedApi - Returning:', {
+//       allData,
+//       dataLength: allData?.length,
+//       loading: baseApi.loading,
+//       error: baseApi.error,
+//       pagination
+//     });
+//   }
+  
+//   return result;
+// };
 
 // Hook for real-time updates
 export const useRealtimeApi = <T = any>(

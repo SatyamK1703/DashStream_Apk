@@ -14,12 +14,12 @@ import Footer from '~/components/home/FooterMain';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Import API hooks
-import { usePopularServices, useActiveOffers} from '../../hooks';
-
+import { usePopularServices, useActiveOffers } from '../../hooks';
+import { Offer } from '../../types/api';
 
 interface PromoBannerProps {
   onPress: () => void;
-} // adjust path as needed
+}
 
 
 
@@ -35,18 +35,15 @@ const HomeScreen = () => {
     execute: fetchPopularServices,
     error: servicesError,
   } = usePopularServices(6);
- 
+
   const {
     data: activeOffersData,
     loading: offersLoading,
     refresh: fetchActiveOffers,
     error: offersError,
-  } = useActiveOffers({ limit: 5 });
-
-
-  // Track loading state for refresh control
+  } = useActiveOffers()
   const isRefreshing = servicesLoading || offersLoading ;
-
+ console.log("activeOffersData:\n\n\n", activeOffersData);
   // Load initial data
   useEffect(() => {
     loadHomeData();
@@ -74,25 +71,40 @@ const HomeScreen = () => {
     }
   };
 
+
   const handleRefresh = () => {
     loadHomeData();
   };
 
-  // Prepare data for components
-  const offersToShow = activeOffersData || [];
-  // Prefer personalized recommended > trending, then fallback to active offers
- 
+  // Ensure we're getting the offers array correctly
+  // const offersToShow = Array.isArray(activeOffersData) 
+  //   ? activeOffersData 
+  //   : activeOffersData?.offers || [];
+  const offersToShow = Array.isArray(activeOffersData) 
+  ? activeOffersData 
+  : activeOffersData?.offers || [];
 
-  const mapOfferImage = (offer: any) => {
-    // OfferCarousel expects `item.image` to be a source for Image.
-    const img = offer?.image || offer?.imageUrl || offer?.thumbnail;
-    const imageSource = typeof img === 'string' && img.length > 0 ? { uri: img } : img || require('../../../assets/1.png');
+
+  const mapOfferImage = (offer: Offer) => {
+    const imageUrl = offer?.image?.url;
+    const imageSource = typeof imageUrl === 'string' && imageUrl.length > 0 
+      ? { uri: imageUrl }
+      : require('../../assets/images/poster.png');
     return { ...offer, image: imageSource };
   };
 
-  const carouselOffers = offersToShow.map(mapOfferImage);
 
-  // const servicesToShow = popularServicesData?.services || [];
+  const carouselOffers = offersToShow.slice(0, 5).map(mapOfferImage);
+
+  // Debug log to see the final carousel offers
+  console.log("carouselOffers with images:", carouselOffers.map(offer => ({
+    id: offer.id,
+    title: offer.title,
+    hasImage: !!offer.image,
+    imageType: typeof offer.image
+  })));
+
+  
   const servicesToShow = Array.isArray(popularServicesData)
     ? popularServicesData
     : Array.isArray((popularServicesData as any)?.services)

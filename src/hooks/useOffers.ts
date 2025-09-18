@@ -4,18 +4,23 @@ import { offerService } from '../services';
 import { Offer } from '../types/api';
 
 // Hook for fetching active offers
-export const useActiveOffers = (filters?: {
-  category?: string;
-  minOrderValue?: number;
-}) => {
+export const useActiveOffers = () => {
   return usePaginatedApi(
-    (params) => offerService.getActiveOffers({ ...filters, ...params }),
-    {
-      showErrorAlert: false,
+    (params) => offerService.getActiveOffers(params),
+    { showErrorAlert: false },
+    (resp) => {
+      const items = resp.offers ?? [];
+      const total = resp.results ?? items.length;
+      return { items, total };
     }
   );
 };
-console.log('useActiveOffers', useActiveOffers);
+// export const useActiveOffers = () => {
+  
+//     return offerService.getActiveOffers()
+// };
+
+
 // Hook for fetching all offers
 export const useAllOffers = (filters?: {
   status?: 'active' | 'inactive' | 'expired';

@@ -11,7 +11,8 @@ class OfferService {
     limit?: number;
   }): Promise<ApiResponse<Offer[]>> {
     try {
-        return await httpClient.get(ENDPOINTS.OFFERS.ACTIVE, { params });
+       return await httpClient.get(ENDPOINTS.OFFERS.ACTIVE, { params });
+      
     } catch (error) {
       console.error('Get active offers error:', error);
 
