@@ -37,12 +37,32 @@ export const useVerifyPayment = () => {
 
 // Hook for fetching payment methods
 export const usePaymentMethods = () => {
-  return useApi(
-    () => paymentService.getPaymentMethods(),
+  const [data, setData] = useState([
     {
-      showErrorAlert: false,
-    }
-  );
+      id: 'upi',
+      name: 'UPI',
+      details: 'Pay using UPI',
+      icon: 'phone-portrait-outline',
+      type: 'upi',
+      isDefault: true,
+    },
+    {
+      id: 'cod',
+      name: 'Cash on Delivery',
+      details: 'Pay after service completion',
+      icon: 'cash-outline',
+      type: 'cod',
+      isDefault: false,
+    },
+  ]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const execute = () => {
+    // This is now a no-op since we are using hardcoded data
+  };
+
+  return { data, loading, error, execute };
 };
 
 // Hook for adding payment method

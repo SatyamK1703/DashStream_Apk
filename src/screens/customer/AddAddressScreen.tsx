@@ -22,6 +22,8 @@ import { CreateAddressRequest } from '../../types/api';
 
 
 
+import { useLocation } from '../../hooks/useLocation';
+
 const AddAddressScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
   const route = useRoute<RouteProp<CustomerStackParamList, 'AddAddress'>>();
@@ -37,35 +39,18 @@ const AddAddressScreen = () => {
   const [pincode, setPincode] = useState(addressToEdit?.pincode || '');
   const [isDefault, setIsDefault] = useState(addressToEdit?.isDefault || false);
   const [loading, setLoading] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState<string | null>(null);
+  const { location, loading: locationLoading, error: locationError, getCurrentLocation, reverseGeocode } = useLocation();
 
-
-
-  // useEffect(() => {
-  //   setTimeout(() => {
-  //     setCurrentLocation('123 Main Street, Mumbai, Maharashtra, 400001');
-  //   }, 1000);
-  // }, []);
-    useEffect(() => {
-    const fetchCurrentLocation = async () => {
-      // In a real app, you would use Geolocation API or Expo Location
-      // For demo purposes, we'll simulate a delay and return a mock location
-      setTimeout(() => {
-        setCurrentLocation('123 Main Street, Mumbai, Maharashtra, 400001');
-      }, 1000);
-    };
-
-    fetchCurrentLocation();
-  }, []);
-
-  const useCurrentLocation = () => {
-    if (currentLocation) {
-      setAddress('123 Main Street');
-      setCity('Mumbai');
-      setState('Maharashtra');
-      setPincode('400001');
-    } else {
-      Alert.alert('Location not available', 'Please try again later.');
+  const useCurrentLocation = async () => {
+    await getCurrentLocation();
+    if (location) {
+      const addressDetails = await reverseGeocode(location.coords.latitude, location.coords.longitude);
+      if (addressDetails) {
+        setAddress(addressDetails.street || '');
+        setCity(addressDetails.city || '');
+        setState(addressDetails.region || '');
+        setPincode(addressDetails.postalCode || '');
+      }
     }
   };
 
@@ -73,7 +58,7 @@ const AddAddressScreen = () => {
     if (!name.trim()) return Alert.alert('Error', 'Please enter a name for this address'), false;
     if (!address.trim()) return Alert.alert('Error', 'Please enter the address'), false;
     if (!city.trim()) return Alert.alert('Error', 'Please enter the city'), false;
-    if (!state.trim()) return Alert.alert('Error', 'Please select a state'), false;
+    // if (!state.trim()) return Alert.alert('Error', 'Please select a state'), false;
     if (!pincode.trim() || pincode.length !== 6 || !/^\d+$/.test(pincode)) {
       return Alert.alert('Error', 'Please enter a valid 6-digit pincode'), false;
     }
@@ -91,12 +76,12 @@ const AddAddressScreen = () => {
           addressLine1: address,
           addressLine2: landmark || undefined,
           city,
-          state,
+          // state,
           postalCode: pincode,
           country: 'IN',
           coordinates: {
-            latitude: 0,
-            longitude: 0,
+            latitude: location?.coords.latitude || 0,
+            longitude: location?.coords.longitude || 0,
           },
         };
 

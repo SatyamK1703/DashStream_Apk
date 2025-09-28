@@ -1,6 +1,44 @@
 import { useState, useEffect } from 'react';
 import { useApi } from './useApi';
 import { locationService } from '../services';
+import * as Location from 'expo-location';
+
+export const useLocation = () => {
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const reverseGeocodeApi = useReverseGeocode();
+
+  const getCurrentLocation = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setError('Permission to access location was denied');
+        setLoading(false);
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      setLocation(location);
+    } catch (err) {
+      setError('Failed to get location');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const reverseGeocode = async (latitude: number, longitude: number) => {
+    const result = await reverseGeocodeApi.execute({ latitude, longitude });
+    if (result && result.data && result.data.length > 0) {
+      return result.data[0];
+    }
+    return null;
+  };
+
+  return { location, loading, error, getCurrentLocation, reverseGeocode };
+};
 
 interface LocationCoordinates {
   latitude: number;

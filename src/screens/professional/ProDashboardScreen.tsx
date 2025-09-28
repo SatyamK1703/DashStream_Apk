@@ -16,7 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import { ProStackParamList } from '../../../app/routes/ProfessionalNavigator';
+import { ProStackParamList } from '../../app/routes/ProNavigator';
 import { useProfessionalDashboardScreen, useProfessionalJobActions, useProfessionalProfileActions } from '../../hooks/useProfessional';
 
 type ProDashboardScreenNavigationProp = NativeStackNavigationProp<ProStackParamList, 'Dashboard'>;

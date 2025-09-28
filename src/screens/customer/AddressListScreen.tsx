@@ -61,7 +61,7 @@ const AddressListScreen = () => {
           onPress: async () => {
             try {
               await userService.deleteAddress(addressId);
-              setAddresses(prev => prev.filter(addr => addr.id !== addressId));
+              setAddresses(prev => prev.filter(addr => addr._id !== addressId));
             } catch (err) {
               console.error('Delete address failed', err);
               Alert.alert('Error', 'Failed to delete address. Please try again.');

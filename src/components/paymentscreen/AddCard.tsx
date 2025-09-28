@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { PaymentMethod } from '../types/PaymentType';
+import { PaymentMethod } from '../../types/PaymentType';
 
 interface AddCardProps {
   visible: boolean;

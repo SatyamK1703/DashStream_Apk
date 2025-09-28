@@ -1,5 +1,5 @@
 import httpClient, { ApiResponse } from './httpClient';
-import { ENDPOINTS } from '../config/env';
+import { API_ENDPOINTS as ENDPOINTS } from '../config/config';
 import { Service, ServiceCategory, SearchParams } from '../types/api';
 
 class ServiceService {

@@ -82,9 +82,7 @@ class LocationService {
    */
   async reverseGeocode(location: LocationCoordinates): Promise<ApiResponse<GeocodeResult>> {
     try {
-      return await httpClient.get(ENDPOINTS.LOCATIONS.REVERSE_GEOCODE, { 
-        params: location 
-      });
+      return await httpClient.get(ENDPOINTS.LOCATIONS.REVERSE_GEOCODE, { params: location });
     } catch (error) {
       console.error('Reverse geocode error:', error);
       throw error;

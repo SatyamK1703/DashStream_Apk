@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -19,119 +19,22 @@ import AddCard from '../../components/paymentscreen/AddCard';
 import AddUpi from '../../components/paymentscreen/AddUpi';
 import PaymentMethodItem from '../../components/paymentscreen/PaymentMethodItem';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { usePaymentMethods } from '../../hooks/usePayments';
 
 type PaymentMethodsScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
 const PaymentMethodsScreen: React.FC = () => {
   const navigation = useNavigation<PaymentMethodsScreenNavigationProp>();
 
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-
-  const [loading, setLoading] = useState(true);
+  const [paymentMethods, setPaymentMethods] = useState(usePaymentMethods().data);
   const [showAddCardModal, setShowAddCardModal] = useState(false);
   const [showAddUpiModal, setShowAddUpiModal] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  // API functions
-  const fetchPaymentMethods = async () => {
-    try {
-      // TODO: Replace with actual API endpoint
-      const response = await fetch('/api/payment-methods', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add authentication headers as needed
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch payment methods');
-      }
-
-      const data = await response.json();
-      return data.paymentMethods || [];
-    } catch (error) {
-      console.error('Error fetching payment methods:', error);
-      throw error;
-    }
-  };
-
-  const deletePaymentMethodAPI = async (id: string) => {
-    try {
-      // TODO: Replace with actual API endpoint
-      const response = await fetch(`/api/payment-methods/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add authentication headers as needed
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete payment method');
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error deleting payment method:', error);
-      throw error;
-    }
-  };
-
-  const setDefaultPaymentMethodAPI = async (id: string) => {
-    try {
-      // TODO: Replace with actual API endpoint
-      const response = await fetch(`/api/payment-methods/${id}/set-default`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add authentication headers as needed
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to set default payment method');
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error setting default payment method:', error);
-      throw error;
-    }
-  };
-
-  // Load payment methods on component mount
-  useEffect(() => {
-    const loadPaymentMethods = async () => {
-      try {
-        const methods = await fetchPaymentMethods();
-        setPaymentMethods(methods);
-      } catch (error) {
-        console.error('Failed to load payment methods:', error);
-        setPaymentMethods([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadPaymentMethods();
-  }, []);
 
   // Handlers
-  const handleSetDefault = async (id: string) => {
-    try {
-      setLoading(true);
-      await setDefaultPaymentMethodAPI(id);
-      setPaymentMethods((methods) =>
-        methods.map((method) => ({ ...method, isDefault: method.id === id }))
-      );
-      Alert.alert('Success', 'Default payment method updated');
-    } catch (error) {
-      console.error('Error setting default payment method:', error);
-      Alert.alert('Error', 'Failed to set default payment method');
-    } finally {
-      setLoading(false);
-    }
+  const handleSetDefault = (id: string) => {
+    setPaymentMethods((methods) =>
+      methods.map((method) => ({ ...method, isDefault: method.id === id }))
+    );
   };
 
   const handleDeleteMethod = (id: string) => {
@@ -140,51 +43,21 @@ const PaymentMethodsScreen: React.FC = () => {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: async () => {
-          try {
-            setDeletingId(id);
-            await deletePaymentMethodAPI(id);
-            setPaymentMethods((methods) => methods.filter((method) => method.id !== id));
-            Alert.alert('Success', 'Payment method deleted successfully');
-          } catch (error) {
-            console.error('Error deleting payment method:', error);
-            Alert.alert('Error', 'Failed to delete payment method');
-          } finally {
-            setDeletingId(null);
-          }
+        onPress: () => {
+          setPaymentMethods((methods) => methods.filter((method) => method.id !== id));
         }
       }
     ]);
   };
 
-  const handleAddCardSuccess = async (newCard: PaymentMethod) => {
-    try {
-      // Refresh the payment methods list to get updated data from server
-      const methods = await fetchPaymentMethods();
-      setPaymentMethods(methods);
-      setShowAddCardModal(false);
-      Alert.alert('Success', 'Card added successfully');
-    } catch (error) {
-      // Fallback to local update if refresh fails
-      setPaymentMethods((methods) => [...methods, newCard]);
-      setShowAddCardModal(false);
-      Alert.alert('Success', 'Card added successfully');
-    }
+  const handleAddCardSuccess = (newCard: PaymentMethod) => {
+    setPaymentMethods((methods) => [...methods, newCard]);
+    setShowAddCardModal(false);
   };
 
-  const handleAddUpiSuccess = async (newUpi: PaymentMethod) => {
-    try {
-      // Refresh the payment methods list to get updated data from server
-      const methods = await fetchPaymentMethods();
-      setPaymentMethods(methods);
-      setShowAddUpiModal(false);
-      Alert.alert('Success', 'UPI ID added successfully');
-    } catch (error) {
-      // Fallback to local update if refresh fails
-      setPaymentMethods((methods) => [...methods, newUpi]);
-      setShowAddUpiModal(false);
-      Alert.alert('Success', 'UPI ID added successfully');
-    }
+  const handleAddUpiSuccess = (newUpi: PaymentMethod) => {
+    setPaymentMethods((methods) => [...methods, newUpi]);
+    setShowAddUpiModal(false);
   };
 
   const renderPaymentMethodItem = ({ item }: { item: PaymentMethod }) => (
@@ -192,7 +65,7 @@ const PaymentMethodsScreen: React.FC = () => {
       method={item}
       onSetDefault={handleSetDefault}
       onDelete={handleDeleteMethod}
-      isDeleting={deletingId === item.id}
+      isDeleting={false}
     />
   );
 
@@ -203,7 +76,6 @@ const PaymentMethodsScreen: React.FC = () => {
       <TouchableOpacity 
         style={styles.optionRow} 
         onPress={() => setShowAddCardModal(true)}
-        disabled={loading}
       >
         <View style={styles.optionIcon}>
           <Ionicons name="card-outline" size={20} color="#2563eb" />
@@ -218,7 +90,6 @@ const PaymentMethodsScreen: React.FC = () => {
       <TouchableOpacity 
         style={styles.optionRow} 
         onPress={() => setShowAddUpiModal(true)}
-        disabled={loading}
       >
         <View style={styles.optionIcon}>
           <Ionicons name="phone-portrait-outline" size={20} color="#2563eb" />
@@ -233,7 +104,6 @@ const PaymentMethodsScreen: React.FC = () => {
       <TouchableOpacity
         style={styles.optionRow}
         onPress={() => Alert.alert('Coming Soon', 'This payment method will be available soon!')}
-        disabled={loading}
       >
         <View style={styles.optionIcon}>
           <Ionicons name="cash-outline" size={20} color="#2563eb" />
@@ -269,17 +139,6 @@ const PaymentMethodsScreen: React.FC = () => {
       </Text>
     </View>
   );
-
-  if (loading && !showAddCardModal && !showAddUpiModal) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.loader}>
-          <ActivityIndicator size="large" color="#2563eb" />
-          {deletingId && <Text style={styles.deletingText}>Deleting payment method...</Text>}
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>

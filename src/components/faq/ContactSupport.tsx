@@ -13,7 +13,7 @@ const ContactSupport: React.FC<ContactSupportProps> = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>
-        Couldn't find what you're looking for?
+        Couldn&apos;t find what you&apos;re looking for?
       </Text>
       <TouchableOpacity
         style={styles.button}

@@ -414,7 +414,7 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
                   value={formData.duration}
                   onChangeText={(value) => updateFormData('duration', value)}
                 />
-                <Text style={styles.helperText}>Format: "45 mins" or "1 hour"</Text>
+                <Text style={styles.helperText}>Format: &quot;45 mins&quot; or &quot;1 hour&quot;</Text>
                 {formErrors.duration && <Text style={styles.errorText}>{formErrors.duration}</Text>}
               </View>
 
@@ -632,7 +632,6 @@ modalContentContainer: {
 
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1F2937' },
-  scrollContent: { padding: 16, paddingBottom: 20 },
   inputGroup: { marginBottom: 16 },
   label: { fontWeight: '500', color: '#374151', marginBottom: 8 },
   requiredAsterisk: { color: '#EF4444' },

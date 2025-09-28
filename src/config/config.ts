@@ -1,55 +1,38 @@
-// API Configuration
-export const API_CONFIG = {
-  // Base URLs for different environments
-  BASE_URL: {
-    development: 'https://dash-stream-apk-backend.vercel.app/api',
-    staging: 'https://dash-stream-apk-backend.vercel.app/api',
-    production: 'https://api.dashstream.com/api',
+
+import { Platform } from 'react-native';
+
+// Using a more secure way to handle environment variables is recommended,
+// for example, using a library like react-native-config.
+// For this example, we'll define them here, but they should be in a .env file.
+
+const ENV = {
+  development: {
+    API_URL: Platform.OS === 'ios'
+      ? 'http://localhost:5000/api'
+      : 'http://10.0.2.2:5000/api',
+    GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY',
+    RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || 'YOUR_RAZORPAY_KEY_ID',
   },
-  
-  // Current environment
-  ENVIRONMENT: __DEV__ ? 'development' : 'production',
-  
-  // Request timeout
-  TIMEOUT: 30000, // 30 seconds
-  
-  // API Version
-  VERSION: 'v1',
-  
-  // Authentication
-  AUTH: {
-    TOKEN_KEY: '@dashstream_token',
-    REFRESH_TOKEN_KEY: '@dashstream_refresh_token',
-    USER_KEY: '@dashstream_user',
+  staging: {
+    API_URL: 'https://dash-stream-apk-backend.vercel.app/api',
+    GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY',
+    RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || 'YOUR_RAZORPAY_KEY_ID',
   },
-  
-  // Pagination defaults
-  PAGINATION: {
-    DEFAULT_LIMIT: 10,
-    MAX_LIMIT: 100,
-  },
-  
-  // File upload limits
-  UPLOAD: {
-    MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
-    ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
-    ALLOWED_DOCUMENT_TYPES: ['application/pdf', 'image/jpeg', 'image/png'],
-  },
-  
-  // Cache settings
-  CACHE: {
-    DEFAULT_TTL: 5 * 60 * 1000, // 5 minutes
-    USER_PROFILE_TTL: 30 * 60 * 1000, // 30 minutes
-    SERVICES_TTL: 60 * 60 * 1000, // 1 hour
-  },
+  production: {
+    API_URL: 'https://api.dashstream.com/api',
+    GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY',
+    RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || 'YOUR_RAZORPAY_KEY_ID',
+  }
 };
 
-// Get current API base URL
-export const getApiBaseUrl = (): string => {
-  return API_CONFIG.BASE_URL[API_CONFIG.ENVIRONMENT as keyof typeof API_CONFIG.BASE_URL];
+const getCurrentEnv = () => {
+  if (__DEV__) return 'development';
+  // Add logic to detect staging vs production
+  return 'production';
 };
 
-// API Endpoints
+export const config = ENV[getCurrentEnv()];
+
 export const API_ENDPOINTS = {
   // Authentication
   AUTH: {
@@ -64,13 +47,13 @@ export const API_ENDPOINTS = {
 
   // User Profile
   USER: {
-    PROFILE: '/user/profile',
-    UPDATE_PROFILE: '/user/profile',
-    UPLOAD_AVATAR: '/user/avatar',
-    CHANGE_PASSWORD: '/user/change-password',
-    DELETE_ACCOUNT: '/user/delete-account',
-    ADDRESSES: '/user/addresses',
-    VEHICLES: '/user/vehicles',
+    PROFILE: '/users/profile',
+    UPDATE_PROFILE: '/users/profile',
+    UPLOAD_AVATAR: '/users/avatar',
+    CHANGE_PASSWORD: '/users/change-password',
+    DELETE_ACCOUNT: '/users/delete-account',
+    ADDRESSES: '/users/addresses',
+    VEHICLES: '/users/vehicles',
   },
 
   // Services
@@ -175,7 +158,7 @@ export const API_ENDPOINTS = {
     CONTACT: '/support/contact',
   },
 
-  // Admin (if needed for customer app)
+  // Admin
   ADMIN: {
     DASHBOARD: '/admin/dashboard',
     USERS: '/admin/users',
@@ -185,64 +168,11 @@ export const API_ENDPOINTS = {
   },
 };
 
-// HTTP Methods
-export const HTTP_METHODS = {
-  GET: 'GET',
-  POST: 'POST',
-  PUT: 'PUT',
-  PATCH: 'PATCH',
-  DELETE: 'DELETE',
-} as const;
-
-// Request Headers
-export const getDefaultHeaders = (token?: string) => {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'X-API-Version': API_CONFIG.VERSION,
-  };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  return headers;
-};
-
-// Multipart form headers
-export const getMultipartHeaders = (token?: string) => {
-  const headers: Record<string, string> = {
-    'Content-Type': 'multipart/form-data',
-    'Accept': 'application/json',
-    'X-API-Version': API_CONFIG.VERSION,
-  };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  return headers;
-};
-
-// Error messages
-export const API_ERROR_MESSAGES = {
-  NETWORK_ERROR: 'Network error. Please check your internet connection.',
-  TIMEOUT: 'Request timeout. Please try again.',
-  UNAUTHORIZED: 'You are not authorized. Please login again.',
-  FORBIDDEN: 'Access denied.',
-  NOT_FOUND: 'Resource not found.',
-  VALIDATION_ERROR: 'Please check your input and try again.',
-  SERVER_ERROR: 'Server error. Please try again later.',
-  UNKNOWN_ERROR: 'Something went wrong. Please try again.',
-};
-
-// Feature flags (for gradual rollout of features)
-export const FEATURE_FLAGS = {
-  ENABLE_PUSH_NOTIFICATIONS: true,
-  ENABLE_LOCATION_TRACKING: true,
-  ENABLE_SOCIAL_LOGIN: true,
-  ENABLE_MEMBERSHIP: true,
-  ENABLE_CHAT_SUPPORT: false,
-  ENABLE_VIDEO_CALLS: false,
-  ENABLE_OFFLINE_MODE: false,
+export const APP_CONFIG = {
+  APP_NAME: 'DashStream',
+  APP_VERSION: '1.0.0',
+  API_TIMEOUT: 30000,
+  CACHE_DURATION: 5 * 60 * 1000,
+  MAX_RETRY_ATTEMPTS: 3,
+  RETRY_DELAY: 1000,
 };

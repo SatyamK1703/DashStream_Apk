@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import { config, APP_CONFIG, ENDPOINTS } from '../config/env';
+import { config, APP_CONFIG, API_ENDPOINTS as ENDPOINTS } from '../config/config';
 
 // Types for API responses
 export interface ApiResponse<T = any> {

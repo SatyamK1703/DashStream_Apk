@@ -18,7 +18,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Import proper types and hooks
-import { ProStackParamList } from '../../../app/routes/ProfessionalNavigator';
+import { ProStackParamList } from '../../app/routes/ProNavigator';
 import { useAuth } from '../../context/AuthContext';
 import { useProfessionalProfile, useProfessionalProfileActions } from '../../hooks/useProfessional';
 

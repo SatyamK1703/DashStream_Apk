@@ -133,15 +133,7 @@ export const useToggleServiceStatus = () => {
   );
 };
 
-// Hook for getting service categories
-export const useServiceCategories = () => {
-  return useApi(
-    () => serviceService.getServiceCategories(),
-    {
-      showErrorAlert: false,
-    }
-  );
-};
+
 
 // Hook for admin dashboard stats (alias for useAdminDashboard)
 export const useAdminStats = () => {

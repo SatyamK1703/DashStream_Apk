@@ -9,14 +9,10 @@ import { useCart } from '../../context/CartContext';
 import { useCreateBooking } from '../../hooks/useBookings';
 import { useCreatePaymentOrder, usePaymentMethods, useVerifyPayment } from '../../hooks/usePayments';
 
-type CheckoutScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
+import { useMyAddresses } from '../../hooks/useUser';
+import { Address } from '../../types/api';
 
-interface AddressOption {
-  id: string;
-  title: string;
-  address: string;
-  isDefault: boolean;
-}
+type CheckoutScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
 interface TimeSlot {
   id: string;
@@ -53,31 +49,15 @@ const CheckoutScreen = () => {
   const verifyPaymentApi = useVerifyPayment();
 
   // Address management
-  const [addresses, setAddresses] = useState<AddressOption[]>([]);
+  const { data: addresses, loading: addressesLoading, error: addressesError } = useMyAddresses();
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
-  const [addressesLoading, setAddressesLoading] = useState(true);
   
   useEffect(() => {
-    const loadAddresses = async () => {
-      try {
-        setAddressesLoading(true);
-        // TODO: Replace with actual API call to load user addresses
-        // const userAddresses = await userService.getAddresses();
-        
-        // For now, use fallback address
-        const fallback = [{ id: 'default', title: 'Home', address: 'Default Address', isDefault: true }];
-        setAddresses(fallback);
-        if (fallback.length > 0) setSelectedAddress(fallback[0].id);
-      } catch (error) {
-        console.error('Failed to load addresses:', error);
-        setAddresses([]);
-      } finally {
-        setAddressesLoading(false);
-      }
-    };
-    
-    loadAddresses();
-  }, []);
+    if (addresses && addresses.length > 0) {
+      const defaultAddress = addresses.find(a => a.isDefault) || addresses[0];
+      setSelectedAddress(defaultAddress._id);
+    }
+  }, [addresses]);
 
   // Generate dates for the next 7 days
   const dates = Array.from({ length: 7 }, (_, i) => {
@@ -105,84 +85,20 @@ const CheckoutScreen = () => {
     setTimeSlots(slots);
   }, []);
 
-  // Payment methods from API
+  // Payment methods from hook
   const paymentMethodsApi = usePaymentMethods();
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
-  
-  // Load payment methods on component mount
-  useEffect(() => {
-    console.log('Loading payment methods...');
-    paymentMethodsApi.execute();
-    
-    // Add timeout to show fallback methods if API takes too long
-    const timeout = setTimeout(() => {
-      if (paymentMethodsApi.loading && (!paymentMethodsApi.data || paymentMethodsApi.data.length === 0)) {
-        console.log('Payment methods API timeout, using fallback methods');
-        const fallbackMethods = [
-          {
-            id: 'razorpay',
-            name: 'Razorpay (All Methods)',
-            details: 'Cards, UPI, Wallets, Net Banking',
-            icon: 'card-outline',
-            type: 'razorpay',
-            isDefault: true
-          }
-        ];
-        
-        // Force update the API state
-        paymentMethodsApi.data = fallbackMethods;
-        paymentMethodsApi.loading = false;
-        setSelectedPaymentMethod(fallbackMethods[0].id);
-      }
-    }, 5000); // 5 second timeout
-    
-    return () => clearTimeout(timeout);
-  }, []);
-  
+
   // Set default payment method when data loads
   useEffect(() => {
-    console.log('Payment methods API response:', {
-      data: paymentMethodsApi.data,
-      loading: paymentMethodsApi.loading,
-      error: paymentMethodsApi.error
-    });
-    
     if (paymentMethodsApi.data && Array.isArray(paymentMethodsApi.data)) {
       const methods = paymentMethodsApi.data as any[];
       if (methods.length > 0 && !selectedPaymentMethod) {
-        setSelectedPaymentMethod(methods[0].id);
+        const defaultMethod = methods.find(m => m.isDefault) || methods[0];
+        setSelectedPaymentMethod(defaultMethod.id);
       }
     }
-    
-    // If API fails, add fallback payment methods for development
-    if (paymentMethodsApi.error && (!paymentMethodsApi.data || paymentMethodsApi.data.length === 0)) {
-      console.log('Using fallback payment methods due to API error');
-      const fallbackMethods = [
-        {
-          id: 'razorpay',
-          name: 'Razorpay (All Methods)',
-          details: 'Cards, UPI, Wallets, Net Banking',
-          icon: 'card-outline',
-          type: 'razorpay',
-          isDefault: true
-        },
-        {
-          id: 'upi',
-          name: 'UPI',
-          details: 'Pay using UPI',
-          icon: 'phone-portrait-outline',
-          type: 'upi',
-          isDefault: false
-        }
-      ];
-      
-      // Simulate API response structure
-      paymentMethodsApi.data = fallbackMethods;
-      if (!selectedPaymentMethod) {
-        setSelectedPaymentMethod(fallbackMethods[0].id);
-      }
-    }
-  }, [paymentMethodsApi.data, paymentMethodsApi.loading, paymentMethodsApi.error, selectedPaymentMethod]);
+  }, [paymentMethodsApi.data, selectedPaymentMethod]);
   const handlePlaceOrder = async () => {
     if (!selectedTimeSlot) {
       Alert.alert('Select Time', 'Please select a time slot for your service.');
@@ -206,16 +122,22 @@ const CheckoutScreen = () => {
 
     setIsLoading(true);
     try {
+      const selectedAddressDetails = addresses?.find(a => a._id === selectedAddress);
+      if (!selectedAddressDetails) {
+        Alert.alert('Error', 'Please select a valid address.');
+        return;
+      }
+
       // Create booking on backend
       const bookingPayload = {
         service: cartItems.map(i => i.id),
         scheduledDate: selectedDate.toISOString(),
         scheduledTime: selectedTimeSlot,
         location: {
-          address: addresses.find(a => a.id === selectedAddress)?.address || 'Default Address',
-          name: addresses.find(a => a.id === selectedAddress)?.title || 'Home',
-          city: '',
-          pincode: ''
+          address: selectedAddressDetails.addressLine1,
+          name: selectedAddressDetails.title,
+          city: selectedAddressDetails.city,
+          pincode: selectedAddressDetails.postalCode
         },
         price: cartItems.reduce((s, it) => s + it.price * it.quantity, 0),
         totalAmount: cartItems.reduce((s, it) => s + it.price * it.quantity, 0),
@@ -493,14 +415,21 @@ const CheckoutScreen = () => {
 
             {addressesLoading ? (
               <Text style={styles.grayText}>Loading addresses...</Text>
-            ) : addresses.length > 0 ? (
+            ) : addressesError ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>Failed to load addresses</Text>
+                <TouchableOpacity onPress={() => {}} style={styles.retryButton}>
+                  <Text style={styles.linkText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : addresses && addresses.length > 0 ? (
               addresses.map((address) => {
-                const isSelected = selectedAddress === address.id;
+                const isSelected = selectedAddress === address._id;
                 return (
                   <TouchableOpacity
-                    key={address.id}
+                    key={address._id}
                     style={[styles.addressBox, isSelected && styles.addressSelected]}
-                    onPress={() => setSelectedAddress(address.id)}
+                    onPress={() => setSelectedAddress(address._id)}
                   >
                     <View style={styles.addressTopRow}>
                       <Text style={styles.addressTitle}>{address.title}</Text>
@@ -510,7 +439,7 @@ const CheckoutScreen = () => {
                         </View>
                       )}
                     </View>
-                    <Text style={styles.addressText}>{address.address}</Text>
+                    <Text style={styles.addressText}>{address.addressLine1}</Text>
                   </TouchableOpacity>
                 );
               })
@@ -549,16 +478,7 @@ const CheckoutScreen = () => {
               </TouchableOpacity>
             </View>
             
-            {paymentMethodsApi.loading ? (
-              <Text style={styles.grayText}>Loading payment methods...</Text>
-            ) : paymentMethodsApi.error ? (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>Failed to load payment methods</Text>
-                <TouchableOpacity onPress={() => paymentMethodsApi.execute()} style={styles.retryButton}>
-                  <Text style={styles.linkText}>Retry</Text>
-                </TouchableOpacity>
-              </View>
-            ) : paymentMethodsApi.data && Array.isArray(paymentMethodsApi.data) && paymentMethodsApi.data.length > 0 ? (
+            {paymentMethodsApi.data && Array.isArray(paymentMethodsApi.data) && paymentMethodsApi.data.length > 0 ? (
               (paymentMethodsApi.data as any[]).map((method) => {
                 const isSelected = selectedPaymentMethod === method.id;
                 return (
