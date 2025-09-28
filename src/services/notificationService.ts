@@ -1,5 +1,5 @@
 import httpClient, { ApiResponse } from './httpClient';
-import { ENDPOINTS } from '../config/env';
+import { API_ENDPOINTS } from '../config/config';
 import { Notification } from '../types/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
@@ -22,7 +22,7 @@ class NotificationService {
     unreadCount: number;
   }>> {
     try {
-      return await httpClient.get(ENDPOINTS.NOTIFICATIONS.ALL, { params });
+      return await httpClient.get(API_ENDPOINTS.NOTIFICATIONS.ALL, { params });
     } catch (error) {
       console.error('Get notifications error:', error);
       throw error;
@@ -34,7 +34,7 @@ class NotificationService {
    */
   async markAsRead(notificationId: string): Promise<ApiResponse<{ success: boolean }>> {
     try {
-      return await httpClient.patch(ENDPOINTS.NOTIFICATIONS.MARK_READ(notificationId));
+      return await httpClient.patch(API_ENDPOINTS.NOTIFICATIONS.MARK_READ(notificationId));
     } catch (error) {
       console.error('Mark notification as read error:', error);
       throw error;
@@ -46,7 +46,7 @@ class NotificationService {
    */
   async markAllAsRead(): Promise<ApiResponse<{ success: boolean; count: number }>> {
     try {
-      return await httpClient.patch(ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
+      return await httpClient.patch(API_ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
     } catch (error) {
       console.error('Mark all notifications as read error:', error);
       throw error;
@@ -58,7 +58,7 @@ class NotificationService {
    */
   async getUnreadCount(): Promise<ApiResponse<{ count: number }>> {
     try {
-      return await httpClient.get(ENDPOINTS.NOTIFICATIONS.UNREAD_COUNT);
+      return await httpClient.get(API_ENDPOINTS.NOTIFICATIONS.UNREAD_COUNT);
     } catch (error) {
       console.error('Get unread count error:', error);
       throw error;
@@ -70,7 +70,7 @@ class NotificationService {
    */
   async deleteNotification(notificationId: string): Promise<ApiResponse<{ success: boolean }>> {
     try {
-      return await httpClient.delete(ENDPOINTS.NOTIFICATIONS.DELETE(notificationId));
+      return await httpClient.delete(API_ENDPOINTS.NOTIFICATIONS.DELETE(notificationId));
     } catch (error) {
       console.error('Delete notification error:', error);
       throw error;
@@ -82,7 +82,7 @@ class NotificationService {
    */
   async clearAllNotifications(): Promise<ApiResponse<{ success: boolean; count: number }>> {
     try {
-      return await httpClient.delete(ENDPOINTS.NOTIFICATIONS.CLEAR_ALL);
+      return await httpClient.delete(API_ENDPOINTS.NOTIFICATIONS.CLEAR_ALL);
     } catch (error) {
       console.error('Clear all notifications error:', error);
       throw error;
@@ -102,7 +102,7 @@ class NotificationService {
     sms: boolean;
   }): Promise<ApiResponse<{ success: boolean }>> {
     try {
-      return await httpClient.patch(ENDPOINTS.NOTIFICATIONS.PREFERENCES, preferences);
+      return await httpClient.patch(API_ENDPOINTS.NOTIFICATIONS.PREFERENCES, preferences);
     } catch (error) {
       console.error('Update notification preferences error:', error);
       // Persist locally so user's choice is not lost when server denies access
@@ -128,7 +128,7 @@ class NotificationService {
     sms: boolean;
   }>> {
     try {
-      return await httpClient.get(ENDPOINTS.NOTIFICATIONS.PREFERENCES);
+      return await httpClient.get(API_ENDPOINTS.NOTIFICATIONS.PREFERENCES);
     } catch (error: any) {
       console.error('Get notification preferences error:', error);
 
@@ -157,7 +157,7 @@ class NotificationService {
    */
   async registerFCMToken(token: string): Promise<ApiResponse<{ success: boolean }>> {
     try {
-      return await httpClient.post(ENDPOINTS.NOTIFICATIONS.REGISTER_FCM, { token });
+      return await httpClient.post(API_ENDPOINTS.NOTIFICATIONS.REGISTER_FCM, { token });
     } catch (error) {
       console.error('Register FCM token error:', error);
       throw error;
@@ -183,8 +183,8 @@ export const buildPreferencesCurl = async (): Promise<string> => {
     // Fallback to AsyncStorage-stored token
     if (!accessToken) accessToken = await AsyncStorage.getItem('@DashStream:access_token');
 
-    const base = (ENDPOINTS as any).__base || '';
-    const url = `${(base || '')}${ENDPOINTS.NOTIFICATIONS.PREFERENCES}`;
+    const base = (API_ENDPOINTS as any).__base || '';
+    const url = `${(base || '')}${API_ENDPOINTS.NOTIFICATIONS.PREFERENCES}`;
     const headers = [] as string[];
     if (accessToken) headers.push(`-H "Authorization: Bearer ${accessToken}"`);
     headers.push('-H "Content-Type: application/json"');

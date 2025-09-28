@@ -1,7 +1,7 @@
 // hooks/useAdminOffers.ts
 import { useState, useEffect } from 'react';
 import httpClient from '../services/httpClient';
-import { ENDPOINTS } from '../config/env';
+import { API_ENDPOINTS } from '../config/config';
 
 export const useAdminOffers = () => {
   const [data, setData] = useState<any[]>([]);
@@ -11,7 +11,7 @@ export const useAdminOffers = () => {
   const fetchOffers = async () => {
     try {
       setLoading(true);
-      const resp = await httpClient.get(ENDPOINTS.OFFERS.ALL);
+      const resp = await httpClient.get(API_ENDPOINTS.OFFERS.ALL);
       const items = (resp as any)?.offers || (resp as any)?.data?.offers || (resp as any)?.data || [];
       setData(Array.isArray(items) ? items : []);
     } catch (err) {
@@ -34,7 +34,7 @@ export const useCreateOffer = () => {
   const execute = async (offerData: any) => {
     setLoading(true);
     try {
-      const resp = await httpClient.post(ENDPOINTS.OFFERS.ALL, offerData);
+      const resp = await httpClient.post(API_ENDPOINTS.OFFERS.ALL, offerData);
       // Backend returns { status, data: { offer } }
       return (resp as any)?.data?.offer || (resp as any)?.offer || resp;
     } finally {
@@ -49,7 +49,7 @@ export const useUpdateOffer = () => {
   const execute = async (id: string, offerData: any) => {
     setLoading(true);
     try {
-      const resp = await httpClient.patch(ENDPOINTS.OFFERS.BY_ID(id), offerData);
+      const resp = await httpClient.patch(API_ENDPOINTS.OFFERS.BY_ID(id), offerData);
       // Backend returns { status, data: { offer } }
       return (resp as any)?.data?.offer || (resp as any)?.offer || resp;
     } finally {
@@ -64,7 +64,7 @@ export const useDeleteOffer = () => {
   const execute = async (id: string) => {
     setLoading(true);
     try {
-      await httpClient.delete(ENDPOINTS.OFFERS.BY_ID(id));
+      await httpClient.delete(API_ENDPOINTS.OFFERS.BY_ID(id));
     } finally {
       setLoading(false);
     }
@@ -77,10 +77,10 @@ export const useToggleOfferStatus = () => {
   const execute = async (id: string, isActive: boolean) => {
     setLoading(true);
     try {
-      // Backend has separate endpoints for activate/deactivate
+      // Backend has separate API_ENDPOINTS for activate/deactivate
       const url = isActive
-        ? `${ENDPOINTS.OFFERS.BY_ID(id)}/activate`
-        : `${ENDPOINTS.OFFERS.BY_ID(id)}/deactivate`;
+        ? `${API_ENDPOINTS.OFFERS.BY_ID(id)}/activate`
+        : `${API_ENDPOINTS.OFFERS.BY_ID(id)}/deactivate`;
       const resp = await httpClient.patch(url);
       return (resp as any)?.data?.offer || (resp as any)?.offer || resp;
     } finally {
@@ -98,7 +98,7 @@ export const useOfferStats = (offerId: string) => {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const resp = await httpClient.get(ENDPOINTS.OFFERS.STATS(offerId));
+      const resp = await httpClient.get(API_ENDPOINTS.OFFERS.STATS(offerId));
       // Backend returns { status, data: { offer, usageHistory, topUsers, totalRevenue, totalSavings } }
       setData((resp as any)?.data || resp);
     } catch (err) {

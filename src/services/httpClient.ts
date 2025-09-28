@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import { config, APP_CONFIG, API_ENDPOINTS as ENDPOINTS } from '../config/config';
+import { config, APP_CONFIG, API_ENDPOINTS } from '../config/config';
 
 // Types for API responses
 export interface ApiResponse<T = any> {
@@ -390,7 +390,7 @@ class HttpClient {
         }
 
         const response = await this.client.post<ApiResponse<{ token?: string; accessToken?: string; refreshToken?: string }>>(
-          ENDPOINTS.AUTH.REFRESH_TOKEN,
+          API_ENDPOINTS.AUTH.REFRESH_TOKEN,
           { refreshToken }
         );
 
@@ -631,7 +631,7 @@ class HttpClient {
     try {
       const token = await this.getAccessToken();
       if (token) {
-        await this.post(ENDPOINTS.AUTH.LOGOUT);
+        await this.post(API_ENDPOINTS.AUTH.LOGOUT);
       }
     } catch (error) {
       if (__DEV__) console.warn('Logout API call failed:', error);

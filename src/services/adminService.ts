@@ -1,5 +1,5 @@
 import httpClient, { ApiResponse } from './httpClient';
-import { ENDPOINTS } from '../config/env';
+import { API_ENDPOINTS } from '../config/config';
 import { 
   User, 
   Booking, 
@@ -39,7 +39,7 @@ class AdminService {
    */
   async getDashboardStats(): Promise<ApiResponse<AdminDashboardStats>> {
     try {
-      return await httpClient.get(ENDPOINTS.ADMIN.DASHBOARD);
+      return await httpClient.get(API_ENDPOINTS.ADMIN.DASHBOARD);
     } catch (error) {
       // Log error in development only
       if (__DEV__) console.error('Get dashboard stats error:', error);
@@ -59,7 +59,7 @@ class AdminService {
    */
   async getUsers(filters?: AdminFilters): Promise<ApiResponse<User[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.ADMIN.USERS, { params: filters });
+      return await httpClient.get(API_ENDPOINTS.ADMIN.USERS, { params: filters });
     } catch (error) {
       console.error('Get users error:', error);
       throw error;
@@ -71,7 +71,7 @@ class AdminService {
    */
   async getUserById(userId: string): Promise<ApiResponse<User>> {
     try {
-      return await httpClient.get(ENDPOINTS.ADMIN.USER_BY_ID(userId));
+      return await httpClient.get(API_ENDPOINTS.ADMIN.USER_BY_ID(userId));
     } catch (error) {
       console.error('Get user by ID error:', error);
       throw error;
@@ -89,7 +89,7 @@ class AdminService {
     additionalInfo?: any;
   }): Promise<ApiResponse<User>> {
     try {
-      return await httpClient.post(ENDPOINTS.ADMIN.CREATE_USER, userData);
+      return await httpClient.post(API_ENDPOINTS.ADMIN.CREATE_USER, userData);
     } catch (error) {
       console.error('Create user error:', error);
       throw error;
@@ -101,7 +101,7 @@ class AdminService {
    */
   async updateUser(userId: string, userData: Partial<User>): Promise<ApiResponse<User>> {
     try {
-      return await httpClient.patch(ENDPOINTS.ADMIN.UPDATE_USER(userId), userData);
+      return await httpClient.patch(API_ENDPOINTS.ADMIN.UPDATE_USER(userId), userData);
     } catch (error) {
       console.error('Update user error:', error);
       throw error;
@@ -113,7 +113,7 @@ class AdminService {
    */
   async deleteUser(userId: string): Promise<ApiResponse<void>> {
     try {
-      return await httpClient.delete(ENDPOINTS.ADMIN.DELETE_USER(userId));
+      return await httpClient.delete(API_ENDPOINTS.ADMIN.DELETE_USER(userId));
     } catch (error) {
       console.error('Delete user error:', error);
       throw error;
@@ -125,7 +125,7 @@ class AdminService {
    */
   async getBookings(filters?: AdminFilters): Promise<ApiResponse<Booking[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.ADMIN.BOOKINGS, { params: filters });
+      return await httpClient.get(API_ENDPOINTS.ADMIN.BOOKINGS, { params: filters });
     } catch (error) {
       console.error('Get bookings error:', error);
       throw error;
@@ -137,7 +137,7 @@ class AdminService {
    */
   async getBookingById(bookingId: string): Promise<ApiResponse<Booking>> {
     try {
-      return await httpClient.get(ENDPOINTS.ADMIN.BOOKING_BY_ID(bookingId));
+      return await httpClient.get(API_ENDPOINTS.ADMIN.BOOKING_BY_ID(bookingId));
     } catch (error) {
       console.error('Get booking by ID error:', error);
       throw error;
@@ -149,7 +149,7 @@ class AdminService {
    */
   async updateBookingStatus(bookingId: string, status: string): Promise<ApiResponse<Booking>> {
     try {
-      return await httpClient.patch(ENDPOINTS.ADMIN.UPDATE_BOOKING_STATUS(bookingId), { status });
+      return await httpClient.patch(API_ENDPOINTS.ADMIN.UPDATE_BOOKING_STATUS(bookingId), { status });
     } catch (error) {
       console.error('Update booking status error:', error);
       throw error;
@@ -161,7 +161,7 @@ class AdminService {
    */
   async assignProfessional(bookingId: string, professionalId: string): Promise<ApiResponse<Booking>> {
     try {
-      return await httpClient.patch(ENDPOINTS.ADMIN.ASSIGN_PROFESSIONAL(bookingId), { 
+      return await httpClient.patch(API_ENDPOINTS.ADMIN.ASSIGN_PROFESSIONAL(bookingId), { 
         professionalId 
       });
     } catch (error) {
@@ -175,7 +175,7 @@ class AdminService {
    */
   async cancelBooking(bookingId: string, reason?: string): Promise<ApiResponse<Booking>> {
     try {
-      return await httpClient.patch(ENDPOINTS.ADMIN.CANCEL_BOOKING(bookingId), { reason });
+      return await httpClient.patch(API_ENDPOINTS.ADMIN.CANCEL_BOOKING(bookingId), { reason });
     } catch (error) {
       console.error('Cancel booking error:', error);
       throw error;
@@ -188,10 +188,10 @@ class AdminService {
   async getServices(filters?: AdminFilters): Promise<ApiResponse<{ services: Service[]; pagination?: any }>> {
     try {
       if (__DEV__) {
-        console.log('adminService.getServices - Making request to:', ENDPOINTS.ADMIN.SERVICES, 'with filters:', filters);
+        console.log('adminService.getServices - Making request to:', API_ENDPOINTS.ADMIN.SERVICES, 'with filters:', filters);
       }
       
-      const response = await httpClient.get(ENDPOINTS.ADMIN.SERVICES, { params: filters });
+      const response = await httpClient.get(API_ENDPOINTS.ADMIN.SERVICES, { params: filters });
 
       
       // Handle both array and object responses
@@ -259,7 +259,7 @@ class AdminService {
    */
   async createService(serviceData: Partial<Service>): Promise<ApiResponse<Service>> {
     try {
-      return await httpClient.post(ENDPOINTS.ADMIN.CREATE_SERVICE, serviceData);
+      return await httpClient.post(API_ENDPOINTS.ADMIN.CREATE_SERVICE, serviceData);
     } catch (error) {
       console.error('Create service error:', error);
       throw error;
@@ -271,7 +271,7 @@ class AdminService {
    */
   async updateService(serviceId: string, serviceData: Partial<Service>): Promise<ApiResponse<Service>> {
     try {
-      return await httpClient.patch(ENDPOINTS.ADMIN.UPDATE_SERVICE(serviceId), serviceData);
+      return await httpClient.patch(API_ENDPOINTS.ADMIN.UPDATE_SERVICE(serviceId), serviceData);
     } catch (error) {
       console.error('Update service error:', error);
       throw error;
@@ -283,7 +283,7 @@ class AdminService {
    */
   async deleteService(serviceId: string): Promise<ApiResponse<void>> {
     try {
-      return await httpClient.delete(ENDPOINTS.ADMIN.DELETE_SERVICE(serviceId));
+      return await httpClient.delete(API_ENDPOINTS.ADMIN.DELETE_SERVICE(serviceId));
     } catch (error) {
       console.error('Delete service error:', error);
       throw error;
@@ -295,7 +295,7 @@ class AdminService {
    */
   async getProfessionals(filters?: AdminFilters): Promise<ApiResponse<Professional[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.ADMIN.PROFESSIONALS, { params: filters });
+      return await httpClient.get(API_ENDPOINTS.ADMIN.PROFESSIONALS, { params: filters });
     } catch (error) {
       console.error('Get professionals error:', error);
       throw error;
@@ -307,7 +307,7 @@ class AdminService {
    */
   async getProfessionalById(professionalId: string): Promise<ApiResponse<Professional>> {
     try {
-      return await httpClient.get(ENDPOINTS.ADMIN.PROFESSIONAL_BY_ID(professionalId));
+      return await httpClient.get(API_ENDPOINTS.ADMIN.PROFESSIONAL_BY_ID(professionalId));
     } catch (error) {
       console.error('Get professional by ID error:', error);
       throw error;
@@ -323,7 +323,7 @@ class AdminService {
   ): Promise<ApiResponse<Professional>> {
     try {
       return await httpClient.patch(
-        ENDPOINTS.ADMIN.VERIFY_PROFESSIONAL(professionalId), 
+        API_ENDPOINTS.ADMIN.VERIFY_PROFESSIONAL(professionalId), 
         verificationData
       );
     } catch (error) {
@@ -337,7 +337,7 @@ class AdminService {
    */
   async getStats(): Promise<ApiResponse<any>> {
     try {
-      return await httpClient.get(ENDPOINTS.ADMIN.STATS);
+      return await httpClient.get(API_ENDPOINTS.ADMIN.STATS);
     } catch (error) {
       console.error('Get admin stats error:', error);
       throw error;
@@ -349,7 +349,7 @@ class AdminService {
    */
   async getCustomers(filters?: AdminFilters): Promise<ApiResponse<User[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.ADMIN.USERS, { 
+      return await httpClient.get(API_ENDPOINTS.ADMIN.USERS, { 
         params: { ...filters, role: 'customer' } 
       });
     } catch (error) {
@@ -363,7 +363,7 @@ class AdminService {
    */
   async getNotifications(filters?: AdminFilters): Promise<ApiResponse<any[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.NOTIFICATIONS.ALL, { params: filters });
+      return await httpClient.get(API_ENDPOINTS.NOTIFICATIONS.ALL, { params: filters });
     } catch (error) {
       console.error('Get notifications error:', error);
       throw error;
@@ -375,7 +375,7 @@ class AdminService {
    */
   async markNotificationAsRead(notificationId: string): Promise<ApiResponse<any>> {
     try {
-      return await httpClient.patch(ENDPOINTS.NOTIFICATIONS.MARK_READ(notificationId));
+      return await httpClient.patch(API_ENDPOINTS.NOTIFICATIONS.MARK_READ(notificationId));
     } catch (error) {
       console.error('Mark notification as read error:', error);
       throw error;
@@ -387,7 +387,7 @@ class AdminService {
    */
   async markAllNotificationsAsRead(): Promise<ApiResponse<any>> {
     try {
-      return await httpClient.patch(ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
+      return await httpClient.patch(API_ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
     } catch (error) {
       console.error('Mark all notifications as read error:', error);
       throw error;

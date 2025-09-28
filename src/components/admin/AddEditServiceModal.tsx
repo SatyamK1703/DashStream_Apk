@@ -19,7 +19,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 
 // Import API utilities
 import httpClient from '../../services/httpClient';
-import { ENDPOINTS } from '../../config/env';
+import { API_ENDPOINTS } from '../../config/config';
 
 interface ServiceFormData {
   id?: string;
@@ -232,13 +232,13 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
       let response;
       if (isEditing && formData.id) {
         response = await httpClient.patch(
-          ENDPOINTS.SERVICES.UPDATE(formData.id),
+          API_ENDPOINTS.SERVICES.UPDATE(formData.id),
           serviceData
         );
         Alert.alert('Success', 'Service updated successfully!');
       } else {
         response = await httpClient.post(
-          ENDPOINTS.SERVICES.CREATE,
+          API_ENDPOINTS.SERVICES.CREATE,
           serviceData
         );
         Alert.alert('Success', 'Service created successfully!');

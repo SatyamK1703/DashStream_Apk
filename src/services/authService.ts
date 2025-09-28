@@ -1,5 +1,5 @@
 import httpClient, { ApiResponse } from './httpClient';
-import { ENDPOINTS } from '../config/env';
+import { API_ENDPOINTS } from '../config/config';
 import {
   User,
   SendOtpRequest,
@@ -14,7 +14,7 @@ class AuthService {
    */
   async sendOtp(data: SendOtpRequest): Promise<ApiResponse<SendOtpResponse>> {
     try {
-      return await httpClient.post(ENDPOINTS.AUTH.SEND_OTP, data);
+      return await httpClient.post(API_ENDPOINTS.AUTH.SEND_OTP, data);
     } catch (error) {
       console.error('Send OTP error:', error);
       throw error;
@@ -26,7 +26,7 @@ class AuthService {
    */
   async verifyOtp(data: VerifyOtpRequest): Promise<ApiResponse<VerifyOtpResponse>> {
     try {
-      const response = await httpClient.post<VerifyOtpResponse>(ENDPOINTS.AUTH.VERIFY_OTP, data);
+      const response = await httpClient.post<VerifyOtpResponse>(API_ENDPOINTS.AUTH.VERIFY_OTP, data);
       
       // Store tokens after successful verification
       const isSuccess = response.success === true || response.status === 'success';
@@ -91,7 +91,7 @@ class AuthService {
    */
   async refreshToken(): Promise<ApiResponse<{ accessToken: string; refreshToken?: string }>> {
     try {
-      return await httpClient.post(ENDPOINTS.AUTH.REFRESH_TOKEN);
+      return await httpClient.post(API_ENDPOINTS.AUTH.REFRESH_TOKEN);
     } catch (error) {
       console.error('Refresh token error:', error);
       throw error;
@@ -103,7 +103,7 @@ class AuthService {
    */
   async getCurrentUser(): Promise<ApiResponse<{ user: User }>> {
     try {
-      return await httpClient.get(ENDPOINTS.AUTH.ME);
+      return await httpClient.get(API_ENDPOINTS.AUTH.ME);
     } catch (error) {
       console.error('Get current user error:', error);
       throw error;
@@ -115,7 +115,7 @@ class AuthService {
    */
   async verifyToken(): Promise<ApiResponse<{ userId: string; role: string; tokenValid: boolean }>> {
     try {
-      return await httpClient.get(ENDPOINTS.AUTH.VERIFY_TOKEN);
+      return await httpClient.get(API_ENDPOINTS.AUTH.VERIFY_TOKEN);
     } catch (error) {
       console.error('Verify token error:', error);
       throw error;

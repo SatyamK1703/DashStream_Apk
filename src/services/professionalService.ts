@@ -1,5 +1,5 @@
 import httpClient, { ApiResponse } from './httpClient';
-import { ENDPOINTS } from '../config/env';
+import { API_ENDPOINTS } from '../config/config';
 
 // Professional-specific types based on backend controller
 export interface ProfessionalJob {
@@ -107,7 +107,7 @@ class ProfessionalService {
    */
   async getJobs(): Promise<ApiResponse<ProfessionalJob[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.PROFESSIONALS.JOBS);
+      return await httpClient.get(API_ENDPOINTS.PROFESSIONALS.JOBS);
     } catch (error) {
       if (__DEV__) console.error('Get professional jobs error:', error);
       throw error;
@@ -119,7 +119,7 @@ class ProfessionalService {
    */
   async getJobDetails(jobId: string): Promise<ApiResponse<JobDetails>> {
     try {
-      return await httpClient.get(ENDPOINTS.PROFESSIONALS.JOB_BY_ID(jobId));
+      return await httpClient.get(API_ENDPOINTS.PROFESSIONALS.JOB_BY_ID(jobId));
     } catch (error) {
       if (__DEV__) console.error('Get job details error:', error);
       throw error;
@@ -131,7 +131,7 @@ class ProfessionalService {
    */
   async updateJobStatus(jobId: string, data: UpdateJobStatusData): Promise<ApiResponse<{ id: string; status: string }>> {
     try {
-      return await httpClient.patch(ENDPOINTS.PROFESSIONALS.UPDATE_JOB_STATUS(jobId), data);
+      return await httpClient.patch(API_ENDPOINTS.PROFESSIONALS.UPDATE_JOB_STATUS(jobId), data);
     } catch (error) {
       if (__DEV__) console.error('Update job status error:', error);
       throw error;
@@ -143,7 +143,7 @@ class ProfessionalService {
    */
   async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
     try {
-      return await httpClient.get(ENDPOINTS.PROFESSIONALS.DASHBOARD);
+      return await httpClient.get(API_ENDPOINTS.PROFESSIONALS.DASHBOARD);
     } catch (error) {
       if (__DEV__) console.error('Get dashboard stats error:', error);
       throw error;
@@ -155,7 +155,7 @@ class ProfessionalService {
    */
   async getProfile(): Promise<ApiResponse<ProfessionalProfile>> {
     try {
-      return await httpClient.get(ENDPOINTS.PROFESSIONALS.PROFILE);
+      return await httpClient.get(API_ENDPOINTS.PROFESSIONALS.PROFILE);
     } catch (error) {
       if (__DEV__) console.error('Get professional profile error:', error);
       throw error;
@@ -171,7 +171,7 @@ class ProfessionalService {
     status: string;
   }>> {
     try {
-      return await httpClient.patch(ENDPOINTS.PROFESSIONALS.PROFILE, data);
+      return await httpClient.patch(API_ENDPOINTS.PROFESSIONALS.PROFILE, data);
     } catch (error) {
       if (__DEV__) console.error('Update professional profile error:', error);
       throw error;

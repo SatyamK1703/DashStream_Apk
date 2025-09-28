@@ -51,21 +51,13 @@ const OrderHistoryScreen = () => {
   // API service for orders
   const fetchOrdersFromAPI = async () => {
     try {
-      // TODO: Replace with actual API endpoint
-      const response = await fetch('/api/orders', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add authentication headers as needed
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch orders');
+      const response = await bookingService.getMyBookings();
+
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'Failed to fetch orders');
       }
-      
-      const data = await response.json();
-      return data.orders || [];
+
+      return response.data;
     } catch (error) {
       console.error('Error fetching orders:', error);
       throw error;
@@ -77,7 +69,7 @@ const OrderHistoryScreen = () => {
       setLoading(true);
       try {
         const fetchedOrders = await fetchOrdersFromAPI();
-        setOrders(fetchedOrders);
+        setOrders(fetchedOrders as any);
       } catch (error) {
         console.error('Failed to load orders:', error);
         // Handle error - show empty state or error message
@@ -94,7 +86,7 @@ const OrderHistoryScreen = () => {
     setRefreshing(true);
     try {
       const fetchedOrders = await fetchOrdersFromAPI();
-      setOrders(fetchedOrders);
+      setOrders(fetchedOrders as any);
     } catch (error) {
       console.error('Failed to refresh orders:', error);
       // Handle error silently during refresh

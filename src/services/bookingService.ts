@@ -1,5 +1,5 @@
 import httpClient, { ApiResponse } from './httpClient';
-import { ENDPOINTS } from '../config/env';
+import { API_ENDPOINTS } from '../config/config';
 import { Booking, CreateBookingRequest } from '../types/api';
 
 class BookingService {
@@ -8,7 +8,7 @@ class BookingService {
    */
   async createBooking(data: CreateBookingRequest): Promise<ApiResponse<Booking>> {
     try {
-      return await httpClient.post(ENDPOINTS.BOOKINGS.CREATE, data);
+      return await httpClient.post(API_ENDPOINTS.BOOKINGS.CREATE, data);
     } catch (error) {
       // Log error in development only
       if (__DEV__) console.error('Create booking error:', error);
@@ -29,7 +29,7 @@ class BookingService {
     sortOrder?: 'asc' | 'desc';
   }): Promise<ApiResponse<Booking[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.BOOKINGS.MY_BOOKINGS, { params });
+      return await httpClient.get(API_ENDPOINTS.BOOKINGS.MY_BOOKINGS, { params });
     } catch (error) {
       console.error('Get my bookings error:', error);
       throw error;
@@ -41,7 +41,7 @@ class BookingService {
    */
   async getBookingById(bookingId: string): Promise<ApiResponse<Booking>> {
     try {
-      return await httpClient.get(ENDPOINTS.BOOKINGS.BY_ID(bookingId));
+      return await httpClient.get(API_ENDPOINTS.BOOKINGS.BY_ID(bookingId));
     } catch (error) {
       console.error('Get booking by ID error:', error);
       throw error;
@@ -53,7 +53,7 @@ class BookingService {
    */
   async cancelBooking(bookingId: string, reason?: string): Promise<ApiResponse<Booking>> {
     try {
-      return await httpClient.patch(ENDPOINTS.BOOKINGS.CANCEL(bookingId), { reason });
+      return await httpClient.patch(API_ENDPOINTS.BOOKINGS.CANCEL(bookingId), { reason });
     } catch (error) {
       console.error('Cancel booking error:', error);
       throw error;
@@ -69,7 +69,7 @@ class BookingService {
     notes?: string
   ): Promise<ApiResponse<Booking>> {
     try {
-      return await httpClient.patch(ENDPOINTS.BOOKINGS.UPDATE_STATUS(bookingId), {
+      return await httpClient.patch(API_ENDPOINTS.BOOKINGS.UPDATE_STATUS(bookingId), {
         status,
         notes,
       });
@@ -88,7 +88,7 @@ class BookingService {
     review?: string
   ): Promise<ApiResponse<Booking>> {
     try {
-      return await httpClient.patch(ENDPOINTS.BOOKINGS.BY_ID(bookingId), {
+      return await httpClient.patch(API_ENDPOINTS.BOOKINGS.BY_ID(bookingId), {
         rating,
         review,
       });
@@ -113,7 +113,7 @@ class BookingService {
     }>;
   }>> {
     try {
-      return await httpClient.get(`${ENDPOINTS.BOOKINGS.BY_ID(bookingId)}/tracking`);
+      return await httpClient.get(`${API_ENDPOINTS.BOOKINGS.BY_ID(bookingId)}/tracking`);
     } catch (error) {
       console.error('Get booking tracking error:', error);
       throw error;
@@ -125,7 +125,7 @@ class BookingService {
    */
   async verifyBookingOtp(bookingId: string, otp: string): Promise<ApiResponse<{ verified: boolean }>> {
     try {
-      return await httpClient.post(`${ENDPOINTS.BOOKINGS.BY_ID(bookingId)}/verify-otp`, { otp });
+      return await httpClient.post(`${API_ENDPOINTS.BOOKINGS.BY_ID(bookingId)}/verify-otp`, { otp });
     } catch (error) {
       console.error('Verify booking OTP error:', error);
       throw error;

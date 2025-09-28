@@ -1,11 +1,11 @@
 import httpClient, { ApiResponse } from './httpClient';
-import { API_ENDPOINTS as ENDPOINTS } from '../config/config';
+import { API_ENDPOINTS as API_ENDPOINTS } from '../config/config';
 import { Service, ServiceCategory, SearchParams } from '../types/api';
 
 class ServiceService {
   async getAllServices(params?: SearchParams): Promise<ApiResponse<Service[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.SERVICES.ALL, { params });
+      return await httpClient.get(API_ENDPOINTS.SERVICES.ALL, { params });
     } catch (error) {
       console.error('Get all services error:', error);
       throw error;
@@ -16,7 +16,7 @@ class ServiceService {
   async getPopularServices(limit?: number): Promise<ApiResponse<Service[]>> {
     try {
       const params = limit ? { limit } : undefined;
-      return await httpClient.get(ENDPOINTS.SERVICES.POPULAR, { params });
+      return await httpClient.get(API_ENDPOINTS.SERVICES.POPULAR, { params });
     } catch (error) {
       console.error('Get popular services error:', error);
       // ✅ Return empty array to prevent app crashes
@@ -28,7 +28,7 @@ class ServiceService {
   async getTopServices(limit?: number): Promise<ApiResponse<Service[]>> {
     try {
       const params = limit ? { limit } : undefined;
-      return await httpClient.get(ENDPOINTS.SERVICES.TOP_SERVICES, { params });
+      return await httpClient.get(API_ENDPOINTS.SERVICES.TOP_SERVICES, { params });
     } catch (error) {
       console.error('Get top services error:', error);
       throw error;
@@ -40,7 +40,7 @@ class ServiceService {
    */
   async getServiceCategories(): Promise<ApiResponse<ServiceCategory[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.SERVICES.CATEGORIES);
+      return await httpClient.get(API_ENDPOINTS.SERVICES.CATEGORIES);
     } catch (error) {
       console.error('Get service categories error:', error);
       throw error;
@@ -55,7 +55,7 @@ class ServiceService {
     params?: SearchParams
   ): Promise<ApiResponse<Service[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.SERVICES.BY_CATEGORY(category), { params });
+      return await httpClient.get(API_ENDPOINTS.SERVICES.BY_CATEGORY(category), { params });
     } catch (error) {
       console.error('Get services by category error:', error);
       throw error;
@@ -67,7 +67,7 @@ class ServiceService {
    */
   async searchServices(params: SearchParams): Promise<ApiResponse<Service[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.SERVICES.SEARCH, { params });
+      return await httpClient.get(API_ENDPOINTS.SERVICES.SEARCH, { params });
     } catch (error) {
       console.error('Search services error:', error);
       throw error;
@@ -79,7 +79,7 @@ class ServiceService {
    */
   async getServiceById(serviceId: string): Promise<ApiResponse<Service>> {
     try {
-      return await httpClient.get(ENDPOINTS.SERVICES.BY_ID(serviceId));
+      return await httpClient.get(API_ENDPOINTS.SERVICES.BY_ID(serviceId));
     } catch (error) {
       console.error('Get service by ID error:', error);
       throw error;
@@ -91,7 +91,7 @@ class ServiceService {
    */
   async createService(serviceData: Partial<Service>): Promise<ApiResponse<Service>> {
     try {
-      return await httpClient.post(ENDPOINTS.SERVICES.ALL, serviceData);
+      return await httpClient.post(API_ENDPOINTS.SERVICES.ALL, serviceData);
     } catch (error) {
       console.error('Create service error:', error);
       throw error;
@@ -103,7 +103,7 @@ class ServiceService {
    */
   async updateService(serviceId: string, serviceData: Partial<Service>): Promise<ApiResponse<Service>> {
     try {
-      return await httpClient.patch(ENDPOINTS.SERVICES.BY_ID(serviceId), serviceData);
+      return await httpClient.patch(API_ENDPOINTS.SERVICES.BY_ID(serviceId), serviceData);
     } catch (error) {
       console.error('Update service error:', error);
       throw error;
@@ -115,7 +115,7 @@ class ServiceService {
    */
   async deleteService(serviceId: string): Promise<ApiResponse<void>> {
     try {
-      return await httpClient.delete(ENDPOINTS.SERVICES.BY_ID(serviceId));
+      return await httpClient.delete(API_ENDPOINTS.SERVICES.BY_ID(serviceId));
     } catch (error) {
       console.error('Delete service error:', error);
       throw error;

@@ -1,5 +1,5 @@
 import httpClient, { ApiResponse } from './httpClient';
-import { ENDPOINTS } from '../config/env';
+import { API_ENDPOINTS } from '../config/config';
 import { Membership, UserMembership } from '../types/api';
 
 class MembershipService {
@@ -8,7 +8,7 @@ class MembershipService {
    */
   async getMembershipPlans(): Promise<ApiResponse<Membership[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.MEMBERSHIPS.PLANS);
+      return await httpClient.get(API_ENDPOINTS.MEMBERSHIPS.PLANS);
     } catch (error) {
       console.error('Get membership plans error:', error);
       throw error;
@@ -25,7 +25,7 @@ class MembershipService {
     discountPercentage: number;
   }>> {
     try {
-      return await httpClient.get(ENDPOINTS.MEMBERSHIPS.MY_MEMBERSHIP);
+      return await httpClient.get(API_ENDPOINTS.MEMBERSHIPS.MY_MEMBERSHIP);
     } catch (error) {
       console.error('Get my membership error:', error);
       throw error;
@@ -50,7 +50,7 @@ class MembershipService {
     };
   }>> {
     try {
-      return await httpClient.post(ENDPOINTS.MEMBERSHIPS.PURCHASE, data);
+      return await httpClient.post(API_ENDPOINTS.MEMBERSHIPS.PURCHASE, data);
     } catch (error) {
       console.error('Purchase membership error:', error);
       throw error;

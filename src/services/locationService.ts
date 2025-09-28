@@ -1,5 +1,5 @@
 import httpClient, { ApiResponse } from './httpClient';
-import { ENDPOINTS } from '../config/env';
+import { API_ENDPOINTS } from '../config/config';
 
 interface LocationCoordinates {
   latitude: number;
@@ -39,7 +39,7 @@ class LocationService {
     limit?: number;
   }): Promise<ApiResponse<Place[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.LOCATIONS.SEARCH, { params: data });
+      return await httpClient.get(API_ENDPOINTS.LOCATIONS.SEARCH, { params: data });
     } catch (error) {
       console.error('Search places error:', error);
       throw error;
@@ -56,7 +56,7 @@ class LocationService {
     limit?: number;
   }): Promise<ApiResponse<Place[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.LOCATIONS.NEARBY, { params: data });
+      return await httpClient.get(API_ENDPOINTS.LOCATIONS.NEARBY, { params: data });
     } catch (error) {
       console.error('Get nearby places error:', error);
       throw error;
@@ -68,7 +68,7 @@ class LocationService {
    */
   async geocodeAddress(address: string): Promise<ApiResponse<GeocodeResult[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.LOCATIONS.GEOCODE, { 
+      return await httpClient.get(API_ENDPOINTS.LOCATIONS.GEOCODE, { 
         params: { address } 
       });
     } catch (error) {
@@ -82,7 +82,7 @@ class LocationService {
    */
   async reverseGeocode(location: LocationCoordinates): Promise<ApiResponse<GeocodeResult>> {
     try {
-      return await httpClient.get(ENDPOINTS.LOCATIONS.REVERSE_GEOCODE, { params: location });
+      return await httpClient.get(API_ENDPOINTS.LOCATIONS.REVERSE_GEOCODE, { params: location });
     } catch (error) {
       console.error('Reverse geocode error:', error);
       throw error;

@@ -36,29 +36,33 @@ export const config = ENV[getCurrentEnv()];
 export const API_ENDPOINTS = {
   // Authentication
   AUTH: {
-    LOGIN: '/auth/login',
-    REGISTER: '/auth/register',
+    SEND_OTP: '/auth/send-otp',
     VERIFY_OTP: '/auth/verify-otp',
     RESEND_OTP: '/auth/resend-otp',
     REFRESH_TOKEN: '/auth/refresh-token',
     LOGOUT: '/auth/logout',
-    SOCIAL_LOGIN: '/auth/social-login',
+    ME: '/auth/me',
+    VERIFY_TOKEN: '/auth/verify-token',
   },
 
   // User Profile
-  USER: {
+  USERS: {
     PROFILE: '/users/profile',
-    UPDATE_PROFILE: '/users/profile',
-    UPLOAD_AVATAR: '/users/avatar',
+    PROFILE_IMAGE: '/users/update-profile-image',
     CHANGE_PASSWORD: '/users/change-password',
     DELETE_ACCOUNT: '/users/delete-account',
     ADDRESSES: '/users/addresses',
-    VEHICLES: '/users/vehicles',
+    ADDRESS_BY_ID: (id: string) => `/users/addresses/${id}`,
+    SET_DEFAULT_ADDRESS: (id: string) => `/users/addresses/${id}/default`,
+    PROFESSIONALS: '/users/professionals',
+    PROFESSIONAL_DETAILS: (id: string) => `/users/professionals/${id}`,
   },
 
   // Services
   SERVICES: {
     LIST: '/services',
+    UPDATE: (id: string) => `/services/${id}`,
+    CREATE: '/services',
     DETAILS: (id: string) => `/services/${id}`,
     CATEGORIES: '/services/categories',
     POPULAR: '/services/popular',
@@ -70,8 +74,9 @@ export const API_ENDPOINTS = {
   BOOKINGS: {
     LIST: '/bookings',
     CREATE: '/bookings',
-    DETAILS: (id: string) => `/bookings/${id}`,
-    UPDATE: (id: string) => `/bookings/${id}`,
+    MY_BOOKINGS: '/bookings/my-bookings',
+    BY_ID: (id: string) => `/bookings/${id}`,
+    UPDATE_STATUS: (id: string) => `/bookings/${id}/status`,
     CANCEL: (id: string) => `/bookings/${id}/cancel`,
     RESCHEDULE: (id: string) => `/bookings/${id}/reschedule`,
     RATING: (id: string) => `/bookings/${id}/rating`,
@@ -81,8 +86,8 @@ export const API_ENDPOINTS = {
   // Payments
   PAYMENTS: {
     CREATE_ORDER: '/payments/create-order',
-    VERIFY: '/payments/verify',
-    METHODS: '/payments/methods',
+    VERIFY_PAYMENT: '/payments/verify',
+    PAYMENT_METHODS: '/payments/methods',
     ADD_METHOD: '/payments/methods',
     REMOVE_METHOD: (id: string) => `/payments/methods/${id}`,
     HISTORY: '/payments/history',
@@ -95,6 +100,7 @@ export const API_ENDPOINTS = {
     ACTIVE: '/offers/active',
     ALL: '/offers',
     DETAILS: (id: string) => `/offers/${id}`,
+    BY_ID: (id: string) => `/offers/${id}`,
     STATS: (id: string) => `/offers/${id}/stats`,
     APPLY: '/offers/apply',
     PERSONALIZED: '/offers',
@@ -104,6 +110,7 @@ export const API_ENDPOINTS = {
   // Notifications
   NOTIFICATIONS: {
     LIST: '/notifications',
+    ALL: '/notifications/all',
     MARK_READ: (id: string) => `/notifications/${id}/read`,
     MARK_ALL_READ: '/notifications/mark-all-read',
     DELETE: (id: string) => `/notifications/${id}`,
@@ -127,8 +134,8 @@ export const API_ENDPOINTS = {
 
   // Vehicles
   VEHICLES: {
-    LIST: '/vehicles',
     CREATE: '/vehicles',
+    MY_VEHICLES: '/vehicles',
     UPDATE: (id: string) => `/vehicles/${id}`,
     DELETE: (id: string) => `/vehicles/${id}`,
     SET_DEFAULT: (id: string) => `/vehicles/${id}/set-default`,
@@ -161,10 +168,29 @@ export const API_ENDPOINTS = {
   // Admin
   ADMIN: {
     DASHBOARD: '/admin/dashboard',
+    STATS: '/admin/dashboard',
     USERS: '/admin/users',
+    CREATE_USER: '/admin/users',
+    USER_BY_ID: (userId: string) => `/admin/users/${userId}`,
+    USER_DETAILS: (userId: string) => `/admin/users/${userId}`,
+    UPDATE_USER: (userId: string) => `/admin/users/${userId}`,
+    DELETE_USER: (userId: string) => `/admin/users/${userId}`,
     BOOKINGS: '/admin/bookings',
+    BOOKING_BY_ID: (bookingId: string) => `/admin/bookings/${bookingId}`,
+    UPDATE_BOOKING_STATUS: (bookingId: string) => `/admin/bookings/${bookingId}/status`,
+    CANCEL_BOOKING: (bookingId: string) => `/admin/bookings/${bookingId}/cancel`,
+
     SERVICES: '/admin/services',
+    CREATE_SERVICE: '/admin/services',
+    SERVICE_BY_ID: (serviceId: string) => `/admin/services/${serviceId}`,
+    UPDATE_SERVICE: (serviceId: string) => `/admin/services/${serviceId}`,
+    DELETE_SERVICE: (serviceId: string) => `/admin/services/${serviceId}`,
+  
     PROFESSIONALS: '/admin/professionals',
+    ASSIGN_PROFESSIONAL: (bookingId: string) => `/admin/professionals/${bookingId}/assign-professional`,
+    VERIFY_PROFESSIONAL: (professionalId: string) => `/admin/professionals/${professionalId}/verification`,
+    PROFESSIONAL_BY_ID: (professionalId: string) => `/admin/professionals/${professionalId}`,
+
   },
 };
 

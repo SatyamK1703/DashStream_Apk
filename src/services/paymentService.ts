@@ -1,5 +1,5 @@
 import httpClient, { ApiResponse } from './httpClient';
-import { ENDPOINTS } from '../config/env';
+import { API_ENDPOINTS } from '../config/config';
 import { Payment } from '../types/api';
 
 class PaymentService {
@@ -25,7 +25,7 @@ class PaymentService {
     };
   }>> {
     try {
-      return await httpClient.post(ENDPOINTS.PAYMENTS.CREATE_ORDER, data);
+      return await httpClient.post(API_ENDPOINTS.PAYMENTS.CREATE_ORDER, data);
     } catch (error) {
       console.error('Create payment order error:', error);
       throw error;
@@ -46,7 +46,7 @@ class PaymentService {
     booking: any;
   }>> {
     try {
-      return await httpClient.post(ENDPOINTS.PAYMENTS.VERIFY_PAYMENT, data);
+      return await httpClient.post(API_ENDPOINTS.PAYMENTS.VERIFY_PAYMENT, data);
     } catch (error) {
       console.error('Verify payment error:', error);
       throw error;
@@ -68,7 +68,7 @@ class PaymentService {
     createdAt: string;
   }>>> {
     try {
-      return await httpClient.get(ENDPOINTS.PAYMENTS.PAYMENT_METHODS);
+      return await httpClient.get(API_ENDPOINTS.PAYMENTS.PAYMENT_METHODS);
     } catch (error) {
       console.error('Get payment methods error:', error);
       throw error;
@@ -89,7 +89,7 @@ class PaymentService {
     added: boolean;
   }>> {
     try {
-      return await httpClient.post(ENDPOINTS.PAYMENTS.PAYMENT_METHODS, data);
+      return await httpClient.post(API_ENDPOINTS.PAYMENTS.PAYMENT_METHODS, data);
     } catch (error) {
       console.error('Add payment method error:', error);
       throw error;
@@ -101,7 +101,7 @@ class PaymentService {
    */
   async removePaymentMethod(methodId: string): Promise<ApiResponse<{ removed: boolean }>> {
     try {
-      return await httpClient.delete(`${ENDPOINTS.PAYMENTS.PAYMENT_METHODS}/${methodId}`);
+      return await httpClient.delete(`${API_ENDPOINTS.PAYMENTS.PAYMENT_METHODS}/${methodId}`);
     } catch (error) {
       console.error('Remove payment method error:', error);
       throw error;
@@ -122,7 +122,7 @@ class PaymentService {
     estimatedSettlement: string;
   }>> {
     try {
-      return await httpClient.post(ENDPOINTS.PAYMENTS.REFUND, data);
+      return await httpClient.post(API_ENDPOINTS.PAYMENTS.REFUND, data);
     } catch (error) {
       console.error('Request refund error:', error);
       throw error;

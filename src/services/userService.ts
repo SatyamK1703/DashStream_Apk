@@ -1,5 +1,5 @@
 import httpClient, { ApiResponse } from './httpClient';
-import { ENDPOINTS } from '../config/env';
+import { API_ENDPOINTS } from '../config/config';
 import {
   User,
   Address,
@@ -15,7 +15,7 @@ class UserService {
   async getUserProfile(): Promise<ApiResponse<User>> {
     try {
       // Use auth/me endpoint to fetch current authenticated user's profile
-      return await httpClient.get(ENDPOINTS.AUTH.ME);
+      return await httpClient.get(API_ENDPOINTS.AUTH.ME);
     } catch (error) {
       console.error('Get user profile error:', error);
       throw error;
@@ -27,7 +27,7 @@ class UserService {
    */
   async updateProfile(data: UpdateProfileRequest): Promise<ApiResponse<User>> {
     try {
-      return await httpClient.patch(ENDPOINTS.USERS.PROFILE, data);
+      return await httpClient.patch(API_ENDPOINTS.USERS.PROFILE, data);
     } catch (error) {
       console.error('Update profile error:', error);
       throw error;
@@ -42,7 +42,7 @@ class UserService {
       // Allow callers to pass a FormData and optional progress via the httpClient.uploadFile signature
       // If callers need upload progress, they can call this method with a FormData that includes
       // the file and use httpClient.uploadFile directly with an onUploadProgress handler.
-      return await httpClient.uploadFile(ENDPOINTS.USERS.PROFILE_IMAGE, imageFile as any);
+      return await httpClient.uploadFile(API_ENDPOINTS.USERS.PROFILE_IMAGE, imageFile as any);
     } catch (error) {
       console.error('Update profile image error:', error);
       throw error;
@@ -54,7 +54,7 @@ class UserService {
    */
   async deleteAccount(): Promise<ApiResponse<void>> {
     try {
-      return await httpClient.delete(ENDPOINTS.USERS.DELETE_ACCOUNT);
+      return await httpClient.delete(API_ENDPOINTS.USERS.DELETE_ACCOUNT);
     } catch (error) {
       console.error('Delete account error:', error);
       throw error;
@@ -67,7 +67,7 @@ class UserService {
    */
   async getMyAddresses(): Promise<ApiResponse<Address[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.USERS.ADDRESSES);
+      return await httpClient.get(API_ENDPOINTS.USERS.ADDRESSES);
     } catch (error) {
       console.error('Get addresses error:', error);
       throw error;
@@ -79,7 +79,7 @@ class UserService {
    */
   async createAddress(data: CreateAddressRequest): Promise<ApiResponse<Address>> {
     try {
-      return await httpClient.post(ENDPOINTS.USERS.ADDRESSES, data);
+      return await httpClient.post(API_ENDPOINTS.USERS.ADDRESSES, data);
     } catch (error) {
       console.error('Create address error:', error);
       throw error;
@@ -91,7 +91,7 @@ class UserService {
    */
   async updateAddress(addressId: string, data: Partial<CreateAddressRequest>): Promise<ApiResponse<Address>> {
     try {
-      return await httpClient.patch(ENDPOINTS.USERS.ADDRESS_BY_ID(addressId), data);
+      return await httpClient.patch(API_ENDPOINTS.USERS.ADDRESS_BY_ID(addressId), data);
     } catch (error) {
       console.error('Update address error:', error);
       throw error;
@@ -103,7 +103,7 @@ class UserService {
    */
   async deleteAddress(addressId: string): Promise<ApiResponse<void>> {
     try {
-      return await httpClient.delete(ENDPOINTS.USERS.ADDRESS_BY_ID(addressId));
+      return await httpClient.delete(API_ENDPOINTS.USERS.ADDRESS_BY_ID(addressId));
     } catch (error) {
       console.error('Delete address error:', error);
       throw error;
@@ -115,7 +115,7 @@ class UserService {
    */
   async setDefaultAddress(addressId: string): Promise<ApiResponse<Address>> {
     try {
-      return await httpClient.patch(ENDPOINTS.USERS.SET_DEFAULT_ADDRESS(addressId));
+      return await httpClient.patch(API_ENDPOINTS.USERS.SET_DEFAULT_ADDRESS(addressId));
     } catch (error) {
       console.error('Set default address error:', error);
       throw error;
@@ -135,7 +135,7 @@ class UserService {
     limit?: number;
   }): Promise<ApiResponse<Professional[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.USERS.PROFESSIONALS, { params });
+      return await httpClient.get(API_ENDPOINTS.USERS.PROFESSIONALS, { params });
     } catch (error) {
       console.error('Get professionals error:', error);
       throw error;
@@ -147,14 +147,14 @@ class UserService {
    */
   async getProfessionalDetails(professionalId: string): Promise<ApiResponse<Professional>> {
     try {
-      return await httpClient.get(ENDPOINTS.USERS.PROFESSIONAL_DETAILS(professionalId));
+      return await httpClient.get(API_ENDPOINTS.USERS.PROFESSIONAL_DETAILS(professionalId));
     } catch (error) {
       console.error('Get professional details error:', error);
       throw error;
     }
   }
 
-  // Professional-only endpoints
+  // Professional-only API_ENDPOINTS
   /**
    * Update professional profile
    */

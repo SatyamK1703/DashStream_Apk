@@ -35,4 +35,4 @@ export const useSetDefaultVehicle = () => {
   return useApi(apiCall, { showErrorAlert: true });
 };
 // Note: additional helper hooks for makes/models/years were removed
-// because the backend vehicle service does not expose dedicated endpoints.
+// because the backend vehicle service does not expose dedicated API_ENDPOINTS.

@@ -1,11 +1,11 @@
 import httpClient, { ApiResponse } from './httpClient';
-import { ENDPOINTS } from '../config/env';
+import { API_ENDPOINTS } from '../config/config';
 import { CreateVehicleRequest, Vehicle as ApiVehicle } from '../types/api';
 
 class VehicleService {
   async getMyVehicles(): Promise<ApiResponse<ApiVehicle[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.VEHICLES.MY_VEHICLES);
+      return await httpClient.get(API_ENDPOINTS.VEHICLES.MY_VEHICLES);
     } catch (error) {
       console.error('getMyVehicles error:', error);
       throw error;
@@ -19,9 +19,9 @@ class VehicleService {
     try {
       if (data instanceof FormData) {
         // Use uploadFile to ensure multipart/form-data headers
-        return await httpClient.uploadFile(ENDPOINTS.VEHICLES.CREATE, data);
+        return await httpClient.uploadFile(API_ENDPOINTS.VEHICLES.CREATE, data);
       }
-      return await httpClient.post(ENDPOINTS.VEHICLES.CREATE, data as CreateVehicleRequest);
+      return await httpClient.post(API_ENDPOINTS.VEHICLES.CREATE, data as CreateVehicleRequest);
     } catch (error) {
       console.error('createVehicle error:', error);
       throw error;
@@ -32,9 +32,9 @@ class VehicleService {
     try {
       if (data instanceof FormData) {
         // Some backends accept multipart on PATCH; if not, callers should upload via a dedicated endpoint
-        return await httpClient.uploadFile(ENDPOINTS.VEHICLES.UPDATE(id), data);
+        return await httpClient.uploadFile(API_ENDPOINTS.VEHICLES.UPDATE(id), data);
       }
-      return await httpClient.patch(ENDPOINTS.VEHICLES.UPDATE(id), data as Partial<CreateVehicleRequest>);
+      return await httpClient.patch(API_ENDPOINTS.VEHICLES.UPDATE(id), data as Partial<CreateVehicleRequest>);
     } catch (error) {
       console.error('updateVehicle error:', error);
       throw error;
@@ -43,7 +43,7 @@ class VehicleService {
 
   async deleteVehicle(id: string): Promise<ApiResponse<void>> {
     try {
-      return await httpClient.delete(ENDPOINTS.VEHICLES.DELETE(id));
+      return await httpClient.delete(API_ENDPOINTS.VEHICLES.DELETE(id));
     } catch (error) {
       console.error('deleteVehicle error:', error);
       throw error;

@@ -1,5 +1,5 @@
 import httpClient, { ApiResponse } from './httpClient';
-import { ENDPOINTS } from '../config/env';
+import { API_ENDPOINTS } from '../config/config';
 import { Offer } from '../types/api';
 
 class OfferService {
@@ -11,7 +11,7 @@ class OfferService {
     limit?: number;
   }): Promise<ApiResponse<Offer[]>> {
     try {
-       return await httpClient.get(ENDPOINTS.OFFERS.ACTIVE, { params });
+       return await httpClient.get(API_ENDPOINTS.OFFERS.ACTIVE, { params });
       
     } catch (error) {
       console.error('Get active offers error:', error);
@@ -27,7 +27,7 @@ class OfferService {
     limit?: number;
   }): Promise<ApiResponse<Offer[]>> {
     try {
-      return await httpClient.get(ENDPOINTS.OFFERS.ALL, { params });
+      return await httpClient.get(API_ENDPOINTS.OFFERS.ALL, { params });
     } catch (error) {
       console.error('Get all offers error:', error);
       throw error;
@@ -37,7 +37,7 @@ class OfferService {
  
   async getOfferById(offerId: string): Promise<ApiResponse<Offer>> {
     try {
-      return await httpClient.get(ENDPOINTS.OFFERS.BY_ID(offerId));
+      return await httpClient.get(API_ENDPOINTS.OFFERS.BY_ID(offerId));
     } catch (error) {
       console.error('Get offer by ID error:', error);
       throw error;
@@ -59,7 +59,7 @@ class OfferService {
     offer?: Offer;
   }>> {
     try {
-      return await httpClient.post(ENDPOINTS.OFFERS.APPLY, data);
+      return await httpClient.post(API_ENDPOINTS.OFFERS.APPLY, data);
     } catch (error) {
       console.error('Apply offer error:', error);
       throw error;
@@ -122,7 +122,7 @@ class OfferService {
    */
   async markOfferViewed(offerId: string): Promise<ApiResponse<{ success: boolean }>> {
     try {
-      return await httpClient.post(`${ENDPOINTS.OFFERS.BY_ID(offerId)}/view`);
+      return await httpClient.post(`${API_ENDPOINTS.OFFERS.BY_ID(offerId)}/view`);
     } catch (error) {
       console.error('Mark offer viewed error:', error);
       throw error;
