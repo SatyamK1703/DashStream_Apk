@@ -8,8 +8,8 @@ import { Platform } from 'react-native';
 const ENV = {
   development: {
     API_URL: Platform.OS === 'ios'
-      ? 'http://localhost:5000/api'
-      : 'http://10.0.2.2:5000/api',
+      ? 'https://dash-stream-apk-backend.vercel.app/api'
+      : 'https://dash-stream-apk-backend.vercel.app/api',
     GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY',
     RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || 'YOUR_RAZORPAY_KEY_ID',
   },
@@ -19,7 +19,7 @@ const ENV = {
     RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || 'YOUR_RAZORPAY_KEY_ID',
   },
   production: {
-    API_URL: 'https://api.dashstream.com/api',
+    API_URL: 'https://dash-stream-apk-backend.vercel.app/api',
     GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY',
     RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || 'YOUR_RAZORPAY_KEY_ID',
   }

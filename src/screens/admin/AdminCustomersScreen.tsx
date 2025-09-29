@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
-import { adminService } from '../../services/adminService';
+import { useAdminCustomers } from '../../hooks/useAdmin';
 import { User } from '../../types/api';
 
 type AdminCustomersNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
@@ -32,59 +32,37 @@ interface Customer extends User {
 const AdminCustomersScreen = () => {
   const navigation = useNavigation<AdminCustomersNavigationProp>();
 
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'blocked'>('all');
   const [membershipFilter, setMembershipFilter] = useState<'all' | 'none' | 'silver' | 'gold' | 'platinum'>('all');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Fetch customers using adminService
-  const fetchCustomers = async () => {
-    try {
-      setLoading(true);
-      const response = await adminService.getCustomers({
-        search: searchQuery || undefined,
-        status: statusFilter === 'all' ? undefined : statusFilter,
-      });
-      console.log("response", response);
+  // Use admin customers hook instead of direct service calls
+  const {
+    data: customers,
+    loading,
+    error,
+    loadMore,
+    refresh,
+    pagination
+  } = useAdminCustomers({
+    search: searchQuery || undefined,
+    status: statusFilter === 'all' ? undefined : statusFilter,
+  });
 
+  // Refresh data when search or status filter changes
+  useEffect(() => {
+    refresh();
+  }, [searchQuery, statusFilter]);
 
-      // Handle response data structure
-      const usersArray = Array.isArray(response.data) 
-        ? response.data 
-        : response.data?.users || response.data?.data || [];
-
-      const customersData: Customer[] = usersArray.map((user: any) => ({
-        ...user,
-        id: user._id || user.id,
-        profileImage: user.profileImage || 'https://via.placeholder.com/50',
-        totalBookings: user.totalBookings || 0,
-        totalSpent: user.totalSpent || 0,
-        status: user.status || 'active',
-        joinDate: user.joinDate || user.createdAt || new Date().toISOString(),
-        membershipStatus: user.membershipStatus || 'none',
-      }));
-
-      setCustomers(customersData);
-    } catch (err) {
-      console.error('Fetch customers error:', err);
-      setCustomers([]);
-    } finally {
-      setLoading(false);
-    }
+  const handleRefresh = () => {
+    refresh();
   };
 
-
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchCustomers();
-    setRefreshing(false);
+  const handleLoadMore = () => {
+    if (!loading && pagination.hasMore) {
+      loadMore();
+    }
   };
 
   // Filter + Search
@@ -229,7 +207,7 @@ const AdminCustomersScreen = () => {
         data={filteredCustomers}
         keyExtractor={item => item.id}
         renderItem={renderCustomerItem}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={handleRefresh} colors={['#2563EB']} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={48} color="#D1D5DB" />

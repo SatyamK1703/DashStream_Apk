@@ -3,6 +3,14 @@ import { API_ENDPOINTS } from '../config/config';
 import { Offer } from '../types/api';
 
 class OfferService {
+  // Backwards-compatible alias used by stores/hooks
+  async getOffers(params?: {
+    status?: 'active' | 'inactive' | 'expired';
+    page?: number;
+    limit?: number;
+  }): Promise<ApiResponse<Offer[]>> {
+    return this.getAllOffers(params);
+  }
 
   async getActiveOffers(params?: {
     category?: string;
@@ -64,6 +72,15 @@ class OfferService {
       console.error('Apply offer error:', error);
       throw error;
     }
+  }
+
+  // Convenience wrapper for code validation used by stores
+  async validateOfferCode(code: string, serviceId?: string, orderAmount?: number) {
+    return this.applyOffer({
+      code,
+      amount: orderAmount ?? 0,
+      serviceIds: serviceId ? [serviceId] : undefined,
+    });
   }
 
   /**

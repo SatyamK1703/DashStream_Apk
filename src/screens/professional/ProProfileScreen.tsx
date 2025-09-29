@@ -19,7 +19,7 @@ import { Ionicons, MaterialIcons, MaterialCommunityIcons, FontAwesome5 } from '@
 
 // Import proper types and hooks
 import { ProStackParamList } from '../../app/routes/ProNavigator';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../store';
 import { useProfessionalProfile, useProfessionalProfileActions } from '../../hooks/useProfessional';
 
 type ProProfileScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;

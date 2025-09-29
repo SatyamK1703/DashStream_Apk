@@ -3,6 +3,11 @@ import { API_ENDPOINTS as API_ENDPOINTS } from '../config/config';
 import { Service, ServiceCategory, SearchParams } from '../types/api';
 
 class ServiceService {
+  // Backwards-compatible alias used by stores/hooks
+  async getServices(params?: SearchParams): Promise<ApiResponse<Service[]>> {
+    return this.getAllServices(params);
+  }
+
   async getAllServices(params?: SearchParams): Promise<ApiResponse<Service[]>> {
     try {
       return await httpClient.get(API_ENDPOINTS.SERVICES.ALL, { params });

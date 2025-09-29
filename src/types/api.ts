@@ -77,6 +77,7 @@ export interface ServiceCategory {
 
 export interface Booking {
   _id: string;
+  id: string;
   bookingId: string;
   customer: User;
   professional?: Professional;
@@ -100,6 +101,7 @@ export interface Booking {
 
 export interface Professional {
   _id: string;
+  id: string;
   name: string;
   email: string;
   phone: string;
@@ -162,6 +164,7 @@ export interface Vehicle {
 
 export interface Offer {
   _id: string;
+  id: string;
   title: string;
   description: string;
   type: 'percentage' | 'fixed' | 'bogo';
@@ -179,6 +182,7 @@ export interface Offer {
   usedCount: number;
   applicableServices: string[]; // Service IDs
   isActive: boolean;
+  isFeatured?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -198,6 +202,14 @@ export interface Payment {
   refundReason?: string;
   createdAt: string;
   updatedAt: string;
+}
+export interface PaymentMethod {
+  id: string;
+  type: 'card' | 'upi' | 'netbanking' | 'wallet';
+  name: string;
+  details: string;
+  icon: string;
+  isDefault: boolean;
 }
 
 export interface Notification {

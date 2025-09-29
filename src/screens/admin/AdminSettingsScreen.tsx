@@ -11,7 +11,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AdminStackParamList } from "../../../app/routes/AdminNavigator";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../store";
 
 type AdminSettingsScreenNavigationProp =
   NativeStackNavigationProp<AdminStackParamList>;

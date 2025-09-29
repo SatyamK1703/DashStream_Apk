@@ -12,26 +12,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { RouteProp, useRoute } from '@react-navigation/native';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { userService } from '../../services/userService';
-import { ApiResponse } from '../../services/httpClient';
 import { Address } from '../../types/api';
 
+type AddressListNavigationProp = NativeStackNavigationProp<CustomerStackParamList, 'AddressList'>;
 
 const AddressListScreen = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
+  const navigation = useNavigation<AddressListNavigationProp>();
+  const route = useRoute<RouteProp<CustomerStackParamList, 'AddressList'>>();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isFocused = useIsFocused();
+  const { currentAddressId } = route.params || {};
 
   useEffect(() => {
     const fetchAddresses = async () => {
       setLoading(true);
       setError(null);
       try {
-        const res: ApiResponse<Address[]> = await userService.getMyAddresses();
-        if (res && res.data) setAddresses(res.data as Address[]);
+        const fetchedAddresses = await userService.getMyAddresses();
+        setAddresses(Array.isArray(fetchedAddresses) ? fetchedAddresses : []);
       } catch (err: any) {
         console.error('Failed to load addresses', err);
         setError(err?.message || 'Failed to load addresses');
@@ -42,6 +45,14 @@ const AddressListScreen = () => {
 
     if (isFocused) fetchAddresses();
   }, [isFocused]);
+
+  const handleSelect = (address: Address) => {
+    const selectedId = address._id || address.id || null;
+    console.log('🎯 Address selected:', { id: selectedId, title: address.title });
+    
+    // Navigate back to checkout with the selected address ID
+    navigation.navigate('Checkout', { addressFromListId: selectedId });
+  };
 
   const handleEdit = (addressData: Address) => {
     navigation.navigate('AddAddress', {
@@ -73,38 +84,100 @@ const AddressListScreen = () => {
     );
   };
 
-  const renderAddress = ({ item }: { item: Address }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.iconContainer}>
-          <Ionicons 
-            name={item.type === 'home' ? 'home-outline' : 'briefcase-outline'} 
-            size={24} 
-            color="#4B5563" 
-          />
+  const renderAddress = ({ item }: { item: Address }) => {
+    const typeValue = typeof item?.type === 'string' ? item.type : undefined;
+    const formattedType = typeValue && typeValue.length > 0
+      ? `${typeValue.charAt(0).toUpperCase()}${typeValue.slice(1)}`
+      : item?.title ?? 'Address';
+    const iconName = typeValue === 'work' ? 'briefcase-outline' : 'home-outline';
+    const displayTitle = item?.title ?? item?.addressLine1 ?? item?.city ?? formattedType;
+
+    const detailLines: string[] = [];
+
+    if (item?.addressLine1 && item.addressLine1 !== displayTitle) {
+      detailLines.push(item.addressLine1);
+    }
+
+    if (item?.addressLine2) {
+      detailLines.push(item.addressLine2);
+    }
+
+    const cityParts = [item?.city, item?.state].filter(
+      (part): part is string => typeof part === 'string' && part.trim().length > 0,
+    );
+
+    if (cityParts.length > 0 || (typeof item?.postalCode === 'string' && item.postalCode.trim().length > 0)) {
+      let cityLine = cityParts.join(', ');
+      if (item?.postalCode) {
+        cityLine = cityLine ? `${cityLine} - ${item.postalCode}` : item.postalCode;
+      }
+
+      if (cityLine && cityLine !== displayTitle) {
+        detailLines.push(cityLine);
+      }
+    }
+
+    if (detailLines.length === 0 && displayTitle !== formattedType) {
+      detailLines.push(formattedType);
+    }
+
+    const deleteId = (item as any)?._id ?? (item as any)?.id;
+
+    const isSelected = currentAddressId && (item._id === currentAddressId || (item as any)?.id === currentAddressId);
+
+    return (
+      <TouchableOpacity
+        style={[styles.card, isSelected && styles.cardSelected]}
+        activeOpacity={0.9}
+        onPress={() => handleSelect(item)}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.iconContainer}>
+            <Ionicons name={iconName} size={24} color="#4B5563" />
+          </View>
+          <View>
+            <Text style={styles.addressType}>{formattedType}</Text>
+            {Boolean(item?.isDefault) && (
+              <View style={styles.defaultBadge}>
+                <Text style={styles.defaultBadgeText}>Default</Text>
+              </View>
+            )}
+          </View>
+          {Boolean(isSelected) && (
+            <View style={styles.selectedBadge}>
+              <Text style={styles.selectedBadgeText}>Selected</Text>
+            </View>
+          )}
         </View>
-        <View>
-          <Text style={styles.addressType}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</Text>
-          {item.isDefault && <View style={styles.defaultBadge}><Text style={styles.defaultBadgeText}>Default</Text></View>}
+        <View style={styles.cardBody}>
+          <Text style={styles.addressName}>{displayTitle}</Text>
+          {detailLines.map((line, index) => (
+            <Text key={`${line}-${index}`} style={styles.addressText}>
+              {line}
+            </Text>
+          ))}
         </View>
-      </View>
-      <View style={styles.cardBody}>
-        <Text style={styles.addressName}>{item.title}</Text>
-        <Text style={styles.addressText}>{item.addressLine1}</Text>
-        <Text style={styles.addressText}>{`${item.city}, ${item.state} - ${item.postalCode}`}</Text>
-      </View>
-      <View style={styles.cardFooter}>
-        <TouchableOpacity style={styles.actionButton} onPress={() => handleEdit(item)}>
-          <Ionicons name="pencil-outline" size={20} color="#2563EB" />
-          <Text style={styles.actionButtonText}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={() => handleDelete(item.id)}>
-          <Ionicons name="trash-outline" size={20} color="#EF4444" />
-          <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+        <View style={styles.cardFooter}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleEdit(item)}>
+            <Ionicons name="pencil-outline" size={20} color="#2563EB" />
+            <Text style={styles.actionButtonText}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, !deleteId && { opacity: 0.4 }]}
+            disabled={!deleteId}
+            onPress={() => {
+              if (deleteId) {
+                handleDelete(deleteId);
+              }
+            }}
+          >
+            <Ionicons name="trash-outline" size={20} color="#EF4444" />
+            <Text style={[styles.actionButtonText, { color: '#EF4444' }]}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -179,6 +252,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+  },
+  cardSelected: {
+    borderColor: '#2563EB',
+    shadowColor: '#2563EB',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  selectedBadge: {
+    marginLeft: 'auto',
+    backgroundColor: '#2563EB',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  selectedBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
   },
   cardHeader: {
     flexDirection: 'row',

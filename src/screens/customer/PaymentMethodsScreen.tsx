@@ -14,7 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import { PaymentMethod } from '../../types/PaymentType';
+import { PaymentMethod } from '../../types/api';
 import AddCard from '../../components/paymentscreen/AddCard';
 import AddUpi from '../../components/paymentscreen/AddUpi';
 import PaymentMethodItem from '../../components/paymentscreen/PaymentMethodItem';

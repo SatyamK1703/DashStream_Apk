@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUserProfile, useNotificationPreferences } from '../../hooks';
 

@@ -30,7 +30,7 @@ import {
   useToggleServiceStatus,
   useServiceCategories 
 } from '../../hooks';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../store';
 
 type AdminServicesNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 

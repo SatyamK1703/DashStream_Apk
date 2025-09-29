@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import { API_CONFIG } from '../config/api';
+import { API_CONFIG } from '../config/config';
 
 // Storage utility functions
 export class StorageManager {

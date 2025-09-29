@@ -29,7 +29,7 @@ import {
   useDeleteOffer,
   useToggleOfferStatus,
 } from '../../hooks/adminOffers';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../store';
 
 type AdminOffersNavigationProp = NativeStackNavigationProp<
   AdminStackParamList

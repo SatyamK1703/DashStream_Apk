@@ -65,9 +65,20 @@ class UserService {
   /**
    * Get all user addresses
    */
-  async getMyAddresses(): Promise<ApiResponse<Address[]>> {
+  async getMyAddresses(): Promise<Address[]> {
     try {
-      return await httpClient.get(API_ENDPOINTS.USERS.ADDRESSES);
+      const response = await httpClient.get(API_ENDPOINTS.USERS.ADDRESSES);
+      const addresses = (response as any)?.data?.addresses;
+
+      if (Array.isArray(addresses)) {
+        return addresses as Address[];
+      }
+
+      if (__DEV__) {
+        console.warn('Unexpected address response shape', response);
+      }
+
+      return [];
     } catch (error) {
       console.error('Get addresses error:', error);
       throw error;

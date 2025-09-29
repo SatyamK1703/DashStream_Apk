@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useCart } from '../../context/CartContext';
+import { useCart } from '../../store';
 
 type ServiceDetailsNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 

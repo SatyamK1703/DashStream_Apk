@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { ApiResponse } from '../services/httpClient';
 import { handleApiError, retryOperation } from '../utils/errorHandler';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../store';
 
 interface UseApiState<T> {
   data: T | null;

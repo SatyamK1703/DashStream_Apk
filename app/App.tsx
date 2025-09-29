@@ -1,23 +1,26 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './routes/RootNavigator';
 import { StatusBar } from 'expo-status-bar';
-import { AuthProvider } from '../src/context/AuthContext';
-import { CartProvider } from '../src/context/CartContext';
 import { View } from 'react-native';
+import { useInitializeStores } from '../src/store';
+
 const App = () => {
+  const { initializeApp } = useInitializeStores();
+
+  useEffect(() => {
+    // Initialize all stores on app launch
+    initializeApp().catch(console.error);
+  }, [initializeApp]);
+
   return (
     <SafeAreaProvider>
       <View style={{ flex: 1 }}>
         <StatusBar style="auto" />
-        <AuthProvider>
-          <CartProvider>
-            <NavigationContainer>
-              <RootNavigator />
-            </NavigationContainer>
-          </CartProvider>
-        </AuthProvider>
+        <NavigationContainer>
+          <RootNavigator />
+        </NavigationContainer>
       </View>
     </SafeAreaProvider>
   );

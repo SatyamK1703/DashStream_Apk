@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useCart } from '../../context/CartContext';
+import { useCart } from '../../store';
 import { useCreateBooking } from '../../hooks/useBookings';
 import { useCreatePaymentOrder, usePaymentMethods, useVerifyPayment } from '../../hooks/usePayments';
 
@@ -37,6 +38,7 @@ const debugRazorpayModule = (mod: any) => {
 
 
 const CheckoutScreen = () => {
+  const route = useRoute<RouteProp<CustomerStackParamList, 'Checkout'>>();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -50,14 +52,77 @@ const CheckoutScreen = () => {
 
   // Address management
   const { data: addresses, loading: addressesLoading, error: addressesError } = useMyAddresses();
+  const processedAddresses = useMemo(() => {
+    if (!Array.isArray(addresses)) {
+      return [];
+    }
+
+    return addresses
+      .map((address) => {
+        const preferredId = address?._id || address?.id;
+
+        return {
+          ...address,
+          preferredId: preferredId ?? null,
+        } as Address & { preferredId: string | null };
+      })
+      .filter((address) => {
+        // keep entries that either have an identifier or have at least one display field
+        return Boolean(address.preferredId || address.title || address.addressLine1 || address.city);
+      });
+  }, [addresses]);
+
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
   
   useEffect(() => {
-    if (addresses && addresses.length > 0) {
-      const defaultAddress = addresses.find(a => a.isDefault) || addresses[0];
-      setSelectedAddress(defaultAddress._id);
+    if (processedAddresses.length > 0) {
+      const defaultAddress = processedAddresses.find(a => a?.isDefault) || processedAddresses[0];
+
+      if (defaultAddress?.preferredId) {
+        setSelectedAddress(defaultAddress.preferredId);
+      } else {
+        const fallback = processedAddresses.find(addr => addr.preferredId);
+        setSelectedAddress(fallback?.preferredId ?? null);
+      }
+    } else {
+      setSelectedAddress(null);
     }
-  }, [addresses]);
+  }, [processedAddresses]);
+
+  // Handle address selection from AddressList screen
+  useFocusEffect(
+    React.useCallback(() => {
+      const addressFromListId = route.params?.addressFromListId;
+      
+      if (addressFromListId && processedAddresses.length > 0) {
+        console.log('🔄 Processing address selection from AddressList:', addressFromListId);
+        console.log('Available processed addresses:', processedAddresses.map(a => ({ 
+          preferredId: a.preferredId, 
+          _id: a._id,
+          id: a.id,
+          title: a.title 
+        })));
+        
+        // Check if the address ID exists in our processed addresses
+        // Try both preferredId and direct _id/id matching for better compatibility
+        const matchingAddress = processedAddresses.find(addr => 
+          addr.preferredId === addressFromListId || 
+          addr._id === addressFromListId || 
+          addr.id === addressFromListId
+        );
+        
+        if (matchingAddress && matchingAddress.preferredId) {
+          console.log('✅ Updating selected address from route params:', addressFromListId, '→', matchingAddress.preferredId);
+          setSelectedAddress(matchingAddress.preferredId);
+        } else {
+          console.warn('⚠️ Address ID from route params not found in processed addresses:', addressFromListId);
+        }
+        
+        // Clear the parameter to prevent it from being applied multiple times
+        navigation.setParams({ addressFromListId: undefined } as any);
+      }
+    }, [route.params?.addressFromListId, processedAddresses, navigation])
+  );
 
   // Generate dates for the next 7 days
   const dates = Array.from({ length: 7 }, (_, i) => {
@@ -99,6 +164,7 @@ const CheckoutScreen = () => {
       }
     }
   }, [paymentMethodsApi.data, selectedPaymentMethod]);
+  
   const handlePlaceOrder = async () => {
     if (!selectedTimeSlot) {
       Alert.alert('Select Time', 'Please select a time slot for your service.');
@@ -122,7 +188,7 @@ const CheckoutScreen = () => {
 
     setIsLoading(true);
     try {
-      const selectedAddressDetails = addresses?.find(a => a._id === selectedAddress);
+      const selectedAddressDetails = processedAddresses.find(a => a.preferredId === selectedAddress);
       if (!selectedAddressDetails) {
         Alert.alert('Error', 'Please select a valid address.');
         return;
@@ -135,7 +201,7 @@ const CheckoutScreen = () => {
         scheduledTime: selectedTimeSlot,
         location: {
           address: selectedAddressDetails.addressLine1,
-          name: selectedAddressDetails.title,
+          name: selectedAddressDetails.title || selectedAddressDetails.type || 'Saved Address',
           city: selectedAddressDetails.city,
           pincode: selectedAddressDetails.postalCode
         },
@@ -319,17 +385,16 @@ const CheckoutScreen = () => {
     }
   };
 
+  const handleSelectAddress = () => {
+    console.log('🚀 Navigate to AddressList - Current selected address:', selectedAddress);
+    navigation.navigate('AddressList', {
+      currentAddressId: selectedAddress,
+    });
+  };
+
   const handleAddNewAddress = () => {
-    try {
-      console.log('Add New Address button pressed');
-      console.log('Navigation object:', navigation);
-      console.log('Attempting to navigate to AddAddress screen');
-      navigation.navigate('AddAddress');
-      console.log('Navigation call completed');
-    } catch (error) {
-      console.error('Navigation error:', error);
-      Alert.alert('Navigation Error', 'Failed to navigate to Add Address screen');
-    }
+    console.log('🚀 Navigate to AddAddress screen');
+    navigation.navigate('AddAddress');
   };
   
   const handleAddPaymentMethod = () => {
@@ -403,7 +468,7 @@ const CheckoutScreen = () => {
           {/* Address Selection */}
           <View style={styles.section}>
             <View style={styles.addressHeader}>
-              <Text style={styles.sectionTitle}>Service Address</Text>
+              <Text style={styles.sectionTitle}>Address</Text>
               <TouchableOpacity 
                 onPress={handleAddNewAddress}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -422,32 +487,41 @@ const CheckoutScreen = () => {
                   <Text style={styles.linkText}>Retry</Text>
                 </TouchableOpacity>
               </View>
-            ) : addresses && addresses.length > 0 ? (
-              addresses.map((address) => {
-                const isSelected = selectedAddress === address._id;
+            ) : processedAddresses.length > 0 ? (
+              processedAddresses.map((address) => {
+                const isSelected = selectedAddress === address.preferredId;
+                const displayLines = [address.addressLine1, address.addressLine2, address.city, address.state]
+                  .filter((line) => Boolean(line))
+                  .join(', ');
+
                 return (
                   <TouchableOpacity
-                    key={address._id}
-                    style={[styles.addressBox, isSelected && styles.addressSelected]}
-                    onPress={() => setSelectedAddress(address._id)}
+                    key={address.preferredId || `${address.title || address.addressLine1 || 'address'}-${address.city || ''}`}
+                    style={[styles.addressBox, isSelected && styles.addressSelected, !address.preferredId && styles.addressDisabled]}
+                    onPress={() => address.preferredId && setSelectedAddress(address.preferredId)}
+                    disabled={!address.preferredId}
                   >
                     <View style={styles.addressTopRow}>
-                      <Text style={styles.addressTitle}>{address.title}</Text>
+                      <Text style={styles.addressTitle} numberOfLines={1}>
+                        {address.title || address.type || 'Saved Address'}
+                      </Text>
                       {address.isDefault && (
                         <View style={styles.defaultBadge}>
                           <Text style={styles.defaultBadgeText}>Default</Text>
                         </View>
                       )}
                     </View>
-                    <Text style={styles.addressText}>{address.addressLine1}</Text>
+                    <Text style={styles.addressText} numberOfLines={2}>
+                      {displayLines || 'No address details provided'}
+                    </Text>
                   </TouchableOpacity>
                 );
               })
             ) : (
               <View style={styles.emptyPaymentContainer}>
                 <Text style={styles.grayText}>No saved addresses found</Text>
-                <TouchableOpacity onPress={handleAddNewAddress} style={styles.addPaymentButton}>
-                  <Text style={styles.addPaymentText}>Add Address</Text>
+                <TouchableOpacity onPress={handleSelectAddress} style={styles.addPaymentButton}>
+                  <Text style={styles.addPaymentText}>Select Address</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -677,6 +751,9 @@ const styles = StyleSheet.create({
   defaultBadgeText: { 
     fontSize: 12, 
     color: '#6b7280' 
+  },
+  addressDisabled: {
+    opacity: 0.6
   },
   instructionsInput: { 
     borderWidth: 1, 

@@ -16,7 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../store';
 
 type AdminProfileScreenNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 
