@@ -31,6 +31,9 @@ export { useAddressStore } from './addressStore';
 // Offer store
 export { useOfferStore } from './offerStore';
 
+// Checkout store
+export { useCheckoutStore } from './checkoutStore';
+
 // Export helper hooks from separate file to avoid circular dependencies
 export {
   useInitializeStores,
@@ -43,4 +46,5 @@ export {
   useOffers,
   usePayments,
   useServices,
+  useCheckout,
 } from './helpers';

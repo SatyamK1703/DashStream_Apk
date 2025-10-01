@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   Text,
   TouchableOpacity,
@@ -9,12 +9,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import { userService } from '../../services/userService';
+import { useAddresses, useCheckout } from '../../store';
 import { Address } from '../../types/api';
 
 type AddressListNavigationProp = NativeStackNavigationProp<CustomerStackParamList, 'AddressList'>;
@@ -22,36 +22,22 @@ type AddressListNavigationProp = NativeStackNavigationProp<CustomerStackParamLis
 const AddressListScreen = () => {
   const navigation = useNavigation<AddressListNavigationProp>();
   const route = useRoute<RouteProp<CustomerStackParamList, 'AddressList'>>();
-  const [addresses, setAddresses] = useState<Address[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const isFocused = useIsFocused();
   const { currentAddressId } = route.params || {};
 
-  useEffect(() => {
-    const fetchAddresses = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const fetchedAddresses = await userService.getMyAddresses();
-        setAddresses(Array.isArray(fetchedAddresses) ? fetchedAddresses : []);
-      } catch (err: any) {
-        console.error('Failed to load addresses', err);
-        setError(err?.message || 'Failed to load addresses');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Use modern stores
+  const { addresses, isLoading, error, fetchAddresses, deleteAddress } = useAddresses();
+  const { setSelectedAddress } = useCheckout();
 
-    if (isFocused) fetchAddresses();
-  }, [isFocused]);
+  useEffect(() => {
+    fetchAddresses();
+  }, [fetchAddresses]);
 
   const handleSelect = (address: Address) => {
-    const selectedId = address._id || address.id || null;
-    console.log('🎯 Address selected:', { id: selectedId, title: address.title });
+    // Update the checkout store with the selected address
+    setSelectedAddress(address);
     
-    // Navigate back to checkout with the selected address ID
-    navigation.navigate('Checkout', { addressFromListId: selectedId });
+    // Navigate back to checkout
+    navigation.navigate('Checkout', { selectedAddressId: address._id });
   };
 
   const handleEdit = (addressData: Address) => {
@@ -61,7 +47,7 @@ const AddressListScreen = () => {
     });
   };
 
-  const handleDelete = (addressId: string) => {
+  const handleDelete = async (addressId: string) => {
     Alert.alert(
       "Delete Address",
       "Are you sure you want to delete this address?",
@@ -70,12 +56,9 @@ const AddressListScreen = () => {
         { 
           text: "Delete", 
           onPress: async () => {
-            try {
-              await userService.deleteAddress(addressId);
-              setAddresses(prev => prev.filter(addr => addr._id !== addressId));
-            } catch (err) {
-              console.error('Delete address failed', err);
-              Alert.alert('Error', 'Failed to delete address. Please try again.');
+            const result = await deleteAddress(addressId);
+            if (!result.success) {
+              Alert.alert('Error', result.error || 'Failed to delete address. Please try again.');
             }
           },
           style: "destructive" 
@@ -189,7 +172,7 @@ const AddressListScreen = () => {
         <Text style={styles.headerTitle}>My Addresses</Text>
       </View>
 
-      {loading ? (
+      {isLoading ? (
         <View style={styles.emptyContainer}>
           <ActivityIndicator size="large" color="#2563EB" />
         </View>

@@ -36,7 +36,7 @@ export type CustomerStackParamList = {
   CustomerTabs: undefined;
   ServiceDetails: { serviceId: string };
   Cart: undefined;
-  Checkout: { addressFromListId?: string | null } | undefined;
+  Checkout: { selectedAddressId?: string | null } | undefined;
   BookingConfirmation: { bookingId: string };
   TrackBooking: { bookingId: string };
   OrderDetails: { orderId: string };

@@ -9,6 +9,7 @@ import { usePaymentStore } from './paymentStore';
 import { useServiceStore } from './serviceStore';
 import { useAddressStore } from './addressStore';
 import { useOfferStore } from './offerStore';
+import { useCheckoutStore } from './checkoutStore';
 
 // Store initialization hook
 export const useInitializeStores = () => {
@@ -248,5 +249,35 @@ export const useServices = () => {
     setSelectedService,
     searchServices,
     applyFilters,
+  };
+};
+
+export const useCheckout = () => {
+  const selectedAddress = useCheckoutStore(state => state.selectedAddress);
+  const selectedDate = useCheckoutStore(state => state.selectedDate);
+  const selectedTimeSlot = useCheckoutStore(state => state.selectedTimeSlot);
+  const specialInstructions = useCheckoutStore(state => state.specialInstructions);
+  const isLoading = useCheckoutStore(state => state.isLoading);
+  const setSelectedAddress = useCheckoutStore(state => state.setSelectedAddress);
+  const setSelectedDate = useCheckoutStore(state => state.setSelectedDate);
+  const setSelectedTimeSlot = useCheckoutStore(state => state.setSelectedTimeSlot);
+  const setSpecialInstructions = useCheckoutStore(state => state.setSpecialInstructions);
+  const setLoading = useCheckoutStore(state => state.setLoading);
+  const clearCheckout = useCheckoutStore(state => state.clearCheckout);
+  const updateCheckoutData = useCheckoutStore(state => state.updateCheckoutData);
+
+  return {
+    selectedAddress,
+    selectedDate,
+    selectedTimeSlot,
+    specialInstructions,
+    isLoading,
+    setSelectedAddress,
+    setSelectedDate,
+    setSelectedTimeSlot,
+    setSpecialInstructions,
+    setLoading,
+    clearCheckout,
+    updateCheckoutData,
   };
 };

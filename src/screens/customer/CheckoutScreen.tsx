@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -6,11 +6,9 @@ import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useCart } from '../../store';
+import { useCart, useAddresses, useCheckout } from '../../store';
 import { useCreateBooking } from '../../hooks/useBookings';
 import { useCreatePaymentOrder, usePaymentMethods, useVerifyPayment } from '../../hooks/usePayments';
-
-import { useMyAddresses } from '../../hooks/useUser';
 import { Address } from '../../types/api';
 
 type CheckoutScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
@@ -20,8 +18,6 @@ interface TimeSlot {
   time: string;
   available: boolean;
 }
-
-// ...existing types
 
 // Debug utility for Razorpay module structure
 const debugRazorpayModule = (mod: any) => {
@@ -36,92 +32,57 @@ const debugRazorpayModule = (mod: any) => {
   console.log('=============================');
 };
 
-
 const CheckoutScreen = () => {
   const route = useRoute<RouteProp<CustomerStackParamList, 'Checkout'>>();
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [specialInstructions, setSpecialInstructions] = useState('');
   const navigation = useNavigation<CheckoutScreenNavigationProp>();
 
+  // Use centralized stores
   const { items: cartItems, clear } = useCart();
+  const { addresses, defaultAddress, isLoading: addressesLoading, error: addressesError, fetchAddresses } = useAddresses();
+  const {
+    selectedAddress,
+    selectedDate,
+    selectedTimeSlot,
+    specialInstructions,
+    isLoading,
+    setSelectedAddress,
+    setSelectedDate,
+    setSelectedTimeSlot,
+    setSpecialInstructions,
+    setLoading,
+  } = useCheckout();
+
+  // Booking and payment hooks
   const createBookingApi = useCreateBooking();
   const createOrderApi = useCreatePaymentOrder();
   const verifyPaymentApi = useVerifyPayment();
 
-  // Address management
-  const { data: addresses, loading: addressesLoading, error: addressesError } = useMyAddresses();
-  const processedAddresses = useMemo(() => {
-    if (!Array.isArray(addresses)) {
-      return [];
-    }
-
-    return addresses
-      .map((address) => {
-        const preferredId = address?._id || address?.id;
-
-        return {
-          ...address,
-          preferredId: preferredId ?? null,
-        } as Address & { preferredId: string | null };
-      })
-      .filter((address) => {
-        // keep entries that either have an identifier or have at least one display field
-        return Boolean(address.preferredId || address.title || address.addressLine1 || address.city);
-      });
-  }, [addresses]);
-
-  const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
-  
+  // Initialize addresses and set default
   useEffect(() => {
-    if (processedAddresses.length > 0) {
-      const defaultAddress = processedAddresses.find(a => a?.isDefault) || processedAddresses[0];
+    fetchAddresses();
+  }, [fetchAddresses]);
 
-      if (defaultAddress?.preferredId) {
-        setSelectedAddress(defaultAddress.preferredId);
-      } else {
-        const fallback = processedAddresses.find(addr => addr.preferredId);
-        setSelectedAddress(fallback?.preferredId ?? null);
-      }
-    } else {
-      setSelectedAddress(null);
+  useEffect(() => {
+    if (addresses.length > 0 && !selectedAddress) {
+      const addressToSelect = defaultAddress || addresses[0];
+      setSelectedAddress(addressToSelect);
     }
-  }, [processedAddresses]);
+  }, [addresses, defaultAddress, selectedAddress, setSelectedAddress]);
 
   // Handle address selection from AddressList screen
   useFocusEffect(
     React.useCallback(() => {
-      const addressFromListId = route.params?.addressFromListId;
+      const selectedAddressId = route.params?.selectedAddressId;
       
-      if (addressFromListId && processedAddresses.length > 0) {
-        console.log('🔄 Processing address selection from AddressList:', addressFromListId);
-        console.log('Available processed addresses:', processedAddresses.map(a => ({ 
-          preferredId: a.preferredId, 
-          _id: a._id,
-          id: a.id,
-          title: a.title 
-        })));
-        
-        // Check if the address ID exists in our processed addresses
-        // Try both preferredId and direct _id/id matching for better compatibility
-        const matchingAddress = processedAddresses.find(addr => 
-          addr.preferredId === addressFromListId || 
-          addr._id === addressFromListId || 
-          addr.id === addressFromListId
-        );
-        
-        if (matchingAddress && matchingAddress.preferredId) {
-          console.log('✅ Updating selected address from route params:', addressFromListId, '→', matchingAddress.preferredId);
-          setSelectedAddress(matchingAddress.preferredId);
-        } else {
-          console.warn('⚠️ Address ID from route params not found in processed addresses:', addressFromListId);
+      if (selectedAddressId && addresses.length > 0) {
+        const addressToSet = addresses.find(addr => addr._id === selectedAddressId);
+        if (addressToSet) {
+          setSelectedAddress(addressToSet);
+          // Clear the parameter
+          navigation.setParams({ selectedAddressId: undefined } as any);
         }
-        
-        // Clear the parameter to prevent it from being applied multiple times
-        navigation.setParams({ addressFromListId: undefined } as any);
       }
-    }, [route.params?.addressFromListId, processedAddresses, navigation])
+    }, [route.params?.selectedAddressId, addresses, navigation, setSelectedAddress])
   );
 
   // Generate dates for the next 7 days
@@ -186,10 +147,9 @@ const CheckoutScreen = () => {
       return;
     }
 
-    setIsLoading(true);
+    setLoading(true);
     try {
-      const selectedAddressDetails = processedAddresses.find(a => a.preferredId === selectedAddress);
-      if (!selectedAddressDetails) {
+      if (!selectedAddress) {
         Alert.alert('Error', 'Please select a valid address.');
         return;
       }
@@ -200,10 +160,10 @@ const CheckoutScreen = () => {
         scheduledDate: selectedDate.toISOString(),
         scheduledTime: selectedTimeSlot,
         location: {
-          address: selectedAddressDetails.addressLine1,
-          name: selectedAddressDetails.title || selectedAddressDetails.type || 'Saved Address',
-          city: selectedAddressDetails.city,
-          pincode: selectedAddressDetails.postalCode
+          address: selectedAddress.addressLine1,
+          name: selectedAddress.title || selectedAddress.type || 'Saved Address',
+          city: selectedAddress.city,
+          pincode: selectedAddress.postalCode
         },
         price: cartItems.reduce((s, it) => s + it.price * it.quantity, 0),
         totalAmount: cartItems.reduce((s, it) => s + it.price * it.quantity, 0),
@@ -381,19 +341,17 @@ const CheckoutScreen = () => {
       console.error('Place order error:', error);
       Alert.alert('Error', error?.message || 'Failed to place order.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const handleSelectAddress = () => {
-    console.log('🚀 Navigate to AddressList - Current selected address:', selectedAddress);
     navigation.navigate('AddressList', {
-      currentAddressId: selectedAddress,
+      currentAddressId: selectedAddress?._id || null,
     });
   };
 
   const handleAddNewAddress = () => {
-    console.log('🚀 Navigate to AddAddress screen');
     navigation.navigate('AddAddress');
   };
   
@@ -487,19 +445,18 @@ const CheckoutScreen = () => {
                   <Text style={styles.linkText}>Retry</Text>
                 </TouchableOpacity>
               </View>
-            ) : processedAddresses.length > 0 ? (
-              processedAddresses.map((address) => {
-                const isSelected = selectedAddress === address.preferredId;
+            ) : addresses.length > 0 ? (
+              addresses.map((address) => {
+                const isSelected = selectedAddress?._id === address._id;
                 const displayLines = [address.addressLine1, address.addressLine2, address.city, address.state]
                   .filter((line) => Boolean(line))
                   .join(', ');
 
                 return (
                   <TouchableOpacity
-                    key={address.preferredId || `${address.title || address.addressLine1 || 'address'}-${address.city || ''}`}
-                    style={[styles.addressBox, isSelected && styles.addressSelected, !address.preferredId && styles.addressDisabled]}
-                    onPress={() => address.preferredId && setSelectedAddress(address.preferredId)}
-                    disabled={!address.preferredId}
+                    key={address._id}
+                    style={[styles.addressBox, isSelected && styles.addressSelected]}
+                    onPress={() => setSelectedAddress(address)}
                   >
                     <View style={styles.addressTopRow}>
                       <Text style={styles.addressTitle} numberOfLines={1}>

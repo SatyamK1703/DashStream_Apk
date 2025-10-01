@@ -86,6 +86,37 @@ class UserService {
   }
 
   /**
+   * Get all user addresses (alias for store compatibility)
+   */
+  async getAddresses(): Promise<{ success: boolean; data?: Address[]; message?: string }> {
+    try {
+      const response = await httpClient.get(API_ENDPOINTS.USERS.ADDRESSES);
+      
+      if (response && (response as any).data) {
+        const addresses = Array.isArray((response as any).data.addresses) 
+          ? (response as any).data.addresses 
+          : [];
+        
+        return {
+          success: true,
+          data: addresses as Address[]
+        };
+      }
+
+      return {
+        success: false,
+        message: 'Failed to fetch addresses'
+      };
+    } catch (error: any) {
+      console.error('Get addresses error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch addresses'
+      };
+    }
+  }
+
+  /**
    * Create new address
    */
   async createAddress(data: CreateAddressRequest): Promise<ApiResponse<Address>> {
@@ -94,6 +125,33 @@ class UserService {
     } catch (error) {
       console.error('Create address error:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Create new address (alias for store compatibility)
+   */
+  async addAddress(data: CreateAddressRequest): Promise<{ success: boolean; data?: Address; message?: string }> {
+    try {
+      const response = await httpClient.post(API_ENDPOINTS.USERS.ADDRESSES, data);
+      
+      if (response && (response as any).success && (response as any).data) {
+        return {
+          success: true,
+          data: (response as any).data as Address
+        };
+      }
+
+      return {
+        success: false,
+        message: (response as any)?.message || 'Failed to create address'
+      };
+    } catch (error: any) {
+      console.error('Create address error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to create address'
+      };
     }
   }
 
