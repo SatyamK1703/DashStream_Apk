@@ -1,15 +1,17 @@
-import React, { useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, StyleSheet } from 'react-native';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, StyleSheet, Linking } from 'react-native';
+import { useNavigation, useRoute, useFocusEffect, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCart, useAddresses, useCheckout } from '../../store';
 import { useCreateBooking } from '../../hooks/useBookings';
-import { useCreatePaymentOrder, usePaymentMethods, useVerifyPayment } from '../../hooks/usePayments';
+import { usePaymentMethods } from '../../hooks/usePayments';
+import api from '../../services/httpClient'; // <-- Ensure you have a generic API client for direct calls
 import { Address } from '../../types/api';
+// @ts-ignore: expo-web-browser may not have types in some setups
+import * as WebBrowser from 'expo-web-browser';
 
 type CheckoutScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -19,17 +21,79 @@ interface TimeSlot {
   available: boolean;
 }
 
-// Debug utility for Razorpay module structure
-const debugRazorpayModule = (mod: any) => {
-  console.log('=== Razorpay Module Debug ===');
-  console.log('Module:', mod);
-  console.log('Module keys:', Object.keys(mod || {}));
-  console.log('Has default:', !!mod?.default);
-  console.log('Default keys:', mod?.default ? Object.keys(mod.default) : 'N/A');
-  console.log('Direct open function:', typeof mod?.open);
-  console.log('Default open function:', typeof mod?.default?.open);
-  console.log('RazorpayCheckout property:', typeof mod?.RazorpayCheckout);
-  console.log('=============================');
+const AddressPicker = ({
+  addresses,
+  selectedAddress,
+  onSelect,
+  loading,
+  error,
+  onAddNew,
+}: {
+  addresses: Address[];
+  selectedAddress: Address | null;
+  onSelect: (address: Address) => void;
+  loading: boolean;
+  error: any;
+  onAddNew: () => void;
+}) => {
+  useEffect(() => {
+    if (addresses.length > 0 && !selectedAddress) {
+      onSelect(addresses[0]);
+    }
+  }, [addresses, selectedAddress, onSelect]);
+
+  if (loading) {
+    return <Text style={styles.grayText}>Loading addresses...</Text>;
+  }
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Failed to load addresses</Text>
+        {/* Add retry logic if needed */}
+      </View>
+    );
+  }
+  if (addresses.length === 0) {
+    return (
+      <View style={styles.emptyPaymentContainer}>
+        <Text style={styles.grayText}>No saved addresses found</Text>
+        <TouchableOpacity onPress={onAddNew} style={styles.addPaymentButton}>
+          <Text style={styles.addPaymentText}>Add Address</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  return (
+    <>
+      {addresses.map((address) => {
+        const isSelected = selectedAddress?._id === address._id;
+        const displayLines = [address.addressLine1, address.addressLine2, address.city, address.state]
+          .filter(Boolean)
+          .join(', ');
+        return (
+          <TouchableOpacity
+            key={address._id}
+            style={[styles.addressBox, isSelected && styles.addressSelected]}
+            onPress={() => onSelect(address)}
+          >
+            <View style={styles.addressTopRow}>
+              <Text style={styles.addressTitle} numberOfLines={1}>
+                {address.title || address.type || 'Saved Address'}
+              </Text>
+              {address.isDefault && (
+                <View style={styles.defaultBadge}>
+                  <Text style={styles.defaultBadgeText}>Default</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.addressText} numberOfLines={2}>
+              {displayLines || 'No address details provided'}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </>
+  );
 };
 
 const CheckoutScreen = () => {
@@ -54,8 +118,8 @@ const CheckoutScreen = () => {
 
   // Booking and payment hooks
   const createBookingApi = useCreateBooking();
-  const createOrderApi = useCreatePaymentOrder();
-  const verifyPaymentApi = useVerifyPayment();
+  const paymentMethodsApi = usePaymentMethods();
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
 
   // Initialize addresses and set default
   useEffect(() => {
@@ -110,10 +174,6 @@ const CheckoutScreen = () => {
     }
     setTimeSlots(slots);
   }, []);
-
-  // Payment methods from hook
-  const paymentMethodsApi = usePaymentMethods();
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
 
   // Set default payment method when data loads
   useEffect(() => {
@@ -180,163 +240,38 @@ const CheckoutScreen = () => {
         return;
       }
 
-      console.log('✅ Booking created successfully with ID:', bookingId);
-
-      // Create payment order (Razorpay)
+      // Create payment link (Razorpay Payment Link API)
       const amount = bookingPayload.totalAmount;
-      const orderRes = await createOrderApi.execute({ 
-        bookingId, 
+      // Direct API call to /payments/create-payment-link
+      const paymentLinkRes = await api.post('/payments/create-payment-link', {
+        bookingId,
         amount
       });
+      const paymentLink = paymentLinkRes?.data?.data?.payment_link;
 
-      console.log('💳 Payment order response:', orderRes);
-
-      const order = orderRes?.order ?? orderRes?.data?.order ?? orderRes?.data?.order_id ?? orderRes?.data;
-      const key = orderRes?.key ?? orderRes?.data?.key ?? orderRes?.data?.key_id;
-
-      console.log('💳 Extracted order:', order);
-      console.log('💳 Extracted key:', key);
-
-      // If possible, dynamically import Razorpay SDK and open native checkout
-      // TROUBLESHOOTING: If you get "Cannot read property 'open' of null" errors:
-      // 1. Ensure react-native-razorpay is properly installed: npm install react-native-razorpay
-      // 2. For Expo projects: Add to app.json plugins: ["react-native-razorpay"]
-      // 3. For bare React Native: run 'cd ios && pod install' (iOS) or rebuild (Android)
-      // 4. Clear Metro cache: npx react-native start --reset-cache
-      if (!order || !key) {
-        // Backend didn't return order/key as expected — proceed to confirmation and rely on server-side webhooks
+      if (!paymentLink) {
         Alert.alert('Payment info missing', 'Could not start payment. Booking has been created and will be updated once payment is confirmed.');
         navigation.navigate('BookingConfirmation', { bookingId });
-        // clear cart since booking was created and user is on confirmation
         clear && clear();
-      } else {
+        return;
+      }
+
+      // Open payment link in browser (Expo WebBrowser preferred)
+      try {
+        await WebBrowser.openBrowserAsync(paymentLink);
+      } catch {
+        // Fallback to Linking if WebBrowser fails
         try {
-          let RazorpayCheckout: any = null;
-          try {
-            // dynamic import - will fail if the library isn't installed
-            const mod = await import('react-native-razorpay');
-            debugRazorpayModule(mod);
-            
-            // Try multiple ways to get the RazorpayCheckout
-            if (mod && typeof mod.default === 'object' && typeof mod.default.open === 'function') {
-              RazorpayCheckout = mod.default;
-            } else if (mod && typeof mod.open === 'function') {
-              RazorpayCheckout = mod;
-            } else if (mod && mod.RazorpayCheckout && typeof mod.RazorpayCheckout.open === 'function') {
-              RazorpayCheckout = mod.RazorpayCheckout;
-            } else if (mod && mod.default && typeof mod.default === 'function') {
-              // Some libraries export the main function as default
-              RazorpayCheckout = { open: mod.default };
-            } else {
-              console.warn('Razorpay module structure:', Object.keys(mod || {}));
-              RazorpayCheckout = null;
-            }
-          } catch (importError) {
-            console.error('Razorpay dynamic import error:', importError);
-            
-            // Fallback: try static import (this will only work if the library is properly linked)
-            try {
-              // eslint-disable-next-line @typescript-eslint/no-var-requires
-              const RazorpayStatic = require('react-native-razorpay');
-              if (RazorpayStatic && typeof RazorpayStatic.open === 'function') {
-                RazorpayCheckout = RazorpayStatic;
-              } else if (RazorpayStatic && RazorpayStatic.default && typeof RazorpayStatic.default.open === 'function') {
-                RazorpayCheckout = RazorpayStatic.default;
-              }
-            } catch (staticImportError) {
-              console.error('Razorpay static import also failed:', staticImportError);
-            }
-            
-            RazorpayCheckout = RazorpayCheckout || null;
-          }
-
-          if (RazorpayCheckout && typeof RazorpayCheckout.open === 'function') {
-            const options = {
-              description: 'Payment for booking ' + bookingId,
-              currency: order.currency || 'INR',
-              key: key,
-              amount: order.amount || Math.round(amount * 100), // in paise
-              name: 'DashStream',
-              order_id: order.id || order.order_id,
-              prefill: {
-                name: '',
-                email: '',
-                contact: ''
-              },
-              theme: { color: '#2563eb' }
-            };
-
-            console.log('Opening Razorpay checkout with options:', options);
-            
-            // Final safety check before calling open
-            if (!RazorpayCheckout || typeof RazorpayCheckout.open !== 'function') {
-              throw new Error('Razorpay checkout function is not available');
-            }
-            
-            const paymentResult = await RazorpayCheckout.open(options);
-            console.log('Razorpay payment result:', paymentResult);
-
-            // paymentResult contains: razorpay_payment_id, razorpay_order_id, razorpay_signature
-            const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = paymentResult;
-
-            // Verify payment on backend with retries (network or webhook race conditions possible)
-            const verifyPayload = {
-              orderId: razorpay_order_id || order.id,
-              paymentId: razorpay_payment_id,
-              signature: razorpay_signature,
-              bookingId
-            };
-
-            const verifyWithRetry = async (attempts = 3, delayMs = 1000) => {
-              for (let i = 0; i < attempts; i++) {
-                try {
-                  await verifyPaymentApi.execute(verifyPayload);
-                  return true;
-                } catch (e: any) {
-                  console.warn(`verify attempt ${i + 1} failed`, e?.message || e);
-                  if (i < attempts - 1) await new Promise(res => setTimeout(res, delayMs * (i + 1)));
-                }
-              }
-              return false;
-            };
-
-            const verified = await verifyWithRetry();
-            if (!verified) {
-              Alert.alert('Payment verification pending', 'Payment succeeded but verification failed. We will update your booking once verification succeeds.');
-            }
-
-            // Navigate to confirmation after successful verification
-            navigation.navigate('BookingConfirmation', { bookingId });
-            // clear cart now that booking/payment succeeded
-            clear && clear();
-          } else {
-            // SDK not available: fallback
-            Alert.alert('Razorpay SDK not installed', 'Payment SDK is not available in this build. Complete payment flow via server/webhooks.');
-            navigation.navigate('BookingConfirmation', { bookingId });
-            clear && clear();
-          }
-        } catch (err: any) {
-          console.error('Razorpay checkout error:', err);
-          
-          // Handle specific Razorpay errors
-          let errorMessage = 'Payment was not completed.';
-          
-          if (err?.code === 'payment_cancelled') {
-            errorMessage = 'Payment was cancelled by user.';
-          } else if (err?.code === 'payment_failed') {
-            errorMessage = 'Payment failed. Please try again.';
-          } else if (err?.code === 'network_error') {
-            errorMessage = 'Network error. Please check your connection and try again.';
-          } else if (err?.message?.includes('Cannot read property \'open\' of null')) {
-            errorMessage = 'Payment system is not properly configured. Please try again or contact support.';
-          } else if (err?.message) {
-            errorMessage = err.message;
-          }
-          
-          Alert.alert('Payment Error', errorMessage);
+          await Linking.openURL(paymentLink);
+        } catch {
+          Alert.alert('Error', 'Could not open payment page.');
+          return;
         }
       }
-      
+
+      // After payment, show confirmation (rely on webhook or poll backend for status)
+      navigation.navigate('BookingConfirmation', { bookingId });
+      clear && clear();
     } catch (error: any) {
       console.error('Place order error:', error);
       Alert.alert('Error', error?.message || 'Failed to place order.');
@@ -345,14 +280,10 @@ const CheckoutScreen = () => {
     }
   };
 
-  const handleSelectAddress = () => {
+  const handleAddNewAddress = () => {
     navigation.navigate('AddressList', {
       currentAddressId: selectedAddress?._id || null,
     });
-  };
-
-  const handleAddNewAddress = () => {
-    navigation.navigate('AddAddress');
   };
   
   const handleAddPaymentMethod = () => {
@@ -435,53 +366,14 @@ const CheckoutScreen = () => {
                 <Text style={styles.linkText}>+ Add New</Text>
               </TouchableOpacity>
             </View>
-
-            {addressesLoading ? (
-              <Text style={styles.grayText}>Loading addresses...</Text>
-            ) : addressesError ? (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>Failed to load addresses</Text>
-                <TouchableOpacity onPress={() => {}} style={styles.retryButton}>
-                  <Text style={styles.linkText}>Retry</Text>
-                </TouchableOpacity>
-              </View>
-            ) : addresses.length > 0 ? (
-              addresses.map((address) => {
-                const isSelected = selectedAddress?._id === address._id;
-                const displayLines = [address.addressLine1, address.addressLine2, address.city, address.state]
-                  .filter((line) => Boolean(line))
-                  .join(', ');
-
-                return (
-                  <TouchableOpacity
-                    key={address._id}
-                    style={[styles.addressBox, isSelected && styles.addressSelected]}
-                    onPress={() => setSelectedAddress(address)}
-                  >
-                    <View style={styles.addressTopRow}>
-                      <Text style={styles.addressTitle} numberOfLines={1}>
-                        {address.title || address.type || 'Saved Address'}
-                      </Text>
-                      {address.isDefault && (
-                        <View style={styles.defaultBadge}>
-                          <Text style={styles.defaultBadgeText}>Default</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.addressText} numberOfLines={2}>
-                      {displayLines || 'No address details provided'}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })
-            ) : (
-              <View style={styles.emptyPaymentContainer}>
-                <Text style={styles.grayText}>No saved addresses found</Text>
-                <TouchableOpacity onPress={handleSelectAddress} style={styles.addPaymentButton}>
-                  <Text style={styles.addPaymentText}>Select Address</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            <AddressPicker
+              addresses={addresses}
+              selectedAddress={selectedAddress}
+              onSelect={setSelectedAddress}
+              loading={addressesLoading}
+              error={addressesError}
+              onAddNew={handleAddNewAddress}
+            />
           </View>
 
           {/* Special Instructions */}
