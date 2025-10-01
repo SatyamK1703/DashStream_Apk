@@ -256,16 +256,16 @@ const CheckoutScreen = () => {
         scheduledDate: selectedDate.toISOString(),
         scheduledTime: selectedTimeSlot,
         location: {
-          address: selectedAddress.addressLine1,
-          name: selectedAddress.title || selectedAddress.type || 'Saved Address',
-          city: selectedAddress.city,
-          pincode: selectedAddress.postalCode
+          address: selectedAddress.addressLine1 || selectedAddress.address || 'Address not specified',
+          name: selectedAddress.title || selectedAddress.type || selectedAddress.name || 'Saved Address',
+          city: selectedAddress.city || 'City not specified',
+          pincode: selectedAddress.postalCode || selectedAddress.pincode || selectedAddress.zipCode || 'Pincode not available'
         },
         price: cartItems.reduce((s, it) => s + it.price * it.quantity, 0),
         totalAmount: cartItems.reduce((s, it) => s + it.price * it.quantity, 0),
         notes: specialInstructions,
         additionalServices: [],
-        paymentMethod: selectedPaymentMethod?.type || 'razorpay' // Add payment method
+        paymentMethod: selectedPaymentMethod?.type || 'razorpay'
       };
 
       const bookingRes = await createBookingApi.execute(bookingPayload);
@@ -553,7 +553,7 @@ const CheckoutScreen = () => {
                   )}
                 </TouchableOpacity>
               );
-            })
+            })}
           </View>
 
           {/* Order Summary */}
