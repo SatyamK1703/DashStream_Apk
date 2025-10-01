@@ -42,6 +42,10 @@ const CartScreen = () => {
   };
 
   const handleApplyPromoCode = () => {
+    if (promoCode === '') {
+      setDiscount(0);
+      return;
+    }
     // Mock promo code logic - in a real app, this would validate against an API
     if (promoCode.toUpperCase() === 'WELCOME50') {
       const discountAmount = subtotal * 0.5; // 50% off
@@ -137,6 +141,14 @@ const CartScreen = () => {
                   <TouchableOpacity style={styles.promoButton} onPress={handleApplyPromoCode}>
                     <Text style={styles.promoButtonText}>Apply</Text>
                   </TouchableOpacity>
+                  {discount > 0 && (
+                    <TouchableOpacity style={styles.clearButton} onPress={() => {
+                      setPromoCode('');
+                      setDiscount(0);
+                    }}>
+                      <Text style={styles.clearButtonText}>Clear</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
                 <Text style={styles.promoHint}>Try WELCOME50 for 50% off on your first order</Text>
               </View>
@@ -314,6 +326,18 @@ const styles = StyleSheet.create({
   promoButtonText: { 
     color: '#fff', 
     fontWeight: '600' 
+  },
+  clearButton: {
+    backgroundColor: '#ef4444',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+    marginLeft: -12,
+  },
+  clearButtonText: {
+    color: '#fff',
+    fontWeight: '600'
   },
   promoHint: { 
     fontSize: 12, 
