@@ -7,7 +7,7 @@ import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCart, useAddresses, useCheckout } from '../../store';
 import { useCreateBooking } from '../../hooks/useBookings';
-import { usePaymentMethods, useCreateCODPayment } from '../../hooks/usePayments';
+import { useCreateCODPayment } from '../../hooks/usePayments';
 import api from '../../services/httpClient'; // <-- Ensure you have a generic API client for direct calls
 import { Address } from '../../types/api';
 // @ts-ignore: expo-web-browser may not have types in some setups
@@ -120,30 +120,41 @@ const CheckoutScreen = () => {
   const createBookingApi = useCreateBooking();
   const createCODPaymentApi = useCreateCODPayment();
   
-  // Get payment methods dynamically based on cart
-  const serviceIds = cartItems?.map(item => item.id) || [];
-  const orderValue = cartItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
+  // Simplified payment methods - only UPI and COD
+  const paymentMethods = [
+    {
+      id: 'upi',
+      type: 'razorpay', // UPI will use Razorpay for processing
+      name: 'UPI Payment',
+      description: 'Pay using UPI apps like GPay, PhonePe, Paytm',
+      icon: 'phone-portrait-outline',
+      isDefault: true,
+      fees: {
+        percentage: 0,
+        fixed: 0
+      }
+    },
+    {
+      id: 'cod',
+      type: 'cod',
+      name: 'Cash on Delivery',
+      description: 'Pay cash after service completion',
+      icon: 'cash-outline',
+      isDefault: false,
+      codSettings: {
+        minAmount: 50,
+        maxAmount: 5000,
+        collectBeforeService: false
+      }
+    }
+  ];
   
-  const paymentMethodsApi = usePaymentMethods({ 
-    serviceIds, 
-    orderValue 
-  });
-  
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<any>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(paymentMethods[0]); // Default to UPI
 
-  // Initialize addresses and payment methods
+  // Initialize addresses
   useEffect(() => {
     fetchAddresses();
-    paymentMethodsApi.execute();
   }, [fetchAddresses]);
-
-  // Set default payment method when payment methods are loaded
-  useEffect(() => {
-    if (paymentMethodsApi.data && paymentMethodsApi.data.length > 0 && !selectedPaymentMethod) {
-      const defaultMethod = paymentMethodsApi.data.find(method => method.isDefault) || paymentMethodsApi.data[0];
-      setSelectedPaymentMethod(defaultMethod);
-    }
-  }, [paymentMethodsApi.data, selectedPaymentMethod]);
 
   useEffect(() => {
     if (addresses.length > 0 && !selectedAddress) {
@@ -220,6 +231,23 @@ const CheckoutScreen = () => {
       if (!selectedAddress) {
         Alert.alert('Error', 'Please select a valid address.');
         return;
+      }
+
+      const totalAmount = cartItems.reduce((s, it) => s + it.price * it.quantity, 0);
+
+      // COD validation
+      if (selectedPaymentMethod.type === 'cod') {
+        const codSettings = selectedPaymentMethod.codSettings;
+        
+        if (totalAmount < codSettings.minAmount) {
+          Alert.alert('COD Not Available', `Minimum amount for COD is ₹${codSettings.minAmount}. Please add more services or choose UPI payment.`);
+          return;
+        }
+        
+        if (totalAmount > codSettings.maxAmount) {
+          Alert.alert('COD Not Available', `Maximum amount for COD is ₹${codSettings.maxAmount}. Please choose UPI payment for this order.`);
+          return;
+        }
       }
 
       // Create booking on backend
@@ -380,17 +408,6 @@ const CheckoutScreen = () => {
       currentAddressId: selectedAddress?._id || null,
     });
   };
-  
-  const handleAddPaymentMethod = () => {
-    try {
-      console.log('Add New Payment Method button pressed');
-      navigation.navigate('PaymentMethods');
-      console.log('Navigated to PaymentMethods screen');
-    } catch (error) {
-      console.error('Payment methods navigation error:', error);
-      Alert.alert('Navigation Error', 'Failed to navigate to Payment Methods screen');
-    }
-  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -485,50 +502,58 @@ const CheckoutScreen = () => {
 
           {/* Payment Method */}
           <View style={styles.section}>
-            <View style={styles.addressHeader}>
-              <Text style={styles.sectionTitle}>Payment Method</Text>
-              <TouchableOpacity 
-                onPress={handleAddPaymentMethod}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.linkText}>+ Add New</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.sectionTitle}>Payment Method</Text>
             
-            {paymentMethodsApi.data && Array.isArray(paymentMethodsApi.data) && paymentMethodsApi.data.length > 0 ? (
-              (paymentMethodsApi.data as any[]).map((method) => {
-                const isSelected = selectedPaymentMethod?.id === method.id;
-                return (
-                  <TouchableOpacity
-                    key={method.id}
-                    style={[styles.paymentMethod, isSelected && styles.addressSelected]}
-                    onPress={() => setSelectedPaymentMethod(method)}
-                  >
-                    <View style={styles.paymentIconBox}>
-                      <Ionicons name={method.icon || 'card-outline'} size={20} color="#2563eb" />
-                    </View>
-                    <View style={styles.paymentMethodInfo}>
-                      <Text style={styles.addressTitle}>{method.name}</Text>
-                      {method.description && <Text style={styles.addressSubtitle}>{method.description}</Text>}
-                      {method.type === 'cod' && method.codSettings && (
-                        <Text style={styles.codInfo}>
-                          Min: ₹{method.codSettings.minAmount} | Max: ₹{method.codSettings.maxAmount}
-                        </Text>
-                      )}
-                    </View>
-                    {method.isDefault && <Text style={styles.defaultBadge}>Default</Text>}
-                  </TouchableOpacity>
-                );
-              })
-            ) : (
-              <View style={styles.emptyPaymentContainer}>
-                <Text style={styles.grayText}>No payment methods found</Text>
-                <TouchableOpacity onPress={handleAddPaymentMethod} style={styles.addPaymentButton}>
-                  <Text style={styles.addPaymentText}>Add Payment Method</Text>
+            {paymentMethods.map((method) => {
+              const isSelected = selectedPaymentMethod?.id === method.id;
+              const totalAmount = cartItems?.reduce((s, it) => s + it.price * it.quantity, 0) || 0;
+              
+              // Check if COD is available for this order
+              const isCODAvailable = method.type === 'cod' ? 
+                (totalAmount >= method.codSettings.minAmount && totalAmount <= method.codSettings.maxAmount) : 
+                true;
+              
+              return (
+                <TouchableOpacity
+                  key={method.id}
+                  style={[
+                    styles.paymentMethod, 
+                    isSelected && styles.addressSelected,
+                    !isCODAvailable && styles.paymentMethodDisabled
+                  ]}
+                  onPress={() => isCODAvailable && setSelectedPaymentMethod(method)}
+                  disabled={!isCODAvailable}
+                >
+                  <View style={styles.paymentIconBox}>
+                    <Ionicons name={method.icon || 'card-outline'} size={20} color={isCODAvailable ? "#2563eb" : "#9ca3af"} />
+                  </View>
+                  <View style={styles.paymentMethodInfo}>
+                    <Text style={[styles.addressTitle, !isCODAvailable && styles.disabledText]}>{method.name}</Text>
+                    <Text style={[styles.addressSubtitle, !isCODAvailable && styles.disabledText]}>{method.description}</Text>
+                    {method.type === 'cod' && (
+                      <Text style={[
+                        styles.codInfo,
+                        !isCODAvailable && styles.codUnavailable
+                      ]}>
+                        {isCODAvailable 
+                          ? `Available for ₹${method.codSettings.minAmount} - ₹${method.codSettings.maxAmount}`
+                          : `Not available (₹${method.codSettings.minAmount} - ₹${method.codSettings.maxAmount})`
+                        }
+                      </Text>
+                    )}
+                    {method.fees?.percentage > 0 && (
+                      <Text style={styles.feeInfo}>
+                        +{method.fees.percentage}% processing fee
+                      </Text>
+                    )}
+                  </View>
+                  {method.isDefault && <Text style={styles.defaultBadge}>Recommended</Text>}
+                  {!isCODAvailable && method.type === 'cod' && (
+                    <Text style={styles.unavailableBadge}>Not Available</Text>
+                  )}
                 </TouchableOpacity>
-              </View>
-            )}
+              );
+            })
           </View>
 
           {/* Order Summary */}
@@ -826,5 +851,32 @@ const styles = StyleSheet.create({
     color: '#16a34a',
     marginTop: 2,
     fontWeight: '500'
+  },
+  codUnavailable: {
+    color: '#dc2626',
+  },
+  paymentMethodDisabled: {
+    backgroundColor: '#f3f4f6',
+    opacity: 0.6,
+  },
+  disabledText: {
+    color: '#9ca3af',
+  },
+  feeInfo: {
+    fontSize: 10,
+    color: '#f59e0b',
+    marginTop: 2,
+    fontWeight: '500'
+  },
+  unavailableBadge: {
+    backgroundColor: '#fef2f2',
+    color: '#dc2626',
+    fontSize: 10,
+    fontWeight: 'bold',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#fecaca'
   }
 });

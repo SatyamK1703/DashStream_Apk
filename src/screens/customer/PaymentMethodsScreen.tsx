@@ -26,9 +26,25 @@ type PaymentMethodsScreenNavigationProp = NativeStackNavigationProp<CustomerStac
 const PaymentMethodsScreen: React.FC = () => {
   const navigation = useNavigation<PaymentMethodsScreenNavigationProp>();
 
-  const [paymentMethods, setPaymentMethods] = useState(usePaymentMethods().data);
+  const { data: initialPaymentMethods, isLoading } = usePaymentMethods();
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [showAddCardModal, setShowAddCardModal] = useState(false);
   const [showAddUpiModal, setShowAddUpiModal] = useState(false);
+
+  useEffect(() => {
+    if (initialPaymentMethods) {
+      setPaymentMethods(initialPaymentMethods);
+    }
+  }, [initialPaymentMethods]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator size="large" color="#2563eb" />
+        <Text style={styles.deletingText}>Loading Payment Methods...</Text>
+      </View>
+    );
+  }
 
   // Handlers
   const handleSetDefault = (id: string) => {
