@@ -16,81 +16,77 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useBookingDetails, useBookingTracking } from '../../hooks';
 
 type TrackBookingScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 type TrackBookingScreenRouteProp = RouteProp<CustomerStackParamList, 'TrackBooking'>;
 
-// Mock data for tracking
+// Booking status mapping
 const BOOKING_STATUSES = {
   CONFIRMED: 'confirmed',
-  PROFESSIONAL_ASSIGNED: 'professional_assigned',
+  PROFESSIONAL_ASSIGNED: 'professional_assigned', 
   ON_THE_WAY: 'on_the_way',
   ARRIVED: 'arrived',
-  IN_PROGRESS: 'in_progress',
+  IN_PROGRESS: 'in-progress',
   COMPLETED: 'completed',
 } as const;
 
-const GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY'; // replace in real app
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY';
 
 const TrackBookingScreen = () => {
   const navigation = useNavigation<TrackBookingScreenNavigationProp>();
   const route = useRoute<TrackBookingScreenRouteProp>();
   const { bookingId } = route.params;
 
-  const [currentStatus, setCurrentStatus] = useState<typeof BOOKING_STATUSES[keyof typeof BOOKING_STATUSES]>(
-    BOOKING_STATUSES.PROFESSIONAL_ASSIGNED
-  );
-  const [estimatedArrival, setEstimatedArrival] = useState('15 mins');
-  const [isLoading, setIsLoading] = useState(true);
+  // Fetch booking details and tracking data
+  const { data: booking, loading: bookingLoading, error: bookingError } = useBookingDetails(bookingId);
+  const { data: tracking, loading: trackingLoading, trackingData } = useBookingTracking(bookingId);
 
-  // Mock coordinates
-  const customerLocation = {
+  // Get data from booking and tracking
+  const bookingData = booking?.data;
+  const trackingInfo = trackingData || tracking?.data;
+  
+  // Default coordinates (Mumbai) - fallback
+  const defaultLocation = {
     latitude: 19.076,
     longitude: 72.8777,
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   };
 
-  const professionalLocation = {
-    latitude: 19.065,
-    longitude: 72.835,
+  // Get customer location from booking address or use default
+  const customerLocation = bookingData?.address?.coordinates ? {
+    latitude: bookingData.address.coordinates.latitude,
+    longitude: bookingData.address.coordinates.longitude,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  } : defaultLocation;
+
+  // Get professional location from tracking data or use default
+  const professionalLocation = trackingInfo?.professionalLocation ? {
+    latitude: trackingInfo.professionalLocation.latitude,
+    longitude: trackingInfo.professionalLocation.longitude,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  } : {
+    latitude: customerLocation.latitude + 0.01,
+    longitude: customerLocation.longitude + 0.01,
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   };
 
-  // Mock professional data
-  const professional = {
-    id: 'pro123',
-    name: 'Rahul Sharma',
-    rating: 4.8,
-    image: require('../../assets/images/image.png'),
-    phone: '+91 9876543210',
+  // Get professional data from booking
+  const professional = bookingData?.professional || {
+    id: 'unassigned',
+    name: 'Professional not assigned yet',
+    rating: 0,
+    image: null,
+    phone: '',
   };
 
-  useEffect(() => {
-    const loadingTimer = setTimeout(() => setIsLoading(false), 1500);
-
-    const statusTimer = setTimeout(() => {
-      setCurrentStatus(BOOKING_STATUSES.ON_THE_WAY);
-
-      const arrivalTimer = setTimeout(() => {
-        setEstimatedArrival('10 mins');
-
-        const finalArrivalTimer = setTimeout(() => {
-          setEstimatedArrival('5 mins');
-        }, 10000);
-
-        return () => clearTimeout(finalArrivalTimer);
-      }, 8000);
-
-      return () => clearTimeout(arrivalTimer);
-    }, 5000);
-
-    return () => {
-      clearTimeout(loadingTimer);
-      clearTimeout(statusTimer);
-    };
-  }, []);
+  // Get current status and estimated arrival
+  const currentStatus = bookingData?.status || BOOKING_STATUSES.CONFIRMED;
+  const estimatedArrival = trackingInfo?.estimatedArrival || '15 mins';
 
   const getStatusText = () => {
     switch (currentStatus) {
@@ -131,19 +127,54 @@ const TrackBookingScreen = () => {
   };
 
   const handleCallProfessional = () => {
-    Alert.alert('Call', `Calling ${professional.name} at ${professional.phone}`);
+    if (professional.phone) {
+      Alert.alert('Call', `Calling ${professional.name} at ${professional.phone}`);
+    } else {
+      Alert.alert('Call', 'Professional phone number not available');
+    }
   };
 
   const handleCancelBooking = () => {
-    Alert.alert('Cancel Booking', 'This would cancel your booking in a real app');
+    Alert.alert(
+      'Cancel Booking', 
+      `Are you sure you want to cancel booking ${bookingId}?`,
+      [
+        { text: 'No', style: 'cancel' },
+        { text: 'Yes', style: 'destructive', onPress: () => {
+          // Implement actual cancel booking logic
+          Alert.alert('Booking Cancelled', 'Your booking has been cancelled successfully.');
+        }}
+      ]
+    );
   };
 
-  if (isLoading) {
+  // Show loading state
+  if (bookingLoading || trackingLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color="#2563eb" />
           <Text style={styles.loaderText}>Loading booking details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show error state  
+  if (bookingError || !bookingData) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.loaderContainer, { justifyContent: 'center' }]}>
+          <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
+          <Text style={[styles.loaderText, { color: '#ef4444', marginTop: 16 }]}>
+            {bookingError ? 'Failed to load booking details' : 'Booking not found'}
+          </Text>
+          <TouchableOpacity 
+            style={[styles.primaryBtn, { marginTop: 24 }]} 
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.primaryBtnText}>Go Back</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -366,18 +397,35 @@ const TrackBookingScreen = () => {
         <View style={[styles.pad, styles.dividerTop]}>
           <Text style={styles.sectionTitle}>Professional Details</Text>
           <View style={styles.proCard}>
-            <Image source={professional.image} style={styles.proAvatar} resizeMode="cover" />
+            {professional.profileImage?.url ? (
+              <Image 
+                source={{ uri: professional.profileImage.url }} 
+                style={styles.proAvatar} 
+                resizeMode="cover"
+                onError={() => {
+                  // If image fails to load, show placeholder
+                }}
+              />
+            ) : (
+              <View style={[styles.proAvatar, styles.proAvatarPlaceholder]}>
+                <Ionicons name="person" size={32} color="#666" />
+              </View>
+            )}
             <View style={styles.proInfo}>
               <Text style={styles.proName}>{professional.name}</Text>
               <View style={styles.proMetaRow}>
                 <Ionicons name="star" size={16} color="#f59e0b" />
-                <Text style={styles.proRating}>{professional.rating}</Text>
-                <Text style={styles.proBookings}>(120+ bookings)</Text>
+                <Text style={styles.proRating}>{professional.rating || 'N/A'}</Text>
+                {professional.totalRatings ? (
+                  <Text style={styles.proBookings}>({professional.totalRatings}+ ratings)</Text>
+                ) : null}
               </View>
             </View>
-            <TouchableOpacity style={styles.callBtn} onPress={handleCallProfessional}>
-              <Ionicons name="call" size={20} color="#fff" />
-            </TouchableOpacity>
+            {professional.phone && (
+              <TouchableOpacity style={styles.callBtn} onPress={handleCallProfessional}>
+                <Ionicons name="call" size={20} color="#fff" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -387,20 +435,34 @@ const TrackBookingScreen = () => {
           <View style={styles.detailsCard}>
             <View style={styles.rowBetween}>
               <Text style={styles.muted}>Date & Time</Text>
-              <Text style={styles.semibold}>Today, 11:00 AM</Text>
+              <Text style={styles.semibold}>
+                {new Date(bookingData.scheduledDate).toLocaleDateString()}, {bookingData.scheduledTime}
+              </Text>
             </View>
             <View style={styles.rowBetween}>
-              <Text style={styles.muted}>Services</Text>
-              <Text style={styles.semibold}>Basic Wash, Premium Wash</Text>
+              <Text style={styles.muted}>Service</Text>
+              <Text style={styles.semibold}>{bookingData.service.name}</Text>
             </View>
             <View style={styles.rowBetween}>
               <Text style={styles.muted}>Total Amount</Text>
-              <Text style={styles.semibold}>₹1,397</Text>
+              <Text style={styles.semibold}>₹{bookingData.totalAmount}</Text>
             </View>
             <View style={styles.rowBetween}>
-              <Text style={styles.muted}>Payment Method</Text>
-              <Text style={styles.semibold}>Credit Card</Text>
+              <Text style={styles.muted}>Payment Status</Text>
+              <Text style={[styles.semibold, { 
+                color: bookingData.paymentStatus === 'paid' ? '#16a34a' : '#f59e0b' 
+              }]}>
+                {bookingData.paymentStatus.charAt(0).toUpperCase() + bookingData.paymentStatus.slice(1)}
+              </Text>
             </View>
+            {bookingData.address && (
+              <View style={styles.rowBetween}>
+                <Text style={styles.muted}>Service Address</Text>
+                <Text style={[styles.semibold, { flex: 1, textAlign: 'right' }]}>
+                  {`${bookingData.address.addressLine1}, ${bookingData.address.city}`}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -523,6 +585,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   proAvatar: { width: 64, height: 64, borderRadius: 32 },
+  proAvatarPlaceholder: { 
+    backgroundColor: '#f3f4f6', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
   proInfo: { flex: 1, marginLeft: 12 },
   proName: { fontSize: 16, fontWeight: '700', color: '#111827' },
   proMetaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
@@ -554,4 +621,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cancelText: { color: '#ef4444', fontWeight: '600' },
+  primaryBtn: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  primaryBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });

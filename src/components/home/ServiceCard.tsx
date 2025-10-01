@@ -1,26 +1,41 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const ServiceCard = ({ title, price, duration, onPress, description, image }) => (
-  <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
-    {image && <Image source={image} style={styles.image} resizeMode="cover" />}
-    <View style={styles.content}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>{title}</Text>
-        <View style={styles.priceTag}>
-          <Ionicons name="pricetag-outline" size={14} color="#fff" />
-          <Text style={styles.price}>AED {price}</Text>
+const ServiceCard = ({ title, price, duration, onPress, description, image }) => {
+  const imageSource = typeof image === 'string' ? { uri: image } : image;
+
+  return (
+    <Pressable
+      style={styles.card}
+      onPress={onPress}
+      android_ripple={{ color: '#e5e7eb' }}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}, AED ${price}, ${duration} minutes`}
+      hitSlop={8}
+    >
+      {imageSource ? (
+        <Image source={imageSource} style={styles.image} resizeMode="cover" />
+      ) : (
+        <View style={[styles.image, { backgroundColor: '#f3f4f6' }]} />
+      )}
+      <View style={styles.content}>
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>{title}</Text>
+          <View style={styles.priceTag}>
+            <Ionicons name="pricetag-outline" size={14} color="#fff" />
+            <Text style={styles.price}>AED {price}</Text>
+          </View>
         </View>
+        <View style={styles.infoRow}>
+          <Ionicons name="time-outline" size={14} color="#6b7280" />
+          <Text style={styles.duration}>{duration} mins</Text>
+        </View>
+        <Text style={styles.description}>{description}</Text>
       </View>
-      <View style={styles.infoRow}>
-        <Ionicons name="time-outline" size={14} color="#6b7280" />
-        <Text style={styles.duration}>{duration} mins</Text>
-      </View>
-      <Text style={styles.description}>{description}</Text>
-    </View>
-  </TouchableOpacity>
-);
+    </Pressable>
+  );
+};
 
 const styles = StyleSheet.create({
   card: {

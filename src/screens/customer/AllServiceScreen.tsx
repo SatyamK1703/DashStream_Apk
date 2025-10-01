@@ -102,12 +102,22 @@ const AllServicesScreen = () => {
               )}
             </View>
           </View>
-          <Image 
-            source={item.image ? { uri: item.image } : require('../../assets/images/image.png')} 
-            style={styles.cardImage} 
-          />
+          {item.image ? (
+            <Image 
+              source={{ uri: item.image }} 
+              style={styles.cardImage} 
+              onError={() => console.log('Failed to load service image')}
+            />
+          ) : (
+            <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
+              <Ionicons name="car-outline" size={32} color="#666" />
+            </View>
+          )}
         </View>
-        <TouchableOpacity style={styles.addButton}>
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => handleServicePress(item)}
+        >
           <Text style={styles.addText}>ADD</Text>
         </TouchableOpacity>
       </TouchableOpacity>
@@ -273,6 +283,10 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 8,
     backgroundColor: '#f3f4f6',
+  },
+  cardImagePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addButton: {
     marginTop: 12,

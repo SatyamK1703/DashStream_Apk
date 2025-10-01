@@ -14,6 +14,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { bookingService } from '../../services';
 
 type OrderHistoryScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 

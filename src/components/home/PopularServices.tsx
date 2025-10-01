@@ -39,6 +39,9 @@ const PopularServices = ({ services }: any) => {
           style={styles.seeAllButton}
           onPress={handleSeeAll}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="See all services"
+          hitSlop={8}
         >
           <Text style={styles.seeAllText}>See All</Text>
           <MaterialIcons name="arrow-forward" size={18} color="#2563eb" />
@@ -66,6 +69,9 @@ const PopularServices = ({ services }: any) => {
                     style={styles.itemTwoCol}
                     onPress={() => handlePress(item)}
                     activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${item.title || item.name}`}
+                    hitSlop={8}
                   >
                     <View style={styles.iconContainer}>
                       <Image source={imageSrc} style={styles.icon} resizeMode="cover" />

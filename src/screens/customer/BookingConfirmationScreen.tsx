@@ -1,10 +1,11 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
+import { useBookingDetails } from '../../hooks';
 
 type BookingConfirmationScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 type BookingConfirmationScreenRouteProp = RouteProp<CustomerStackParamList, 'BookingConfirmation'>;
@@ -13,7 +14,14 @@ const BookingConfirmationScreen = () => {
   const navigation = useNavigation<BookingConfirmationScreenNavigationProp>();
   const route = useRoute<BookingConfirmationScreenRouteProp>();
   
-  const { bookingId, date, timeSlot, address } = route.params || {};
+  const { bookingId } = route.params || {};
+  const { data: booking, loading, error, execute } = useBookingDetails(bookingId || null);
+
+  useEffect(() => {
+    if (bookingId && !booking?.data) {
+      execute();
+    }
+  }, [bookingId]);
   
   const formatDate = (date: Date | string | undefined) => {
     if (!date) return 'Date not available';
@@ -36,6 +44,43 @@ const BookingConfirmationScreen = () => {
   const handleViewAllBookings = () => {
     navigation.navigate('CustomerTabs', { screen: 'Bookings' });
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={[styles.value, { marginTop: 16 }]}>Loading booking details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show error state
+  if (error || !booking?.data) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+          <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
+          <Text style={[styles.successTitle, { color: '#ef4444', marginTop: 16 }]}>
+            {error ? 'Failed to load booking' : 'Booking not found'}
+          </Text>
+          <Text style={[styles.successText, { marginTop: 8 }]}>
+            {error ? 'Please check your connection and try again.' : 'The booking ID may be invalid.'}
+          </Text>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.goBack()}>
+            <Text style={styles.primaryBtnText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const bookingData = booking.data;
+  const service = bookingData.service;
+  const address = bookingData.address;
+  const serviceImages = service.images && service.images.length > 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -63,7 +108,7 @@ const BookingConfirmationScreen = () => {
                 </View>
                 <View>
                   <Text style={styles.label}>Booking ID</Text>
-                  <Text style={styles.value}>{bookingId || 'N/A'}</Text>
+                  <Text style={styles.value}>{bookingData.bookingId || bookingData._id}</Text>
                 </View>
               </View>
 
@@ -73,7 +118,7 @@ const BookingConfirmationScreen = () => {
                 </View>
                 <View>
                   <Text style={styles.label}>Date</Text>
-                  <Text style={styles.value}>{formatDate(date)}</Text>
+                  <Text style={styles.value}>{formatDate(bookingData.scheduledDate)}</Text>
                 </View>
               </View>
 
@@ -83,7 +128,7 @@ const BookingConfirmationScreen = () => {
                 </View>
                 <View>
                   <Text style={styles.label}>Time Slot</Text>
-                  <Text style={styles.value}>{timeSlot || 'Time not available'}</Text>
+                  <Text style={styles.value}>{bookingData.scheduledTime || 'Time not available'}</Text>
                 </View>
               </View>
 
@@ -93,50 +138,48 @@ const BookingConfirmationScreen = () => {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.label}>Service Address</Text>
-                  <Text style={styles.value}>{address || 'Address not available'}</Text>
+                  <Text style={styles.value}>
+                    {address ? `${address.addressLine1}, ${address.city}, ${address.state} ${address.postalCode}` : 'Address not available'}
+                  </Text>
                 </View>
               </View>
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Services Booked</Text>
+              <Text style={styles.sectionTitle}>Service Booked</Text>
 
               <View style={styles.serviceRow}>
-                <Image source={require('../../assets/images/image.png')} style={styles.serviceImage} />
+                {serviceImages ? (
+                  <Image 
+                    source={{ uri: service.images[0].url }} 
+                    style={styles.serviceImage} 
+                    resizeMode="cover"
+                    onError={() => {
+                      // If image fails to load, show placeholder
+                    }}
+                  />
+                ) : (
+                  <View style={styles.serviceImagePlaceholder}>
+                    <Ionicons name="car-outline" size={32} color="#666" />
+                  </View>
+                )}
                 <View style={styles.serviceInfo}>
-                  <Text style={styles.serviceTitle}>Basic Wash</Text>
-                  <Text style={styles.serviceSubtitle}>1 x ₹499</Text>
+                  <Text style={styles.serviceTitle}>{service.name}</Text>
+                  <Text style={styles.serviceSubtitle}>1 x ₹{service.basePrice}</Text>
                 </View>
-                <Text style={styles.value}>₹499</Text>
-              </View>
-
-              <View style={styles.serviceRow}>
-                <Image source={require('../../assets/images/image.png')} style={styles.serviceImage} />
-                <View style={styles.serviceInfo}>
-                  <Text style={styles.serviceTitle}>Premium Wash</Text>
-                  <Text style={styles.serviceSubtitle}>1 x ₹999</Text>
-                </View>
-                <Text style={styles.value}>₹999</Text>
+                <Text style={styles.value}>₹{service.basePrice}</Text>
               </View>
             </View>
 
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Payment Summary</Text>
               <View style={styles.summaryRow}>
-                <Text style={styles.label}>Subtotal</Text>
-                <Text style={styles.value}>₹1,498</Text>
-              </View>
-              <View style={styles.summaryRow}>
-                <Text style={styles.label}>Delivery Fee</Text>
-                <Text style={styles.value}>₹49</Text>
-              </View>
-              <View style={styles.summaryRow}>
-                <Text style={styles.discountLabel}>Discount</Text>
-                <Text style={styles.discountValue}>-₹150</Text>
+                <Text style={styles.label}>Service Amount</Text>
+                <Text style={styles.value}>₹{service.basePrice}</Text>
               </View>
               <View style={styles.totalRow}>
-                <Text style={styles.totalText}>Total</Text>
-                <Text style={[styles.totalText, { color: '#2563eb' }]}>₹1,397</Text>
+                <Text style={styles.totalText}>Total Amount</Text>
+                <Text style={[styles.totalText, { color: '#2563eb' }]}>₹{bookingData.totalAmount}</Text>
               </View>
             </View>
 
@@ -266,6 +309,14 @@ const styles = StyleSheet.create({
     width: 64, 
     height: 64, 
     borderRadius: 8 
+  },
+  serviceImagePlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   serviceInfo: { 
     flex: 1, 
