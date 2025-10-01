@@ -35,34 +35,56 @@ export const useVerifyPayment = () => {
   );
 };
 
-// Hook for fetching payment methods
-export const usePaymentMethods = () => {
-  const [data, setData] = useState([
+// Hook for fetching available payment methods
+export const usePaymentMethods = (params?: {
+  serviceIds?: string[];
+  orderValue?: number;
+}) => {
+  return useApi(
+    () => paymentService.getAvailablePaymentMethods(params),
     {
-      id: 'upi',
-      name: 'UPI',
-      details: 'Pay using UPI',
-      icon: 'phone-portrait-outline',
-      type: 'upi',
-      isDefault: true,
-    },
+      showErrorAlert: false,
+    }
+  );
+};
+
+// Hook for COD payment creation
+export const useCreateCODPayment = () => {
+  return useApi(
+    (data: {
+      bookingId: string;
+      amount: number;
+      notes?: any;
+    }) => paymentService.createCODPayment(data),
     {
-      id: 'cod',
-      name: 'Cash on Delivery',
-      details: 'Pay after service completion',
-      icon: 'cash-outline',
-      type: 'cod',
-      isDefault: false,
-    },
-  ]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+      showErrorAlert: true,
+    }
+  );
+};
 
-  const execute = () => {
-    // This is now a no-op since we are using hardcoded data
-  };
+// Hook for collecting COD payment (for professionals)
+export const useCollectCODPayment = () => {
+  return useApi(
+    (bookingId: string, data: {
+      amount: number;
+      notes?: string;
+    }) => paymentService.collectCODPayment(bookingId, data),
+    {
+      showErrorAlert: true,
+    }
+  );
+};
 
-  return { data, loading, error, execute };
+// Hook for failing COD payment (for professionals)
+export const useFailCODPayment = () => {
+  return useApi(
+    (bookingId: string, data: {
+      reason: string;
+    }) => paymentService.failCODPayment(bookingId, data),
+    {
+      showErrorAlert: true,
+    }
+  );
 };
 
 // Hook for adding payment method

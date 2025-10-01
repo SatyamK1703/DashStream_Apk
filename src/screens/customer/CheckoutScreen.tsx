@@ -7,7 +7,7 @@ import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCart, useAddresses, useCheckout } from '../../store';
 import { useCreateBooking } from '../../hooks/useBookings';
-import { usePaymentMethods } from '../../hooks/usePayments';
+import { usePaymentMethods, useCreateCODPayment } from '../../hooks/usePayments';
 import api from '../../services/httpClient'; // <-- Ensure you have a generic API client for direct calls
 import { Address } from '../../types/api';
 // @ts-ignore: expo-web-browser may not have types in some setups
@@ -118,13 +118,32 @@ const CheckoutScreen = () => {
 
   // Booking and payment hooks
   const createBookingApi = useCreateBooking();
-  const paymentMethodsApi = usePaymentMethods();
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  const createCODPaymentApi = useCreateCODPayment();
+  
+  // Get payment methods dynamically based on cart
+  const serviceIds = cartItems?.map(item => item.id) || [];
+  const orderValue = cartItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
+  
+  const paymentMethodsApi = usePaymentMethods({ 
+    serviceIds, 
+    orderValue 
+  });
+  
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<any>(null);
 
-  // Initialize addresses and set default
+  // Initialize addresses and payment methods
   useEffect(() => {
     fetchAddresses();
+    paymentMethodsApi.execute();
   }, [fetchAddresses]);
+
+  // Set default payment method when payment methods are loaded
+  useEffect(() => {
+    if (paymentMethodsApi.data && paymentMethodsApi.data.length > 0 && !selectedPaymentMethod) {
+      const defaultMethod = paymentMethodsApi.data.find(method => method.isDefault) || paymentMethodsApi.data[0];
+      setSelectedPaymentMethod(defaultMethod);
+    }
+  }, [paymentMethodsApi.data, selectedPaymentMethod]);
 
   useEffect(() => {
     if (addresses.length > 0 && !selectedAddress) {
@@ -174,17 +193,6 @@ const CheckoutScreen = () => {
     }
     setTimeSlots(slots);
   }, []);
-
-  // Set default payment method when data loads
-  useEffect(() => {
-    if (paymentMethodsApi.data && Array.isArray(paymentMethodsApi.data)) {
-      const methods = paymentMethodsApi.data as any[];
-      if (methods.length > 0 && !selectedPaymentMethod) {
-        const defaultMethod = methods.find(m => m.isDefault) || methods[0];
-        setSelectedPaymentMethod(defaultMethod.id);
-      }
-    }
-  }, [paymentMethodsApi.data, selectedPaymentMethod]);
   
   const handlePlaceOrder = async () => {
     if (!selectedTimeSlot) {
@@ -228,7 +236,8 @@ const CheckoutScreen = () => {
         price: cartItems.reduce((s, it) => s + it.price * it.quantity, 0),
         totalAmount: cartItems.reduce((s, it) => s + it.price * it.quantity, 0),
         notes: specialInstructions,
-        additionalServices: []
+        additionalServices: [],
+        paymentMethod: selectedPaymentMethod?.type || 'razorpay' // Add payment method
       };
 
       const bookingRes = await createBookingApi.execute(bookingPayload);
@@ -240,7 +249,55 @@ const CheckoutScreen = () => {
         return;
       }
 
-      // Create payment link (Razorpay Payment Link API)
+      // Handle payment based on selected method
+      if (selectedPaymentMethod?.type === 'cod') {
+        // For COD, create a COD payment record and navigate to confirmation
+        try {
+          const amount = bookingPayload.totalAmount;
+          await createCODPaymentApi.execute({
+            bookingId,
+            amount,
+            notes: { 
+              paymentMethod: 'cod',
+              scheduledDate: selectedDate.toISOString(),
+              specialInstructions
+            }
+          });
+          
+          Alert.alert(
+            'Order Placed Successfully!', 
+            'Your booking has been confirmed. You can pay cash when the service is completed.',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  navigation.navigate('BookingConfirmation', { 
+                    bookingId, 
+                    date: selectedDate, 
+                    timeSlot: selectedTimeSlot,
+                    address: selectedAddress.addressLine1 
+                  });
+                  clear && clear();
+                }
+              }
+            ]
+          );
+          return;
+        } catch (codError) {
+          console.error('COD payment creation failed:', codError);
+          Alert.alert('COD Setup Failed', 'Booking created but COD setup failed. You can still pay cash during service.');
+          navigation.navigate('BookingConfirmation', { 
+            bookingId, 
+            date: selectedDate, 
+            timeSlot: selectedTimeSlot,
+            address: selectedAddress.addressLine1 
+          });
+          clear && clear();
+          return;
+        }
+      }
+
+      // For online payments, create payment link
       const amount = bookingPayload.totalAmount;
       // Direct API call to /payments/create-payment-link
       let paymentLinkRes;
@@ -441,19 +498,24 @@ const CheckoutScreen = () => {
             
             {paymentMethodsApi.data && Array.isArray(paymentMethodsApi.data) && paymentMethodsApi.data.length > 0 ? (
               (paymentMethodsApi.data as any[]).map((method) => {
-                const isSelected = selectedPaymentMethod === method.id;
+                const isSelected = selectedPaymentMethod?.id === method.id;
                 return (
                   <TouchableOpacity
                     key={method.id}
                     style={[styles.paymentMethod, isSelected && styles.addressSelected]}
-                    onPress={() => setSelectedPaymentMethod(method.id)}
+                    onPress={() => setSelectedPaymentMethod(method)}
                   >
                     <View style={styles.paymentIconBox}>
                       <Ionicons name={method.icon || 'card-outline'} size={20} color="#2563eb" />
                     </View>
                     <View style={styles.paymentMethodInfo}>
                       <Text style={styles.addressTitle}>{method.name}</Text>
-                      {method.details && <Text style={styles.addressSubtitle}>{method.details}</Text>}
+                      {method.description && <Text style={styles.addressSubtitle}>{method.description}</Text>}
+                      {method.type === 'cod' && method.codSettings && (
+                        <Text style={styles.codInfo}>
+                          Min: ₹{method.codSettings.minAmount} | Max: ₹{method.codSettings.maxAmount}
+                        </Text>
+                      )}
                     </View>
                     {method.isDefault && <Text style={styles.defaultBadge}>Default</Text>}
                   </TouchableOpacity>
@@ -758,5 +820,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 14
+  },
+  codInfo: {
+    fontSize: 10,
+    color: '#16a34a',
+    marginTop: 2,
+    fontWeight: '500'
   }
 });

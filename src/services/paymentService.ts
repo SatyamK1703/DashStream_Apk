@@ -4,7 +4,40 @@ import { Payment } from '../types/api';
 
 class PaymentService {
   /**
-   * Create a payment order
+   * Get available payment methods
+   */
+  async getAvailablePaymentMethods(params?: {
+    serviceIds?: string[];
+    orderValue?: number;
+  }): Promise<ApiResponse<Array<{
+    id: string;
+    type: string;
+    name: string;
+    description: string;
+    icon: string;
+    isDefault: boolean;
+    fees?: {
+      percentage?: number;
+      fixed?: number;
+      maxFee?: number;
+    };
+    codSettings?: {
+      minAmount?: number;
+      maxAmount?: number;
+      collectBeforeService?: boolean;
+      allowPartialPayment?: boolean;
+    };
+  }>>> {
+    try {
+      return await httpClient.get('/payment-methods', { params });
+    } catch (error) {
+      console.error('Get available payment methods error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a payment order (for online payments)
    */
   async createOrder(data: {
     bookingId: string;
@@ -54,7 +87,63 @@ class PaymentService {
   }
 
   /**
-   * Get user's saved payment methods
+   * Create COD payment record
+   */
+  async createCODPayment(data: {
+    bookingId: string;
+    amount: number;
+    notes?: any;
+  }): Promise<ApiResponse<{
+    paymentId: string;
+    codStatus: string;
+    amount: number;
+    message: string;
+  }>> {
+    try {
+      return await httpClient.post(API_ENDPOINTS.PAYMENTS.CREATE_ORDER.replace('create-order', 'create-cod'), data);
+    } catch (error) {
+      console.error('Create COD payment error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Collect COD payment (for professionals)
+   */
+  async collectCODPayment(bookingId: string, data: {
+    amount: number;
+    notes?: string;
+  }): Promise<ApiResponse<{
+    booking: any;
+    message: string;
+  }>> {
+    try {
+      return await httpClient.post(`/payments/cod/${bookingId}/collect`, data);
+    } catch (error) {
+      console.error('Collect COD payment error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark COD payment as failed (for professionals)
+   */
+  async failCODPayment(bookingId: string, data: {
+    reason: string;
+  }): Promise<ApiResponse<{
+    booking: any;
+    message: string;
+  }>> {
+    try {
+      return await httpClient.post(`/payments/cod/${bookingId}/fail`, data);
+    } catch (error) {
+      console.error('Fail COD payment error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user's saved payment methods (user's cards/UPI saved in account)
    */
   async getPaymentMethods(): Promise<ApiResponse<Array<{
     id: string;
