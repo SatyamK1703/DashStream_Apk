@@ -90,7 +90,7 @@ const HomeScreen = () => {
     : [];
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <Header userName={user?.name || 'Guest'} />
       <ScrollView 
@@ -105,7 +105,7 @@ const HomeScreen = () => {
           />
         }
       >
-        {/* Show offers carousel with API data */}
+        {/* Offers carousel with API data or placeholder */}
         <OffersCarousel
           offers={carouselOffers}
           currentIndex={currentOfferIndex}
@@ -113,22 +113,28 @@ const HomeScreen = () => {
           loading={offersLoading}
           error={offersError}
         />
-       
-        {/* Show popular services with API data */}
-        {!servicesLoading && (
+
+        {/* Popular services with loading placeholder */}
+        {servicesLoading ? (
+          <View style={styles.skeletonRow}>
+            <View style={styles.skeletonCard} />
+            <View style={styles.skeletonCard} />
+            <View style={styles.skeletonCard} />
+          </View>
+        ) : (
           <PopularServices 
             services={servicesToShow} 
             loading={servicesLoading}
             error={servicesError}
           />
         )}
-       
+
         <PromoBanner onPress={() => navigation.navigate('Membership')} />
         <CustomerTestimonials/>
         <QuickFixes/>
         <Footer/>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -138,4 +144,17 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   scrollView: { flex: 1 },
   safeArea: { flex: 1 },
+  skeletonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginTop: 12,
+  },
+  skeletonCard: {
+    height: 120,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    flex: 1,
+    marginHorizontal: 6,
+  },
 });

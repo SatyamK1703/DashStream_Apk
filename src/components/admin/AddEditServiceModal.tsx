@@ -662,10 +662,6 @@ modalContentContainer: {
   tagListContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 },
   tagListItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginRight: 8, marginBottom: 8 },
   tagText: { marginRight: 4, color: '#4B5563' },
-  submitButton: { backgroundColor: '#2563EB', paddingVertical: 14, borderRadius: 12, marginTop: 16 },
-  submitButtonDisabled: { backgroundColor: '#9CA3AF', opacity: 0.6 },
-  submitButtonContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  submitButtonText: { color: 'white', fontWeight: 'bold', textAlign: 'center', fontSize: 16 },
   errorText: { color: '#EF4444', fontSize: 12, marginTop: 4 },
   helperText: { color: '#6B7280', fontSize: 12, marginTop: 4 },
 });

@@ -10,10 +10,17 @@ export interface Booking {
   date: string;
   time: string;
   address: string;
-  status: 'pending' | 'ongoing' | 'completed' | 'cancelled';
+  status: 'pending' | 'ongoing' | 'completed' | 'cancelled' | 'confirmed' | 'in-progress' | 'refunded';
   amount: string;
-  paymentStatus: 'paid' | 'pending' | 'failed';
+  totalAmount: number;
+  paymentStatus: 'paid' | 'pending' | 'failed' | 'refunded';
+  paymentMethod: string;
   createdAt: string;
+  services: {
+    name: string;
+    price: number;
+  }[];
+  rating?: number;
 }
 
 export interface FilterOption {
@@ -60,24 +67,6 @@ export interface Vehicle {
   color: string;
   licensePlate?: string;
   image?: string;
-}
-
-export interface Booking {
-  id: string;
-  date: string;
-  time: string;
-  services: {
-    name: string;
-    price: number;
-  }[];
-  totalAmount: number;
-  status: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled' | 'refunded';
-  paymentStatus: 'pending' | 'paid' | 'refunded';
-  paymentMethod: string;
-  professionalName?: string;
-  professionalId?: string;
-  rating?: number;
-  address: string;
 }
 
 export interface Note {

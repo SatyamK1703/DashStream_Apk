@@ -111,9 +111,7 @@ export default {
       ],
     ],
     extra: {
-      eas: {
-        projectId: 'your-eas-project-id-here',
-      },
+      eas: { projectId: 'f1a076b7-0687-4639-8076-5f62f9c5a0bd' },
       apiUrl: IS_DEV
         ? 'http://localhost:5000/api'
         : IS_STAGING
@@ -125,6 +123,6 @@ export default {
       environment: IS_DEV ? 'development' : IS_STAGING ? 'staging' : 'production',
     },
     scheme: 'dashstream',
-    owner: 'your-expo-username',
+    owner: 'satyam1703',
   },
 };

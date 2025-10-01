@@ -17,7 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 
 // Import proper types and hooks
-import { ProStackParamList } from '../../app/routes/ProNavigator';
+import { ProNavigator, ProRoutes } from '../../../app/routes/ProNavigator';
 import { useProfessionalProfile, useProfessionalProfileActions } from '../../hooks/useProfessional';
 import { useApi } from '../../hooks/useApi';
 import httpClient from '../../services/httpClient';

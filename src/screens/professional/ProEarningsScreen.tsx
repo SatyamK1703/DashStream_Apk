@@ -15,7 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 
 // Import proper types and hooks
-import { ProStackParamList } from '../../app/routes/ProNavigator';
+import { ProRoutes, ProNavigator } from '../../../app/routes/ProNavigator';
 import { useProfessionalEarningsScreen } from '../../hooks/useProfessional';
 
 type ProEarningsScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;

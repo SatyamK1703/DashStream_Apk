@@ -31,10 +31,8 @@
       "package": "com.satyamk1078.DashSteam"
     },
     "extra": {
-      "eas": {
-        "projectId": "0e570d38-47d8-4f55-9485-54ebf1831748"
-      }
+      "eas": { "projectId": "f1a076b7-0687-4639-8076-5f62f9c5a0bd" }
     },
-    "owner": "satyamk1078"
+    "owner": "satyam1703"
   }
 }
