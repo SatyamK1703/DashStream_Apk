@@ -35,7 +35,7 @@ const TestimonialItem = ({ item }) => {
       <VideoView
         style={styles.video}
         player={player}
-        allowsFullscreen
+        fullscreenOptions={{ allowsFullscreen: true }}
         allowsPictureInPicture
       />
       <View style={styles.overlay}>

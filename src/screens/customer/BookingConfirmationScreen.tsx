@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,14 +13,24 @@ const BookingConfirmationScreen = () => {
   const navigation = useNavigation<BookingConfirmationScreenNavigationProp>();
   const route = useRoute<BookingConfirmationScreenRouteProp>();
   
-  const { bookingId, date, timeSlot, address } = route.params;
+  const { bookingId, date, timeSlot, address } = route.params || {};
   
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const formatDate = (date: Date | string | undefined) => {
+    if (!date) return 'Date not available';
+    
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    
+    if (dateObj instanceof Date && !isNaN(dateObj.getTime())) {
+      return dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    }
+    
+    return 'Invalid date';
   };
 
   const handleTrackOrder = () => {
-    navigation.navigate('TrackBooking', { bookingId });
+    if (bookingId) {
+      navigation.navigate('TrackBooking', { bookingId });
+    }
   };
 
   const handleViewAllBookings = () => {
@@ -52,7 +63,7 @@ const BookingConfirmationScreen = () => {
                 </View>
                 <View>
                   <Text style={styles.label}>Booking ID</Text>
-                  <Text style={styles.value}>{bookingId}</Text>
+                  <Text style={styles.value}>{bookingId || 'N/A'}</Text>
                 </View>
               </View>
 
@@ -72,7 +83,7 @@ const BookingConfirmationScreen = () => {
                 </View>
                 <View>
                   <Text style={styles.label}>Time Slot</Text>
-                  <Text style={styles.value}>{timeSlot}</Text>
+                  <Text style={styles.value}>{timeSlot || 'Time not available'}</Text>
                 </View>
               </View>
 
@@ -82,7 +93,7 @@ const BookingConfirmationScreen = () => {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.label}>Service Address</Text>
-                  <Text style={styles.value}>{address}</Text>
+                  <Text style={styles.value}>{address || 'Address not available'}</Text>
                 </View>
               </View>
             </View>

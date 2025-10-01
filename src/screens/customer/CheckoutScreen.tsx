@@ -243,10 +243,33 @@ const CheckoutScreen = () => {
       // Create payment link (Razorpay Payment Link API)
       const amount = bookingPayload.totalAmount;
       // Direct API call to /payments/create-payment-link
-      const paymentLinkRes = await api.post('/payments/create-payment-link', {
-        bookingId,
-        amount
-      });
+      let paymentLinkRes;
+      
+      try {
+        paymentLinkRes = await api.post('/payments/create-payment-link', {
+          bookingId,
+          amount
+        });
+      } catch (paymentError: any) {
+        // Handle duplicate key error specifically
+        if (paymentError?.errorCode === 'APP-500-407' && paymentError?.message?.includes('duplicate key')) {
+          // Try again after a brief delay
+          console.log('Duplicate payment detected, retrying...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          try {
+            paymentLinkRes = await api.post('/payments/create-payment-link', {
+              bookingId,
+              amount
+            });
+          } catch (retryError) {
+            console.error('Payment creation retry failed:', retryError);
+            throw paymentError; // Throw original error
+          }
+        } else {
+          throw paymentError;
+        }
+      }
+      
       const paymentLink = paymentLinkRes?.data?.data?.payment_link;
 
       if (!paymentLink) {
@@ -274,7 +297,22 @@ const CheckoutScreen = () => {
       clear && clear();
     } catch (error: any) {
       console.error('Place order error:', error);
-      Alert.alert('Error', error?.message || 'Failed to place order.');
+      
+      // Handle specific error scenarios
+      if (error?.errorCode === 'APP-500-407' && error?.message?.includes('duplicate key')) {
+        Alert.alert(
+          'Duplicate Order', 
+          'A payment for this booking is already in progress. Please check your bookings or try again in a few minutes.',
+          [
+            { text: 'View Bookings', onPress: () => navigation.navigate('CustomerTabs', { screen: 'Bookings' }) },
+            { text: 'OK', style: 'cancel' }
+          ]
+        );
+      } else if (error?.userFriendlyMessage) {
+        Alert.alert('Error', error.userFriendlyMessage);
+      } else {
+        Alert.alert('Error', error?.message || 'Failed to place order. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

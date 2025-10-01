@@ -60,14 +60,17 @@ export const API_ENDPOINTS = {
 
   // Services
   SERVICES: {
+    ALL: '/services',
     LIST: '/services',
     UPDATE: (id: string) => `/services/${id}`,
     CREATE: '/services',
     DETAILS: (id: string) => `/services/${id}`,
+    BY_ID: (id: string) => `/services/${id}`,
     CATEGORIES: '/services/categories',
     POPULAR: '/services/popular',
     SEARCH: '/services/search',
     BY_CATEGORY: (categoryId: string) => `/services/category/${categoryId}`,
+    TOP_SERVICES: '/services/top',
   },
 
   // Bookings
@@ -86,6 +89,7 @@ export const API_ENDPOINTS = {
   // Payments
   PAYMENTS: {
     CREATE_ORDER: '/payments/create-order',
+    CREATE_PAYMENT_LINK: '/payments/create-payment-link',
     VERIFY_PAYMENT: '/payments/verify',
     PAYMENT_METHODS: '/payments/methods',
     ADD_METHOD: '/payments/methods',

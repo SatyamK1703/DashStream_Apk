@@ -1,5 +1,5 @@
 import httpClient, { ApiResponse } from './httpClient';
-import { API_ENDPOINTS as API_ENDPOINTS } from '../config/config';
+import { API_ENDPOINTS } from '../config/config';
 import { Service, ServiceCategory, SearchParams } from '../types/api';
 
 class ServiceService {
@@ -10,7 +10,11 @@ class ServiceService {
 
   async getAllServices(params?: SearchParams): Promise<ApiResponse<Service[]>> {
     try {
-      return await httpClient.get(API_ENDPOINTS.SERVICES.ALL, { params });
+      const endpoint = API_ENDPOINTS.SERVICES.ALL;
+      if (!endpoint) {
+        throw new Error('SERVICES.ALL endpoint is not defined');
+      }
+      return await httpClient.get(endpoint, { params });
     } catch (error) {
       console.error('Get all services error:', error);
       throw error;
@@ -20,20 +24,33 @@ class ServiceService {
 
   async getPopularServices(limit?: number): Promise<ApiResponse<Service[]>> {
     try {
+      const endpoint = API_ENDPOINTS.SERVICES.POPULAR;
+      if (!endpoint) {
+        throw new Error('SERVICES.POPULAR endpoint is not defined');
+      }
       const params = limit ? { limit } : undefined;
-      return await httpClient.get(API_ENDPOINTS.SERVICES.POPULAR, { params });
+      return await httpClient.get(endpoint, { params });
     } catch (error) {
       console.error('Get popular services error:', error);
       // ✅ Return empty array to prevent app crashes
-      return { success: true, data: [] };
+      return { 
+        success: true, 
+        status: 'success',
+        message: 'No popular services available',
+        data: [] 
+      };
     }
   }
 
  
   async getTopServices(limit?: number): Promise<ApiResponse<Service[]>> {
     try {
+      const endpoint = API_ENDPOINTS.SERVICES.TOP_SERVICES;
+      if (!endpoint) {
+        throw new Error('SERVICES.TOP_SERVICES endpoint is not defined');
+      }
       const params = limit ? { limit } : undefined;
-      return await httpClient.get(API_ENDPOINTS.SERVICES.TOP_SERVICES, { params });
+      return await httpClient.get(endpoint, { params });
     } catch (error) {
       console.error('Get top services error:', error);
       throw error;
