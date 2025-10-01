@@ -1,6 +1,6 @@
 // src/store/checkoutStore.ts
 import { create } from 'zustand';
-import { subscribeWithSelector } from 'zustand/middleware';
+import { subscribeWithSelector, devtools } from 'zustand/middleware';
 import { Address } from '../types/api';
 
 export interface CheckoutState {
@@ -28,48 +28,51 @@ export interface CheckoutState {
 }
 
 export const useCheckoutStore = create<CheckoutState>()(
-  subscribeWithSelector((set, get) => ({
-    // Initial state
-    selectedAddress: null,
-    selectedDate: new Date(),
-    selectedTimeSlot: null,
-    specialInstructions: '',
-    isLoading: false,
+  devtools(
+    subscribeWithSelector((set, get) => ({
+      // Initial state
+      selectedAddress: null,
+      selectedDate: new Date(),
+      selectedTimeSlot: null,
+      specialInstructions: '',
+      isLoading: false,
 
-    // Actions
-    setSelectedAddress: (address) => {
-      set({ selectedAddress: address });
-    },
+      // Actions
+      setSelectedAddress: (address) => {
+        set({ selectedAddress: address });
+      },
 
-    setSelectedDate: (date) => {
-      set({ selectedDate: date });
-    },
+      setSelectedDate: (date) => {
+        set({ selectedDate: date });
+      },
 
-    setSelectedTimeSlot: (slot) => {
-      set({ selectedTimeSlot: slot });
-    },
+      setSelectedTimeSlot: (slot) => {
+        set({ selectedTimeSlot: slot });
+      },
 
-    setSpecialInstructions: (instructions) => {
-      set({ specialInstructions: instructions });
-    },
+      setSpecialInstructions: (instructions) => {
+        set({ specialInstructions: instructions });
+      },
 
-    setLoading: (isLoading) => {
-      set({ isLoading });
-    },
+      setLoading: (isLoading) => {
+        set({ isLoading });
+      },
 
-    // Utilities
-    clearCheckout: () => {
-      set({
-        selectedAddress: null,
-        selectedDate: new Date(),
-        selectedTimeSlot: null,
-        specialInstructions: '',
-        isLoading: false,
-      });
-    },
+      // Utilities
+      clearCheckout: () => {
+        set({
+          selectedAddress: null,
+          selectedDate: new Date(),
+          selectedTimeSlot: null,
+          specialInstructions: '',
+          isLoading: false,
+        });
+      },
 
-    updateCheckoutData: (data) => {
-      set((state) => ({ ...state, ...data }));
-    },
-  }))
+      updateCheckoutData: (data) => {
+        set((state) => ({ ...state, ...data }));
+      },
+    })),
+    { name: 'Checkout' }
+  )
 );
