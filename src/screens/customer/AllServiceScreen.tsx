@@ -18,6 +18,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import CategoryTabs from '../../components/service/CategoryTabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useServices } from '../../hooks/useServices';
+import { useCart } from '../../store';
 
 type NavigationProp = NativeStackNavigationProp<CustomerStackParamList, 'AllServices'>;
 
@@ -28,7 +29,7 @@ const AllServicesScreen = () => {
   const [filteredServices, setFilteredServices] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTab, setSelectedTab] = useState('All');
-
+  
   // Fetch services from API
   const { 
     data: servicesData = [], 
@@ -43,6 +44,11 @@ const AllServicesScreen = () => {
   useEffect(() => {
     fetchServices();
   }, []);
+
+  // Debug log when data changes
+  useEffect(() => {
+   
+  }, [servicesData, isLoading, error]);
 
   // Handle category filter changes
   useEffect(() => {
@@ -72,9 +78,22 @@ const AllServicesScreen = () => {
   }, [searchQuery, servicesData]);
 
   const handleServicePress = (service: any) => {
-    navigation.navigate('ServiceDetails', { serviceId: service.id });
+    navigation.navigate('ServiceDetails', { serviceId: service._id || service.id, service });
   };
+  const { addItem } = useCart();
 
+  const handleAddToCart = (service: any) => {
+    if (!service) return;
+    addItem({
+      id: service.id || service._id,
+      title: service.title || service.name,
+      price: service.price,
+      quantity: 1,
+      image: typeof service.image === 'string' ? { uri: service.image } : service.image,
+      meta: { vehicleType: service.vehicleType }
+    });
+  };
+  
   const renderServiceItem = ({ item }: { item: any }) => {
     const discountPercentage = item.originalPrice && item.price ? 
       Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100) : 0;
@@ -116,7 +135,7 @@ const AllServicesScreen = () => {
         </View>
         <TouchableOpacity 
           style={styles.addButton}
-          onPress={() => handleServicePress(item)}
+          onPress={() => handleAddToCart(item)}
         >
           <Text style={styles.addText}>ADD</Text>
         </TouchableOpacity>

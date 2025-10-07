@@ -15,11 +15,6 @@ export const useActiveOffers = () => {
     }
   );
 };
-// export const useActiveOffers = () => {
-  
-//     return offerService.getActiveOffers()
-// };
-
 
 // Hook for fetching all offers
 export const useAllOffers = (filters?: {

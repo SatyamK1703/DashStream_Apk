@@ -154,8 +154,16 @@ export const usePaginatedApi = <T = any>(
   const defaultNormalizer = (resp: any) => {
     if (!resp) return { items: [], total: 0 };
     const payload = resp.data ?? resp;
-    const items = Array.isArray(payload) ? payload : payload.items ?? [];
+    
+    // Handle array response
+    if (Array.isArray(payload)) {
+      return { items: payload, total: payload.length };
+    }
+    
+    // Handle paginated response with various property names
+    const items = payload.items ?? payload.services ?? payload.results ?? payload.bookings ?? payload.notifications ?? payload.offers ?? [];
     const total = payload.total ?? payload.totalCount ?? items.length;
+    
     return { items, total };
   };
 
@@ -163,27 +171,51 @@ export const usePaginatedApi = <T = any>(
 
   const loadMore = useCallback(
     async (params: any = {}) => {
-      if (isLoadingPageRef.current || !pagination.hasMore) return;
+      if (isLoadingPageRef.current || !pagination.hasMore) {
+        if (__DEV__) {
+          console.log('usePaginatedApi - loadMore skipped:', {
+            isLoading: isLoadingPageRef.current,
+            hasMore: pagination.hasMore
+          });
+        }
+        return;
+      }
       isLoadingPageRef.current = true;
 
-      const rawResponse = await apiCall({
-        ...params,
-        page: pagination.page,
-        limit: pagination.limit,
-      });
+      try {
+        const rawResponse = await apiCall({
+          ...params,
+          page: pagination.page,
+          limit: pagination.limit,
+        });
 
-      const { items: newItems, total } = normalizeResponse(rawResponse);
+        
 
-      setAllData(prev => (pagination.page === 1 ? newItems : [...prev, ...newItems]));
-      setPagination(prev => ({
-        ...prev,
-        page: prev.page + 1,
-        total,
-        hasMore: prev.page * prev.limit < total,
-      }));
+        const { items: newItems, total } = normalizeResponse(rawResponse);
 
-      isLoadingPageRef.current = false;
-      return { items: newItems, total };
+        if (__DEV__) {
+          console.log('usePaginatedApi - Normalized:', {
+            itemsCount: newItems?.length,
+            total,
+            page: pagination.page
+          });
+        }
+
+        setAllData(prev => (pagination.page === 1 ? newItems : [...prev, ...newItems]));
+        setPagination(prev => ({
+          ...prev,
+          page: prev.page + 1,
+          total,
+          hasMore: prev.page * prev.limit < total,
+        }));
+
+        isLoadingPageRef.current = false;
+        return { items: newItems, total };
+      } catch (error) {
+        console.error('usePaginatedApi - loadMore error:', error);
+        isLoadingPageRef.current = false;
+        throw error;
+      }
     },
     [apiCall, normalizeResponse, pagination.page, pagination.limit, pagination.hasMore]
   );
@@ -213,149 +245,6 @@ export const usePaginatedApi = <T = any>(
     reset,
   };
 };
-
-// export const usePaginatedApi = <T = any>(
-//   apiCall: (params: any) => Promise<ApiResponse<T> | ApiResponse<T[]> | any>,
-//   options: UseApiOptions = {}
-// ) => {
-//   const [pagination, setPagination] = useState({
-//     page: 1,
-//     limit: 10,
-//     total: 0,
-//     hasMore: true,
-//   });
-
-//   const [allData, setAllData] = useState<T[]>([]);
-//   const isLoadingPageRef = useRef(false);
-//   const baseApi = useApi(apiCall, options);
-
-//   const normalizePaginated = (resp: any) => {
-  
-//     if (!resp) return { items: [], total: 0 };
-
-//     // Direct array
-//     if (Array.isArray(resp)) return { items: resp, total: resp.length };
-
-//     const payload = resp.data ?? resp;
-//     const items = payload.items ?? payload.results ?? payload.services ?? payload.bookings ?? payload.notifications??payload.offers;
-//     if (Array.isArray(items)) {
-//       const total = payload.total ?? payload.totalCount ?? (items.length);
-//       return { items, total };
-//     }
-
-//     // If payload itself is an array (defensive)
-//     if (Array.isArray(payload)) return { items: payload, total: payload.length };
-
-//     return { items: [], total: 0 };
-//   };
-
-//   const loadMore = useCallback(
-//     async (params: any = {}) => {
-//       if (!pagination.hasMore && pagination.page > 1) return;
-//       if (__DEV__) {
-//         console.log('usePaginatedApi - loadMore called:', {
-//           params,
-//           pagination,
-//           currentData: allData
-//         });
-//       }
-
-//       const rawResponse = await baseApi.execute({
-//         ...params,
-//         page: pagination.page,
-//         limit: pagination.limit,
-//       });
-
-//       const response = normalizePaginated(rawResponse);
-
-//       if (__DEV__) {
-//         console.log('usePaginatedApi - loadMore response:', {
-//           response,
-//           responseType: typeof response,
-//           isArray: Array.isArray(response),
-//           responseLength: Array.isArray(response) ? response.length : 'N/A'
-//         });
-//       }
-
-//       if (response) {
-//         const newData = Array.isArray(response.items) ? response.items : response.items || [];
-
-//         const updatedData = pagination.page === 1 ? newData : [...allData, ...newData];
-        
-//         if (__DEV__) {
-//           console.log('usePaginatedApi - Setting data:', {
-//             previousLength: allData.length,
-//             newDataLength: newData.length,
-//             totalLength: updatedData.length,
-//             isFirstPage: pagination.page === 1
-//           });
-//         }
-        
-//         setAllData(updatedData);
-
-//         setPagination(prev => ({
-//           ...prev,
-//           page: prev.page + 1,
-//           hasMore: newData.length === prev.limit,
-//           total: newData.length < prev.limit 
-//             ? (prev.page - 1) * prev.limit + newData.length
-//             : prev.total,
-//         }));
-//       }
-
-//       isLoadingPageRef.current = false;
-//       return response;
-//     },
-//     [baseApi, pagination, allData]
-//   );
-
-//   const refresh = useCallback(
-//     async (params: any = {}) => {
-//       setPagination(prev => ({ ...prev, page: 1, hasMore: true }));
-//       setAllData([]);
-//       // ensure we don't collide with an ongoing load
-//       while ((isLoadingPageRef as any).current) {
-//         await new Promise(r => setTimeout(r, 50));
-//       }
-//       return loadMore(params);
-//     },
-//     [loadMore]
-//   );
-
-//   const reset = useCallback(() => {
-//     baseApi.reset();
-//     setAllData([]);
-//     setPagination({
-//       page: 1,
-//       limit: 10,
-//       total: 0,
-//       hasMore: true,
-//     });
-//   }, [baseApi]);
-
-//   const result = {
-//     data: allData,
-//     loading: baseApi.loading,
-//     error: baseApi.error,
-//     pagination,
-//     loadMore,
-//     refresh,
-//     reset,
-//   };
-  
-//   if (__DEV__) {
-//     console.log('usePaginatedApi - Returning:', {
-//       allData,
-//       dataLength: allData?.length,
-//       loading: baseApi.loading,
-//       error: baseApi.error,
-//       pagination
-//     });
-//   }
-  
-//   return result;
-// };
-
 // Hook for real-time updates
 export const useRealtimeApi = <T = any>(
   apiCall: (...args: any[]) => Promise<ApiResponse<T>>,

@@ -290,7 +290,7 @@ const ProfileScreen = () => {
         </View>
 
         {/* Settings */}
-        <View style={styles.card}>
+        {/* <View style={styles.card}>
           <Text style={styles.sectionTitle}>Settings</Text>
           
           <View style={styles.settingRow}>
@@ -327,7 +327,7 @@ const ProfileScreen = () => {
               value={localLocationState}
             />
           </View>
-        </View>
+        </View> */}
 
         {/* Profile Menu */}
         <View style={styles.card}>

@@ -355,9 +355,18 @@ const CheckoutScreen = () => {
         }
       }
       
-      const paymentLink = paymentLinkRes?.data?.data?.payment_link;
+      // Debug: Log the full response to see the structure
+      console.log('Payment Link Response:', JSON.stringify(paymentLinkRes, null, 2));
+      
+      // Extract payment link from response (backend returns { status: "success", data: { payment_link, paymentId, ... } })
+      const paymentLink = paymentLinkRes?.data?.payment_link;
+      const paymentId = paymentLinkRes?.data?.paymentId;
+
+      console.log('Extracted Payment Link:', paymentLink);
+      console.log('Extracted Payment ID:', paymentId);
 
       if (!paymentLink) {
+        console.error('Payment link missing from response:', paymentLinkRes);
         Alert.alert('Payment info missing', 'Could not start payment. Booking has been created and will be updated once payment is confirmed.');
         navigation.navigate('BookingConfirmation', { bookingId });
         clear && clear();
@@ -365,21 +374,127 @@ const CheckoutScreen = () => {
       }
 
       // Open payment link in browser (Expo WebBrowser preferred)
+      let browserResult;
       try {
-        await WebBrowser.openBrowserAsync(paymentLink);
+        browserResult = await WebBrowser.openBrowserAsync(paymentLink);
       } catch {
         // Fallback to Linking if WebBrowser fails
         try {
           await Linking.openURL(paymentLink);
+          // For Linking, we can't detect when user returns, so show a message
+          Alert.alert(
+            'Payment Window Opened',
+            'Please complete your payment in the browser. Once done, return to the app and check your bookings.',
+            [
+              {
+                text: 'View Bookings',
+                onPress: () => {
+                  navigation.navigate('CustomerTabs', { screen: 'Bookings' });
+                  clear && clear();
+                }
+              },
+              {
+                text: 'OK',
+                onPress: () => {
+                  navigation.navigate('BookingConfirmation', { bookingId });
+                  clear && clear();
+                }
+              }
+            ]
+          );
+          return;
         } catch {
           Alert.alert('Error', 'Could not open payment page.');
           return;
         }
       }
 
-      // After payment, show confirmation (rely on webhook or poll backend for status)
-      navigation.navigate('BookingConfirmation', { bookingId });
-      clear && clear();
+      // User closed the browser - check payment status
+      if (browserResult.type === 'cancel' || browserResult.type === 'dismiss') {
+        // Poll payment status for a few seconds
+        let paymentStatus = null;
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        while (attempts < maxAttempts && !paymentStatus) {
+          try {
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between checks
+            const statusRes = await api.get(`/payments/${paymentId}`);
+            const status = statusRes?.data?.payment?.status;
+            
+            if (status === 'captured' || status === 'authorized') {
+              paymentStatus = 'success';
+              break;
+            } else if (status === 'failed') {
+              paymentStatus = 'failed';
+              break;
+            }
+          } catch (error) {
+            console.error('Error checking payment status:', error);
+          }
+          attempts++;
+        }
+
+        // Show appropriate message based on payment status
+        if (paymentStatus === 'success') {
+          Alert.alert(
+            'Payment Successful!',
+            'Your booking has been confirmed and payment is complete.',
+            [
+              {
+                text: 'View Booking',
+                onPress: () => {
+                  navigation.navigate('BookingConfirmation', { bookingId });
+                  clear && clear();
+                }
+              }
+            ]
+          );
+        } else if (paymentStatus === 'failed') {
+          Alert.alert(
+            'Payment Failed',
+            'Your payment could not be processed. Please try again or contact support.',
+            [
+              {
+                text: 'Try Again',
+                onPress: () => {
+                  // User can try placing order again
+                }
+              },
+              {
+                text: 'Cancel',
+                style: 'cancel'
+              }
+            ]
+          );
+        } else {
+          // Payment status unknown - might still be processing
+          Alert.alert(
+            'Payment Processing',
+            'Your payment is being processed. Please check your bookings in a few moments.',
+            [
+              {
+                text: 'View Bookings',
+                onPress: () => {
+                  navigation.navigate('CustomerTabs', { screen: 'Bookings' });
+                  clear && clear();
+                }
+              },
+              {
+                text: 'OK',
+                onPress: () => {
+                  navigation.navigate('BookingConfirmation', { bookingId });
+                  clear && clear();
+                }
+              }
+            ]
+          );
+        }
+      } else {
+        // Browser closed normally (shouldn't happen with payment links)
+        navigation.navigate('BookingConfirmation', { bookingId });
+        clear && clear();
+      }
     } catch (error: any) {
       console.error('Place order error:', error);
       

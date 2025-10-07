@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { View, ScrollView, StatusBar, StyleSheet, RefreshControl } from 'react-native';
 import { useAuth } from '../../store';
 import Header from '../../components/home/Header';
@@ -35,6 +35,7 @@ const HomeScreen = () => {
     refresh: fetchActiveOffers,
     error: offersError,
   } = useActiveOffers();
+  console.log('Active Offers Data:', useActiveOffers());
   
   const isRefreshing = servicesLoading || offersLoading;
   

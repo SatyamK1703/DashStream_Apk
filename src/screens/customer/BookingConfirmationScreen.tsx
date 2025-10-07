@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -6,6 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { useBookingDetails } from '../../hooks';
+import api from '../../services/httpClient';
 
 type BookingConfirmationScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 type BookingConfirmationScreenRouteProp = RouteProp<CustomerStackParamList, 'BookingConfirmation'>;
@@ -16,12 +17,49 @@ const BookingConfirmationScreen = () => {
   
   const { bookingId } = route.params || {};
   const { data: booking, loading, error, execute } = useBookingDetails(bookingId || null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [checkingPayment, setCheckingPayment] = useState(false);
 
   useEffect(() => {
     if (bookingId && !booking?.data) {
       execute();
     }
   }, [bookingId]);
+
+  // Poll payment status if booking has a payment that's not yet captured
+  useEffect(() => {
+    if (!booking?.data) return;
+    
+    const bookingData = booking.data;
+    const paymentId = bookingData.paymentId;
+    
+    if (!paymentId) {
+      setPaymentStatus('pending');
+      return;
+    }
+
+    // Check payment status
+    const checkPaymentStatus = async () => {
+      try {
+        setCheckingPayment(true);
+        const statusRes = await api.get(`/payments/${paymentId}`);
+        const status = statusRes?.data?.payment?.status;
+        setPaymentStatus(status || 'unknown');
+        
+        // If payment is still pending, poll again after 3 seconds
+        if (status === 'created' || status === 'pending' || status === 'authorized') {
+          setTimeout(checkPaymentStatus, 3000);
+        }
+      } catch (error) {
+        console.error('Error checking payment status:', error);
+        setPaymentStatus('unknown');
+      } finally {
+        setCheckingPayment(false);
+      }
+    };
+
+    checkPaymentStatus();
+  }, [booking?.data]);
   
   const formatDate = (date: Date | string | undefined) => {
     if (!date) return 'Date not available';
@@ -96,6 +134,37 @@ const BookingConfirmationScreen = () => {
             <Text style={styles.successText}>
               Your booking has been confirmed. A professional will be assigned shortly.
             </Text>
+            
+            {/* Payment Status Indicator */}
+            {paymentStatus && (
+              <View style={[
+                styles.paymentStatusBadge,
+                paymentStatus === 'captured' && styles.paymentStatusSuccess,
+                paymentStatus === 'failed' && styles.paymentStatusFailed,
+                (paymentStatus === 'created' || paymentStatus === 'pending' || paymentStatus === 'authorized') && styles.paymentStatusPending,
+                paymentStatus === 'cod_pending' && styles.paymentStatusCOD
+              ]}>
+                {checkingPayment && <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />}
+                <Ionicons 
+                  name={
+                    paymentStatus === 'captured' ? 'checkmark-circle' :
+                    paymentStatus === 'failed' ? 'close-circle' :
+                    paymentStatus === 'cod_pending' ? 'cash' :
+                    'time'
+                  } 
+                  size={16} 
+                  color="#fff" 
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={styles.paymentStatusText}>
+                  {paymentStatus === 'captured' ? 'Payment Successful' :
+                   paymentStatus === 'failed' ? 'Payment Failed' :
+                   paymentStatus === 'cod_pending' ? 'Cash on Delivery' :
+                   paymentStatus === 'authorized' ? 'Payment Authorized' :
+                   'Payment Processing...'}
+                </Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -400,5 +469,30 @@ const styles = StyleSheet.create({
   secondaryBtnText: {
     color: '#1f2937',
     fontWeight: '600',
+  },
+  paymentStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 16,
+  },
+  paymentStatusSuccess: {
+    backgroundColor: '#16a34a',
+  },
+  paymentStatusFailed: {
+    backgroundColor: '#ef4444',
+  },
+  paymentStatusPending: {
+    backgroundColor: '#f59e0b',
+  },
+  paymentStatusCOD: {
+    backgroundColor: '#8b5cf6',
+  },
+  paymentStatusText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
