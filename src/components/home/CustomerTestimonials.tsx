@@ -1,47 +1,46 @@
-import React, { useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, Dimensions } from 'react-native';
-import { VideoView, useVideoPlayer } from 'expo-video';
+import React from 'react';
+import { View, Text, ScrollView, StyleSheet, Dimensions, TouchableOpacity, Image, Linking } from 'react-native';
 
 const testimonials = [
   {
     id: '1',
     name: 'Aadarsh',
-    videoUri: 'https://www.w3schools.com/html/mov_bbb.mp4',
+    instagramUrl: 'https://www.instagram.com/reel/DPHNxayjJpQ/?igsh=djExeXhjejhmYzQy', // Replace with real links
+    thumbnail: 'https://via.placeholder.com/300x300.png?text=Video+1', // Optional: preview image
   },
   {
     id: '2',
     name: 'Dolly Parma',
-    videoUri: 'https://www.w3schools.com/html/movie.mp4',
+    instagramUrl: 'https://www.instagram.com/reel/DPHNxayjJpQ/?igsh=djExeXhjejhmYzQy',
+    thumbnail: 'https://via.placeholder.com/300x300.png?text=Video+2',
   },
   {
     id: '3',
     name: 'Parma',
-    videoUri: 'https://www.w3schools.com/html/mov_bbb.mp4',
+    instagramUrl: 'https://www.instagram.com/reel/DPHNxayjJpQ/?igsh=djExeXhjejhmYzQy',
+    thumbnail: 'https://via.placeholder.com/300x300.png?text=Video+3',
   },
 ];
 
 const ITEM_WIDTH = Dimensions.get('window').width * 0.4;
 
-// ✅ FIXED: Separate component that uses hook at top level
 const TestimonialItem = ({ item }) => {
-  const player = useVideoPlayer(item.videoUri, (player) => {
-    player.loop = true;
-    player.play();
-    player.muted = true;
-  });
+  const handlePress = async () => {
+    const supported = await Linking.canOpenURL(item.instagramUrl);
+    if (supported) {
+      Linking.openURL(item.instagramUrl);
+    } else {
+      alert("Can't open Instagram link.");
+    }
+  };
 
   return (
-    <View style={styles.card}>
-      <VideoView
-        style={styles.video}
-        player={player}
-        fullscreenOptions={{ allowsFullscreen: true }}
-        allowsPictureInPicture
-      />
+    <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.8}>
+      <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
       <View style={styles.overlay}>
         <Text style={styles.name}>{item.name}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -49,8 +48,7 @@ const CustomerTestimonials = () => {
   return (
     <View style={{ marginVertical: 10 }}>
       <Text style={styles.title}>Customer Testimonials</Text>
-      {/* ✅ FIXED: Replace FlatList with horizontal ScrollView to avoid VirtualizedList nesting */}
-      <ScrollView 
+      <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16 }}
@@ -79,7 +77,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     backgroundColor: '#000',
   },
-  video: {
+  thumbnail: {
     width: '100%',
     height: '100%',
   },
