@@ -149,20 +149,52 @@ export const usePaginatedApi = <T = any>(
   });
 
   const [allData, setAllData] = useState<T[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const isLoadingPageRef = useRef(false);
 
   const defaultNormalizer = (resp: any) => {
     if (!resp) return { items: [], total: 0 };
+    
+    // First check if response itself is an array
+    if (Array.isArray(resp)) {
+      return { items: resp, total: resp.length };
+    }
+    
+    // Try to get payload from resp.data or use resp directly
     const payload = resp.data ?? resp;
     
-    // Handle array response
+    // Handle array payload
     if (Array.isArray(payload)) {
       return { items: payload, total: payload.length };
     }
     
     // Handle paginated response with various property names
-    const items = payload.items ?? payload.services ?? payload.results ?? payload.bookings ?? payload.notifications ?? payload.offers ?? [];
-    const total = payload.total ?? payload.totalCount ?? items.length;
+    // Check both root level and nested data level
+    const items = 
+      payload.items ?? 
+      payload.services ?? 
+      payload.results ?? 
+      payload.bookings ?? 
+      payload.notifications ?? 
+      payload.offers ?? 
+      resp.bookings ??  // Check root level too
+      resp.services ?? 
+      resp.items ?? 
+      [];
+    
+    const total = payload.total ?? payload.totalCount ?? resp.totalCount ?? items.length;
+    
+    if (__DEV__) {
+      console.log('defaultNormalizer - Debug:', {
+        hasRespData: !!resp.data,
+        hasPayloadBookings: !!payload.bookings,
+        hasRespBookings: !!resp.bookings,
+        itemsLength: items?.length,
+        total,
+        payloadKeys: Object.keys(payload || {}),
+        respKeys: Object.keys(resp || {})
+      });
+    }
     
     return { items, total };
   };
@@ -181,6 +213,7 @@ export const usePaginatedApi = <T = any>(
         return;
       }
       isLoadingPageRef.current = true;
+      setIsLoading(true);
 
       try {
         const rawResponse = await apiCall({
@@ -189,7 +222,9 @@ export const usePaginatedApi = <T = any>(
           limit: pagination.limit,
         });
 
-        
+        if (__DEV__) {
+          console.log('usePaginatedApi - Raw Response:', JSON.stringify(rawResponse, null, 2));
+        }
 
         const { items: newItems, total } = normalizeResponse(rawResponse);
 
@@ -197,7 +232,8 @@ export const usePaginatedApi = <T = any>(
           console.log('usePaginatedApi - Normalized:', {
             itemsCount: newItems?.length,
             total,
-            page: pagination.page
+            page: pagination.page,
+            firstItem: newItems?.[0]
           });
         }
 
@@ -210,10 +246,12 @@ export const usePaginatedApi = <T = any>(
         }));
 
         isLoadingPageRef.current = false;
+        setIsLoading(false);
         return { items: newItems, total };
       } catch (error) {
         console.error('usePaginatedApi - loadMore error:', error);
         isLoadingPageRef.current = false;
+        setIsLoading(false);
         throw error;
       }
     },
@@ -237,7 +275,7 @@ export const usePaginatedApi = <T = any>(
 
   return {
     data: allData,
-    loading: isLoadingPageRef.current,
+    loading: isLoading,
     error: null,
     pagination,
     loadMore,
