@@ -23,8 +23,7 @@ const OrderDetailsScreen = () => {
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
 
-  // Handle both old and new API response formats
-  const order = bookingResponse?.data || bookingResponse?.booking || bookingResponse;
+  const order = bookingResponse?.booking;
 
   const handleShareInvoice = async () => {
     if (!order) return;

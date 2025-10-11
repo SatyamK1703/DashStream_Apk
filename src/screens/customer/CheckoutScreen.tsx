@@ -269,7 +269,7 @@ const CheckoutScreen = () => {
       };
 
       const bookingRes = await createBookingApi.execute(bookingPayload);
-      const bookingId = bookingRes?.data?._id || bookingRes?.booking?._id || bookingRes?.booking?.['_id '];
+      const bookingId = bookingRes?.booking?._id;
 
       if (!bookingId) {
         console.error('Failed to extract booking ID from response:', bookingRes);
