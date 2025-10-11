@@ -226,7 +226,9 @@ export const usePaginatedApi = <T = any>(
           console.log('usePaginatedApi - Raw Response:', JSON.stringify(rawResponse, null, 2));
         }
 
-        const { items: newItems, total } = normalizeResponse(rawResponse);
+        const normalized = normalizeResponse(rawResponse);
+        const newItems = normalized.items;
+        const total = normalized.total;
 
         if (__DEV__) {
           console.log('usePaginatedApi - Normalized:', {
@@ -237,7 +239,7 @@ export const usePaginatedApi = <T = any>(
           });
         }
 
-        setAllData(prev => (pagination.page === 1 ? newItems : [...prev, ...newItems]));
+        setAllData(prev => (pagination.page === 1 ? (Array.isArray(newItems) ? newItems : []) : [...prev, ...(Array.isArray(newItems) ? newItems : [])]));
         setPagination(prev => ({
           ...prev,
           page: prev.page + 1,
