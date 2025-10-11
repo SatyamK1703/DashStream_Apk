@@ -16,15 +16,18 @@ const BookingConfirmationScreen = () => {
   const route = useRoute<BookingConfirmationScreenRouteProp>();
   
   const { bookingId } = route.params || {};
-  const { data: booking, loading, error, execute } = useBookingDetails(bookingId || null);
+  const { data: bookingResponse, loading, error, execute } = useBookingDetails(bookingId || null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [checkingPayment, setCheckingPayment] = useState(false);
 
   useEffect(() => {
-    if (bookingId && !booking) {
+    if (bookingId && !bookingResponse) {
       execute();
     }
-  }, [bookingId, booking]);
+  }, [bookingId, bookingResponse]);
+
+  // Handle both old and new API response formats
+  const booking = bookingResponse?.data || bookingResponse?.booking || bookingResponse;
 
   // Poll payment status if booking has a payment that's not yet captured
   useEffect(() => {

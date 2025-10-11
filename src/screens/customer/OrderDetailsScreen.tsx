@@ -17,11 +17,14 @@ const OrderDetailsScreen = () => {
   const route = useRoute<OrderDetailsScreenRouteProp>();
   const { bookingId } = route.params;
 
-  const { data: order, loading, error } = useBookingDetails(bookingId);
+  const { data: bookingResponse, loading, error } = useBookingDetails(bookingId);
 
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
+
+  // Handle both old and new API response formats
+  const order = bookingResponse?.data || bookingResponse?.booking || bookingResponse;
 
   const handleShareInvoice = async () => {
     if (!order) return;
