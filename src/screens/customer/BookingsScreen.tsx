@@ -9,6 +9,8 @@ import { useMyBookings } from '../../hooks/useBookings';
 import { Booking } from '../../types/api';
 import { showErrorAlert } from '../../utils/errorHandler';
 import { bookingService } from '../../services';
+import BookingCard from './BookingCard';
+
 type BookingsScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
 const BookingsScreen = () => {
@@ -70,122 +72,8 @@ const BookingsScreen = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    if (date.toDateString() === today.toDateString()) {
-      return 'Today';
-    } else if (date.toDateString() === tomorrow.toDateString()) {
-      return 'Tomorrow';
-    } else {
-      return date.toLocaleDateString('en-IN', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
-      });
-    }
-  };
-
-  const formatTime = (timeString: string) => {
-    const time = new Date(timeString);
-    return time.toLocaleTimeString('en-IN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-  };
-
-  const getStatusStyle = (status: string) => {
-    switch (status) {
-      case 'pending':
-      case 'confirmed': return styles.statusBlue;
-      case 'in-progress': return styles.statusGreen;
-      case 'completed': return styles.statusGreen;
-      case 'cancelled': return styles.statusRed;
-      default: return styles.statusGray;
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending': return 'Pending';
-      case 'confirmed': return 'Confirmed';
-      case 'in-progress': return 'In Progress';
-      case 'completed': return 'Completed';
-      case 'cancelled': return 'Cancelled';
-      default: return status.charAt(0).toUpperCase() + status.slice(1);
-    }
-  };
-
   const renderBookingItem = ({ item }: { item: Booking }) => (
-    <TouchableOpacity style={styles.card} onPress={() => handleViewBooking(item._id, item.status)}>
-      <View style={styles.cardContent}>
-        <View style={styles.rowBetween}>
-          <View style={styles.rowCenter}>
-            <Text style={styles.bookingId}>#{item.bookingId}</Text>
-            <View style={[styles.statusBadge, getStatusStyle(item.status)]}>
-              <Text style={[styles.statusText, getStatusStyle(item.status)]}>{getStatusText(item.status)}</Text>
-            </View>
-          </View>
-          <Text style={styles.timestamp}>
-            {formatDate(item.scheduledDate)}, {formatTime(item.scheduledTime)}
-          </Text>
-        </View>
-
-        <View style={styles.rowIconText}>
-          <Ionicons name="construct-outline" size={18} color="#2563eb" />
-          <Text style={styles.text}>{item.service.name}</Text>
-        </View>
-
-        <View style={styles.rowIconText}>
-          <Ionicons name="location-outline" size={18} color="#2563eb" />
-          <Text style={styles.text} numberOfLines={1}>
-            {`${item.address.addressLine1}, ${item.address.city}`}
-          </Text>
-        </View>
-
-        {item.professional && (
-          <View style={styles.rowIconText}>
-            <Ionicons name="person-outline" size={18} color="#2563eb" />
-            <View style={styles.rowCenter}>
-              {item.professional.user.profileImage?.url ? (
-                <Image 
-                  source={{ uri: item.professional.user.profileImage.url }} 
-                  style={styles.avatar} 
-                />
-              ) : (
-                <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                  <Ionicons name="person" size={12} color="#666" />
-                </View>
-              )}
-              <Text style={styles.text}>{item.professional.user.name}</Text>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.rowIconText}>
-          <Ionicons name="cash-outline" size={18} color="#2563eb" />
-          <Text style={styles.text}>₹{item.totalAmount.toLocaleString('en-IN')}</Text>
-        </View>
-      </View>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Service • {formatDate(item.scheduledDate)}
-        </Text>
-        <View style={styles.rowCenter}>
-          <Text style={styles.linkText}>
-            {item.status === 'pending' || item.status === 'confirmed' || item.status === 'in-progress' 
-              ? 'Track Booking' 
-              : 'View Details'}
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color="#2563eb" />
-        </View>
-      </View>
-    </TouchableOpacity>
+    <BookingCard booking={item} onPress={() => handleViewBooking(item._id, item.status)} />
   );
 
   const renderEmptyList = () => (

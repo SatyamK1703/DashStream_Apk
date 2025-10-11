@@ -1,95 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, Share, ActivityIndicator, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useBookingDetails } from '../../hooks/useBookings';
+import { Booking } from '../../types/api';
 
 // Types
 type OrderDetailsScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 type OrderDetailsScreenRouteProp = RouteProp<CustomerStackParamList, 'OrderDetails'>;
-
-type ServiceItem = { name: string; price: number; description?: string };
-
-type Order = {
-  id: string;
-  status: 'completed' | 'ongoing' | 'upcoming' | 'cancelled';
-  date: string;
-  time: string;
-  completedTime?: string;
-  services: ServiceItem[];
-  addons?: { name: string; price: number }[];
-  subtotal: number;
-  discount: number;
-  deliveryFee: number;
-  tax: number;
-  totalAmount: number;
-  paymentMethod: string;
-  address: string;
-  professional: {
-    id: string;
-    name: string;
-    rating: number;
-    image: any;
-    totalBookings: number;
-  };
-  userRating?: number;
-  userReview?: string;
-  invoiceNumber: string;
-  photos?: any[];
-};
 
 const OrderDetailsScreen = () => {
   const navigation = useNavigation<OrderDetailsScreenNavigationProp>();
   const route = useRoute<OrderDetailsScreenRouteProp>();
   const { bookingId } = route.params;
 
-  const [isLoading, setIsLoading] = useState(false);
+  const { data: order, loading, error } = useBookingDetails(bookingId);
+
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
 
-  // Mock order data
-  const order: Order = {
-    id: bookingId,
-    status: 'completed',
-    date: 'June 15, 2023',
-    time: '11:00 AM',
-    completedTime: '12:30 PM',
-    services: [
-      { name: 'Basic Wash', price: 499, description: 'Exterior wash with foam' },
-      { name: 'Premium Wash', price: 999, description: 'Exterior wash with premium wax' },
-    ],
-    addons: [{ name: 'Dashboard Polish', price: 299 }],
-    subtotal: 1498,
-    discount: 100,
-    deliveryFee: 0,
-    tax: 269.64,
-    totalAmount: 1667.64,
-    paymentMethod: 'Credit Card',
-    address: 'Home - 123 Main Street, Mumbai, Maharashtra',
-    professional: {
-      id: 'pro123',
-      name: 'Rahul Sharma',
-      rating: 4.8,
-      image: require('../../assets/images/image.png'),
-      totalBookings: 120,
-    },
-    userRating: 5,
-    userReview:
-      'Great service! My car looks brand new. The professional was punctual and very skilled.',
-    invoiceNumber: 'INV-2023-1001',
-    photos: [require('../../assets/images/image.png'), require('../../assets/images/image.png')],
-  };
-
   const handleShareInvoice = async () => {
+    if (!order) return;
     try {
       await Share.share({
-        message: `Your DashStream invoice #${order.invoiceNumber} for booking #${order.id} is ready. Total amount: ₹${order.totalAmount.toFixed(
+        message: `Your DashStream invoice for booking #${order.bookingId} is ready. Total amount: ₹${order.totalAmount.toFixed(
           2
         )}`,
-        title: `DashStream Invoice #${order.invoiceNumber}`,
+        title: `DashStream Invoice #${order.bookingId}`,
       });
     } catch (error) {
       alert('Error sharing invoice');
@@ -101,20 +42,31 @@ const OrderDetailsScreen = () => {
   };
 
   const handleSubmitReview = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setShowRatingModal(false);
-      alert('Thank you for your review!');
-    }, 1000);
+    // Add your review submission logic here
+    setShowRatingModal(false);
+    alert('Thank you for your review!');
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color="#2563eb" />
           <Text style={styles.loadingText}>Loading order details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !order) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loaderContainer}>
+          <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
+          <Text style={styles.errorTitle}>Failed to load booking details</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.retryText}>Go Back</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -129,7 +81,7 @@ const OrderDetailsScreen = () => {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>Order Details</Text>
-          <Text style={styles.headerSubtitle}>Booking #{bookingId}</Text>
+          <Text style={styles.headerSubtitle}>Booking #{order.bookingId}</Text>
         </View>
         <TouchableOpacity onPress={handleShareInvoice} style={styles.shareButton}>
           <Ionicons name="share-outline" size={24} color="#2563eb" />
@@ -139,42 +91,31 @@ const OrderDetailsScreen = () => {
       <ScrollView style={styles.scroll}>
         {/* Status Banner */}
         <View style={styles.statusBanner}>
-          <Text style={styles.statusTitle}>Service Completed</Text>
+          <Text style={styles.statusTitle}>Service {order.status}</Text>
           <Text style={styles.statusMeta}>
-            {order.date} at {order.completedTime}
+            {new Date(order.scheduledDate).toDateString()} at {order.scheduledTime}
           </Text>
         </View>
 
-        {/* Service Photos */}
-        {order.photos && order.photos.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Service Photos</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {order.photos.map((photo, index) => (
-                <Image key={index} source={photo} style={styles.photo} resizeMode="cover" />
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
         {/* Professional Details */}
-        <View style={[styles.section, styles.sectionDivider]}>
-          <Text style={styles.sectionTitle}>Professional</Text>
-          <View style={styles.professionalCard}>
-            <Image source={order.professional.image} style={styles.proAvatar} resizeMode="cover" />
-            <View style={styles.proInfo}>
-              <Text style={styles.proName}>{order.professional.name}</Text>
-              <View style={styles.rowCenter}>
-                <Ionicons name="star" size={16} color="#f59e0b" />
-                <Text style={styles.proRating}>{order.professional.rating}</Text>
-                <Text style={styles.proBookings}>({order.professional.totalBookings}+ bookings)</Text>
+        {order.professional && (
+          <View style={[styles.section, styles.sectionDivider]}>
+            <Text style={styles.sectionTitle}>Professional</Text>
+            <View style={styles.professionalCard}>
+              <Image source={{ uri: order.professional.user.profileImage?.url || 'https://via.placeholder.com/150' }} style={styles.proAvatar} resizeMode="cover" />
+              <View style={styles.proInfo}>
+                <Text style={styles.proName}>{order.professional.user.name}</Text>
+                <View style={styles.rowCenter}>
+                  <Ionicons name="star" size={16} color="#f59e0b" />
+                  <Text style={styles.proRating}>{order.professional.rating || 'N/A'}</Text>
+                </View>
               </View>
             </View>
           </View>
-        </View>
+        )}
 
         {/* User Review */}
-        {order.userRating && order.userReview ? (
+        {order.rating ? (
           <View style={[styles.section, styles.sectionDivider]}>
             <Text style={styles.sectionTitle}>Your Review</Text>
             <View style={styles.reviewCard}>
@@ -182,14 +123,13 @@ const OrderDetailsScreen = () => {
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Ionicons
                     key={star}
-                    name={star <= (order.userRating || 0) ? 'star' : 'star-outline'}
+                    name={star <= (order.rating?.rating || 0) ? 'star' : 'star-outline'}
                     size={20}
                     color="#f59e0b"
                     style={{ marginRight: 2 }}
                   />
-                ))}
-              </View>
-              <Text style={styles.reviewText}>{order.userReview}</Text>
+                ))}</View>
+              <Text style={styles.reviewText}>{order.rating.review}</Text>
             </View>
           </View>
         ) : (
@@ -205,29 +145,15 @@ const OrderDetailsScreen = () => {
         <View style={[styles.section, styles.sectionDivider]}>
           <Text style={styles.sectionTitle}>Service Details</Text>
           <View style={styles.card}>
-            {order.services.map((service, index) => (
-              <View key={index} style={styles.serviceRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.serviceName}>{service.name}</Text>
-                  {service.description ? (
-                    <Text style={styles.serviceDesc}>{service.description}</Text>
-                  ) : null}
-                </View>
-                <Text style={styles.servicePrice}>₹{service.price}</Text>
+            <View style={styles.serviceRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.serviceName}>{order.service.name}</Text>
+                {order.service.description ? (
+                  <Text style={styles.serviceDesc}>{order.service.description}</Text>
+                ) : null}
               </View>
-            ))}
-
-            {order.addons && order.addons.length > 0 && (
-              <View style={styles.addonSection}>
-                <Text style={styles.addonTitle}>Add-ons</Text>
-                {order.addons.map((addon, index) => (
-                  <View key={index} style={styles.addonRow}>
-                    <Text style={styles.addonName}>{addon.name}</Text>
-                    <Text style={styles.addonPrice}>₹{addon.price}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
+              <Text style={styles.servicePrice}>₹{order.service.price}</Text>
+            </View>
           </View>
         </View>
 
@@ -237,15 +163,11 @@ const OrderDetailsScreen = () => {
           <View style={styles.card}>
             <View style={styles.rowBetween}>
               <Text style={styles.muted}>Date & Time</Text>
-              <Text style={styles.semibold}>{order.date}, {order.time}</Text>
-            </View>
-            <View style={styles.rowBetween}>
-              <Text style={styles.muted}>Completed At</Text>
-              <Text style={styles.semibold}>{order.completedTime}</Text>
+              <Text style={styles.semibold}>{new Date(order.scheduledDate).toDateString()}, {order.scheduledTime}</Text>
             </View>
             <View style={styles.rowAddress}>
               <Text style={[styles.muted, { width: 96 }]}>Address</Text>
-              <Text style={[styles.semibold, styles.addressValue]}>{order.address}</Text>
+              <Text style={[styles.semibold, styles.addressValue]}>{`${order.address.addressLine1}, ${order.address.city}`}</Text>
             </View>
           </View>
         </View>
@@ -260,12 +182,7 @@ const OrderDetailsScreen = () => {
             </View>
           </View>
           <View style={styles.card}>
-            <View style={styles.rowBetween}><Text style={styles.muted}>Subtotal</Text><Text style={styles.semibold}>₹{order.subtotal.toFixed(2)}</Text></View>
-            {order.discount > 0 && (
-              <View style={styles.rowBetween}><Text style={styles.muted}>Discount</Text><Text style={[styles.semibold, { color: '#16a34a' }]}>-₹{order.discount.toFixed(2)}</Text></View>
-            )}
-            <View style={styles.rowBetween}><Text style={styles.muted}>Delivery Fee</Text><Text style={styles.semibold}>{order.deliveryFee > 0 ? `₹${order.deliveryFee.toFixed(2)}` : 'Free'}</Text></View>
-            <View style={styles.rowBetween}><Text style={styles.muted}>Tax (18% GST)</Text><Text style={styles.semibold}>₹{order.tax.toFixed(2)}</Text></View>
+            <View style={styles.rowBetween}><Text style={styles.muted}>Subtotal</Text><Text style={styles.semibold}>₹{order.price.toFixed(2)}</Text></View>
             <View style={styles.totalRow}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalLabel}>₹{order.totalAmount.toFixed(2)}</Text></View>
             <View style={styles.rowBetween}><Text style={styles.muted}>Payment Method</Text><Text style={styles.semibold}>{order.paymentMethod}</Text></View>
           </View>
@@ -277,7 +194,7 @@ const OrderDetailsScreen = () => {
           <View style={styles.card}>
             <View style={styles.rowBetween}>
               <Text style={styles.muted}>Invoice Number</Text>
-              <Text style={styles.semibold}>{order.invoiceNumber}</Text>
+              <Text style={styles.semibold}>{order.bookingId}</Text>
             </View>
             <TouchableOpacity style={styles.primaryButton} onPress={handleDownloadInvoice}>
               <Text style={styles.primaryButtonText}>Download Invoice</Text>
@@ -313,7 +230,13 @@ const OrderDetailsScreen = () => {
 
             <View style={styles.reviewBox}>
               <Text style={styles.reviewHint}>Share your experience (optional)</Text>
-              <Text style={styles.reviewValue}>{reviewText || 'Tap to write a review...'}</Text>
+              <TextInput
+                style={styles.reviewValue}
+                placeholder="Tap to write a review..."
+                multiline
+                value={reviewText}
+                onChangeText={setReviewText}
+              />
             </View>
 
             <View style={styles.modalActions}>
@@ -336,324 +259,336 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff'
   },
-  loaderContainer: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
-  loadingText: { 
-    marginTop: 12, 
-    color: '#4b5563' 
+  loadingText: {
+    marginTop: 12,
+    color: '#4b5563'
   },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#ef4444',
+    textAlign: 'center',
+    marginBottom: 16
+  },
+  retryText: {
+    color: '#2563eb',
+    fontWeight: '600',
+    marginTop: 16
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16, 
-    paddingVertical: 12, 
-    backgroundColor: '#fff', 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#e5e7eb' 
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb'
   },
-  backButton: { 
-    padding: 4 
+  backButton: {
+    padding: 4
   },
   headerTitleContainer: {
     flex: 1,
     alignItems: 'center'
   },
-  headerTitle: { 
-    fontSize: 20, 
-    fontWeight: '700', 
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
     color: '#1f2937',
     textAlign: 'center'
   },
-  headerSubtitle: { 
+  headerSubtitle: {
     color: '#6b7280',
     textAlign: 'center',
     marginTop: 2
   },
-  shareButton: { 
-    padding: 4 
+  shareButton: {
+    padding: 4
   },
-  scroll: { 
-    flex: 1 
+  scroll: {
+    flex: 1
   },
-  statusBanner: { 
-    backgroundColor: '#22c55e', 
-    paddingHorizontal: 16, 
-    paddingVertical: 12 
+  statusBanner: {
+    backgroundColor: '#22c55e',
+    paddingHorizontal: 16,
+    paddingVertical: 12
   },
-  statusTitle: { 
-    color: '#fff', 
-    fontWeight: '600' 
+  statusTitle: {
+    color: '#fff',
+    fontWeight: '600'
   },
-  statusMeta: { 
-    color: 'rgba(255,255,255,0.85)' 
+  statusMeta: {
+    color: 'rgba(255,255,255,0.85)'
   },
-  section: { 
-    padding: 16 
+  section: {
+    padding: 16
   },
-  sectionDivider: { 
-    borderTopWidth: 1, 
-    borderTopColor: '#e5e7eb' 
+  sectionDivider: {
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb'
   },
-  sectionTitle: { 
-    fontSize: 18, 
-    fontWeight: '600', 
-    marginBottom: 12, 
-    color: '#1f2937' 
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#1f2937'
   },
-  photo: { 
-    width: 160, 
-    height: 128, 
-    borderRadius: 12, 
-    marginRight: 12 
+  photo: {
+    width: 160,
+    height: 128,
+    borderRadius: 12,
+    marginRight: 12
   },
-  professionalCard: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#f9fafb', 
-    padding: 12, 
-    borderRadius: 16 
+  professionalCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    padding: 12,
+    borderRadius: 16
   },
-  proAvatar: { 
-    width: 64, 
-    height: 64, 
-    borderRadius: 32 
+  proAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32
   },
-  proInfo: { 
-    flex: 1, 
-    marginLeft: 12 
+  proInfo: {
+    flex: 1,
+    marginLeft: 12
   },
-  proName: { 
-    fontSize: 16, 
-    fontWeight: '700', 
-    color: '#111827' 
+  proName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827'
   },
-  rowCenter: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginTop: 4 
+  rowCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4
   },
-  proRating: { 
-    marginLeft: 4, 
-    color: '#111827' 
+  proRating: {
+    marginLeft: 4,
+    color: '#111827'
   },
-  proBookings: { 
-    marginLeft: 4, 
-    color: '#6b7280' 
+  proBookings: {
+    marginLeft: 4,
+    color: '#6b7280'
   },
-  reviewCard: { 
-    backgroundColor: '#f9fafb', 
-    padding: 12, 
-    borderRadius: 16 
+  reviewCard: {
+    backgroundColor: '#f9fafb',
+    padding: 12,
+    borderRadius: 16
   },
-  rowStars: { 
-    flexDirection: 'row', 
-    marginBottom: 8 
+  rowStars: {
+    flexDirection: 'row',
+    marginBottom: 8
   },
-  reviewText: { 
-    color: '#111827' 
+  reviewText: {
+    color: '#111827'
   },
-  primaryButton: { 
-    backgroundColor: '#2563eb', 
-    paddingVertical: 12, 
-    borderRadius: 12, 
-    alignItems: 'center' 
+  primaryButton: {
+    backgroundColor: '#2563eb',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center'
   },
-  primaryButtonText: { 
-    color: '#fff', 
-    fontWeight: '600' 
+  primaryButtonText: {
+    color: '#fff',
+    fontWeight: '600'
   },
-  card: { 
-    backgroundColor: '#f9fafb', 
-    borderRadius: 16, 
-    padding: 12 
+  card: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 16,
+    padding: 12
   },
-  serviceRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginBottom: 8 
+  serviceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8
   },
-  serviceName: { 
-    fontWeight: '600', 
-    color: '#111827' 
+  serviceName: {
+    fontWeight: '600',
+    color: '#111827'
   },
-  serviceDesc: { 
-    color: '#6b7280', 
-    fontSize: 12 
+  serviceDesc: {
+    color: '#6b7280',
+    fontSize: 12
   },
-  servicePrice: { 
-    fontWeight: '600' 
+  servicePrice: {
+    fontWeight: '600'
   },
-  addonSection: { 
-    marginTop: 8, 
-    paddingTop: 8, 
-    borderTopWidth: 1, 
-    borderTopColor: '#e5e7eb' 
+  addonSection: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb'
   },
-  addonTitle: { 
-    fontWeight: '600', 
-    marginBottom: 8, 
-    color: '#111827' 
+  addonTitle: {
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#111827'
   },
-  addonRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginBottom: 4 
+  addonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4
   },
-  addonName: { 
-    color: '#1f2937' 
+  addonName: {
+    color: '#1f2937'
   },
-  addonPrice: { 
-    fontWeight: '600' 
+  addonPrice: {
+    fontWeight: '600'
   },
-  rowBetween: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginBottom: 8 
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8
   },
-  rowAddress: { 
-    flexDirection: 'row', 
-    alignItems: 'flex-start', 
-    marginBottom: 8 
+  rowAddress: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8
   },
-  addressValue: { 
-    textAlign: 'right', 
-    flex: 1 
+  addressValue: {
+    textAlign: 'right',
+    flex: 1
   },
-  muted: { 
-    color: '#6b7280' 
+  muted: {
+    color: '#6b7280'
   },
-  semibold: { 
-    fontWeight: '600', 
-    color: '#111827' 
+  semibold: {
+    fontWeight: '600',
+    color: '#111827'
   },
-  paymentHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 8 
+  paymentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8
   },
-  paidBadgeRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center' 
+  paidBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center'
   },
-  paidDot: { 
-    width: 10, 
-    height: 10, 
-    borderRadius: 5, 
-    backgroundColor: '#22c55e', 
-    marginRight: 6 
+  paidDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#22c55e',
+    marginRight: 6
   },
-  paidText: { 
-    color: '#16a34a', 
-    fontWeight: '600' 
+  paidText: {
+    color: '#16a34a',
+    fontWeight: '600'
   },
-  totalRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    paddingTop: 8, 
-    marginTop: 8, 
-    borderTopWidth: 1, 
-    borderTopColor: '#e5e7eb' 
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb'
   },
-  totalLabel: { 
-    fontWeight: '700' 
+  totalLabel: {
+    fontWeight: '700'
   },
-  outlineButton: { 
-    borderWidth: 1, 
-    borderColor: '#2563eb', 
-    paddingVertical: 12, 
-    borderRadius: 12, 
-    alignItems: 'center', 
-    marginTop: 8 
+  outlineButton: {
+    borderWidth: 1,
+    borderColor: '#2563eb',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8
   },
-  outlineButtonText: { 
-    color: '#2563eb', 
-    fontWeight: '600' 
+  outlineButtonText: {
+    color: '#2563eb',
+    fontWeight: '600'
   },
-  supportRow: { 
-    backgroundColor: '#f9fafb', 
-    padding: 12, 
-    borderRadius: 16, 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between' 
+  supportRow: {
+    backgroundColor: '#f9fafb',
+    padding: 12,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
   },
-  supportText: { 
-    fontWeight: '600', 
-    color: '#111827' 
+  supportText: {
+    fontWeight: '600',
+    color: '#111827'
   },
-  modalOverlay: { 
-    position: 'absolute', 
-    left: 0, 
-    right: 0, 
-    top: 0, 
-    bottom: 0, 
-    backgroundColor: 'rgba(0,0,0,0.5)', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    padding: 16 
+  modalOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16
   },
-  modalCard: { 
-    backgroundColor: '#fff', 
-    borderRadius: 16, 
-    padding: 16, 
-    width: '100%', 
-    maxWidth: 400 
+  modalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    width: '100%',
+    maxWidth: 400
   },
-  modalTitle: { 
-    fontSize: 20, 
-    fontWeight: '700', 
-    textAlign: 'center', 
-    marginBottom: 16 
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 16
   },
-  starsRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'center', 
-    marginBottom: 16 
+  starsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 16
   },
-  reviewBox: { 
-    backgroundColor: '#f3f4f6', 
-    borderRadius: 12, 
-    padding: 12, 
-    marginBottom: 12 
+  reviewBox: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12
   },
-  reviewHint: { 
-    color: '#6b7280', 
-    marginBottom: 8 
+  reviewHint: {
+    color: '#6b7280',
+    marginBottom: 8
   },
-  reviewValue: { 
-    color: '#1f2937', 
-    minHeight: 80 
+  reviewValue: {
+    color: '#1f2937',
+    minHeight: 80
   },
-  modalActions: { 
-    flexDirection: 'row' 
+  modalActions: {
+    flexDirection: 'row'
   },
-  actionBtn: { 
-    flex: 1, 
-    paddingVertical: 12, 
-    borderRadius: 12, 
-    alignItems: 'center' 
+  actionBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center'
   },
-  actionBtnGhost: { 
-    borderWidth: 1, 
-    borderColor: '#d1d5db', 
-    marginRight: 8 
+  actionBtnGhost: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    marginRight: 8
   },
-  actionBtnPrimary: { 
-    backgroundColor: '#2563eb', 
-    marginLeft: 8 
+  actionBtnPrimary: {
+    backgroundColor: '#2563eb',
+    marginLeft: 8
   },
-  actionGhostText: { 
-    color: '#6b7280', 
-    fontWeight: '600' 
+  actionGhostText: {
+    color: '#6b7280',
+    fontWeight: '600'
   },
-  actionPrimaryText: { 
-    color: '#fff', 
-    fontWeight: '600' 
+  actionPrimaryText: {
+    color: '#fff',
+    fontWeight: '600'
   },
 });
 

@@ -269,7 +269,7 @@ const CheckoutScreen = () => {
       };
 
       const bookingRes = await createBookingApi.execute(bookingPayload);
-      const bookingId = bookingRes?.booking?._id || bookingRes?.data?.booking?._id || bookingRes?.data?._id || bookingRes?.data?.bookingId;
+      const bookingId = bookingRes?.booking?._id || bookingRes?.booking?.['_id '];
 
       if (!bookingId) {
         console.error('Failed to extract booking ID from response:', bookingRes);
@@ -300,10 +300,7 @@ const CheckoutScreen = () => {
                 text: 'OK',
                 onPress: () => {
                   navigation.navigate('BookingConfirmation', { 
-                    bookingId, 
-                    date: selectedDate, 
-                    timeSlot: selectedTimeSlot,
-                    address: selectedAddress.addressLine1 
+                    bookingId
                   });
                   clear && clear();
                 }
@@ -315,10 +312,7 @@ const CheckoutScreen = () => {
           console.error('COD payment creation failed:', codError);
           Alert.alert('COD Setup Failed', 'Booking created but COD setup failed. You can still pay cash during service.');
           navigation.navigate('BookingConfirmation', { 
-            bookingId, 
-            date: selectedDate, 
-            timeSlot: selectedTimeSlot,
-            address: selectedAddress.addressLine1 
+            bookingId
           });
           clear && clear();
           return;

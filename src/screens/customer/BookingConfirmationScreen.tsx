@@ -21,17 +21,16 @@ const BookingConfirmationScreen = () => {
   const [checkingPayment, setCheckingPayment] = useState(false);
 
   useEffect(() => {
-    if (bookingId && !booking?.data) {
+    if (bookingId && !booking) {
       execute();
     }
-  }, [bookingId]);
+  }, [bookingId, booking]);
 
   // Poll payment status if booking has a payment that's not yet captured
   useEffect(() => {
-    if (!booking?.data) return;
+    if (!booking) return;
     
-    const bookingData = booking.data;
-    const paymentId = bookingData.paymentId;
+    const paymentId = booking.paymentId;
     
     if (!paymentId) {
       setPaymentStatus('pending');
@@ -59,7 +58,7 @@ const BookingConfirmationScreen = () => {
     };
 
     checkPaymentStatus();
-  }, [booking?.data]);
+  }, [booking]);
   
   const formatDate = (date: Date | string | undefined) => {
     if (!date) return 'Date not available';
@@ -96,7 +95,7 @@ const BookingConfirmationScreen = () => {
   }
 
   // Show error state
-  if (error || !booking?.data) {
+  if (error || !booking) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
@@ -115,9 +114,8 @@ const BookingConfirmationScreen = () => {
     );
   }
 
-  const bookingData = booking.data;
-  const service = bookingData.service;
-  const address = bookingData.address;
+  const service = booking.service;
+  const address = booking.address;
   const serviceImages = service.images && service.images.length > 0;
 
   return (
@@ -177,7 +175,7 @@ const BookingConfirmationScreen = () => {
                 </View>
                 <View>
                   <Text style={styles.label}>Booking ID</Text>
-                  <Text style={styles.value}>{bookingData.bookingId || bookingData._id}</Text>
+                  <Text style={styles.value}>{booking.bookingId || booking._id}</Text>
                 </View>
               </View>
 
@@ -187,7 +185,7 @@ const BookingConfirmationScreen = () => {
                 </View>
                 <View>
                   <Text style={styles.label}>Date</Text>
-                  <Text style={styles.value}>{formatDate(bookingData.scheduledDate)}</Text>
+                  <Text style={styles.value}>{formatDate(booking.scheduledDate)}</Text>
                 </View>
               </View>
 
@@ -197,7 +195,7 @@ const BookingConfirmationScreen = () => {
                 </View>
                 <View>
                   <Text style={styles.label}>Time Slot</Text>
-                  <Text style={styles.value}>{bookingData.scheduledTime || 'Time not available'}</Text>
+                  <Text style={styles.value}>{booking.scheduledTime || 'Time not available'}</Text>
                 </View>
               </View>
 
@@ -248,7 +246,7 @@ const BookingConfirmationScreen = () => {
               </View>
               <View style={styles.totalRow}>
                 <Text style={styles.totalText}>Total Amount</Text>
-                <Text style={[styles.totalText, { color: '#2563eb' }]}>₹{bookingData.totalAmount}</Text>
+                <Text style={[styles.totalText, { color: '#2563eb' }]}>₹{booking.totalAmount}</Text>
               </View>
             </View>
 

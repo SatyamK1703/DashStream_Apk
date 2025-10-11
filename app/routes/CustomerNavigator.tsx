@@ -39,7 +39,7 @@ export type CustomerStackParamList = {
   Checkout: { selectedAddressId?: string | null } | undefined;
   BookingConfirmation: { bookingId: string };
   TrackBooking: { bookingId: string };
-  OrderDetails: { orderId: string };
+  OrderDetails: { bookingId: string };
   EditProfile: undefined;
   Support: undefined;
   FAQ: undefined;
