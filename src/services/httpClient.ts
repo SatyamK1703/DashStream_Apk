@@ -525,9 +525,91 @@ class HttpClient {
       throw new Error('httpClient.patch: missing url');
     }
 
+    // Debug log for booking cancellation
+    if (url.includes('cancel') && __DEV__) {
+      console.log('🔍 PATCH request details:', {
+        url,
+        fullUrl: `${this.client.defaults.baseURL}/${url}`,
+        data,
+        baseURL: this.client.defaults.baseURL
+      });
+      
+      // Fix URL if it has a leading slash and baseURL ends with a path
+      if (url.startsWith('/') && this.client.defaults.baseURL?.includes('/api')) {
+        url = url.substring(1);
+        console.log('🔧 Fixed URL by removing leading slash:', url);
+      }
+    }
+    
+    // Additional URL validation for all booking cancellation requests
+    if (url.includes('bookings') && url.includes('cancel')) {
+      // Ensure there's no double slash in the URL
+      if (url.includes('//')) {
+        url = url.replace('//', '/');
+        console.log('🔧 Fixed URL by removing double slash:', url);
+      }
+      
+      // Ensure the URL doesn't start with /api if baseURL already includes it
+      if (url.startsWith('/api/') && this.client.defaults.baseURL?.includes('/api')) {
+        url = url.substring(5); // Remove '/api/' prefix
+        console.log('🔧 Fixed URL by removing duplicate /api/ prefix:', url);
+      }
+      
+      // Log the final URL for debugging
+      console.log('📍 Final cancellation URL:', {
+        url,
+        fullUrl: `${this.client.defaults.baseURL}/${url.startsWith('/') ? url.substring(1) : url}`
+      });
+    }
+
     await this.guardRateLimit();
-    const response = await this.client.patch<ApiResponse<T>>(url, data, config);
-    return response.data;
+    try {
+      // For booking cancellation, ensure the URL is properly formatted
+      if (url.includes('bookings') && url.includes('cancel')) {
+        // Remove any leading slash to avoid double slash issues with baseURL
+        if (url.startsWith('/')) {
+          url = url.substring(1);
+        }
+        
+        // Log the final URL being used
+        console.log('📤 Sending PATCH request to:', {
+          url,
+          fullUrl: `${this.client.defaults.baseURL}/${url}`
+        });
+      }
+      
+      const response = await this.client.patch<ApiResponse<T>>(url, data, config);
+      
+      // Log successful cancellation
+      if (url.includes('cancel') && __DEV__) {
+        console.log('✅ Booking cancellation successful:', {
+          url,
+          status: response.status,
+          data: response.data
+        });
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      if (url.includes('cancel') && __DEV__) {
+        // Enhanced error logging for cancellation requests
+        console.error('🔴 PATCH request failed:', {
+          url,
+          error: error.message,
+          status: error.response?.status,
+          data: error.response?.data,
+          fullUrl: `${this.client.defaults.baseURL}/${url}`,
+          // Include the actual URL that was used in the request
+          requestUrl: error.config?.url
+        });
+        
+        // Provide a more detailed error message
+        const errorMessage = error.response?.data?.message || error.message;
+        const statusCode = error.response?.status;
+        console.error(`❌ PATCH ${url} ${statusCode}: ${errorMessage}`);
+      }
+      throw error;
+    }
   }
 
   async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {

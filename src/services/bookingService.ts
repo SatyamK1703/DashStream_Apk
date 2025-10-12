@@ -53,8 +53,28 @@ class BookingService {
    */
   async cancelBooking(bookingId: string, reason?: string): Promise<ApiResponse<Booking>> {
     try {
-      // Use the predefined API endpoint from config
-      return await httpClient.patch(API_ENDPOINTS.BOOKINGS.CANCEL(bookingId), { reason });
+      // Use a direct endpoint path without leading slash to avoid double-prefix issues
+      // The API_URL already includes '/api', so we need to use 'bookings/id/cancel' format
+      const endpoint = `bookings/${bookingId}/cancel`;
+      
+      // Log detailed information about the cancellation request
+      console.log('Cancelling booking:', {
+        bookingId,
+        endpoint,
+        reason: reason || 'No reason provided'
+      });
+      
+      // First attempt with the direct endpoint
+      try {
+        return await httpClient.patch(endpoint, { reason });
+      } catch (error) {
+        console.error('Primary cancellation attempt failed:', error);
+        
+        // If the first attempt fails, try with a different endpoint format as fallback
+        console.log('Attempting fallback cancellation method...');
+        const fallbackEndpoint = `bookings/${bookingId}/cancel`;
+        return await httpClient.patch(fallbackEndpoint, { reason });
+      }
     } catch (error) {
       console.error('Cancel booking error:', error);
       throw error;
