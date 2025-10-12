@@ -46,6 +46,8 @@ const BookingsScreen = () => {
       dataIsArray: Array.isArray(currentApi.data),
       dataType: typeof currentApi.data,
       firstBooking: currentApi.data?.[0],
+      firstBookingId: currentApi.data?.[0]?._id,
+      firstBookingStatus: currentApi.data?.[0]?.status,
       fullData: currentApi.data
     });
   }, [currentApi.data, currentApi.loading, currentApi.error, activeTab]);

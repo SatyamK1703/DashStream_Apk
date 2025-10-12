@@ -170,7 +170,7 @@ export const usePaginatedApi = <T = any>(
     
     // Handle paginated response with various property names
     // Check both root level and nested data level
-    const items = 
+    let items = 
       payload.items ?? 
       payload.services ?? 
       payload.results ?? 
@@ -181,15 +181,32 @@ export const usePaginatedApi = <T = any>(
       resp.services ?? 
       resp.items ?? 
       [];
+      
+    // Fix for backend API response format - if bookings is directly in the response
+    if (resp.bookings && Array.isArray(resp.bookings)) {
+      items = resp.bookings;
+    }
     
-    const total = payload.total ?? payload.totalCount ?? resp.totalCount ?? items.length;
+    // Fix for backend API response format - if bookings is in the response data
+    if (resp.data && resp.data.bookings && Array.isArray(resp.data.bookings)) {
+      items = resp.data.bookings;
+    }
+    
+    const total = 
+      payload.total ?? 
+      payload.totalCount ?? 
+      resp.totalCount ?? 
+      resp.data?.totalCount ?? 
+      items.length;
     
     if (__DEV__) {
       console.log('defaultNormalizer - Debug:', {
         hasRespData: !!resp.data,
         hasPayloadBookings: !!payload.bookings,
         hasRespBookings: !!resp.bookings,
+        hasDataBookings: !!(resp.data && resp.data.bookings),
         itemsLength: items?.length,
+        itemsIsArray: Array.isArray(items),
         total,
         payloadKeys: Object.keys(payload || {}),
         respKeys: Object.keys(resp || {})
@@ -235,11 +252,26 @@ export const usePaginatedApi = <T = any>(
             itemsCount: newItems?.length,
             total,
             page: pagination.page,
-            firstItem: newItems?.[0]
+            firstItem: newItems?.[0],
+            isArray: Array.isArray(newItems),
+            responseFormat: rawResponse && rawResponse.bookings ? 'Direct bookings property' : 
+                           rawResponse && rawResponse.data && rawResponse.data.bookings ? 'Nested data.bookings property' : 
+                           'Other format'
           });
         }
 
-        setAllData(prev => (pagination.page === 1 ? (Array.isArray(newItems) ? newItems : []) : [...prev, ...(Array.isArray(newItems) ? newItems : [])]));
+        // Ensure we're working with arrays
+        const safeNewItems = Array.isArray(newItems) ? newItems : [];
+        
+        setAllData(prev => {
+          // For first page, replace data
+          if (pagination.page === 1) {
+            return safeNewItems;
+          }
+          // For subsequent pages, append data
+          return [...prev, ...safeNewItems];
+        });
+        
         setPagination(prev => ({
           ...prev,
           page: prev.page + 1,

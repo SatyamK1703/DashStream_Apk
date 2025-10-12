@@ -59,40 +59,76 @@ const getStatusText = (status: string) => {
 };
 
 const BookingCard: React.FC<BookingCardProps> = ({ booking, onPress }) => {
+  // Handle potential missing data
+  if (!booking || typeof booking !== 'object') {
+    console.error('Invalid booking data:', booking);
+    return null;
+  }
+
+  // Check if booking has the required fields
+  if (!booking._id || !booking.status) {
+    console.error('Booking missing required fields:', booking);
+    return null;
+  }
+
+  // Handle services array vs single service object
+  const serviceName = booking.service?.name || 
+                     (booking.services && booking.services[0]?.serviceId?.title) || 
+                     'Service';
+
+  // Handle address data
+  const addressLine = booking.address?.addressLine1 || 'Address not available';
+  const city = booking.address?.city || '';
+  const addressText = city ? `${addressLine}, ${city}` : addressLine;
+
+  // Handle professional data
+  const hasProfessional = !!booking.professional;
+  const professionalName = hasProfessional ? 
+                          (booking.professional.user?.name || booking.professional.name || 'Professional') : 
+                          'Not assigned';
+  const profileImageUrl = hasProfessional && 
+                         (booking.professional.user?.profileImage?.url || booking.professional.profileImage?.url);
+
+  // Handle amount formatting
+  const amount = booking.totalAmount || 0;
+  const formattedAmount = typeof amount === 'number' ? 
+                         amount.toLocaleString('en-IN') : 
+                         String(amount);
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.cardContent}>
         <View style={styles.rowBetween}>
           <View style={styles.rowCenter}>
-            <Text style={styles.bookingId}>#{booking.bookingId}</Text>
+            <Text style={styles.bookingId}>#{booking.bookingId || booking._id}</Text>
             <View style={[styles.statusBadge, getStatusStyle(booking.status)]}>
               <Text style={[styles.statusText, getStatusStyle(booking.status)]}>{getStatusText(booking.status)}</Text>
             </View>
           </View>
           <Text style={styles.timestamp}>
-            {formatDate(booking.scheduledDate)}, {formatTime(booking.scheduledTime)}
+            {formatDate(booking.scheduledDate)}, {formatTime(booking.scheduledTime || booking.scheduledDate)}
           </Text>
         </View>
 
         <View style={styles.rowIconText}>
           <Ionicons name="construct-outline" size={18} color="#2563eb" />
-          <Text style={styles.text}>{booking.service.name}</Text>
+          <Text style={styles.text}>{serviceName}</Text>
         </View>
 
         <View style={styles.rowIconText}>
           <Ionicons name="location-outline" size={18} color="#2563eb" />
           <Text style={styles.text} numberOfLines={1}>
-            {`${booking.address.addressLine1}, ${booking.address.city}`}
+            {addressText}
           </Text>
         </View>
 
-        {booking.professional && (
+        {hasProfessional && (
           <View style={styles.rowIconText}>
             <Ionicons name="person-outline" size={18} color="#2563eb" />
             <View style={styles.rowCenter}>
-              {booking.professional.user.profileImage?.url ? (
+              {profileImageUrl ? (
                 <Image
-                  source={{ uri: booking.professional.user.profileImage.url }}
+                  source={{ uri: profileImageUrl }}
                   style={styles.avatar}
                 />
               ) : (
@@ -100,14 +136,14 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, onPress }) => {
                   <Ionicons name="person" size={12} color="#666" />
                 </View>
               )}
-              <Text style={styles.text}>{booking.professional.user.name}</Text>
+              <Text style={styles.text}>{professionalName}</Text>
             </View>
           </View>
         )}
 
         <View style={styles.rowIconText}>
           <Ionicons name="cash-outline" size={18} color="#2563eb" />
-          <Text style={styles.text}>₹{booking.totalAmount.toLocaleString('en-IN')}</Text>
+          <Text style={styles.text}>₹{formattedAmount}</Text>
         </View>
       </View>
 
