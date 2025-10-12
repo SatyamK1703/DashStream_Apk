@@ -29,6 +29,7 @@ class MembershipService {
    */
   async purchaseMembership(data: {
     planId: string;
+    amount: number;
   }): Promise<ApiResponse<{
     orderId: string;
     amount: number;

@@ -33,10 +33,10 @@ export const useMembershipStore = create<MembershipState>((set) => ({
     }
   },
 
-  purchaseMembership: async (planId: string, price: number) => {
+  purchaseMembership: async (planId: string, amount: number) => {
     set({ loading: true, error: null });
     try {
-      const response = await membershipService.purchaseMembership({ planId });
+      const response = await membershipService.purchaseMembership({ planId, amount });
       if (response.success) {
         set({ loading: false });
         return response.data; // This should now contain orderId, amount, currency
