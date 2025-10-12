@@ -137,7 +137,164 @@ class AdminService {
    */
   async getBookingById(bookingId: string): Promise<ApiResponse<Booking>> {
     try {
-      return await httpClient.get(API_ENDPOINTS.ADMIN.BOOKING_BY_ID(bookingId));
+      const response = await httpClient.get(API_ENDPOINTS.ADMIN.BOOKING_BY_ID(bookingId));
+
+      // Normalize response shapes from backend
+      // Possible shapes observed:
+      // 1) { status: 'success', data: booking }
+      // 2) { status: 'success', booking: booking }
+      // 3) { status: 'success', data: { booking: booking } }
+      // 4) { status: 'success', data: { data: booking } }
+      if (!response) return response;
+
+      let bookingPayload: any = null;
+
+      if (response.data && typeof response.data === 'object') {
+        // Direct booking
+        if (!Array.isArray(response.data) && ('_id' in response.data || 'id' in response.data)) {
+          bookingPayload = response.data;
+        }
+
+        // Nested booking under data.booking
+        if (!bookingPayload && response.data.booking) {
+          bookingPayload = response.data.booking;
+        }
+
+        // Double nested data.data
+        if (!bookingPayload && response.data.data) {
+          const maybe = response.data.data;
+          if (maybe && (maybe._id || maybe.id || maybe.booking)) {
+            bookingPayload = maybe.booking ?? maybe;
+          }
+        }
+      }
+
+      // Root-level booking property
+  if (!bookingPayload && (response as any).booking) bookingPayload = (response as any).booking;
+
+      const successFlag = (response as any).success === true || response.status === 'success';
+
+      if (bookingPayload) {
+  // Normalize booking shape to match client expectations
+  const normalize = (b: any) => {
+          if (!b || typeof b !== 'object') return b;
+
+          const out = { ...b };
+
+          // Ensure top-level _id exists (client code often uses _id)
+          if (!out._id && out.id) out._id = out.id;
+
+          // Provide a bookingId fallback for UI header if missing
+          if (!out.bookingId) out.bookingId = out.bookingId || out.id || out._id;
+
+          // Map location -> address for older/newer API shapes
+          if (!out.address && out.location) {
+            out.address = out.location;
+          }
+
+          // Ensure nested customer/professional have _id as client expects
+          if (out.customer && typeof out.customer === 'object') {
+            if (!out.customer._id && out.customer.id) out.customer._id = out.customer.id;
+          }
+
+          if (out.professional && typeof out.professional === 'object') {
+            if (!out.professional._id && out.professional.id) out.professional._id = out.professional.id;
+          }
+
+          // Ensure service has _id when returned as { id }
+          if (out.service && typeof out.service === 'object') {
+            if (!out.service._id && out.service.id) out.service._id = out.service.id;
+          }
+
+          return out;
+        };
+
+        let normalizedBooking = normalize(bookingPayload);
+
+  // Further adapt shape to client Booking type expectations
+
+  try {
+          // Ensure id aliases
+          if (!normalizedBooking.id && normalizedBooking._id) normalizedBooking.id = String(normalizedBooking._id);
+
+          // Customer shape
+          if (normalizedBooking.customer && typeof normalizedBooking.customer === 'object') {
+            const c = normalizedBooking.customer;
+            if (!c._id && c.id) c._id = c.id;
+            // keep as-is otherwise
+          } else if (typeof normalizedBooking.customer === 'string') {
+            normalizedBooking.customer = { _id: normalizedBooking.customer, name: 'Unknown', phone: '' };
+          }
+
+          // Professional shape: ensure .user exists for UI
+          if (normalizedBooking.professional && typeof normalizedBooking.professional === 'object') {
+            const p = normalizedBooking.professional;
+            // If backend returned a simple professional object (id,name,..), create .user wrapper
+            if (!p.user) {
+              p.user = {
+                _id: p._id || p.id || null,
+                name: p.name || (p.user && p.user.name) || 'Unknown',
+                phone: p.phone || (p.user && p.user.phone) || '',
+                email: p.email || (p.user && p.user.email) || '',
+              };
+            } else {
+              // ensure inner user has _id
+              if (p.user && p.user.id && !p.user._id) p.user._id = p.user.id;
+            }
+
+            // Ensure rating/reviewCount exist
+            if (typeof p.rating === 'undefined') p.rating = 0;
+            if (typeof p.reviewCount === 'undefined') p.reviewCount = 0;
+          }
+
+          // Service shape: ensure basePrice and duration exist
+          if (normalizedBooking.service && typeof normalizedBooking.service === 'object') {
+            const s = normalizedBooking.service;
+            if (!s._id && s.id) s._id = s.id;
+            if (typeof s.basePrice === 'undefined') s.basePrice = s.price ?? s.cost ?? 0;
+            if (typeof s.duration === 'undefined') s.duration = s.duration ?? 0;
+          } else if (normalizedBooking.services && Array.isArray(normalizedBooking.services) && normalizedBooking.services[0]) {
+            // sometimes backend returns services array; pick first
+            const s0 = normalizedBooking.services[0];
+            normalizedBooking.service = normalizedBooking.service || {
+              _id: s0.serviceId?._id || s0.serviceId || s0.id,
+              name: s0.serviceId?.title || s0.title || s0.name || 'Service',
+              description: s0.serviceId?.description || s0.description || '',
+              basePrice: s0.price || s0.serviceId?.price || 0,
+              duration: s0.duration || s0.serviceId?.duration || 0,
+            };
+          }
+
+          // Address fallback
+          if (!normalizedBooking.address) {
+            if (normalizedBooking.location && typeof normalizedBooking.location === 'object') {
+              normalizedBooking.address = normalizedBooking.location;
+            } else {
+              normalizedBooking.address = normalizedBooking.address || { addressLine1: '', city: '', state: '', postalCode: '' };
+            }
+          }
+
+          // Ensure totals and payment fields
+          if (typeof normalizedBooking.totalAmount === 'undefined') normalizedBooking.totalAmount = normalizedBooking.totalAmount ?? normalizedBooking.amount ?? 0;
+          if (!normalizedBooking.paymentStatus) normalizedBooking.paymentStatus = normalizedBooking.paymentStatus ?? 'pending';
+          if (!normalizedBooking.paymentMethod) normalizedBooking.paymentMethod = normalizedBooking.paymentMethod ?? null;
+        } catch (e) {
+          if (__DEV__) console.warn('adminService.getBookingById - normalization post-processing failed', e);
+  }
+
+  return {
+          ...response,
+          // Ensure callers relying on `response.success` work even if backend uses `status: 'success'`
+          success: successFlag,
+          data: normalizedBooking,
+        } as ApiResponse<Booking>;
+      }
+
+      // If we didn't find a booking payload, still return a normalized success flag so callers can check reliably
+      return {
+        ...response,
+        success: successFlag,
+      } as ApiResponse<Booking>;
     } catch (error) {
       console.error('Get booking by ID error:', error);
       throw error;

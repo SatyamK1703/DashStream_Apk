@@ -89,7 +89,7 @@ const AdminBookingDetailsScreen = () => {
       if (response.success && response.data) {
         const professionalOptions: ProfessionalOption[] = response.data.map(prof => ({
           id: prof._id,
-          name: prof.user.name,
+          name: prof.user?.name ?? '',
           rating: prof.rating,
           experience: prof.experience,
           isAvailable: prof.isAvailable
@@ -188,11 +188,22 @@ const AdminBookingDetailsScreen = () => {
     }
   };
 
+  // --- Helpers ---
+  const formatAddress = (addr?: any) => {
+    if (!addr) return '';
+    const parts: string[] = [];
+    if (addr.addressLine1) parts.push(addr.addressLine1);
+    if (addr.city) parts.push(addr.city);
+    if (addr.state) parts.push(addr.state);
+    if (addr.postalCode) parts.push(addr.postalCode);
+    return parts.join(', ');
+  };
+
   // --- Render Functions ---
 const renderActionButtons = () => {
   if (!booking) return null;
-
-  switch (booking.status) {
+  const st = String(booking.status ?? '');
+  switch (st) {
     case 'pending':
       return (
         <View style={buttonstyles.row}>
@@ -250,7 +261,7 @@ const renderActionButtons = () => {
 
           <TouchableOpacity
             style={[buttonstyles.button, buttonstyles.buttonGray, buttonstyles.ml2]}
-            onPress={() => navigation.navigate('CreateBooking', { customerId: booking.customer._id })}
+            onPress={() => navigation.navigate('CreateBooking' as any, { customerId: (booking.customer?._id ?? booking.customer?.id ?? '') as string } as any)}
           >
             <MaterialIcons name="refresh" size={20} color="white" />
             <Text style={buttonstyles.buttonText}>Book Again</Text>
@@ -263,7 +274,7 @@ const renderActionButtons = () => {
         <View style={buttonstyles.row}>
           <TouchableOpacity
             style={[buttonstyles.button, buttonstyles.buttonPrimary]}
-            onPress={() => navigation.navigate('CreateBooking', { customerId: booking.customer._id })}
+            onPress={() => navigation.navigate('CreateBooking' as any, { customerId: (booking.customer?._id ?? booking.customer?.id ?? '') as string } as any)}
           >
             <MaterialIcons name="refresh" size={20} color="white" />
             <Text style={buttonstyles.buttonText}>Book Again</Text>
@@ -321,7 +332,6 @@ const renderActionButtons = () => {
   }
 
   const statusStyle = getStatusStyle(booking.status);
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -330,7 +340,7 @@ const renderActionButtons = () => {
         </TouchableOpacity>
         <View>
           <Text style={styles.headerTitle}>Booking Details</Text>
-          <Text style={styles.headerSubtitle}>{booking.bookingId}</Text>
+          <Text style={styles.headerSubtitle}>{booking.bookingId ?? booking.id ?? booking._id ?? ''}</Text>
         </View>
         <View style={styles.headerButton} />{/* Placeholder */}
       </View>
@@ -341,33 +351,27 @@ const renderActionButtons = () => {
             <View style={[styles.statusBadge, statusStyle.container]}>
               <Text style={[styles.statusText, statusStyle.text]}>{booking.status}</Text>
             </View>
-            <Text style={[styles.paymentStatusText, getPaymentStatusColor(booking.paymentStatus)]}>
-              {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+            <Text style={[styles.paymentStatusText, getPaymentStatusColor(booking.paymentStatus ?? '')]}>
+              {(booking.paymentStatus ?? '').charAt(0).toUpperCase() + (booking.paymentStatus ?? '').slice(1)}
             </Text>
           </View>
-          {/* Other details... */}
+
           <View style={styles.rowBetweenMarginTop}>
             <View style={styles.row}>
               <Ionicons name="calendar-outline" size={16} color="#6B7280" />
               <Text style={styles.timeText}>
-                {new Date(booking.scheduledDate).toLocaleDateString('en-IN', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric'
-                })}
+                {booking.scheduledDate ? new Date(booking.scheduledDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
               </Text>
             </View>
             <View style={styles.row}>
               <Ionicons name="time-outline" size={16} color="#6B7280" />
-              <Text style={styles.timeText}>{booking.scheduledTime}</Text>
+              <Text style={styles.timeText}>{booking.scheduledTime ?? ''}</Text>
             </View>
           </View>
 
           <View style={styles.rowMarginTop}>
             <Ionicons name="location-outline" size={16} color="#6B7280" />
-            <Text style={styles.addressText}>
-              {`${booking.address.addressLine1}, ${booking.address.city}, ${booking.address.state} ${booking.address.postalCode}`}
-            </Text>
+            <Text style={styles.addressText}>{formatAddress(booking.address as any)}</Text>
           </View>
 
           {booking.notes ? (
@@ -377,186 +381,128 @@ const renderActionButtons = () => {
             </View>
           ) : null}
         </View>
-        {/* Other sections... */}
+
         {/* Customer Details */}
         <View style={Customerstyles.card}>
-        <View style={Customerstyles.headerRow}>
-          <Text style={Customerstyles.headerText}>Customer Details</Text>
-          <TouchableOpacity 
-            style={Customerstyles.profileButton}
-            onPress={() => navigation.navigate('AdminCustomerDetails', { customerId: booking.customer._id })}
-          >
-            <Text style={Customerstyles.primaryText}>View Profile</Text>
-            <Ionicons name="chevron-forward" size={16} color="#2563EB" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={Customerstyles.customerRow}>
-          <View style={Customerstyles.avatar}>
-            <Text style={Customerstyles.avatarText}>{booking.customer.name.charAt(0)}</Text>
-          </View>
-          <View style={Customerstyles.customerInfo}>
-            <Text style={Customerstyles.customerName}>{booking.customer.name}</Text>
-            <Text style={Customerstyles.customerPhone}>{booking.customer.phone}</Text>
-            {booking.customer.email && (
-              <Text style={Customerstyles.customerEmail}>{booking.customer.email}</Text>
-            )}
-          </View>
-        </View>
-
-        <View style={Customerstyles.actionRow}>
-          <TouchableOpacity 
-            style={Customerstyles.callButton}
-            onPress={() => Alert.alert('Call', `Call ${booking.customer.phone}?`, [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Call', style: 'default' }
-            ])}
-          >
-            <Ionicons name="call" size={16} color="white" />
-            <Text style={Customerstyles.buttonText}>Call</Text>
-          </TouchableOpacity>
-
-          {booking.customer.email && (
-            <TouchableOpacity 
-              style={Customerstyles.emailButton}
-              onPress={() => Alert.alert('Email', `Send email to ${booking.customer.email}?`, [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Email', style: 'default' }
-              ])}
+          <View style={Customerstyles.headerRow}>
+            <Text style={Customerstyles.headerText}>Customer Details</Text>
+            <TouchableOpacity
+              style={Customerstyles.profileButton}
+              onPress={() => navigation.navigate('AdminCustomerDetails', { customerId: booking.customer?._id ?? booking.customer?.id })}
             >
-              <Ionicons name="mail" size={16} color="white" />
-              <Text style={Customerstyles.buttonText}>Email</Text>
+              <Text style={Customerstyles.primaryText}>View Profile</Text>
+              <Ionicons name="chevron-forward" size={16} color="#2563EB" />
             </TouchableOpacity>
-          )}
-        </View>
+          </View>
+
+          <View style={Customerstyles.customerRow}>
+            <View style={Customerstyles.avatar}>
+              <Text style={Customerstyles.avatarText}>{booking.customer?.name ? booking.customer.name.charAt(0) : ''}</Text>
+            </View>
+            <View style={Customerstyles.customerInfo}>
+              <Text style={Customerstyles.customerName}>{booking.customer?.name ?? 'Unknown'}</Text>
+              <Text style={Customerstyles.customerPhone}>{booking.customer?.phone ?? ''}</Text>
+              {booking.customer?.email ? <Text style={Customerstyles.customerEmail}>{booking.customer.email}</Text> : null}
+            </View>
+          </View>
         </View>
 
         {/* Professional Details */}
         <View style={Prostyles.container}>
-        <View style={Prostyles.header}>
-        <Text style={Prostyles.title}>Professional Details</Text>
-        {booking.professional && (
-          <TouchableOpacity 
-            style={Prostyles.viewProfile}
-            onPress={() => navigation.navigate('AdminProfessionalDetails', { professionalId: booking.professional._id })}
-          >
-            <Text style={Prostyles.viewProfileText}>View Profile</Text>
-            <Ionicons name="chevron-forward" size={16} color="#2563EB" />
-          </TouchableOpacity>
-        )}
-        </View>
+          <View style={Prostyles.header}>
+            <Text style={Prostyles.title}>Professional Details</Text>
+            {booking.professional ? (
+              <TouchableOpacity
+                style={Prostyles.viewProfile}
+                onPress={() => navigation.navigate('AdminProfessionalDetails', { professionalId: (booking.professional?._id ?? booking.professional?.id ?? '') as string })}
+              >
+                <Text style={Prostyles.viewProfileText}>View Profile</Text>
+                <Ionicons name="chevron-forward" size={16} color="#2563EB" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
 
-        {booking.professional ? (
-        <>
-          <View style={Prostyles.professionalRow}>
-            <View style={Prostyles.avatar}>
-              <Text style={Prostyles.avatarText}>{booking.professional.user.name.charAt(0)}</Text>
-            </View>
-            <View style={Prostyles.professionalInfo}>
-              <Text style={Prostyles.professionalName}>{booking.professional.user.name}</Text>
-              <Text style={Prostyles.professionalPhone}>{booking.professional.user.phone}</Text>
-              <View style={Prostyles.ratingContainer}>
-                <Ionicons name="star" size={14} color="#FFC107" />
-                <Text style={Prostyles.ratingText}>{booking.professional.rating.toFixed(1)}</Text>
-                <Text style={Prostyles.reviewCount}>({booking.professional.reviewCount} reviews)</Text>
+          {booking.professional ? (
+            <>
+              <View style={Prostyles.professionalRow}>
+                <View style={Prostyles.avatar}>
+                  <Text style={Prostyles.avatarText}>{booking.professional?.user?.name ? booking.professional.user.name.charAt(0) : ''}</Text>
+                </View>
+                <View style={Prostyles.professionalInfo}>
+                  <Text style={Prostyles.professionalName}>{booking.professional?.user?.name ?? 'Unassigned'}</Text>
+                  <Text style={Prostyles.professionalPhone}>{booking.professional?.user?.phone ?? ''}</Text>
+                        <View style={Prostyles.ratingContainer}>
+                          <Ionicons name="star" size={14} color="#FFC107" />
+                          <Text style={Prostyles.ratingText}>{typeof booking.professional?.rating === 'number' ? booking.professional.rating.toFixed(1) : '0.0'}</Text>
+                          <Text style={Prostyles.reviewCount}>({booking.professional?.reviewCount ?? 0} reviews)</Text>
+                        </View>
+                </View>
               </View>
+            </>
+          ) : (
+            <View style={Prostyles.noProfessional}>
+              <MaterialIcons name="person-outline" size={40} color="#9CA3AF" />
+              <Text style={Prostyles.noProfessionalText}>No professional assigned</Text>
+              <TouchableOpacity style={Prostyles.assignButton} onPress={() => setShowAssignModal(true)}>
+                <MaterialIcons name="person-add" size={18} color="white" />
+                <Text style={Prostyles.assignButtonText}>Assign Professional</Text>
+              </TouchableOpacity>
             </View>
-          </View>
-
-          <View style={Prostyles.actionRow}>
-            <TouchableOpacity 
-              style={Prostyles.callButton}
-              onPress={() => Alert.alert('Call', `Call ${booking.professional.user.phone}?`, [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Call', style: 'default' }
-              ])}
-            >
-              <Ionicons name="call" size={16} color="white" />
-              <Text style={Prostyles.buttonText}>Call</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={Prostyles.reassignButton}
-              onPress={() => setShowAssignModal(true)}
-            >
-              <MaterialIcons name="swap-horiz" size={16} color="white" />
-              <Text style={Prostyles.buttonText}>Reassign</Text>
-            </TouchableOpacity>
-          </View>
-        </>
-        ) : (
-        <View style={Prostyles.noProfessional}>
-          <MaterialIcons name="person-outline" size={40} color="#9CA3AF" />
-          <Text style={Prostyles.noProfessionalText}>No professional assigned</Text>
-          <TouchableOpacity 
-            style={Prostyles.assignButton}
-            onPress={() => setShowAssignModal(true)}
-          >
-            <MaterialIcons name="person-add" size={18} color="white" />
-            <Text style={Prostyles.assignButtonText}>Assign Professional</Text>
-          </TouchableOpacity>
+          )}
         </View>
-        )}
-        </View>
-
 
         {/* Service Details */}
-       <View style={servicestyles.container}>
-      <Text style={servicestyles.heading}>Service Details</Text>
-
-      <View style={servicestyles.serviceItem}>
-        <View>
-          <Text style={servicestyles.serviceName}>{booking.service.name}</Text>
-          <Text style={servicestyles.serviceDuration}>{booking.service.duration} minutes</Text>
-          <Text style={servicestyles.serviceDescription}>{booking.service.description}</Text>
-        </View>
-        <Text style={servicestyles.servicePrice}>₹{booking.service.basePrice}</Text>
-      </View>
-
-      <View style={servicestyles.section}>
-        <View style={servicestyles.row}>
-          <Text style={servicestyles.label}>Base Price</Text>
-          <Text style={servicestyles.value}>₹{booking.service.basePrice}</Text>
-        </View>
-        <View style={servicestyles.row}>
-          <Text style={servicestyles.label}>Tax (18% GST)</Text>
-          <Text style={servicestyles.value}>₹{(booking.totalAmount * 0.18 / 1.18).toFixed(2)}</Text>
-        </View>
-        <View style={servicestyles.totalRow}>
-          <Text style={servicestyles.totalLabel}>Total Amount</Text>
-          <Text style={servicestyles.totalValue}>₹{booking.totalAmount}</Text>
-        </View>
-      </View>
-
-      <View style={servicestyles.section}>
-        <View style={servicestyles.row}>
-          <Text style={servicestyles.label}>Payment Method</Text>
-          <Text style={servicestyles.value}>{booking.paymentMethod || 'Not specified'}</Text>
-        </View>
-        <View style={servicestyles.row}>
-          <Text style={servicestyles.label}>Payment Status</Text>
-          <Text style={[servicestyles.value, getPaymentStatusColor(booking.paymentStatus)]}>
-            {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
-          </Text>
-        </View>
-      </View>
-
-      {booking.vehicle && (
-        <View style={servicestyles.section}>
-          <Text style={servicestyles.sectionTitle}>Vehicle Details</Text>
-          <View style={servicestyles.row}>
-            <Text style={servicestyles.label}>Vehicle</Text>
-            <Text style={servicestyles.value}>
-              {booking.vehicle.make} {booking.vehicle.model} ({booking.vehicle.year})
-            </Text>
+        <View style={servicestyles.container}>
+          <Text style={servicestyles.heading}>Service Details</Text>
+          <View style={servicestyles.serviceItem}>
+            <View>
+              <Text style={servicestyles.serviceName}>{booking.service?.name ?? ''}</Text>
+              <Text style={servicestyles.serviceDuration}>{booking.service?.duration ?? 0} minutes</Text>
+              <Text style={servicestyles.serviceDescription}>{booking.service?.description ?? ''}</Text>
+            </View>
+            <Text style={servicestyles.servicePrice}>₹{booking.service?.basePrice ?? booking.service?.price ?? 0}</Text>
           </View>
-          <View style={servicestyles.row}>
-            <Text style={servicestyles.label}>License Plate</Text>
-            <Text style={servicestyles.value}>{booking.vehicle.licensePlate}</Text>
+
+          <View style={servicestyles.section}>
+            <View style={servicestyles.row}>
+              <Text style={servicestyles.label}>Base Price</Text>
+              <Text style={servicestyles.value}>₹{booking.service?.basePrice ?? booking.service?.price ?? 0}</Text>
+            </View>
+            <View style={servicestyles.row}>
+              <Text style={servicestyles.label}>Tax (18% GST)</Text>
+              <Text style={servicestyles.value}>₹{((booking.totalAmount ?? 0) * 0.18 / 1.18).toFixed(2)}</Text>
+            </View>
+            <View style={servicestyles.totalRow}>
+              <Text style={servicestyles.totalLabel}>Total Amount</Text>
+              <Text style={servicestyles.totalValue}>₹{booking.totalAmount ?? 0}</Text>
+            </View>
           </View>
+
+          <View style={servicestyles.section}>
+            <View style={servicestyles.row}>
+              <Text style={servicestyles.label}>Payment Method</Text>
+              <Text style={servicestyles.value}>{booking.paymentMethod ?? 'Not specified'}</Text>
+            </View>
+            <View style={servicestyles.row}>
+              <Text style={servicestyles.label}>Payment Status</Text>
+              <Text style={[servicestyles.value, getPaymentStatusColor(booking.paymentStatus ?? '')]}>{(booking.paymentStatus ?? '').charAt(0).toUpperCase() + (booking.paymentStatus ?? '').slice(1)}</Text>
+            </View>
+          </View>
+
+          {booking.vehicle && (
+            <View style={servicestyles.section}>
+              <Text style={servicestyles.sectionTitle}>Vehicle Details</Text>
+              <View style={servicestyles.row}>
+                <Text style={servicestyles.label}>Vehicle</Text>
+                <Text style={servicestyles.value}>{booking.vehicle?.make} {booking.vehicle?.model} ({booking.vehicle?.year})</Text>
+              </View>
+              <View style={servicestyles.row}>
+                <Text style={servicestyles.label}>License Plate</Text>
+                <Text style={servicestyles.value}>{booking.vehicle?.licensePlate ?? ''}</Text>
+              </View>
+            </View>
+          )}
         </View>
-      )}
-    </View>
 
         {/* Booking Timeline */}
         <View
@@ -851,6 +797,37 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  rowBetweenMarginTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  timeText: {
+    color: '#6B7280',
+    marginLeft: 8,
+  },
+  rowMarginTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  addressText: {
+    color: '#6B7280',
+    marginLeft: 8,
+    flex: 1,
+  },
+  instructions: {
+    marginTop: 12,
+  },
+  instructionsLabel: {
+    color: '#6B7280',
+    fontWeight: '500',
+    marginBottom: 6,
+  },
+  instructionsText: {
+    color: '#1F2937',
+  },
 
   // Header
   header: {
@@ -1104,6 +1081,10 @@ const Customerstyles = StyleSheet.create({
   customerPhone: {
     color: '#6B7280',
   },
+  customerEmail: {
+    color: '#6B7280',
+    marginTop: 4,
+  },
   actionRow: {
     flexDirection: 'row',
     marginTop: 12,
@@ -1183,6 +1164,20 @@ const Prostyles = StyleSheet.create({
   },
   professionalInfo: {
     marginLeft: 12,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  ratingText: {
+    color: '#4B5563',
+    marginLeft: 6,
+  },
+  reviewCount: {
+    color: '#6B7280',
+    marginLeft: 6,
+    fontSize: 12,
   },
   professionalName: {
     color: '#1F2937',
@@ -1416,6 +1411,10 @@ const servicestyles=StyleSheet.create({
     color: '#6B7280', // text-gray-500
     fontSize: 12, // text-sm
   },
+  serviceDescription: {
+    color: '#6B7280',
+    marginTop: 4,
+  },
   servicePrice: {
     color: '#1F2937', // text-gray-800
     fontWeight: '500', // font-medium
@@ -1425,6 +1424,11 @@ const servicestyles=StyleSheet.create({
     paddingTop: 12, // pt-3
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB', // border-gray-200
+  },
+  sectionTitle: {
+    color: '#1F2937',
+    fontWeight: '600',
+    marginBottom: 8,
   },
   row: {
     flexDirection: 'row',
