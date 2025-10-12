@@ -53,6 +53,7 @@ class BookingService {
    */
   async cancelBooking(bookingId: string, reason?: string): Promise<ApiResponse<Booking>> {
     try {
+      // Use the predefined API endpoint from config
       return await httpClient.patch(API_ENDPOINTS.BOOKINGS.CANCEL(bookingId), { reason });
     } catch (error) {
       console.error('Cancel booking error:', error);

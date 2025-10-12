@@ -239,9 +239,9 @@ export const usePaginatedApi = <T = any>(
           limit: pagination.limit,
         });
 
-        if (__DEV__) {
-          console.log('usePaginatedApi - Raw Response:', JSON.stringify(rawResponse, null, 2));
-        }
+        // if (__DEV__) {
+        //   console.log('usePaginatedApi - Raw Response:', JSON.stringify(rawResponse, null, 2));
+        // }
 
         const normalized = normalizeResponse(rawResponse);
         const newItems = normalized.items;

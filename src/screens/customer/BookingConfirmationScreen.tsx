@@ -27,6 +27,29 @@ const BookingConfirmationScreen = () => {
       execute();
     }
   }, [bookingId, bookingResponse]);
+  
+  // Debug logging
+  useEffect(() => {
+    if (__DEV__) {
+      console.log('BookingConfirmationScreen - Data received:', {
+        hasBookingResponse: !!bookingResponse,
+        responseFormat: bookingResponse ? Object.keys(bookingResponse).join(',') : 'none',
+        hasBooking: !!booking,
+        bookingFormat: booking ? Object.keys(booking).join(',') : 'none',
+        hasService: booking?.service ? 'yes' : 'no',
+        hasServices: booking?.services ? 'yes' : 'no',
+        servicesType: booking?.services ? (Array.isArray(booking.services) ? 'array' : typeof booking.services) : 'none',
+        servicesLength: booking?.services && Array.isArray(booking.services) ? booking.services.length : 0,
+        serviceKeys: booking?.service ? Object.keys(booking.service).join(',') : 'none',
+        firstServiceKeys: booking?.services && Array.isArray(booking.services) && booking.services.length > 0 
+          ? Object.keys(booking.services[0]).join(',') 
+          : 'none',
+        bookingId,
+        loading,
+        error: error ? error.toString() : null
+      });
+    }
+  }, [bookingResponse, booking, bookingId, loading, error]);
 
   // Poll payment status if booking has a payment that's not yet captured
   useEffect(() => {
@@ -75,8 +98,41 @@ const BookingConfirmationScreen = () => {
   };
 
   const handleTrackOrder = () => {
-    if (bookingId) {
+    if (__DEV__) {
+      console.log('Track Order - Data available:', {
+        hasBooking: !!booking,
+        bookingFormat: booking ? Object.keys(booking).join(',') : 'none',
+        routeBookingId: bookingId,
+        bookingIdFromObject: booking?.bookingId || booking?._id,
+      });
+    }
+    
+    if (booking) {
+      // Use the booking ID from the loaded booking object, which could be either bookingId or _id
+      const trackingId = booking.bookingId || booking._id;
+      if (trackingId) {
+        console.log('Navigating to TrackBooking with ID from booking object:', trackingId);
+        navigation.navigate('TrackBooking', { bookingId: trackingId });
+      } else {
+        // Handle case where no valid booking ID is found
+        console.error('No valid booking ID found for tracking in booking object');
+        
+        // Try to use the route parameter as fallback
+        if (bookingId) {
+          console.log('Falling back to route parameter bookingId:', bookingId);
+          navigation.navigate('TrackBooking', { bookingId });
+        } else {
+          console.error('No bookingId available from any source');
+          // Alert.alert('Error', 'Unable to track booking: No valid booking ID found');
+        }
+      }
+    } else if (bookingId) {
+      // Fallback to the route parameter if booking object is not available
+      console.log('No booking object available, using route parameter bookingId:', bookingId);
       navigation.navigate('TrackBooking', { bookingId });
+    } else {
+      console.error('Cannot track booking: No booking ID available');
+      // Alert.alert('Error', 'Unable to track booking: No booking information available');
     }
   };
 
@@ -108,17 +164,35 @@ const BookingConfirmationScreen = () => {
           <Text style={[styles.successText, { marginTop: 8 }]}>
             {error ? 'Please check your connection and try again.' : 'The booking ID may be invalid.'}
           </Text>
-          <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.primaryBtnText}>Go Back</Text>
+          <Text style={[styles.successText, { fontSize: 14, marginTop: 8, marginBottom: 16 }]}>
+            Booking ID: {bookingId || 'Not available'}
+          </Text>
+          
+          {/* Add retry button */}
+          {bookingId && (
+            <TouchableOpacity 
+              style={[styles.primaryBtn, { marginBottom: 12 }]} 
+              onPress={() => execute()}
+            >
+              <Text style={styles.primaryBtnText}>Retry</Text>
+            </TouchableOpacity>
+          )}
+          
+          <TouchableOpacity 
+            style={[styles.secondaryBtn]} 
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.secondaryBtnText}>Go Back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  const service = booking.service;
-  const address = booking.address;
-  const serviceImages = service.images && service.images.length > 0;
+  // Handle different service data structures
+  const service = booking.service || (booking.services && booking.services.length > 0 ? booking.services[0] : null);
+  const address = booking.address || booking.location;
+  const serviceImages = service && service.images && service.images.length > 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -208,7 +282,11 @@ const BookingConfirmationScreen = () => {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.label}>Service Address</Text>
                   <Text style={styles.value}>
-                    {address ? `${address.addressLine1}, ${address.city}, ${address.state} ${address.postalCode}` : 'Address not available'}
+                    {address ? 
+                      (address.addressLine1 ? 
+                        `${address.addressLine1}${address.city ? `, ${address.city}` : ''}${address.state ? `, ${address.state}` : ''}${address.postalCode ? ` ${address.postalCode}` : ''}` 
+                        : address.address || 'Address details not available') 
+                      : 'Address not available'}
                   </Text>
                 </View>
               </View>
@@ -233,10 +311,16 @@ const BookingConfirmationScreen = () => {
                   </View>
                 )}
                 <View style={styles.serviceInfo}>
-                  <Text style={styles.serviceTitle}>{service.name}</Text>
-                  <Text style={styles.serviceSubtitle}>1 x ₹{service.basePrice}</Text>
+                  <Text style={styles.serviceTitle}>
+                    {service?.name || service?.title || service?.serviceId?.title || 'Service'}
+                  </Text>
+                  <Text style={styles.serviceSubtitle}>
+                    1 x ₹{service?.basePrice || service?.price || service?.serviceId?.price || booking.totalAmount || 0}
+                  </Text>
                 </View>
-                <Text style={styles.value}>₹{service.basePrice}</Text>
+                <Text style={styles.value}>
+                  ₹{service?.basePrice || service?.price || service?.serviceId?.price || booking.totalAmount || 0}
+                </Text>
               </View>
             </View>
 
@@ -244,11 +328,15 @@ const BookingConfirmationScreen = () => {
               <Text style={styles.sectionTitle}>Payment Summary</Text>
               <View style={styles.summaryRow}>
                 <Text style={styles.label}>Service Amount</Text>
-                <Text style={styles.value}>₹{service.basePrice}</Text>
+                <Text style={styles.value}>
+                  ₹{service?.basePrice || service?.price || service?.serviceId?.price || booking.totalAmount || booking.price || 0}
+                </Text>
               </View>
               <View style={styles.totalRow}>
                 <Text style={styles.totalText}>Total Amount</Text>
-                <Text style={[styles.totalText, { color: '#2563eb' }]}>₹{booking.totalAmount}</Text>
+                <Text style={[styles.totalText, { color: '#2563eb' }]}>
+                  ₹{booking.totalAmount || booking.price || (service?.basePrice || service?.price || service?.serviceId?.price) || 0}
+                </Text>
               </View>
             </View>
 
