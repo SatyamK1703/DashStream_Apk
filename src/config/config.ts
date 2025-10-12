@@ -51,9 +51,6 @@ export const API_ENDPOINTS = {
     PROFILE_IMAGE: '/users/update-profile-image',
     CHANGE_PASSWORD: '/users/change-password',
     DELETE_ACCOUNT: '/users/delete-account',
-    ADDRESSES: '/users/addresses',
-    ADDRESS_BY_ID: (id: string) => `/users/addresses/${id}`,
-    SET_DEFAULT_ADDRESS: (id: string) => `/users/addresses/${id}/default`,
     PROFESSIONALS: '/users/professionals',
     PROFESSIONAL_DETAILS: (id: string) => `/users/professionals/${id}`,
   },
@@ -146,6 +143,14 @@ export const API_ENDPOINTS = {
     MAKES: '/vehicles/makes',
     MODELS: '/vehicles/models',
     YEARS: '/vehicles/years',
+  },
+
+  // Addresses
+  ADDRESSES: {
+    ALL: '/addresses',
+    CREATE: '/addresses',
+    BY_ID: (id: string) => `/addresses/${id}`,
+    SET_DEFAULT: (id: string) => `/addresses/${id}/set-default`,
   },
 
   // Membership

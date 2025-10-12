@@ -173,7 +173,7 @@ const SupportScreen = () => {
                 </Animated.View>
               ) : (
                 <>
-                  <Text style={styles.label}>What's the issue about?</Text>
+                  <Text style={styles.label}>What&#39;s the issue about?</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.issueRow}>
                     {issueTypes.map(issue => (
                       <TouchableOpacity

@@ -519,7 +519,7 @@ const AdminProfileScreen = () => {
                     <MaterialIcons name="security" size={40} color="#4CAF50" />
                     <Text style={styles.twoFactorStatusText}>Two-factor authentication is enabled</Text>
                     <Text style={styles.twoFactorDescription}>
-                      Your account is protected with an additional layer of security. When you sign in, you'll need to provide a verification code from your authentication app.
+                      Your account is protected with an additional layer of security. When you sign in, you&#39;ll need to provide a verification code from your authentication app.
                     </Text>
                   </View>
                   
@@ -541,7 +541,7 @@ const AdminProfileScreen = () => {
                     <MaterialIcons name="security" size={40} color="#888888" />
                     <Text style={styles.twoFactorStatusText}>Two-factor authentication is disabled</Text>
                     <Text style={styles.twoFactorDescription}>
-                      Add an extra layer of security to your account. In addition to your password, you'll need to enter a verification code when you sign in.
+                      Add an extra layer of security to your account. In addition to your password, you&#39;ll need to enter a verification code when you sign in.
                     </Text>
                   </View>
                   

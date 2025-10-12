@@ -15,6 +15,7 @@ import { membershipService as _membershipService } from './membershipService';
 import { locationService as _locationService } from './locationService';
 import { adminService as _adminService } from './adminService';
 import { professionalService as _professionalService } from './professionalService';
+import { addressService as _addressService } from './addressService';
 
 // Then export them
 export const authService = _authService;
@@ -29,6 +30,7 @@ export const membershipService = _membershipService;
 export const locationService = _locationService;
 export const adminService = _adminService;
 export const professionalService = _professionalService;
+export const addressService = _addressService;
 
 // Re-export types
 export * from '../types/api';
@@ -47,6 +49,7 @@ class ServiceAPI {
   location = _locationService;
   admin = _adminService;
   professional = _professionalService;
+  address = _addressService;
 }
 
 // Export singleton instance

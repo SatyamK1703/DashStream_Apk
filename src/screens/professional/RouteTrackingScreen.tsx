@@ -620,7 +620,7 @@ const RouteTrackingScreen = () => {
         </View>
 
         <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('JobDetails', { jobId })}>
-          <Text style={styles.primaryButtonText}>I've Arrived / View Details</Text>
+          <Text style={styles.primaryButtonText}>I&#39;ve Arrived / View Details</Text>
         </TouchableOpacity>
       </View>
     </View>

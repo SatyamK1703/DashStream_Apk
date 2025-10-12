@@ -268,7 +268,7 @@ const AdminCustomerDetailsScreen = () => {
         <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
         <Text style={styles.errorTitle}>Customer Not Found</Text>
         <Text style={styles.errorDescription}>
-          The customer you're looking for doesn't exist or has been removed.
+          The customer you&#39;re looking for doesn&#39;t exist or has been removed.
         </Text>
         <TouchableOpacity 
           style={styles.errorButton}

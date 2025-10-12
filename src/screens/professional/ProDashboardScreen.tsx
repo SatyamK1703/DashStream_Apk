@@ -136,7 +136,7 @@ const ProDashboardScreen = () => {
       </View>
       <View style={styles.headerStatsCard}>
         <View>
-          <Text style={styles.headerStatsLabel}>Today's Earnings</Text>
+          <Text style={styles.headerStatsLabel}>Today&#39;s Earnings</Text>
           <Text style={styles.headerStatsValue}>₹{earnings?.today || 0}</Text>
         </View>
         <View style={styles.headerStatsDivider} />
