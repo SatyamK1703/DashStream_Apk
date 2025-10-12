@@ -30,13 +30,9 @@ class MembershipService {
   async purchaseMembership(data: {
     planId: string;
   }): Promise<ApiResponse<{
-    active: boolean;
-    plan: string;
-    validUntil: string;
-    autoRenew: boolean;
-    usedServices: number;
-    totalServices: number;
-    savings: number;
+    orderId: string;
+    amount: number;
+    currency: string;
   }>> {
     try {
       return await httpClient.post(API_ENDPOINTS.MEMBERSHIPS.PURCHASE, data);

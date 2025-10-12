@@ -39,7 +39,7 @@ export const useMembershipStore = create<MembershipState>((set) => ({
       const response = await membershipService.purchaseMembership({ planId });
       if (response.success) {
         set({ loading: false });
-        return response.data;
+        return response.data; // This should now contain orderId, amount, currency
       } else {
         set({ error: response.message || 'Failed to purchase membership', loading: false });
         throw new Error(response.message || 'Failed to purchase membership');
