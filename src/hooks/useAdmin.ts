@@ -196,12 +196,31 @@ export const useAdminBookings = (filters?: {
 
 // Hook for admin professionals with optional filters
 export const useAdminProfessionals = (filters?: { limit?: number; status?: string; search?: string }) => {
-  return usePaginatedApi(
+  const { data, ...rest } = usePaginatedApi(
     (params) => adminService.getProfessionals({ ...filters, ...params }),
     {
       showErrorAlert: false,
     }
   );
+
+  // Normalize the profileImage to ensure it's always a string
+  const normalizedData = data?.map((professional: any) => {
+    let profileImage = professional.profileImage;
+    if (typeof profileImage === 'object' && profileImage !== null && 'uri' in profileImage) {
+      profileImage = profileImage.uri;
+    } else if (typeof profileImage !== 'string') {
+      profileImage = ''; // Ensure it's an empty string if not a valid string or object with uri
+    }
+    return {
+      ...professional,
+      profileImage: profileImage,
+    };
+  });
+
+  return {
+    data: normalizedData,
+    ...rest,
+  };
 };
 
 // Hook for admin booking actions (update status, assign professional, etc.)

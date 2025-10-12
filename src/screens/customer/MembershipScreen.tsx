@@ -23,6 +23,8 @@ import { useNavigation } from '@react-navigation/native';
 
 import { useMembershipStore } from '../../store/membershipStore';
 import { MembershipPlan } from '../../types/api';
+import * as WebBrowser from 'expo-web-browser';
+
 
 const MembershipScreen = () => {
   const navigation = useNavigation<MembershipScreenNavigationProp>();
@@ -94,7 +96,46 @@ const MembershipScreen = () => {
       console.error('Error purchasing membership:', error);
       Alert.alert('Error', 'Could not complete purchase. Please try again.');
     }
+
+    // Open payment link in browser (Expo WebBrowser preferred)
+    let browserResult;
+      try {
+        browserResult = await WebBrowser.openBrowserAsync(paymentLink);
+      } catch {
+        // Fallback to Linking if WebBrowser fails
+        try {
+          await Linking.openURL(paymentLink);
+          // For Linking, we can't detect when user returns, so show a message
+          Alert.alert(
+            'Payment Window Opened',
+            'Please complete your payment in the browser. Once done, return to the app and check your bookings.',
+            [
+              {
+                text: 'View Bookings',
+                onPress: () => {
+                  navigation.navigate('CustomerTabs' as any, { screen: 'Bookings' });
+                  clear && clear();
+                }
+              },
+              {
+                text: 'OK',
+                onPress: () => {
+                  navigation.navigate('BookingConfirmation', { bookingId });
+                  clear && clear();
+                }
+              }
+            ]
+          );
+          return;
+        } catch {
+          Alert.alert('Error', 'Could not open payment page.');
+          return;
+        }
+      }
+
   };
+
+
 
     const toggleAutoRenew = () => {
     // Implement toggleAutoRenew using the store
