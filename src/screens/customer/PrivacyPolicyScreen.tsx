@@ -114,7 +114,7 @@ const PrivacyPolicyScreen = () => {
           <Text style={styles.sectionTitle}>11. Changes to This Policy</Text>
           <Text style={styles.paragraph}>
             We may update this Privacy Policy from time to time. We will notify you of any 
-            material changes by posting the new policy in the app and updating the "Last updated" date.
+            material changes by posting the new policy in the app and updating the &quot;Last updated&quot; date.
           </Text>
 
           <Text style={styles.sectionTitle}>12. Contact Us</Text>

@@ -18,7 +18,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 // Import proper types and hooks
-import { ProStackParamList } from '../../app/routes/ProNavigator';
+import { ProNavigator, ProRoutes } from '../../../app/routes/ProNavigator';
 import { useAuth } from '../../store';
 import { useProfessionalProfile, useProfessionalProfileActions } from '../../hooks/useProfessional';
 

@@ -328,7 +328,7 @@ const AdminProfessionalDetailsScreen = () => {
        <View style={styles.errorContainer}>
         <MaterialIcons name="error-outline" size={48} color="#EF4444" />
         <Text style={styles.errorTitle}>Professional Not Found</Text>
-        <Text style={styles.errorMessage}>The professional you're looking for doesn't exist or has been removed.</Text>
+        <Text style={styles.errorMessage}>The professional you&apos;re looking for doesn&apos;t exist or has been removed.</Text>
         <TouchableOpacity 
           style={styles.goBackButton}
           onPress={() => navigation.goBack()}
