@@ -53,7 +53,7 @@ const MembershipScreen = () => {
     {
       id: 'silver',
       name: 'Silver',
-      price: 999, // Update if you have another price
+      price: 499, // Update if you have another price
       duration: '1 month',
       features: [
         '4 washes/month (once a week)',
@@ -66,7 +66,7 @@ const MembershipScreen = () => {
     {
       id: 'gold',
       name: 'Gold',
-      price: 1799, // Update if you have another price
+      price: 999, // Update if you have another price
       duration: '1 month',
       features: [
         '8 washes/month (twice a week)',
@@ -80,7 +80,7 @@ const MembershipScreen = () => {
     {
       id: 'platinum',
       name: 'Platinum',
-      price: 2999, // Update if you have another price
+      price: 1499, // Update if you have another price
       duration: '1 month',
       features: [
         '12 washes/month (three times a week) or priority on-demand visits',
