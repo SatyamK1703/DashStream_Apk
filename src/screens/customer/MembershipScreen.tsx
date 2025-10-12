@@ -22,6 +22,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 
 import { useMembershipStore } from '../../store/membershipStore';
+import { MembershipPlan } from '../../types/api';
 
 const MembershipScreen = () => {
   const navigation = useNavigation<MembershipScreenNavigationProp>();
@@ -30,7 +31,6 @@ const MembershipScreen = () => {
     plans,
     userMembership,
     loading,
-    fetchPlans,
     fetchUserMembership,
     purchaseMembership,
   } = useMembershipStore();
@@ -39,9 +39,8 @@ const MembershipScreen = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchPlans();
     fetchUserMembership();
-  }, [fetchPlans, fetchUserMembership]);
+  }, [fetchUserMembership]);
 
   const handleSelectPlan = (plan: MembershipPlan) => {
     setSelectedPlan(plan);

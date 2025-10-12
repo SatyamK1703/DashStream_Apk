@@ -133,10 +133,6 @@ class DataService {
     return notificationService.getNotifications(userId);
   }
 
-  // Membership methods
-  async getMemberships() {
-    return membershipService.getAllMemberships();
-  }
 
   async purchaseMembership(membershipId: string) {
     return membershipService.purchaseMembership(membershipId);

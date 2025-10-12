@@ -244,6 +244,19 @@ export interface Membership {
   updatedAt: string;
 }
 
+export interface LocalMembershipPlan {
+  id: string;
+  name: string;
+  description: string;
+  features: string[];
+}
+
+export interface MembershipPlan extends LocalMembershipPlan {
+  price: number;
+  duration: string;
+  popular: boolean;
+}
+
 export interface UserMembership {
   _id: string;
   user: string; // User ID

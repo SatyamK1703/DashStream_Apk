@@ -2,15 +2,12 @@ import { useState, useEffect } from 'react';
 import { useApi, usePaginatedApi } from './useApi';
 import { membershipService } from '../services';
 import { Membership, UserMembership } from '../types/api';
+import { useMembershipStore } from '../store/membershipStore';
 
 // Hook for fetching membership plans
 export const useMembershipPlans = () => {
-  return useApi(
-    () => membershipService.getMembershipPlans(),
-    {
-      showErrorAlert: false,
-    }
-  );
+  const { plans } = useMembershipStore();
+  return { data: plans, loading: false, error: null };
 };
 
 // Hook for current user membership
