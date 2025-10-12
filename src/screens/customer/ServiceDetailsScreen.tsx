@@ -75,6 +75,18 @@ const ServiceDetailsScreen = () => {
   };
 
   const handleBookNow = () => {
+
+    if (!svc) return;
+
+    addItem({
+      id: svc.id || svc._id,
+      title: svc.title,
+      price: svc.price || 0,
+      quantity,
+      image: typeof svc.image === 'string' ? { uri: svc.image } : svc.image,
+      meta: { vehicleType: svc.vehicleType }
+    });
+
     navigation.navigate('Checkout');
   };
 
@@ -82,7 +94,7 @@ const ServiceDetailsScreen = () => {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header Image */}
       <View style={styles.headerImageWrapper}>
-  <Image source={typeof svc.image === 'string' ? { uri: svc.image } : svc.image} style={styles.headerImage} resizeMode="cover" />
+        <Image source={typeof svc.image === 'string' ? { uri: svc.image } : svc.image} style={styles.headerImage} resizeMode="cover" />
         <TouchableOpacity style={[styles.headerButton, styles.leftButton]} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#2563eb" />
         </TouchableOpacity>
@@ -112,10 +124,10 @@ const ServiceDetailsScreen = () => {
         </View>
 
         {/* Description */}
-  <Text style={styles.description}>{svc.longDescription || svc.description}</Text>
+        <Text style={styles.description}>{svc.longDescription || svc.description}</Text>
 
         {/* Features */}
-  <Text style={styles.sectionTitle}>What&apos;s Included</Text>
+        <Text style={styles.sectionTitle}>What&apos;s Included</Text>
         <View style={{ marginBottom: 24 }}>
           {(svc.features || []).map((feature: string, index: number) => (
             <View key={index} style={styles.featureRow}>
@@ -164,17 +176,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff'
   },
-  centerContainer: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
-  headerImageWrapper: { 
-    position: 'relative' 
+  headerImageWrapper: {
+    position: 'relative'
   },
-  headerImage: { 
-    width: '100%', 
-    height: 256 
+  headerImage: {
+    width: '100%',
+    height: 256
   },
   headerButton: {
     position: 'absolute',
@@ -187,146 +199,146 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 2,
   },
-  leftButton: { 
-    left: 16 
+  leftButton: {
+    left: 16
   },
-  rightButton: { 
-    right: 16 
+  rightButton: {
+    right: 16
   },
-  scroll: { 
-    paddingHorizontal: 16, 
-    paddingTop: 16 
+  scroll: {
+    paddingHorizontal: 16,
+    paddingTop: 16
   },
-  rowBetween: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 16 
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16
   },
-  title: { 
-    fontSize: 22, 
-    fontWeight: '700', 
-    color: '#1f2937' 
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1f2937'
   },
-  price: { 
-    fontSize: 18, 
-    fontWeight: '600', 
-    color: '#2563eb' 
+  price: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2563eb'
   },
-  ratingBox: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: 'rgba(37,99,235,0.1)', 
-    paddingHorizontal: 6, 
-    paddingVertical: 4, 
-    borderRadius: 8 
+  ratingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(37,99,235,0.1)',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 8
   },
-  ratingText: { 
-    marginLeft: 4, 
-    fontWeight: '600' 
+  ratingText: {
+    marginLeft: 4,
+    fontWeight: '600'
   },
-  reviewCount: { 
-    marginLeft: 4, 
-    color: '#6b7280', 
-    fontSize: 12 
+  reviewCount: {
+    marginLeft: 4,
+    color: '#6b7280',
+    fontSize: 12
   },
-  durationRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 16 
+  durationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16
   },
-  durationText: { 
-    marginLeft: 6, 
-    color: '#6b7280' 
+  durationText: {
+    marginLeft: 6,
+    color: '#6b7280'
   },
-  description: { 
-    color: '#374151', 
-    marginBottom: 24 
-  },
-  sectionTitle: { 
-    fontSize: 18, 
-    fontWeight: '700', 
-    color: '#1f2937', 
-    marginBottom: 16 
-  },
-  featureRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 12 
-  },
-  featureIcon: { 
-    width: 24, 
-    height: 24, 
-    backgroundColor: 'rgba(37,99,235,0.1)', 
-    borderRadius: 12, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginRight: 12 
-  },
-  featureText: { 
+  description: {
     color: '#374151',
-    flex: 1 
+    marginBottom: 24
   },
-  quantityRow: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 24 
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 16
   },
-  quantityButton: { 
-    width: 40, 
-    height: 40, 
-    backgroundColor: '#f3f4f6', 
-    borderRadius: 20, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12
   },
-  quantityText: { 
-    marginHorizontal: 16, 
-    fontSize: 18, 
-    fontWeight: '600' 
+  featureIcon: {
+    width: 24,
+    height: 24,
+    backgroundColor: 'rgba(37,99,235,0.1)',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12
   },
-  totalLabel: { 
-    fontSize: 18, 
-    fontWeight: '600', 
-    color: '#1f2937' 
+  featureText: {
+    color: '#374151',
+    flex: 1
   },
-  totalPrice: { 
-    fontSize: 20, 
-    fontWeight: '700', 
-    color: '#2563eb' 
+  quantityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24
   },
-  bottomRow: { 
-    flexDirection: 'row', 
-    padding: 16, 
-    borderTopWidth: 1, 
+  quantityButton: {
+    width: 40,
+    height: 40,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  quantityText: {
+    marginHorizontal: 16,
+    fontSize: 18,
+    fontWeight: '600'
+  },
+  totalLabel: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937'
+  },
+  totalPrice: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2563eb'
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    padding: 16,
+    borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
     backgroundColor: '#fff'
   },
-  addToCartBtn: { 
-    flex: 1, 
-    backgroundColor: 'rgba(37,99,235,0.1)', 
-    borderRadius: 12, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    paddingVertical: 16, 
-    marginRight: 8 
+  addToCartBtn: {
+    flex: 1,
+    backgroundColor: 'rgba(37,99,235,0.1)',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginRight: 8
   },
-  addToCartText: { 
-    color: '#2563eb', 
+  addToCartText: {
+    color: '#2563eb',
     fontWeight: '600',
     fontSize: 16
   },
-  bookNowBtn: { 
-    flex: 1, 
-    backgroundColor: '#2563eb', 
-    borderRadius: 12, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    paddingVertical: 16, 
-    marginLeft: 8 
+  bookNowBtn: {
+    flex: 1,
+    backgroundColor: '#2563eb',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginLeft: 8
   },
-  bookNowText: { 
-    color: '#fff', 
+  bookNowText: {
+    color: '#fff',
     fontWeight: '600',
     fontSize: 16
   },
