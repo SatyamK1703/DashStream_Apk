@@ -27,8 +27,7 @@ export const useMyMembership = () => {
 export const usePurchaseMembership = () => {
   return useApi(
     (data: {
-      membershipId: string;
-      paymentMethod: 'card' | 'upi' | 'wallet' | 'netbanking';
+      planId: string;
     }) => membershipService.purchaseMembership(data),
     {
       showErrorAlert: true,
@@ -45,6 +44,16 @@ export const useVerifyMembershipPayment = () => {
       signature: string;
       membershipId: string;
     }) => membershipService.verifyMembershipPayment(data),
+    {
+      showErrorAlert: true,
+    }
+  );
+};
+
+// Hook for toggling auto-renew
+export const useToggleAutoRenew = () => {
+  return useApi(
+    (autoRenew: boolean) => membershipService.toggleAutoRenew(autoRenew),
     {
       showErrorAlert: true,
     }

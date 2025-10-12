@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,236 +18,184 @@ import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { useAuth } from '../../store';
 import FAQList from '~/components/faq/FAQList';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  useMembershipPlans,
+  useMyMembership,
+  usePurchaseMembership,
+  useToggleAutoRenew,
+  useCancelMembership
+} from '../../hooks/useMembership';
+import { Membership } from '../../types/api';
 
 type MembershipScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
-
-interface MembershipPlan {
-  id: string;
-  name: string;
-  price: number;
-  duration: string;
-  features: string[];
-  popular: boolean;
-}
 
 const MembershipScreen = () => {
   const navigation = useNavigation<MembershipScreenNavigationProp>();
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<MembershipPlan | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<Membership | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  
-  // Mock user membership status
-  const [userMembership, setUserMembership] = useState({
-    active: true,
-    plan: 'Silver',
-    validUntil: '2023-12-31',
-    autoRenew: true,
-    usedServices: 3,
-    totalServices: 5,
-    savings: 1250
-  });
 
-  const membershipPlans: MembershipPlan[] = [
-    {
-      id: 'basic',
-      name: 'Basic',
-      price: 499,
-      duration: '1 month',
-      features: [
-        '5 car washes',
-        'Basic interior cleaning',
-        '10% off on additional services',
-        'Priority booking'
-      ],
-      popular: false
-    },
-    {
-      id: 'silver',
-      name: 'Silver',
-      price: 999,
-      duration: '3 months',
-      features: [
-        '12 car washes',
-        'Full interior cleaning',
-        '15% off on additional services',
-        'Priority booking',
-        'Free car inspection'
-      ],
-      popular: true
-    },
-    {
-      id: 'gold',
-      name: 'Gold',
-      price: 1999,
-      duration: '6 months',
-      features: [
-        '24 car washes',
-        'Premium detailing',
-        '20% off on additional services',
-        'VIP priority booking',
-        'Free car inspection',
-        'Free pickup and drop'
-      ],
-      popular: false
-    },
-    {
-      id: 'platinum',
-      name: 'Platinum',
-      price: 3499,
-      duration: '12 months',
-      features: [
-        'Unlimited car washes',
-        'Premium detailing',
-        '25% off on additional services',
-        'VIP priority booking',
-        'Quarterly car inspection',
-        'Free pickup and drop',
-        'Dedicated relationship manager'
-      ],
-      popular: false
-    }
-  ];
+  // API hooks
+  const { data: membershipPlans, loading: plansLoading, error: plansError } = useMembershipPlans();
+  const { data: userMembership, loading: membershipLoading, error: membershipError, refetch: refetchMembership } = useMyMembership();
+  const { execute: purchaseMembership, loading: purchaseLoading } = usePurchaseMembership();
+  const { execute: toggleAutoRenew, loading: toggleLoading } = useToggleAutoRenew();
+  const { execute: cancelMembership, loading: cancelLoading } = useCancelMembership();
 
-  const handleSelectPlan = (plan: MembershipPlan) => {
+  // Loading state
+  const loading = plansLoading || membershipLoading || purchaseLoading || toggleLoading || cancelLoading;
+
+  const handleSelectPlan = (plan: Membership) => {
     setSelectedPlan(plan);
     setShowConfirmModal(true);
   };
 
-  const handlePurchasePlan = () => {
+  const handlePurchasePlan = async () => {
     if (!selectedPlan) return;
-    
-    setShowConfirmModal(false);
-    setLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setUserMembership({
-        active: true,
-        plan: selectedPlan.name,
-        validUntil: '2024-06-30', // 6 months from now
-        autoRenew: true,
-        usedServices: 0,
-        totalServices: selectedPlan.name === 'Platinum' ? Infinity : (selectedPlan.name === 'Gold' ? 24 : (selectedPlan.name === 'Silver' ? 12 : 5)),
-        savings: 0
-      });
-      setLoading(false);
+
+    try {
+      setShowConfirmModal(false);
+      const result = await purchaseMembership({ planId: selectedPlan._id });
+
+      if (result.success) {
+        await refetchMembership();
+        Alert.alert(
+          'Membership Activated',
+          `Your ${selectedPlan.name} membership has been successfully activated!`,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
       Alert.alert(
-        'Membership Activated',
-        `Your ${selectedPlan.name} membership has been successfully activated!`,
+        'Purchase Failed',
+        'Failed to purchase membership. Please try again.',
         [{ text: 'OK' }]
       );
-    }, 2000);
+    }
   };
 
-  const toggleAutoRenew = () => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setUserMembership(prev => ({
-        ...prev,
-        autoRenew: !prev.autoRenew
-      }));
-      setLoading(false);
+  const handleToggleAutoRenew = async () => {
+    if (!userMembership) return;
+
+    try {
+      const result = await toggleAutoRenew(!userMembership.autoRenew);
+
+      if (result.success) {
+        await refetchMembership();
+        Alert.alert(
+          userMembership.autoRenew ? 'Auto-Renewal Disabled' : 'Auto-Renewal Enabled',
+          userMembership.autoRenew
+            ? 'Your membership will not renew automatically when it expires.'
+            : 'Your membership will renew automatically when it expires.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
       Alert.alert(
-        userMembership.autoRenew ? 'Auto-Renewal Disabled' : 'Auto-Renewal Enabled',
-        userMembership.autoRenew 
-          ? 'Your membership will not renew automatically when it expires.'
-          : 'Your membership will renew automatically when it expires.',
+        'Update Failed',
+        'Failed to update auto-renewal setting. Please try again.',
         [{ text: 'OK' }]
       );
-    }, 1000);
+    }
   };
 
-  const cancelMembership = () => {
+  const handleCancelMembership = () => {
     Alert.alert(
       'Cancel Membership',
       'Are you sure you want to cancel your membership? You will still have access until the end of your current billing period.',
       [
         { text: 'No', style: 'cancel' },
-        { 
-          text: 'Yes, Cancel', 
+        {
+          text: 'Yes, Cancel',
           style: 'destructive',
-          onPress: () => {
-            setLoading(true);
-            // Simulate API call
-            setTimeout(() => {
-              setUserMembership(prev => ({
-                ...prev,
-                active: false
-              }));
-              setLoading(false);
+          onPress: async () => {
+            try {
+              const result = await cancelMembership('User cancelled');
+
+              if (result.success) {
+                await refetchMembership();
+                Alert.alert(
+                  'Membership Cancelled',
+                  'Your membership has been cancelled. You will have access until the end of your current billing period.',
+                  [{ text: 'OK' }]
+                );
+              }
+            } catch (error) {
               Alert.alert(
-                'Membership Cancelled',
-                'Your membership has been cancelled. You will have access until the end of your current billing period.',
+                'Cancellation Failed',
+                'Failed to cancel membership. Please try again.',
                 [{ text: 'OK' }]
               );
-            }, 1500);
+            }
           }
         }
       ]
     );
   };
 
-  const renderMembershipCard = () => (
-    <LinearGradient
-      colors={["#2563eb", "#3b82f6"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.card}
-    >
-      <View style={styles.topRow}>
-        <View>
-          <Text style={styles.planText}>{userMembership.plan} Membership</Text>
-          <Text style={styles.validText}>Valid until {userMembership.validUntil}</Text>
-        </View>
-        <View style={styles.userBadge}>
-          <Text style={styles.userName}>{user?.name}</Text>
-        </View>
-      </View>
+  const renderMembershipCard = () => {
+    if (!userMembership || !userMembership.active) return null;
 
-      <View style={styles.statsRow}>
-        <View style={styles.statBlock}>
-          <Text style={styles.statLabel}>Services Used</Text>
-          <Text style={styles.statValue}>
-            {userMembership.usedServices}/{userMembership.totalServices === Infinity ? '∞' : userMembership.totalServices}
-          </Text>
+    return (
+      <LinearGradient
+        colors={["#2563eb", "#3b82f6"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.card}
+      >
+        <View style={styles.topRow}>
+          <View>
+            <Text style={styles.planText}>{userMembership.plan} Membership</Text>
+            <Text style={styles.validText}>Valid until {new Date(userMembership.validUntil).toLocaleDateString()}</Text>
+          </View>
+          <View style={styles.userBadge}>
+            <Text style={styles.userName}>{user?.name}</Text>
+          </View>
         </View>
-        <View style={styles.statBlock}>
-          <Text style={styles.statLabel}>Total Savings</Text>
-          <Text style={styles.statValue}>₹{userMembership.savings}</Text>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statBlock}>
+            <Text style={styles.statLabel}>Services Used</Text>
+            <Text style={styles.statValue}>
+              {userMembership.usedServices}/{userMembership.totalServices === Infinity ? '∞' : userMembership.totalServices}
+            </Text>
+          </View>
+          <View style={styles.statBlock}>
+            <Text style={styles.statLabel}>Total Savings</Text>
+            <Text style={styles.statValue}>₹{userMembership.savings}</Text>
+          </View>
+          <View style={styles.statBlock}>
+            <Text style={styles.statLabel}>Auto-Renew</Text>
+            <Text style={styles.statValue}>{userMembership.autoRenew ? 'On' : 'Off'}</Text>
+          </View>
         </View>
-        <View style={styles.statBlock}>
-          <Text style={styles.statLabel}>Auto-Renew</Text>
-          <Text style={styles.statValue}>{userMembership.autoRenew ? 'On' : 'Off'}</Text>
+
+        <View style={styles.actionsRow}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleToggleAutoRenew}>
+            <Ionicons
+              name={userMembership.autoRenew ? 'toggle' : 'toggle-outline'}
+              size={18}
+              color="white"
+              style={styles.iconMargin}
+            />
+            <Text style={styles.actionText}>
+              {userMembership.autoRenew ? 'Disable Auto-Renew' : 'Enable Auto-Renew'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionButton} onPress={handleCancelMembership}>
+            <Ionicons name="close-circle-outline" size={18} color="white" style={styles.iconMargin} />
+            <Text style={styles.actionText}>Cancel</Text>
+          </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
+    );
+  };
 
-      <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.actionButton} onPress={toggleAutoRenew}>
-          <Ionicons
-            name={userMembership.autoRenew ? 'toggle' : 'toggle-outline'}
-            size={18}
-            color="white"
-            style={styles.iconMargin}
-          />
-          <Text style={styles.actionText}>
-            {userMembership.autoRenew ? 'Disable Auto-Renew' : 'Enable Auto-Renew'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton} onPress={cancelMembership}>
-          <Ionicons name="close-circle-outline" size={18} color="white" style={styles.iconMargin} />
-          <Text style={styles.actionText}>Cancel</Text>
-        </TouchableOpacity>
-      </View>
-    </LinearGradient>
-  );
-
-  const renderPlanCard = (plan: MembershipPlan) => (
-    <TouchableOpacity 
-      key={plan.id}
+  const renderPlanCard = (plan: Membership) => (
+    <TouchableOpacity
+      key={plan._id}
       style={[styles.planeCard, plan.popular ? styles.popularCard : styles.defaultCard]}
       onPress={() => handleSelectPlan(plan)}
       activeOpacity={0.85}
@@ -257,23 +205,23 @@ const MembershipScreen = () => {
           <Text style={styles.popularText}>POPULAR</Text>
         </View>
       )}
-      
+
       <Text style={styles.planName}>{plan.name}</Text>
       <View style={styles.priceRow}>
         <Text style={styles.price}>₹{plan.price}</Text>
         <Text style={styles.duration}>/{plan.duration}</Text>
       </View>
-      
+
       <View style={styles.divider} />
-      
+
       {plan.features.map((feature, index) => (
         <View key={index} style={styles.featureRow}>
           <Ionicons name="checkmark-circle" size={18} color="#2563eb" />
           <Text style={styles.featureText}>{feature}</Text>
         </View>
       ))}
-      
-      <TouchableOpacity 
+
+      <TouchableOpacity
         style={[styles.button, plan.popular ? styles.popularButton : styles.defaultButton]}
         onPress={() => handleSelectPlan(plan)}
       >
@@ -350,7 +298,7 @@ const MembershipScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -365,16 +313,30 @@ const MembershipScreen = () => {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>Loading membership data...</Text>
+        </View>
+      ) : plansError || membershipError ? (
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+          <Text style={styles.errorTitle}>Failed to Load</Text>
+          <Text style={styles.errorText}>
+            {plansError?.message || membershipError?.message || 'Something went wrong'}
+          </Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => {
+            // Retry logic would go here
+          }}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Current Membership Card */}
           {userMembership.active && renderMembershipCard()}
-          
+
           {/* Membership Benefits */}
           <View style={styles.benefitsContainer}>
             <Text style={styles.sectionTitle}>Membership Benefits</Text>
-            
+
             <View style={styles.benefitItem}>
               <View style={styles.benefitIcon}>
                 <Ionicons name="cash-outline" size={20} color="#2563eb" />
@@ -384,7 +346,7 @@ const MembershipScreen = () => {
                 <Text style={styles.benefitDescription}>Get discounted rates on all services</Text>
               </View>
             </View>
-            
+
             <View style={styles.benefitItem}>
               <View style={styles.benefitIcon}>
                 <Ionicons name="time-outline" size={20} color="#2563eb" />
@@ -394,7 +356,7 @@ const MembershipScreen = () => {
                 <Text style={styles.benefitDescription}>Skip the queue with priority slots</Text>
               </View>
             </View>
-            
+
             <View style={styles.benefitItem}>
               <View style={styles.benefitIcon}>
                 <Ionicons name="car-outline" size={20} color="#2563eb" />
@@ -404,7 +366,7 @@ const MembershipScreen = () => {
                 <Text style={styles.benefitDescription}>Regular vehicle health checks</Text>
               </View>
             </View>
-            
+
             <View style={styles.benefitItem}>
               <View style={styles.benefitIcon}>
                 <Ionicons name="gift-outline" size={20} color="#2563eb" />
@@ -415,25 +377,25 @@ const MembershipScreen = () => {
               </View>
             </View>
           </View>
-          
+
           {/* Available Plans */}
           <Text style={styles.sectionTitle}>
-            {userMembership.active ? 'Upgrade Your Plan' : 'Choose a Plan'}
+            {userMembership?.active ? 'Upgrade Your Plan' : 'Choose a Plan'}
           </Text>
-          
-          {membershipPlans.map(renderPlanCard)}
-          
+
+          {membershipPlans?.map(renderPlanCard)}
+
           {/* FAQ Section */}
           <View style={styles.faqContainer}>
             <FAQList
               searchQuery=""
-              setSearchQuery={() => {}}
+              setSearchQuery={() => { }}
               activeCategory="all"
-              setActiveCategory={() => {}}
+              setActiveCategory={() => { }}
               expandedId={expandedId}
               setExpandedId={setExpandedId}
               navigation={navigation}
-              initialCategory="membership" 
+              initialCategory="membership"
             />
 
             <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('FAQ')}>
@@ -443,7 +405,7 @@ const MembershipScreen = () => {
           </View>
         </ScrollView>
       )}
-      
+
       {renderConfirmModal()}
     </SafeAreaView>
   );
@@ -485,6 +447,40 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center'
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6b7280'
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginTop: 16,
+    marginBottom: 8
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 24
+  },
+  retryButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8
+  },
+  retryText: {
+    color: '#fff',
+    fontWeight: '600'
   },
   scrollView: {
     flex: 1,

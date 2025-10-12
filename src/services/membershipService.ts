@@ -16,16 +16,19 @@ class MembershipService {
   }
 
   /**
-   * Get current user's membership
+   * Get current user's membership status
    */
   async getMyMembership(): Promise<ApiResponse<{
-    membership?: UserMembership;
-    benefits: string[];
-    remainingDays: number;
-    discountPercentage: number;
+    active: boolean;
+    plan: string;
+    validUntil: string;
+    autoRenew: boolean;
+    usedServices: number;
+    totalServices: number;
+    savings: number;
   }>> {
     try {
-      return await httpClient.get(API_ENDPOINTS.MEMBERSHIPS.MY_MEMBERSHIP);
+      return await httpClient.get(API_ENDPOINTS.MEMBERSHIPS.STATUS);
     } catch (error) {
       console.error('Get my membership error:', error);
       throw error;
@@ -36,18 +39,15 @@ class MembershipService {
    * Purchase a membership plan
    */
   async purchaseMembership(data: {
-    membershipId: string;
-    paymentMethod: 'card' | 'upi' | 'wallet' | 'netbanking';
+    planId: string;
   }): Promise<ApiResponse<{
-    orderId: string;
-    amount: number;
-    currency: string;
-    key: string; // Razorpay key
-    prefill: {
-      name: string;
-      email: string;
-      contact: string;
-    };
+    active: boolean;
+    plan: string;
+    validUntil: string;
+    autoRenew: boolean;
+    usedServices: number;
+    totalServices: number;
+    savings: number;
   }>> {
     try {
       return await httpClient.post(API_ENDPOINTS.MEMBERSHIPS.PURCHASE, data);
@@ -78,15 +78,39 @@ class MembershipService {
   }
 
   /**
+   * Toggle auto-renew setting
+   */
+  async toggleAutoRenew(autoRenew: boolean): Promise<ApiResponse<{
+    active: boolean;
+    plan: string;
+    validUntil: string;
+    autoRenew: boolean;
+    usedServices: number;
+    totalServices: number;
+    savings: number;
+  }>> {
+    try {
+      return await httpClient.put(API_ENDPOINTS.MEMBERSHIPS.AUTO_RENEW, { autoRenew });
+    } catch (error) {
+      console.error('Toggle auto-renew error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Cancel membership
    */
   async cancelMembership(reason?: string): Promise<ApiResponse<{
-    cancelled: boolean;
-    refundAmount?: number;
-    refundProcessingDays?: number;
+    active: boolean;
+    plan: string;
+    validUntil: string;
+    autoRenew: boolean;
+    usedServices: number;
+    totalServices: number;
+    savings: number;
   }>> {
     try {
-      return await httpClient.post('/memberships/cancel', { reason });
+      return await httpClient.post(API_ENDPOINTS.MEMBERSHIPS.CANCEL, { reason });
     } catch (error) {
       console.error('Cancel membership error:', error);
       throw error;
