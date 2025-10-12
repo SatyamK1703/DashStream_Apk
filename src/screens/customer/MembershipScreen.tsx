@@ -37,7 +37,7 @@ const MembershipScreen = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<MembershipPlan | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  
+
   // Mock user membership status
   const [userMembership, setUserMembership] = useState({
     active: true,
@@ -51,60 +51,44 @@ const MembershipScreen = () => {
 
   const membershipPlans: MembershipPlan[] = [
     {
-      id: 'basic',
-      name: 'Basic',
-      price: 499,
-      duration: '1 month',
-      features: [
-        '5 car washes',
-        'Basic interior cleaning',
-        '10% off on additional services',
-        'Priority booking'
-      ],
-      popular: false
-    },
-    {
       id: 'silver',
       name: 'Silver',
-      price: 999,
-      duration: '3 months',
+      price: 499, // Update if you have another price
+      duration: '1 month',
       features: [
-        '12 car washes',
-        'Full interior cleaning',
-        '15% off on additional services',
-        'Priority booking',
-        'Free car inspection'
+        '4 washes/month (once a week)',
+        'Exterior wash with eco-friendly shampoo',
+        'Tyre cleaning & air check',
+        'Quick service – ideal for busy customers needing basic upkeep.'
       ],
       popular: true
     },
     {
       id: 'gold',
       name: 'Gold',
-      price: 1999,
-      duration: '6 months',
+      price: 999, // Update if you have another price
+      duration: '1 month',
       features: [
-        '24 car washes',
-        'Premium detailing',
-        '20% off on additional services',
-        'VIP priority booking',
-        'Free car inspection',
-        'Free pickup and drop'
+        '8 washes/month (twice a week)',
+        'Exterior wash + basic interior vacuuming',
+        'Premium shampoo & waxing once a month',
+        'Dashboard, windows & mirrors cleaning',
+        'Tyre polishing for a refined look.'
       ],
       popular: false
     },
     {
       id: 'platinum',
       name: 'Platinum',
-      price: 3499,
-      duration: '12 months',
+      price: 1499, // Update if you have another price
+      duration: '1 month',
       features: [
-        'Unlimited car washes',
-        'Premium detailing',
-        '25% off on additional services',
-        'VIP priority booking',
-        'Quarterly car inspection',
-        'Free pickup and drop',
-        'Dedicated relationship manager'
+        '12 washes/month (three times a week) or priority on-demand visits',
+        'Full exterior + deep interior cleaning',
+        'Wax coating & paint protection twice a month',
+        'Vacuuming of seats, carpets & mats',
+        'Engine bay dust cleaning',
+        '1 complimentary full detailing session each month.'
       ],
       popular: false
     }
@@ -117,10 +101,10 @@ const MembershipScreen = () => {
 
   const handlePurchasePlan = () => {
     if (!selectedPlan) return;
-    
+
     setShowConfirmModal(false);
     setLoading(true);
-    
+
     // Simulate API call
     setTimeout(() => {
       setUserMembership({
@@ -152,7 +136,7 @@ const MembershipScreen = () => {
       setLoading(false);
       Alert.alert(
         userMembership.autoRenew ? 'Auto-Renewal Disabled' : 'Auto-Renewal Enabled',
-        userMembership.autoRenew 
+        userMembership.autoRenew
           ? 'Your membership will not renew automatically when it expires.'
           : 'Your membership will renew automatically when it expires.',
         [{ text: 'OK' }]
@@ -166,8 +150,8 @@ const MembershipScreen = () => {
       'Are you sure you want to cancel your membership? You will still have access until the end of your current billing period.',
       [
         { text: 'No', style: 'cancel' },
-        { 
-          text: 'Yes, Cancel', 
+        {
+          text: 'Yes, Cancel',
           style: 'destructive',
           onPress: () => {
             setLoading(true);
@@ -246,7 +230,7 @@ const MembershipScreen = () => {
   );
 
   const renderPlanCard = (plan: MembershipPlan) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       key={plan.id}
       style={[styles.planeCard, plan.popular ? styles.popularCard : styles.defaultCard]}
       onPress={() => handleSelectPlan(plan)}
@@ -257,23 +241,23 @@ const MembershipScreen = () => {
           <Text style={styles.popularText}>POPULAR</Text>
         </View>
       )}
-      
+
       <Text style={styles.planName}>{plan.name}</Text>
       <View style={styles.priceRow}>
         <Text style={styles.price}>₹{plan.price}</Text>
         <Text style={styles.duration}>/{plan.duration}</Text>
       </View>
-      
+
       <View style={styles.divider} />
-      
+
       {plan.features.map((feature, index) => (
         <View key={index} style={styles.featureRow}>
           <Ionicons name="checkmark-circle" size={18} color="#2563eb" />
           <Text style={styles.featureText}>{feature}</Text>
         </View>
       ))}
-      
-      <TouchableOpacity 
+
+      <TouchableOpacity
         style={[styles.button, plan.popular ? styles.popularButton : styles.defaultButton]}
         onPress={() => handleSelectPlan(plan)}
       >
@@ -350,7 +334,7 @@ const MembershipScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -370,11 +354,11 @@ const MembershipScreen = () => {
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Current Membership Card */}
           {userMembership.active && renderMembershipCard()}
-          
+
           {/* Membership Benefits */}
           <View style={styles.benefitsContainer}>
             <Text style={styles.sectionTitle}>Membership Benefits</Text>
-            
+
             <View style={styles.benefitItem}>
               <View style={styles.benefitIcon}>
                 <Ionicons name="cash-outline" size={20} color="#2563eb" />
@@ -384,7 +368,7 @@ const MembershipScreen = () => {
                 <Text style={styles.benefitDescription}>Get discounted rates on all services</Text>
               </View>
             </View>
-            
+
             <View style={styles.benefitItem}>
               <View style={styles.benefitIcon}>
                 <Ionicons name="time-outline" size={20} color="#2563eb" />
@@ -394,7 +378,7 @@ const MembershipScreen = () => {
                 <Text style={styles.benefitDescription}>Skip the queue with priority slots</Text>
               </View>
             </View>
-            
+
             <View style={styles.benefitItem}>
               <View style={styles.benefitIcon}>
                 <Ionicons name="car-outline" size={20} color="#2563eb" />
@@ -404,7 +388,7 @@ const MembershipScreen = () => {
                 <Text style={styles.benefitDescription}>Regular vehicle health checks</Text>
               </View>
             </View>
-            
+
             <View style={styles.benefitItem}>
               <View style={styles.benefitIcon}>
                 <Ionicons name="gift-outline" size={20} color="#2563eb" />
@@ -415,25 +399,25 @@ const MembershipScreen = () => {
               </View>
             </View>
           </View>
-          
+
           {/* Available Plans */}
           <Text style={styles.sectionTitle}>
             {userMembership.active ? 'Upgrade Your Plan' : 'Choose a Plan'}
           </Text>
-          
+
           {membershipPlans.map(renderPlanCard)}
-          
+
           {/* FAQ Section */}
           <View style={styles.faqContainer}>
             <FAQList
               searchQuery=""
-              setSearchQuery={() => {}}
+              setSearchQuery={() => { }}
               activeCategory="all"
-              setActiveCategory={() => {}}
+              setActiveCategory={() => { }}
               expandedId={expandedId}
               setExpandedId={setExpandedId}
               navigation={navigation}
-              initialCategory="membership" 
+              initialCategory="membership"
             />
 
             <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('FAQ')}>
@@ -443,7 +427,7 @@ const MembershipScreen = () => {
           </View>
         </ScrollView>
       )}
-      
+
       {renderConfirmModal()}
     </SafeAreaView>
   );

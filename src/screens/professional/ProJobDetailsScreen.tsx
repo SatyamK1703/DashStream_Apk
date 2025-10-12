@@ -18,7 +18,7 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 
 // Import proper types and hooks
-import { ProStackParamList } from '../../app/routes/ProNavigator';
+import { ProNavigator, ProRoutes } from '../../../app/routes/ProNavigator';
 import { useProfessionalJob, useProfessionalJobActions } from '../../hooks/useProfessional';
 
 type ProJobDetailsScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;

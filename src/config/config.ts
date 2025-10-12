@@ -154,15 +154,17 @@ export const API_ENDPOINTS = {
   },
 
   // Membership
-  MEMBERSHIP: {
-    PLANS: '/membership/plans',
-    MY_MEMBERSHIP: '/membership/my-membership',
-    PURCHASE: '/membership/purchase',
-    VERIFY_PAYMENT: '/membership/verify-payment',
-    CANCEL: '/membership/cancel',
-    USAGE: '/membership/usage',
-    BENEFITS: '/membership/benefits',
-    RENEW: '/membership/renew',
+  MEMBERSHIPS: {
+    PLANS: '/memberships/plans',
+    STATUS: '/memberships/status',
+    PURCHASE: '/memberships/purchase',
+    AUTO_RENEW: '/memberships/auto-renew',
+    CANCEL: '/memberships/cancel',
+    HISTORY: '/memberships/history',
+    VERIFY_PAYMENT: '/memberships/verify-payment',
+    USAGE: '/memberships/usage',
+    BENEFITS: '/memberships/benefits',
+    RENEW: '/memberships/renew',
   },
 
   // Support
@@ -194,7 +196,7 @@ export const API_ENDPOINTS = {
     SERVICE_BY_ID: (serviceId: string) => `/admin/services/${serviceId}`,
     UPDATE_SERVICE: (serviceId: string) => `/admin/services/${serviceId}`,
     DELETE_SERVICE: (serviceId: string) => `/admin/services/${serviceId}`,
-  
+
     PROFESSIONALS: '/admin/professionals',
     ASSIGN_PROFESSIONAL: (bookingId: string) => `/admin/professionals/${bookingId}/assign-professional`,
     VERIFY_PROFESSIONAL: (professionalId: string) => `/admin/professionals/${professionalId}/verification`,

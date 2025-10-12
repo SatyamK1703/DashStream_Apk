@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Import proper types and hooks
-import { ProStackParamList } from '../../app/routes/ProNavigator';
+import { ProNavigator, ProRoutes } from '../../../app/routes/ProNavigator';
 import { useProfessionalJobsScreen, useProfessionalJobActions } from '../../hooks/useProfessional';
 
 type ProJobsScreenNavigationProp = NativeStackNavigationProp<ProStackParamList, 'Jobs'>;
