@@ -70,18 +70,49 @@ const HomeScreen = () => {
     loadHomeData();
   };
 
-  // Format offers for carousel
+  // Helper to extract a usable image URL from various offer shapes
+  const extractOfferImage = (offer: any): string | undefined => {
+    if (!offer) return undefined;
+
+    // If image is a plain string URL
+    if (typeof offer.image === 'string' && offer.image.trim() !== '') return offer.image;
+
+    // If image is an object with a common 'url' or 'uri' property
+    if (offer.image && typeof offer.image === 'object') {
+      if (typeof offer.image.url === 'string' && offer.image.url.trim() !== '') return offer.image.url;
+      if (typeof offer.image.uri === 'string' && offer.image.uri.trim() !== '') return offer.image.uri;
+      // Some responses might nest image under 'image.data' or similar
+      if (offer.image.data && typeof offer.image.data === 'object') {
+        if (typeof offer.image.data.url === 'string') return offer.image.data.url;
+        if (typeof offer.image.data.uri === 'string') return offer.image.data.uri;
+      }
+    }
+
+    // Fallbacks - some APIs return 'banner' or 'imageUrl' or nested data
+    if (typeof offer.banner === 'string' && offer.banner.trim() !== '') return offer.banner;
+    if (typeof offer.imageUrl === 'string' && offer.imageUrl.trim() !== '') return offer.imageUrl;
+    if (offer.data && typeof offer.data === 'object') {
+      if (typeof offer.data.image === 'string') return offer.data.image;
+      if (offer.data.image && typeof offer.data.image === 'object') {
+        if (typeof offer.data.image.url === 'string') return offer.data.image.url;
+      }
+    }
+
+    return undefined;
+  };
+
+  // Format offers for carousel (normalize image into a string URL)
   const carouselOffers = (activeOffersData || []).map((offer: any) => ({
     id: offer._id || offer.id,
     title: offer.title,
     description: offer.description,
-    image: offer.image || offer.banner,
-    discountPercentage: offer.discountValue,
-    validUntil: offer.validUntil,
-    onPress: () => navigation.navigate('ServiceDetails', { 
+    image: extractOfferImage(offer),
+    discountPercentage: offer.discountValue ?? offer.discount ?? offer.value,
+    validUntil: offer.validUntil ?? offer.valid_until ?? offer.validTo,
+    onPress: () => navigation.navigate('ServiceDetails', ({ 
       serviceId: offer.applicableServices?.[0] || offer.id,
       service: offer 
-    })
+    } as any))
   }));
 
   const servicesToShow = Array.isArray(popularServicesData)
