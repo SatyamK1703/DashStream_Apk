@@ -47,6 +47,7 @@ export interface Service {
   category: string;
   subCategory?: string;
   basePrice: number;
+  price?: number; // Alias for basePrice, some APIs return this
   duration: number; // in minutes
   isActive: boolean;
   images: {
@@ -81,18 +82,22 @@ export interface Booking {
   bookingId: string;
   customer: User;
   professional?: Professional;
-  service: Service;
+  service?: Service;
   vehicle?: Vehicle;
-  address: Address;
+  address?: Address;
   scheduledDate: string;
   scheduledTime: string;
   status: 'pending' | 'confirmed' | 'in-progress' | 'completed' | 'cancelled';
   totalAmount: number;
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  price?: number;
+  paymentStatus?: 'pending' | 'paid' | 'failed' | 'refunded';
   paymentMethod?: string;
   notes?: string;
   otp?: string;
-  rating?: number;
+  rating?: {
+    rating: number;
+    review: string;
+  };
   review?: string;
   cancellationReason?: string;
   createdAt: string;

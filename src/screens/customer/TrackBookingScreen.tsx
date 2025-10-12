@@ -254,15 +254,11 @@ const TrackBookingScreen = () => {
     }
   };
 
-  // Setup the booking cancellation API with improved error handling
+  // Setup the booking cancellation API
   const cancelBookingApi = useApi(
-    (id: string) => bookingService.cancelBooking(id),
+    (id: string, reason?: string) => bookingService.cancelBooking(id, reason),
     {
-      showErrorAlert: false, // We'll handle errors manually for better UX
-      retries: 2, // Increase retry attempts for better reliability
-      retryDelay: 1500, // Slightly longer delay between retries
       onSuccess: () => {
-        // Dismiss any loading alerts that might be showing
         Alert.alert(
           'Success', 
           'Your booking has been cancelled successfully.',
@@ -276,10 +272,6 @@ const TrackBookingScreen = () => {
             }
           ]
         );
-      },
-      onError: (error) => {
-        console.error('Cancel booking error details:', error);
-        // Error will be handled in the catch block of handleCancelBooking
       }
     }
   );
@@ -295,95 +287,21 @@ const TrackBookingScreen = () => {
           style: 'destructive', 
           onPress: async () => {
             try {
-              // Show loading state directly in the UI
               setState(prev => ({ ...prev, isLoading: true }));
-              
-              console.log('Attempting to cancel booking:', bookingId);
-              
-              // First attempt with standard endpoint through useApi hook
-              try {
-                await cancelBookingApi.execute(bookingId);
-                console.log('Booking cancelled successfully through useApi');
-                // Success will be handled by the onSuccess callback
-              } catch (firstError) {
-                console.error('First cancellation attempt failed:', firstError);
-                
-                // If first attempt fails, try a direct manual approach as fallback
-                try {
-                  // Show a message to the user that we're trying an alternative method
-                  console.log('Trying alternative cancellation method...');
-                  
-                  // Manual fallback with direct API call
-                  const result = await bookingService.cancelBooking(bookingId);
-                  console.log('Booking cancelled with fallback method:', result);
-                  
-                  // Handle success manually since we're bypassing the useApi hook
-                  Alert.alert(
-                    'Success', 
-                    'Your booking has been cancelled successfully.',
-                    [
-                      { 
-                        text: 'OK', 
-                        onPress: () => {
-                          // Refresh booking data before navigating back
-                          refreshBookingData();
-                          navigation.navigate('CustomerTabs', { screen: 'Bookings' });
-                        }
-                      }
-                    ]
-                  );
-                } catch (secondError) {
-                  console.error('Both cancellation attempts failed:', secondError);
-                  
-                  // Try one last attempt with a different URL format
-                  try {
-                    console.log('Attempting final cancellation method with direct URL...');
-                    
-                    // Create a direct API call with a manually constructed URL
-                    // This is a last resort attempt
-                    const apiUrl = `bookings/${bookingId}/cancel`;
-                    const result = await httpClient.patch(apiUrl, { reason: 'Customer cancelled' });
-                    
-                    console.log('Booking cancelled with final method:', result);
-                    Alert.alert(
-                      'Success', 
-                      'Your booking has been cancelled successfully.',
-                      [
-                        { 
-                          text: 'OK', 
-                          onPress: () => {
-                            navigation.navigate('CustomerTabs', { screen: 'Bookings' });
-                          }
-                        }
-                      ]
-                    );
-                  } catch (finalError) {
-                    console.error('All cancellation attempts failed:', finalError);
-                    throw finalError; // Re-throw to be caught by outer catch
-                  }
-                }
-              }
+              await cancelBookingApi.execute(bookingId, 'Customer cancelled');
             } catch (error: any) {
-              // Handle all errors here
-              console.error('Failed to cancel booking after all attempts:', error);
-              
-              // Extract more detailed error information if available
+              console.error('Failed to cancel booking:', error);
               const errorMessage = error?.response?.data?.message || 
                                   error?.data?.message || 
                                   error?.message || 
-                                  'Unknown error occurred';
-              
-              const statusCode = error?.response?.status || error?.statusCode || 'Unknown';
-              
-              console.error(`Cancellation error details: ${statusCode} - ${errorMessage}`);
+                                  'Unable to cancel booking';
               
               Alert.alert(
                 'Cancellation Failed', 
-                `We were unable to cancel your booking (Error: ${statusCode}). Please try again or contact support.`,
+                errorMessage,
                 [{ text: 'OK' }]
               );
             } finally {
-              // Ensure loading state is reset
               setState(prev => ({ ...prev, isLoading: false }));
             }
           }

@@ -144,20 +144,22 @@ const OrderDetailsScreen = () => {
         )}
 
         {/* Service Details */}
-        <View style={[styles.section, styles.sectionDivider]}>
-          <Text style={styles.sectionTitle}>Service Details</Text>
-          <View style={styles.card}>
-            <View style={styles.serviceRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.serviceName}>{order.service.name}</Text>
-                {order.service.description ? (
-                  <Text style={styles.serviceDesc}>{order.service.description}</Text>
-                ) : null}
+        {order.service && (
+          <View style={[styles.section, styles.sectionDivider]}>
+            <Text style={styles.sectionTitle}>Service Details</Text>
+            <View style={styles.card}>
+              <View style={styles.serviceRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.serviceName}>{order.service.name}</Text>
+                  {order.service.description ? (
+                    <Text style={styles.serviceDesc}>{order.service.description}</Text>
+                  ) : null}
+                </View>
+                <Text style={styles.servicePrice}>₹{order.service.basePrice || order.service.price || 0}</Text>
               </View>
-              <Text style={styles.servicePrice}>₹{order.service.price}</Text>
             </View>
           </View>
-        </View>
+        )}
 
         {/* Booking Details */}
         <View style={[styles.section, styles.sectionDivider]}>
@@ -167,10 +169,12 @@ const OrderDetailsScreen = () => {
               <Text style={styles.muted}>Date & Time</Text>
               <Text style={styles.semibold}>{new Date(order.scheduledDate).toDateString()}, {order.scheduledTime}</Text>
             </View>
-            <View style={styles.rowAddress}>
-              <Text style={[styles.muted, { width: 96 }]}>Address</Text>
-              <Text style={[styles.semibold, styles.addressValue]}>{`${order.address.addressLine1}, ${order.address.city}`}</Text>
-            </View>
+            {order.address && (
+              <View style={styles.rowAddress}>
+                <Text style={[styles.muted, { width: 96 }]}>Address</Text>
+                <Text style={[styles.semibold, styles.addressValue]}>{`${order.address.addressLine1}, ${order.address.city}`}</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -180,13 +184,15 @@ const OrderDetailsScreen = () => {
             <Text style={styles.sectionTitle}>Payment Summary</Text>
             <View style={styles.paidBadgeRow}>
               <View style={styles.paidDot} />
-              <Text style={styles.paidText}>Paid</Text>
+              <Text style={styles.paidText}>{order.paymentStatus === 'paid' ? 'Paid' : order.paymentStatus || 'Pending'}</Text>
             </View>
           </View>
           <View style={styles.card}>
-            <View style={styles.rowBetween}><Text style={styles.muted}>Subtotal</Text><Text style={styles.semibold}>₹{order.price.toFixed(2)}</Text></View>
-            <View style={styles.totalRow}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalLabel}>₹{order.totalAmount.toFixed(2)}</Text></View>
-            <View style={styles.rowBetween}><Text style={styles.muted}>Payment Method</Text><Text style={styles.semibold}>{order.paymentMethod}</Text></View>
+            <View style={styles.rowBetween}><Text style={styles.muted}>Subtotal</Text><Text style={styles.semibold}>₹{(order.price || order.totalAmount || 0).toFixed(2)}</Text></View>
+            <View style={styles.totalRow}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalLabel}>₹{(order.totalAmount || 0).toFixed(2)}</Text></View>
+            {order.paymentMethod && (
+              <View style={styles.rowBetween}><Text style={styles.muted}>Payment Method</Text><Text style={styles.semibold}>{order.paymentMethod}</Text></View>
+            )}
           </View>
         </View>
 
