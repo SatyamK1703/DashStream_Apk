@@ -57,7 +57,7 @@ interface OfferStatsData {
     usageCount: number;
   };
   usageHistory: OfferUsage[];
-  topUsers: Array<{
+  topUsers: {
     user: {
       _id: string;
       phone: string;
@@ -65,7 +65,7 @@ interface OfferStatsData {
     };
     usageCount: number;
     totalSavings: number;
-  }>;
+  }[];
   totalRevenue: number;
   totalSavings: number;
 }

@@ -125,14 +125,14 @@ class MembershipService {
     endDate?: string;
     page?: number;
     limit?: number;
-  }): Promise<ApiResponse<Array<{
+  }): Promise<ApiResponse<{
     id: string;
     booking: string;
     service: string;
     discountApplied: number;
     savings: number;
     usedAt: string;
-  }>>> {
+  }[]>> {
     try {
       return await httpClient.get('/memberships/usage-history', { params });
     } catch (error) {

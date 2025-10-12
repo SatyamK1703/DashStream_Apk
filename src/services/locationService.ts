@@ -108,13 +108,13 @@ class LocationService {
       value: number; // in seconds
     };
     polyline: string;
-    steps: Array<{
+    steps: {
       instruction: string;
       distance: { text: string; value: number };
       duration: { text: string; value: number };
       startLocation: LocationCoordinates;
       endLocation: LocationCoordinates;
-    }>;
+    }[];
   }>> {
     try {
       return await httpClient.post('/locations/calculate-route', data);
@@ -127,14 +127,14 @@ class LocationService {
   /**
    * Get service areas (for professionals)
    */
-  async getServiceAreas(location: LocationCoordinates): Promise<ApiResponse<Array<{
+  async getServiceAreas(location: LocationCoordinates): Promise<ApiResponse<{
     city: string;
     area: string;
     pincode: string;
     coordinates: LocationCoordinates;
     serviceAvailable: boolean;
     estimatedTime: string;
-  }>>> {
+  }[]>> {
     try {
       return await httpClient.get('/locations/service-areas', { 
         params: location 
@@ -166,13 +166,13 @@ class LocationService {
   /**
    * Get popular locations in a city
    */
-  async getPopularLocations(city: string): Promise<ApiResponse<Array<{
+  async getPopularLocations(city: string): Promise<ApiResponse<{
     name: string;
     address: string;
     coordinates: LocationCoordinates;
     type: 'residential' | 'commercial' | 'landmark';
     bookingsCount: number;
-  }>>> {
+  }[]>> {
     try {
       return await httpClient.get('/locations/popular', { 
         params: { city } 
@@ -203,7 +203,7 @@ class LocationService {
   /**
    * Get user's favorite locations
    */
-  async getFavoriteLocations(): Promise<ApiResponse<Array<{
+  async getFavoriteLocations(): Promise<ApiResponse<{
     id: string;
     name: string;
     address: string;
@@ -211,7 +211,7 @@ class LocationService {
     type: 'home' | 'work' | 'other';
     usageCount: number;
     createdAt: string;
-  }>>> {
+  }[]>> {
     try {
       return await httpClient.get('/locations/favorites');
     } catch (error) {

@@ -106,11 +106,11 @@ class BookingService {
     location?: { latitude: number; longitude: number };
     estimatedArrival?: string;
     professionalLocation?: { latitude: number; longitude: number };
-    timeline: Array<{
+    timeline: {
       status: string;
       timestamp: string;
       description: string;
-    }>;
+    }[];
   }>> {
     try {
       return await httpClient.get(`${API_ENDPOINTS.BOOKINGS.BY_ID(bookingId)}/tracking`);
@@ -141,11 +141,11 @@ class BookingService {
     location?: { latitude: number; longitude: number };
   }): Promise<ApiResponse<{
     date: string;
-    slots: Array<{
+    slots: {
       time: string;
       available: boolean;
       professionalCount: number;
-    }>;
+    }[];
   }>> {
     try {
       return await httpClient.get('/bookings/available-slots', { params });
@@ -172,10 +172,10 @@ class BookingService {
     promoDiscount: number;
     taxes: number;
     totalPrice: number;
-    breakdown: Array<{
+    breakdown: {
       item: string;
       price: number;
-    }>;
+    }[];
   }>> {
     try {
       return await httpClient.post('/bookings/calculate-price', params);

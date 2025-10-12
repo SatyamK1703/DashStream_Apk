@@ -1,7 +1,4 @@
 // API Services - Production Ready
-export { default as httpClient } from './httpClient';
-export type { ApiResponse, ApiError } from './httpClient';
-
 // Import services first
 import { authService as _authService } from './authService';
 import { userService as _userService } from './userService';
@@ -16,6 +13,9 @@ import { locationService as _locationService } from './locationService';
 import { adminService as _adminService } from './adminService';
 import { professionalService as _professionalService } from './professionalService';
 import { addressService as _addressService } from './addressService';
+
+export { default as httpClient } from './httpClient';
+export type { ApiResponse, ApiError } from './httpClient';
 
 // Then export them
 export const authService = _authService;

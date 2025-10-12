@@ -25,13 +25,13 @@ export interface JobDetails {
     email: string;
     image: string;
   };
-  service: Array<{
+  service: {
     id: string;
     title: string;
     description: string;
     price: number;
     duration: number;
-  }>;
+  }[];
   scheduledDate: string;
   scheduledTime: string;
   address: {
@@ -82,12 +82,12 @@ export interface DashboardStats {
     total: number;
     currency: string;
   };
-  todayJobs: Array<{
+  todayJobs: {
     id: string;
     time: string;
     status: string;
     address: string;
-  }>;
+  }[];
 }
 
 export interface UpdateJobStatusData {

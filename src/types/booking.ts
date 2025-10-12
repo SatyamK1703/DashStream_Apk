@@ -34,11 +34,11 @@ export interface Booking {
 
   // Additional details
   specialInstructions?: string;
-  selectedOptions?: Array<{
+  selectedOptions?: {
     id: string;
     name: string;
     price: number;
-  }>;
+  }[];
 
   // Payment information
   paymentMethod?: string;

@@ -11,11 +11,11 @@ export interface Notification {
   readAt?: string;
   
   // Action buttons (optional)
-  actions?: Array<{
+  actions?: {
     id: string;
     title: string;
     action: string;
-  }>;
+  }[];
   
   // Associated entities
   bookingId?: string;
