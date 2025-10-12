@@ -190,9 +190,14 @@ const BookingConfirmationScreen = () => {
   }
 
   // Handle different service data structures
-  const service = booking.service || (booking.services && booking.services.length > 0 ? booking.services[0] : null);
+  const services = booking.services || (booking.service ? [booking.service] : []);
   const address = booking.address || booking.location;
-  const serviceImages = service && service.images && service.images.length > 0;
+
+  // Calculate subtotal from services array
+  const subtotal = services.reduce((acc, service) => {
+    const price = service?.basePrice || service?.price || service?.serviceId?.price || 0;
+    return acc + price;
+  }, 0);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -293,49 +298,27 @@ const BookingConfirmationScreen = () => {
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Service Booked</Text>
-
-              <View style={styles.serviceRow}>
-                {serviceImages ? (
-                  <Image
-                    source={{ uri: service.images[0].url }}
-                    style={styles.serviceImage}
-                    resizeMode="cover"
-                    onError={() => {
-                      // If image fails to load, show placeholder
-                    }}
-                  />
-                ) : (
-                  <View style={styles.serviceImagePlaceholder}>
-                    <Ionicons name="car-outline" size={32} color="#666" />
-                  </View>
-                )}
-                <View style={styles.serviceInfo}>
-                  <Text style={styles.serviceTitle}>
-                    {service?.name || service?.title || service?.serviceId?.title || 'Service'}
-                  </Text>
-                  <Text style={styles.serviceSubtitle}>
-                    1 x ₹{service?.basePrice || service?.price || service?.serviceId?.price || booking.totalAmount || 0}
-                  </Text>
-                </View>
-                <Text style={styles.value}>
-                  ₹{service?.basePrice || service?.price || service?.serviceId?.price || booking.totalAmount || 0}
-                </Text>
-              </View>
+              <Text style={styles.sectionTitle}>Services Booked</Text>
+              {services.map((service, index) => (
+                <ServiceBooked key={service._id || index} service={service} />
+              ))}
             </View>
 
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Payment Summary</Text>
               <View style={styles.summaryRow}>
-                <Text style={styles.label}>Service Amount</Text>
-                <Text style={styles.value}>
-                  ₹{service?.basePrice || service?.price || service?.serviceId?.price || booking.totalAmount || booking.price || 0}
-                </Text>
+                <Text style={styles.label}>Subtotal</Text>
+                <Text style={styles.value}>₹{subtotal.toFixed(2)}</Text>
+              </View>
+              {/* Example of other fees */}
+              <View style={styles.summaryRow}>
+                <Text style={styles.label}>Taxes & Fees</Text>
+                <Text style={styles.value}>₹{(booking.totalAmount - subtotal).toFixed(2)}</Text>
               </View>
               <View style={styles.totalRow}>
                 <Text style={styles.totalText}>Total Amount</Text>
                 <Text style={[styles.totalText, { color: '#2563eb' }]}>
-                  ₹{booking.totalAmount || booking.price || (service?.basePrice || service?.price || service?.serviceId?.price) || 0}
+                  ₹{booking.totalAmount.toFixed(2)}
                 </Text>
               </View>
             </View>
@@ -378,6 +361,34 @@ const BookingConfirmationScreen = () => {
 };
 
 export default BookingConfirmationScreen;
+
+const ServiceBooked = ({ service }) => {
+  const serviceImages = service && service.images && service.images.length > 0;
+  const price = service?.basePrice || service?.price || service?.serviceId?.price || 0;
+
+  return (
+    <View style={styles.serviceRow}>
+      {serviceImages ? (
+        <Image
+          source={{ uri: service.images[0].url }}
+          style={styles.serviceImage}
+          resizeMode="cover"
+        />
+      ) : (
+        <View style={styles.serviceImagePlaceholder}>
+          <Ionicons name="car-outline" size={32} color="#666" />
+        </View>
+      )}
+      <View style={styles.serviceInfo}>
+        <Text style={styles.serviceTitle}>
+          {service?.name || service?.title || service?.serviceId?.title || 'Service'}
+        </Text>
+        <Text style={styles.serviceSubtitle}>1 x ₹{price.toFixed(2)}</Text>
+      </View>
+      <Text style={styles.value}>₹{price.toFixed(2)}</Text>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   safeArea: {
