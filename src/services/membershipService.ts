@@ -34,6 +34,7 @@ class MembershipService {
     orderId: string;
     amount: number;
     currency: string;
+    paymentLink?: string;
   }>> {
     try {
       return await httpClient.post(API_ENDPOINTS.MEMBERSHIPS.PURCHASE, data);

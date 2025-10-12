@@ -56,7 +56,7 @@ const MembershipScreen = () => {
 
     try {
       const order = await purchaseMembership(selectedPlan.id, selectedPlan.price);
-      const { id: order_id, amount, currency } = order;
+      const { id: order_id, amount, currency, paymentLink } = order;
 
       const options = {
         description: `${selectedPlan.name} Membership`,
@@ -74,31 +74,37 @@ const MembershipScreen = () => {
         theme: { color: '#2563eb' }
       };
 
-      const paymentLink = `https://api.razorpay.com/v1/checkout/public?key_id=${config.RAZORPAY_KEY_ID}&amount=${amount}&currency=${currency}&order_id=${order_id}`;
 
-      let browserResult;
-      try {
-        browserResult = await WebBrowser.openBrowserAsync(paymentLink);
-        // After the user potentially completes payment in the browser,
-        // we should refetch their membership status.
-        // In a real app, you might want to use AppState or a deep link
-        // to detect when the user returns from the browser.
-        // For now, we'll just show an alert and refetch.
-        Alert.alert(
-          'Payment Initiated',
-          'Please complete your payment in the browser. Once done, return to the app to see your updated membership status.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                fetchUserMembership(); // Refresh membership status
+
+      if (paymentLink) {
+        // Use WebBrowser if paymentLink is provided by the backend
+        let browserResult;
+        try {
+          browserResult = await WebBrowser.openBrowserAsync(paymentLink);
+          Alert.alert(
+            'Payment Initiated',
+            'Please complete your payment in the browser. Once done, return to the app to see your updated membership status.',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  fetchUserMembership(); // Refresh membership status
+                }
               }
-            }
-          ]
+            ]
+          );
+        } catch (browserError) {
+          console.error('WebBrowser failed to open:', browserError);
+          Alert.alert('Error', 'Could not open payment page in browser. Please try again.');
+        }
+      } else {
+        // Fallback to RazorpayCheckout if no paymentLink, but it's currently failing
+        // This block will now explicitly tell the user about the missing paymentLink
+        console.error('Backend did not provide a paymentLink. RazorpayCheckout.open is also failing.');
+        Alert.alert(
+          'Payment Error',
+          'Could not initiate payment. The backend did not provide a payment link, and the native Razorpay integration is not working. Please contact support.'
         );
-      } catch (browserError) {
-        console.error('WebBrowser failed to open:', browserError);
-        Alert.alert('Error', 'Could not open payment page in browser. Please try again.');
       }
 
     } catch (error) {
