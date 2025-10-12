@@ -35,7 +35,7 @@ const OtpVerificationScreen = () => {
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const inputRefs = useRef<Array<TextInput | null>>(Array(OTP_LENGTH).fill(null));
+  const inputRefs = useRef<(TextInput | null)[]>(Array(OTP_LENGTH).fill(null));
 
   const navigation = useNavigation<OtpVerificationNavigationProp>();
   const route = useRoute<OtpVerificationRouteProp>();

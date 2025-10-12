@@ -11,8 +11,7 @@ import {
   Image,
   StyleSheet,
   Platform
-} from 'react-native';
-import { KeyboardAvoidingView } from 'react-native';
+, KeyboardAvoidingView } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';

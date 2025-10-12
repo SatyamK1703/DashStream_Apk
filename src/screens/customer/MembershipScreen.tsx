@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,168 +10,99 @@ import {
   StyleSheet,
   StatusBar
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
+
 import { useAuth } from '../../store';
 import FAQList from '~/components/faq/FAQList';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { API_ENDPOINTS, config } from '../../config/config';
+import api from '../../services/httpClient';
+import RazorpayCheckout from 'react-native-razorpay';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 
-type MembershipScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
-
-interface MembershipPlan {
-  id: string;
-  name: string;
-  price: number;
-  duration: string;
-  features: string[];
-  popular: boolean;
-}
+import { useMembershipStore } from '../../store/membershipStore';
 
 const MembershipScreen = () => {
   const navigation = useNavigation<MembershipScreenNavigationProp>();
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const { user, profile } = useAuth();
+  const {
+    plans,
+    userMembership,
+    loading,
+    fetchPlans,
+    fetchUserMembership,
+    purchaseMembership,
+  } = useMembershipStore();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<MembershipPlan | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // Mock user membership status
-  const [userMembership, setUserMembership] = useState({
-    active: true,
-    plan: 'Silver',
-    validUntil: '2023-12-31',
-    autoRenew: true,
-    usedServices: 3,
-    totalServices: 5,
-    savings: 1250
-  });
-
-  const membershipPlans: MembershipPlan[] = [
-    {
-      id: 'silver',
-      name: 'Silver',
-      price: 499, // Update if you have another price
-      duration: '1 month',
-      features: [
-        '4 washes/month (once a week)',
-        'Exterior wash with eco-friendly shampoo',
-        'Tyre cleaning & air check',
-        'Quick service – ideal for busy customers needing basic upkeep.'
-      ],
-      popular: true
-    },
-    {
-      id: 'gold',
-      name: 'Gold',
-      price: 999, // Update if you have another price
-      duration: '1 month',
-      features: [
-        '8 washes/month (twice a week)',
-        'Exterior wash + basic interior vacuuming',
-        'Premium shampoo & waxing once a month',
-        'Dashboard, windows & mirrors cleaning',
-        'Tyre polishing for a refined look.'
-      ],
-      popular: false
-    },
-    {
-      id: 'platinum',
-      name: 'Platinum',
-      price: 1499, // Update if you have another price
-      duration: '1 month',
-      features: [
-        '12 washes/month (three times a week) or priority on-demand visits',
-        'Full exterior + deep interior cleaning',
-        'Wax coating & paint protection twice a month',
-        'Vacuuming of seats, carpets & mats',
-        'Engine bay dust cleaning',
-        '1 complimentary full detailing session each month.'
-      ],
-      popular: false
-    }
-  ];
+  useEffect(() => {
+    fetchPlans();
+    fetchUserMembership();
+  }, [fetchPlans, fetchUserMembership]);
 
   const handleSelectPlan = (plan: MembershipPlan) => {
     setSelectedPlan(plan);
     setShowConfirmModal(true);
   };
 
-  const handlePurchasePlan = () => {
+  const handlePurchasePlan = async () => {
     if (!selectedPlan) return;
 
     setShowConfirmModal(false);
-    setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setUserMembership({
-        active: true,
-        plan: selectedPlan.name,
-        validUntil: '2024-06-30', // 6 months from now
-        autoRenew: true,
-        usedServices: 0,
-        totalServices: selectedPlan.name === 'Platinum' ? Infinity : (selectedPlan.name === 'Gold' ? 24 : (selectedPlan.name === 'Silver' ? 12 : 5)),
-        savings: 0
+    try {
+      const order = await purchaseMembership(selectedPlan.id, selectedPlan.price);
+      const { id: order_id, amount, currency } = order;
+
+      const options = {
+        description: `${selectedPlan.name} Membership`,
+        image: 'https://your-logo.com/logo.png', // Replace with your logo
+        currency,
+        key: config.RAZORPAY_KEY_ID,
+        amount,
+        name: 'DashStream',
+        order_id,
+        prefill: {
+          email: profile?.email || '',
+          contact: profile?.phone || '',
+          name: profile?.name || ''
+        },
+        theme: { color: '#2563eb' }
+      };
+
+      RazorpayCheckout.open(options).then(async (data) => {
+        const verificationPayload = {
+          razorpay_order_id: order_id,
+          razorpay_payment_id: data.razorpay_payment_id,
+          razorpay_signature: data.razorpay_signature,
+          planId: selectedPlan.id
+        };
+
+        await api.post(API_ENDPOINTS.MEMBERSHIPS.VERIFY_PAYMENT, verificationPayload);
+
+        fetchUserMembership();
+
+        Alert.alert('Membership Activated', `Your ${selectedPlan.name} membership has been successfully activated!`);
+
+      }).catch(error => {
+        Alert.alert('Payment Failed', error.description || 'An error occurred during payment.');
       });
-      setLoading(false);
-      Alert.alert(
-        'Membership Activated',
-        `Your ${selectedPlan.name} membership has been successfully activated!`,
-        [{ text: 'OK' }]
-      );
-    }, 2000);
+
+    } catch (error) {
+      console.error('Error purchasing membership:', error);
+      Alert.alert('Error', 'Could not complete purchase. Please try again.');
+    }
   };
 
-  const toggleAutoRenew = () => {
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setUserMembership(prev => ({
-        ...prev,
-        autoRenew: !prev.autoRenew
-      }));
-      setLoading(false);
-      Alert.alert(
-        userMembership.autoRenew ? 'Auto-Renewal Disabled' : 'Auto-Renewal Enabled',
-        userMembership.autoRenew
-          ? 'Your membership will not renew automatically when it expires.'
-          : 'Your membership will renew automatically when it expires.',
-        [{ text: 'OK' }]
-      );
-    }, 1000);
+    const toggleAutoRenew = () => {
+    // Implement toggleAutoRenew using the store
   };
 
   const cancelMembership = () => {
-    Alert.alert(
-      'Cancel Membership',
-      'Are you sure you want to cancel your membership? You will still have access until the end of your current billing period.',
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: () => {
-            setLoading(true);
-            // Simulate API call
-            setTimeout(() => {
-              setUserMembership(prev => ({
-                ...prev,
-                active: false
-              }));
-              setLoading(false);
-              Alert.alert(
-                'Membership Cancelled',
-                'Your membership has been cancelled. You will have access until the end of your current billing period.',
-                [{ text: 'OK' }]
-              );
-            }, 1500);
-          }
-        }
-      ]
-    );
+    // Implement cancelMembership using the store
   };
 
   const renderMembershipCard = () => (
@@ -353,7 +284,7 @@ const MembershipScreen = () => {
       ) : (
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Current Membership Card */}
-          {userMembership.active && renderMembershipCard()}
+          {userMembership && userMembership.active && renderMembershipCard()}
 
           {/* Membership Benefits */}
           <View style={styles.benefitsContainer}>
@@ -402,10 +333,10 @@ const MembershipScreen = () => {
 
           {/* Available Plans */}
           <Text style={styles.sectionTitle}>
-            {userMembership.active ? 'Upgrade Your Plan' : 'Choose a Plan'}
+            {userMembership && userMembership.active ? 'Upgrade Your Plan' : 'Choose a Plan'}
           </Text>
 
-          {membershipPlans.map(renderPlanCard)}
+          {plans.map(renderPlanCard)}
 
           {/* FAQ Section */}
           <View style={styles.faqContainer}>

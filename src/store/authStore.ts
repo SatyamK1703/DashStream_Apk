@@ -24,7 +24,7 @@ interface AuthState {
   isBooting: boolean;
   isAuthenticated: boolean;
   isGuest: boolean;
-  
+
   // Actions
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
@@ -60,14 +60,14 @@ export const useAuthStore = create<AuthState>()(
         isGuest: false,
 
         // Actions
-        setUser: (user) => set({ 
-          user, 
+        setUser: (user) => set({
+          user,
           isAuthenticated: !!user && !user.isGuest,
-          isGuest: !!user?.isGuest 
+          isGuest: !!user?.isGuest
         }),
 
         setLoading: (isLoading) => set({ isLoading }),
-        
+
         setBooting: (isBooting) => set({ isBooting }),
 
         login: async (phone: string) => {
@@ -97,11 +97,11 @@ export const useAuthStore = create<AuthState>()(
 
             if (isSuccess && response.data?.user) {
               const appUser = convertApiUserToAppUser(response.data.user);
-              set({ 
+              set({
                 user: appUser,
                 isAuthenticated: !appUser.isGuest,
                 isGuest: !!appUser.isGuest,
-                isLoading: false 
+                isLoading: false
               });
               if (__DEV__) console.log('✅ OTP verified and user authenticated');
               return true;
@@ -120,20 +120,20 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true });
           try {
             await authService.logout();
-            set({ 
-              user: null, 
-              isAuthenticated: false, 
-              isGuest: false, 
-              isLoading: false 
+            set({
+              user: null,
+              isAuthenticated: false,
+              isGuest: false,
+              isLoading: false
             });
           } catch (error) {
             if (__DEV__) console.error('Logout error:', error);
             // Force logout even if service call fails
-            set({ 
-              user: null, 
-              isAuthenticated: false, 
-              isGuest: false, 
-              isLoading: false 
+            set({
+              user: null,
+              isAuthenticated: false,
+              isGuest: false,
+              isLoading: false
             });
           }
         },
@@ -145,7 +145,7 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true });
           try {
             // Handle profile image upload if provided
-            const isLocalImage = 
+            const isLocalImage =
               typeof userData.profileImage === 'string' &&
               !userData.profileImage.startsWith('http');
 
@@ -181,7 +181,7 @@ export const useAuthStore = create<AuthState>()(
                 email: userData.email,
               });
 
-              if (response && response.success && response.data) {
+              if (response && (response.success === true || response.status === 'success') && response.data) {
                 const updatedUser = convertApiUserToAppUser(response.data);
                 set({ user: updatedUser, isLoading: false });
               } else {
@@ -198,38 +198,38 @@ export const useAuthStore = create<AuthState>()(
         refreshUser: async () => {
           try {
             if (__DEV__) console.log('🔄 Refreshing user data...');
-            
+
             // Add a small delay to ensure any token refresh operations are complete
             await new Promise(resolve => setTimeout(resolve, 100));
-            
+
             const response = await authService.getCurrentUser();
             const isSuccess = response.success === true || response.status === 'success';
-            
+
             if (isSuccess && response.data?.user) {
               const appUser = convertApiUserToAppUser(response.data.user);
               set({ user: appUser });
               if (__DEV__) console.log('✅ User data refreshed successfully:', appUser.name);
             } else {
               if (__DEV__) console.warn('⚠️ Refresh user failed: Invalid response data');
-              
+
               // If the response indicates success but data is undefined/invalid,
               // it might be a token issue - clear tokens and force re-authentication
               if (isSuccess && !response.data?.user) {
                 if (__DEV__) console.log('🔄 Success response but no user data during refresh - clearing tokens');
                 await authService.logout();
               }
-              
+
               // Check if we still have valid tokens
               const hasTokens = await authService.isAuthenticated();
               if (!hasTokens && __DEV__) {
                 console.log('🚪 No valid tokens found, logging out user');
               }
-              
+
               set({ user: null, isAuthenticated: false, isGuest: false });
             }
           } catch (error: any) {
             if (__DEV__) console.error('❌ Refresh user error:', error);
-            
+
             // If there's an authentication error, clear the user and tokens
             if (error?.statusCode === 401) {
               if (__DEV__) console.log('🚪 Authentication error during refresh, clearing user and tokens');
@@ -280,10 +280,10 @@ export const useAuthStore = create<AuthState>()(
                 // If tokens exist, fetch current user
                 const response = await authService.getCurrentUser();
                 const isSuccess = response.success === true || response.status === 'success';
-                
+
                 if (isSuccess && response.data?.user) {
                   const appUser = convertApiUserToAppUser(response.data.user);
-                  set({ 
+                  set({
                     user: appUser,
                     isAuthenticated: !appUser.isGuest,
                     isGuest: !!appUser.isGuest
@@ -405,10 +405,10 @@ export const useAuthStore = create<AuthState>()(
       {
         name: 'auth-storage',
         storage: createJSONStorage(() => AsyncStorage),
-        partialize: (state) => ({ 
+        partialize: (state) => ({
           user: state.user,
           isAuthenticated: state.isAuthenticated,
-          isGuest: state.isGuest 
+          isGuest: state.isGuest
         }),
       }
     ),

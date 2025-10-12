@@ -37,11 +37,11 @@ interface Job {
   totalAmount: number;
   status: 'pending' | 'accepted' | 'ongoing' | 'completed' | 'cancelled';
   paymentStatus: 'paid' | 'pending';
-  services: Array<{
+  services: {
     id: string;
     name: string;
     price: number;
-  }>;
+  }[];
   distance?: string;
 }
 

@@ -66,7 +66,7 @@ const ProfileScreen = () => {
       }
     })();
   }, []); // ✅ Empty dependency array - run only on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
 
   // Show alert if profile loading produced an error
   useEffect(() => {

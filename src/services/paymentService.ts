@@ -9,7 +9,7 @@ class PaymentService {
   async getAvailablePaymentMethods(params?: {
     serviceIds?: string[];
     orderValue?: number;
-  }): Promise<ApiResponse<Array<{
+  }): Promise<ApiResponse<{
     id: string;
     type: string;
     name: string;
@@ -27,7 +27,7 @@ class PaymentService {
       collectBeforeService?: boolean;
       allowPartialPayment?: boolean;
     };
-  }>>> {
+  }[]>> {
     try {
       return await httpClient.get('/payment-methods', { params });
     } catch (error) {
@@ -145,7 +145,7 @@ class PaymentService {
   /**
    * Get user's saved payment methods (user's cards/UPI saved in account)
    */
-  async getPaymentMethods(): Promise<ApiResponse<Array<{
+  async getPaymentMethods(): Promise<ApiResponse<{
     id: string;
     type: 'card' | 'upi';
     last4?: string;
@@ -155,7 +155,7 @@ class PaymentService {
     upiId?: string;
     isDefault: boolean;
     createdAt: string;
-  }>>> {
+  }[]>> {
     try {
       return await httpClient.get(API_ENDPOINTS.PAYMENTS.PAYMENT_METHODS);
     } catch (error) {
@@ -240,17 +240,17 @@ class PaymentService {
    * Get payment details by ID
    */
   async getPaymentDetails(paymentId: string): Promise<ApiResponse<Payment & {
-    breakdown: Array<{
+    breakdown: {
       description: string;
       amount: number;
-    }>;
-    refunds: Array<{
+    }[];
+    refunds: {
       id: string;
       amount: number;
       status: string;
       reason: string;
       createdAt: string;
-    }>;
+    }[];
   }>> {
     try {
       return await httpClient.get(`/payments/${paymentId}`);

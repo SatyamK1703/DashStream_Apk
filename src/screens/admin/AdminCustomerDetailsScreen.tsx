@@ -22,8 +22,7 @@ import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
 import {Customer , Address , Vehicle ,Booking ,Note} from '../../types/AdminType';
 import { adminService } from '../../services';
 import { handleApiError } from '../../utils/errorHandler';
-import httpClient from '../../services/httpClient';
-import { ApiResponse } from '../../services/httpClient';
+import httpClient, { ApiResponse } from '../../services/httpClient';
 
 type AdminCustomerDetailsRouteProp = RouteProp<AdminStackParamList, 'CustomerDetails'>;
 type AdminCustomerDetailsNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
