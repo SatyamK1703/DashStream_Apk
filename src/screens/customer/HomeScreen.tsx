@@ -90,6 +90,14 @@ const HomeScreen = () => {
 
     // Fallbacks - some APIs return 'banner' or 'imageUrl' or nested data
     if (typeof offer.banner === 'string' && offer.banner.trim() !== '') return offer.banner;
+    if (offer.banner && typeof offer.banner === 'object') {
+      if (typeof offer.banner.url === 'string' && offer.banner.url.trim() !== '') return offer.banner.url;
+      if (typeof offer.banner.uri === 'string' && offer.banner.uri.trim() !== '') return offer.banner.uri;
+      if (offer.banner.data && typeof offer.banner.data === 'object') {
+        if (typeof offer.banner.data.url === 'string') return offer.banner.data.url;
+        if (typeof offer.banner.data.uri === 'string') return offer.banner.data.uri;
+      }
+    }
     if (typeof offer.imageUrl === 'string' && offer.imageUrl.trim() !== '') return offer.imageUrl;
     if (offer.data && typeof offer.data === 'object') {
       if (typeof offer.data.image === 'string') return offer.data.image;
