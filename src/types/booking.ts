@@ -8,31 +8,30 @@ export interface Booking {
   status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
   scheduledDateTime: string;
   completedDateTime?: string;
-  
+
   // Service details
   serviceName: string;
   serviceCategory: string;
   basePrice: number;
   totalPrice: number;
   duration: number; // in minutes
-  
+
   // Address information
   customerAddress: {
-    addressLine1: string;
-    addressLine2?: string;
+    address: string;
+    landmark?: string;
     city: string;
-    state: string;
-    postalCode: string;
+    pincode: string;
     coordinates: {
       latitude: number;
       longitude: number;
     };
   };
-  
+
   // Contact information
   customerPhone: string;
   customerName: string;
-  
+
   // Additional details
   specialInstructions?: string;
   selectedOptions?: Array<{
@@ -40,12 +39,12 @@ export interface Booking {
     name: string;
     price: number;
   }>;
-  
+
   // Payment information
   paymentMethod?: string;
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   transactionId?: string;
-  
+
   // Professional information (if assigned)
   professional?: {
     id: string;
@@ -54,14 +53,14 @@ export interface Booking {
     rating: number;
     profileImage?: string;
   };
-  
+
   // Reviews and ratings
   review?: {
     rating: number;
     comment: string;
     createdAt: string;
   };
-  
+
   // Timestamps
   createdAt: string;
   updatedAt: string;

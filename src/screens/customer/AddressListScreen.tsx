@@ -35,7 +35,7 @@ const AddressListScreen = () => {
   const handleSelect = (address: Address) => {
     // Update the checkout store with the selected address
     setSelectedAddress(address);
-    
+
     // Navigate back to checkout
     navigation.navigate('Checkout', { selectedAddressId: address._id });
   };
@@ -53,15 +53,15 @@ const AddressListScreen = () => {
       "Are you sure you want to delete this address?",
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
+        {
+          text: "Delete",
           onPress: async () => {
             const result = await deleteAddress(addressId);
             if (!result.success) {
               Alert.alert('Error', result.error || 'Failed to delete address. Please try again.');
             }
           },
-          style: "destructive" 
+          style: "destructive"
         },
       ]
     );
@@ -71,28 +71,28 @@ const AddressListScreen = () => {
     const typeValue = typeof item?.type === 'string' ? item.type : undefined;
     const formattedType = typeValue && typeValue.length > 0
       ? `${typeValue.charAt(0).toUpperCase()}${typeValue.slice(1)}`
-      : item?.title ?? 'Address';
+      : item?.name ?? 'Address';
     const iconName = typeValue === 'work' ? 'briefcase-outline' : 'home-outline';
-    const displayTitle = item?.title ?? item?.addressLine1 ?? item?.city ?? formattedType;
+    const displayTitle = item?.name ?? item?.address ?? item?.city ?? formattedType;
 
     const detailLines: string[] = [];
 
-    if (item?.addressLine1 && item.addressLine1 !== displayTitle) {
-      detailLines.push(item.addressLine1);
+    if (item?.address && item.address !== displayTitle) {
+      detailLines.push(item.address);
     }
 
-    if (item?.addressLine2) {
-      detailLines.push(item.addressLine2);
+    if (item?.landmark) {
+      detailLines.push(item.landmark);
     }
 
-    const cityParts = [item?.city, item?.state].filter(
+    const cityParts = [item?.city].filter(
       (part): part is string => typeof part === 'string' && part.trim().length > 0,
     );
 
-    if (cityParts.length > 0 || (typeof item?.postalCode === 'string' && item.postalCode.trim().length > 0)) {
+    if (cityParts.length > 0 || (typeof item?.pincode === 'string' && item.pincode.trim().length > 0)) {
       let cityLine = cityParts.join(', ');
-      if (item?.postalCode) {
-        cityLine = cityLine ? `${cityLine} - ${item.postalCode}` : item.postalCode;
+      if (item?.pincode) {
+        cityLine = cityLine ? `${cityLine} - ${item.pincode}` : item.pincode;
       }
 
       if (cityLine && cityLine !== displayTitle) {
@@ -197,8 +197,8 @@ const AddressListScreen = () => {
       )}
 
       {/* Add New Address Button */}
-      <TouchableOpacity 
-        style={styles.fab} 
+      <TouchableOpacity
+        style={styles.fab}
         onPress={() => navigation.navigate('AddAddress', {})}
       >
         <Ionicons name="add" size={32} color="#FFFFFF" />

@@ -72,28 +72,27 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, onPress }) => {
   }
 
   // Handle services array vs single service object
-  const serviceName = booking.service?.name || 
-                     (booking.services && booking.services[0]?.serviceId?.title) || 
-                     'Service';
+  const serviceName = booking.service?.name ||
+    (booking.services && booking.services[0]?.serviceId?.title) ||
+    'Service';
 
   // Handle address data
-  const addressLine = booking.address?.addressLine1 || 'Address not available';
-  const city = booking.address?.city || '';
-  const addressText = city ? `${addressLine}, ${city}` : addressLine;
+  const addressLine = (booking as any).location?.address || 'Address not available';
+  const addressText = addressLine;
 
   // Handle professional data
   const hasProfessional = !!booking.professional;
-  const professionalName = hasProfessional ? 
-                          (booking.professional.user?.name || booking.professional.name || 'Professional') : 
-                          'Not assigned';
-  const profileImageUrl = hasProfessional && 
-                         (booking.professional.user?.profileImage?.url || booking.professional.profileImage?.url);
+  const professionalName = hasProfessional ?
+    (booking.professional.user?.name || booking.professional.name || 'Professional') :
+    'Not assigned';
+  const profileImageUrl = hasProfessional &&
+    (booking.professional.user?.profileImage?.url || booking.professional.profileImage?.url);
 
   // Handle amount formatting
   const amount = booking.totalAmount || 0;
-  const formattedAmount = typeof amount === 'number' ? 
-                         amount.toLocaleString('en-IN') : 
-                         String(amount);
+  const formattedAmount = typeof amount === 'number' ?
+    amount.toLocaleString('en-IN') :
+    String(amount);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>

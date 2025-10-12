@@ -67,7 +67,7 @@ const AddressPicker = ({
     <>
       {addresses.map((address) => {
         const isSelected = selectedAddress?._id === address._id;
-        const displayLines = [address.addressLine1, address.addressLine2, address.city, address.state]
+        const displayLines = [address.address, address.landmark, address.city]
           .filter(Boolean)
           .join(', ');
         return (
@@ -78,7 +78,7 @@ const AddressPicker = ({
           >
             <View style={styles.addressTopRow}>
               <Text style={styles.addressTitle} numberOfLines={1}>
-                {address.title || address.type || 'Saved Address'}
+                {address.name || address.type || 'Saved Address'}
               </Text>
               {address.isDefault && (
                 <View style={styles.defaultBadge}>
@@ -119,7 +119,7 @@ const CheckoutScreen = () => {
   // Booking and payment hooks
   const createBookingApi = useCreateBooking();
   const createCODPaymentApi = useCreateCODPayment();
-  
+
   // Simplified payment methods - only UPI and COD
   const paymentMethods = [
     {
@@ -148,7 +148,7 @@ const CheckoutScreen = () => {
       }
     }
   ];
-  
+
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(paymentMethods[0]); // Default to UPI
 
   // Initialize addresses
@@ -167,7 +167,7 @@ const CheckoutScreen = () => {
   useFocusEffect(
     React.useCallback(() => {
       const selectedAddressId = route.params?.selectedAddressId;
-      
+
       if (selectedAddressId && addresses.length > 0) {
         const addressToSet = addresses.find(addr => addr._id === selectedAddressId);
         if (addressToSet) {
@@ -204,7 +204,7 @@ const CheckoutScreen = () => {
     }
     setTimeSlots(slots);
   }, []);
-  
+
   const handlePlaceOrder = async () => {
     if (!selectedTimeSlot) {
       Alert.alert('Select Time', 'Please select a time slot for your service.');
@@ -233,18 +233,37 @@ const CheckoutScreen = () => {
         return;
       }
 
-      const totalAmount = cartItems.reduce((s, it) => s + it.price * it.quantity, 0);
+      // Calculate complete total including all fees and taxes
+      const subtotal = cartItems.reduce((s, it) => s + it.price * it.quantity, 0);
+      const deliveryFee = 49;
+      const discount = 0; // Can be calculated from promo codes
+
+      // Calculate processing fee from selected payment method
+      const processingFee = selectedPaymentMethod?.fees ?
+        (selectedPaymentMethod.fees.percentage > 0 ?
+          (subtotal * selectedPaymentMethod.fees.percentage / 100) :
+          (selectedPaymentMethod.fees.fixed || 0)
+        ) : 0;
+
+      // Calculate amount before tax
+      const amountBeforeTax = subtotal + deliveryFee + processingFee - discount;
+
+      // Calculate 18% GST
+      const gst = amountBeforeTax * 0.18;
+
+      // Calculate final total
+      const totalAmount = amountBeforeTax + gst;
 
       // COD validation
       if (selectedPaymentMethod.type === 'cod') {
         const codSettings = selectedPaymentMethod.codSettings;
-        
-        if (totalAmount < codSettings.minAmount) {
+
+        if (codSettings && totalAmount < codSettings.minAmount) {
           Alert.alert('COD Not Available', `Minimum amount for COD is ₹${codSettings.minAmount}. Please add more services or choose UPI payment.`);
           return;
         }
-        
-        if (totalAmount > codSettings.maxAmount) {
+
+        if (codSettings && totalAmount > codSettings.maxAmount) {
           Alert.alert('COD Not Available', `Maximum amount for COD is ₹${codSettings.maxAmount}. Please choose UPI payment for this order.`);
           return;
         }
@@ -256,13 +275,13 @@ const CheckoutScreen = () => {
         scheduledDate: selectedDate.toISOString(),
         scheduledTime: selectedTimeSlot,
         location: {
-          address: selectedAddress.addressLine1 || selectedAddress.address || 'Address not specified',
-          name: selectedAddress.title || selectedAddress.type || selectedAddress.name || 'Saved Address',
+          address: selectedAddress.address || 'Address not specified',
+          name: selectedAddress.name || selectedAddress.type || 'Saved Address',
           city: selectedAddress.city || 'City not specified',
-          pincode: selectedAddress.postalCode || selectedAddress.pincode || selectedAddress.zipCode || 'Pincode not available'
+          pincode: selectedAddress.pincode || 'Pincode not available'
         },
-        price: cartItems.reduce((s, it) => s + it.price * it.quantity, 0),
-        totalAmount: cartItems.reduce((s, it) => s + it.price * it.quantity, 0),
+        price: subtotal, // Base price without fees and taxes
+        totalAmount: totalAmount, // Complete total including all fees and taxes
         notes: specialInstructions,
         additionalServices: [],
         paymentMethod: selectedPaymentMethod?.type || 'razorpay'
@@ -281,25 +300,25 @@ const CheckoutScreen = () => {
       if (selectedPaymentMethod?.type === 'cod') {
         // For COD, create a COD payment record and navigate to confirmation
         try {
-          const amount = bookingPayload.totalAmount;
+          const amount = totalAmount; // Use the complete total amount
           await createCODPaymentApi.execute({
             bookingId,
             amount,
-            notes: { 
+            notes: {
               paymentMethod: 'cod',
               scheduledDate: selectedDate.toISOString(),
               specialInstructions
             }
           });
-          
+
           Alert.alert(
-            'Order Placed Successfully!', 
+            'Order Placed Successfully!',
             'Your booking has been confirmed. You can pay cash when the service is completed.',
             [
               {
                 text: 'OK',
                 onPress: () => {
-                  navigation.navigate('BookingConfirmation', { 
+                  navigation.navigate('BookingConfirmation', {
                     bookingId
                   });
                   clear && clear();
@@ -311,7 +330,7 @@ const CheckoutScreen = () => {
         } catch (codError) {
           console.error('COD payment creation failed:', codError);
           Alert.alert('COD Setup Failed', 'Booking created but COD setup failed. You can still pay cash during service.');
-          navigation.navigate('BookingConfirmation', { 
+          navigation.navigate('BookingConfirmation', {
             bookingId
           });
           clear && clear();
@@ -320,10 +339,10 @@ const CheckoutScreen = () => {
       }
 
       // For online payments, create payment link
-      const amount = bookingPayload.totalAmount;
+      const amount = totalAmount; // Use the complete total amount
       // Direct API call to /payments/create-payment-link
       let paymentLinkRes;
-      
+
       try {
         paymentLinkRes = await api.post('/payments/create-payment-link', {
           bookingId,
@@ -348,10 +367,10 @@ const CheckoutScreen = () => {
           throw paymentError;
         }
       }
-      
+
       // Debug: Log the full response to see the structure
       console.log('Payment Link Response:', JSON.stringify(paymentLinkRes, null, 2));
-      
+
       // Extract payment link from response (backend returns { status: "success", data: { payment_link, paymentId, ... } })
       const paymentLink = paymentLinkRes?.data?.payment_link;
       const paymentId = paymentLinkRes?.data?.paymentId;
@@ -383,7 +402,7 @@ const CheckoutScreen = () => {
               {
                 text: 'View Bookings',
                 onPress: () => {
-                  navigation.navigate('CustomerTabs', { screen: 'Bookings' });
+                  navigation.navigate('CustomerTabs' as any, { screen: 'Bookings' });
                   clear && clear();
                 }
               },
@@ -409,13 +428,13 @@ const CheckoutScreen = () => {
         let paymentStatus = null;
         let attempts = 0;
         const maxAttempts = 5;
-        
+
         while (attempts < maxAttempts && !paymentStatus) {
           try {
             await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between checks
             const statusRes = await api.get(`/payments/${paymentId}`);
             const status = statusRes?.data?.payment?.status;
-            
+
             if (status === 'captured' || status === 'authorized') {
               paymentStatus = 'success';
               break;
@@ -470,7 +489,7 @@ const CheckoutScreen = () => {
               {
                 text: 'View Bookings',
                 onPress: () => {
-                  navigation.navigate('CustomerTabs', { screen: 'Bookings' });
+                  navigation.navigate('CustomerTabs' as any, { screen: 'Bookings' });
                   clear && clear();
                 }
               },
@@ -491,14 +510,14 @@ const CheckoutScreen = () => {
       }
     } catch (error: any) {
       console.error('Place order error:', error);
-      
+
       // Handle specific error scenarios
       if (error?.errorCode === 'APP-500-407' && error?.message?.includes('duplicate key')) {
         Alert.alert(
-          'Duplicate Order', 
+          'Duplicate Order',
           'A payment for this booking is already in progress. Please check your bookings or try again in a few minutes.',
           [
-            { text: 'View Bookings', onPress: () => navigation.navigate('CustomerTabs', { screen: 'Bookings' }) },
+            { text: 'View Bookings', onPress: () => navigation.navigate('CustomerTabs' as any, { screen: 'Bookings' }) },
             { text: 'OK', style: 'cancel' }
           ]
         );
@@ -579,7 +598,7 @@ const CheckoutScreen = () => {
           <View style={styles.section}>
             <View style={styles.addressHeader}>
               <Text style={styles.sectionTitle}>Address</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handleAddNewAddress}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 activeOpacity={0.7}
@@ -612,21 +631,21 @@ const CheckoutScreen = () => {
           {/* Payment Method */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Payment Method</Text>
-            
+
             {paymentMethods.map((method) => {
               const isSelected = selectedPaymentMethod?.id === method.id;
               const totalAmount = cartItems?.reduce((s, it) => s + it.price * it.quantity, 0) || 0;
-              
+
               // Check if COD is available for this order
-              const isCODAvailable = method.type === 'cod' ? 
-                (totalAmount >= method.codSettings.minAmount && totalAmount <= method.codSettings.maxAmount) : 
+              const isCODAvailable = method.type === 'cod' ?
+                (method.codSettings && totalAmount >= method.codSettings.minAmount && totalAmount <= method.codSettings.maxAmount) :
                 true;
-              
+
               return (
                 <TouchableOpacity
                   key={method.id}
                   style={[
-                    styles.paymentMethod, 
+                    styles.paymentMethod,
                     isSelected && styles.addressSelected,
                     !isCODAvailable && styles.paymentMethodDisabled
                   ]}
@@ -634,23 +653,23 @@ const CheckoutScreen = () => {
                   disabled={!isCODAvailable}
                 >
                   <View style={styles.paymentIconBox}>
-                    <Ionicons name={method.icon || 'card-outline'} size={20} color={isCODAvailable ? "#2563eb" : "#9ca3af"} />
+                    <Ionicons name={method.icon as any || 'card-outline'} size={20} color={isCODAvailable ? "#2563eb" : "#9ca3af"} />
                   </View>
                   <View style={styles.paymentMethodInfo}>
                     <Text style={[styles.addressTitle, !isCODAvailable && styles.disabledText]}>{method.name}</Text>
                     <Text style={[styles.addressSubtitle, !isCODAvailable && styles.disabledText]}>{method.description}</Text>
-                    {method.type === 'cod' && (
+                    {method.type === 'cod' && method.codSettings && (
                       <Text style={[
                         styles.codInfo,
                         !isCODAvailable && styles.codUnavailable
                       ]}>
-                        {isCODAvailable 
+                        {isCODAvailable
                           ? `Available for ₹${method.codSettings.minAmount} - ₹${method.codSettings.maxAmount}`
                           : `Not available (₹${method.codSettings.minAmount} - ₹${method.codSettings.maxAmount})`
                         }
                       </Text>
                     )}
-                    {method.fees?.percentage > 0 && (
+                    {method.fees && method.fees.percentage > 0 && (
                       <Text style={styles.feeInfo}>
                         +{method.fees.percentage}% processing fee
                       </Text>
@@ -668,26 +687,60 @@ const CheckoutScreen = () => {
           {/* Order Summary */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Order Summary</Text>
-            {cartItems && (
-              <>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.grayText}>Subtotal</Text>
-                  <Text style={styles.summaryValue}>₹{cartItems.reduce((s, it) => s + it.price * it.quantity, 0)}</Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.grayText}>Delivery Fee</Text>
-                  <Text style={styles.summaryValue}>₹49</Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.greenText}>Discount</Text>
-                  <Text style={styles.greenText}>-₹0</Text>
-                </View>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalText}>Total</Text>
-                  <Text style={styles.totalPrimary}>₹{cartItems.reduce((s, it) => s + it.price * it.quantity, 0) + 49}</Text>
-                </View>
-              </>
-            )}
+            {cartItems && (() => {
+              const subtotal = cartItems.reduce((s, it) => s + it.price * it.quantity, 0);
+              const deliveryFee = 49;
+              const discount = 0; // Can be calculated from promo codes
+
+              // Calculate processing fee from selected payment method
+              const processingFee = selectedPaymentMethod?.fees ?
+                (selectedPaymentMethod.fees.percentage > 0 ?
+                  (subtotal * selectedPaymentMethod.fees.percentage / 100) :
+                  (selectedPaymentMethod.fees.fixed || 0)
+                ) : 0;
+
+              // Calculate amount before tax
+              const amountBeforeTax = subtotal + deliveryFee + processingFee - discount;
+
+              // Calculate 18% GST
+              const gst = amountBeforeTax * 0.18;
+
+              // Calculate final total
+              const finalTotal = amountBeforeTax + gst;
+
+              return (
+                <>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.grayText}>Subtotal</Text>
+                    <Text style={styles.summaryValue}>₹{subtotal}</Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.grayText}>Delivery Fee</Text>
+                    <Text style={styles.summaryValue}>₹{deliveryFee}</Text>
+                  </View>
+                  {processingFee > 0 && (
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.grayText}>Processing Fee</Text>
+                      <Text style={styles.summaryValue}>₹{processingFee.toFixed(2)}</Text>
+                    </View>
+                  )}
+                  {discount > 0 && (
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.greenText}>Discount</Text>
+                      <Text style={styles.greenText}>-₹{discount}</Text>
+                    </View>
+                  )}
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.grayText}>GST (18%)</Text>
+                    <Text style={styles.summaryValue}>₹{gst.toFixed(2)}</Text>
+                  </View>
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalText}>Total</Text>
+                    <Text style={styles.totalPrimary}>₹{finalTotal.toFixed(2)}</Text>
+                  </View>
+                </>
+              );
+            })()}
           </View>
         </ScrollView>
 
@@ -717,202 +770,202 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff'
   },
-  container: { 
-    flex: 1, 
-    backgroundColor: '#fff' 
+  container: {
+    flex: 1,
+    backgroundColor: '#fff'
   },
-  flex1: { 
-    flex: 1 
+  flex1: {
+    flex: 1
   },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingHorizontal: 16, 
-    paddingTop: 16, 
-    paddingBottom: 16, 
-    borderBottomWidth: 1, 
-    borderColor: '#e5e7eb' 
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb'
   },
-  backButton: { 
-    marginRight: 16 
+  backButton: {
+    marginRight: 16
   },
-  headerTitle: { 
-    fontSize: 20, 
-    fontWeight: 'bold' 
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold'
   },
-  section: { 
-    padding: 16, 
-    borderBottomWidth: 1, 
-    borderColor: '#e5e7eb' 
+  section: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb'
   },
-  sectionTitle: { 
-    fontSize: 18, 
-    fontWeight: '600', 
-    marginBottom: 12 
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12
   },
-  dateOption: { 
-    padding: 12, 
-    borderRadius: 16, 
-    backgroundColor: '#f3f4f6', 
-    marginRight: 12 
+  dateOption: {
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: '#f3f4f6',
+    marginRight: 12
   },
-  dateOptionSelected: { 
-    backgroundColor: '#2563eb' 
+  dateOptionSelected: {
+    backgroundColor: '#2563eb'
   },
-  dateText: { 
-    textAlign: 'center', 
-    fontWeight: '600', 
-    color: '#1f2937' 
+  dateText: {
+    textAlign: 'center',
+    fontWeight: '600',
+    color: '#1f2937'
   },
-  dateTextSelected: { 
-    color: '#fff' 
+  dateTextSelected: {
+    color: '#fff'
   },
-  timeSlotContainer: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap' 
+  timeSlotContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap'
   },
-  timeSlot: { 
-    padding: 12, 
-    borderRadius: 16, 
-    backgroundColor: '#f3f4f6', 
-    margin: 4 
+  timeSlot: {
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: '#f3f4f6',
+    margin: 4
   },
-  timeSlotSelected: { 
-    backgroundColor: '#2563eb' 
+  timeSlotSelected: {
+    backgroundColor: '#2563eb'
   },
-  timeSlotDisabled: { 
-    backgroundColor: '#e5e7eb' 
+  timeSlotDisabled: {
+    backgroundColor: '#e5e7eb'
   },
-  timeSlotText: { 
-    textAlign: 'center', 
-    color: '#1f2937' 
+  timeSlotText: {
+    textAlign: 'center',
+    color: '#1f2937'
   },
-  textGray: { 
-    color: '#9ca3af' 
+  textGray: {
+    color: '#9ca3af'
   },
-  textWhite: { 
-    color: '#fff' 
+  textWhite: {
+    color: '#fff'
   },
-  addressHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 12 
+  addressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12
   },
-  linkText: { 
-    color: '#2563eb' 
+  linkText: {
+    color: '#2563eb'
   },
-  addressBox: { 
-    padding: 12, 
-    marginBottom: 12, 
-    borderRadius: 16, 
-    borderWidth: 1, 
-    borderColor: '#e5e7eb' 
+  addressBox: {
+    padding: 12,
+    marginBottom: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb'
   },
-  addressSelected: { 
-    borderColor: '#2563eb', 
-    backgroundColor: '#eff6ff' 
+  addressSelected: {
+    borderColor: '#2563eb',
+    backgroundColor: '#eff6ff'
   },
-  addressTopRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center' 
+  addressTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
   },
-  addressTitle: { 
-    fontWeight: '600', 
-    color: '#1f2937' 
+  addressTitle: {
+    fontWeight: '600',
+    color: '#1f2937'
   },
-  addressText: { 
-    marginTop: 4, 
-    color: '#4b5563' 
+  addressText: {
+    marginTop: 4,
+    color: '#4b5563'
   },
-  defaultBadge: { 
-    backgroundColor: '#e5e7eb', 
-    paddingHorizontal: 8, 
-    borderRadius: 8 
+  defaultBadge: {
+    backgroundColor: '#e5e7eb',
+    paddingHorizontal: 8,
+    borderRadius: 8
   },
-  defaultBadgeText: { 
-    fontSize: 12, 
-    color: '#6b7280' 
+  defaultBadgeText: {
+    fontSize: 12,
+    color: '#6b7280'
   },
   addressDisabled: {
     opacity: 0.6
   },
-  instructionsInput: { 
-    borderWidth: 1, 
-    borderColor: '#e5e7eb', 
-    borderRadius: 16, 
-    padding: 12, 
-    height: 100, 
-    color: '#1f2937', 
-    textAlignVertical: 'top' 
+  instructionsInput: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 16,
+    padding: 12,
+    height: 100,
+    color: '#1f2937',
+    textAlignVertical: 'top'
   },
-  paymentMethod: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    padding: 12, 
-    borderWidth: 1, 
-    borderColor: '#e5e7eb', 
-    borderRadius: 16, 
-    marginBottom: 12 
+  paymentMethod: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 16,
+    marginBottom: 12
   },
-  paymentIconBox: { 
-    width: 40, 
-    height: 40, 
-    backgroundColor: '#f3f4f6', 
-    borderRadius: 20, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginRight: 12 
+  paymentIconBox: {
+    width: 40,
+    height: 40,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12
   },
-  summaryRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginBottom: 8 
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8
   },
-  totalRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginTop: 12, 
-    paddingTop: 12, 
-    borderTopWidth: 1, 
-    borderColor: '#e5e7eb' 
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderColor: '#e5e7eb'
   },
-  grayText: { 
-    color: '#6b7280' 
+  grayText: {
+    color: '#6b7280'
   },
-  greenText: { 
-    color: '#16a34a', 
-    fontWeight: '600' 
+  greenText: {
+    color: '#16a34a',
+    fontWeight: '600'
   },
-  summaryValue: { 
-    fontWeight: '600' 
+  summaryValue: {
+    fontWeight: '600'
   },
-  totalText: { 
-    fontSize: 18, 
-    fontWeight: 'bold' 
+  totalText: {
+    fontSize: 18,
+    fontWeight: 'bold'
   },
-  totalPrimary: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-    color: '#2563eb' 
+  totalPrimary: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2563eb'
   },
-  footer: { 
-    padding: 16, 
-    borderTopWidth: 1, 
-    borderColor: '#e5e7eb' 
+  footer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderColor: '#e5e7eb'
   },
-  placeOrderButton: { 
-    backgroundColor: '#2563eb', 
-    borderRadius: 16, 
-    paddingVertical: 16, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  placeOrderButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 16,
+    paddingVertical: 16,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
-  placeOrderText: { 
-    color: '#fff', 
-    fontWeight: '600', 
-    fontSize: 16 
+  placeOrderText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16
   },
   errorContainer: {
     padding: 12,
