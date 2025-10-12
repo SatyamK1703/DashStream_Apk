@@ -61,21 +61,6 @@ interface Professional {
     amount: string;
     status: 'completed' | 'cancelled' | 'ongoing';
   }[];
-      };
-  reviews: {
-    id: string;
-    customerName: string;
-    rating: number;
-    comment: string;
-    date: string;
-  }[];
-  recentBookings: {
-    id: string;
-    date: string;
-    services: string[];
-    amount: string;
-    status: 'completed' | 'cancelled' | 'ongoing';
-  }[];
   performanceMetrics: {
     acceptanceRate: number;
     cancellationRate: number;
