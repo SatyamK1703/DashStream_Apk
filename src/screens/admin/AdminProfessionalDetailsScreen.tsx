@@ -15,6 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
 import { adminService } from '../../services/adminService';
+import { useAdminProfessionalActions } from '../../hooks/useAdmin';
 
 type AdminProfessionalDetailsRouteProp = RouteProp<AdminStackParamList, 'AdminProfessionalDetails'>;
 type AdminProfessionalDetailsNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
@@ -47,43 +48,22 @@ interface Professional {
     avgServiceTime: string;
     customerSatisfaction: number;
   };
-  reviews: {
+  reviews: Array<{
     id: string;
     customerName: string;
     rating: number;
     comment: string;
     date: string;
-  }[];
-  recentBookings: {
+  }>;
+  recentBookings: Array<{
     id: string;
     date: string;
     services: string[];
     amount: string;
     status: 'completed' | 'cancelled' | 'ongoing';
-  }[];
-      };
-  reviews: {
-    id: string;
-    customerName: string;
-    rating: number;
-    comment: string;
-    date: string;
-  }[];
-  recentBookings: {
-    id: string;
-    date: string;
-    services: string[];
-    amount: string;
-    status: 'completed' | 'cancelled' | 'ongoing';
-  }[];
-  performanceMetrics: {
-    acceptanceRate: number;
-    cancellationRate: number;
-    avgResponseTime: string;
-    avgServiceTime: string;
-    customerSatisfaction: number;
-  };
-}
+  }>;
+};
+
 
 const AdminProfessionalDetailsScreen = () => {
   const route = useRoute<AdminProfessionalDetailsRouteProp>();
@@ -95,43 +75,137 @@ const AdminProfessionalDetailsScreen = () => {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [adminNote, setAdminNote] = useState('');
   
-  // Mock data
-  const mockProfessional: Professional = {
-    id: 'PRO-001',
-    name: 'Rajesh Kumar',
-    phone: '+91 9876543210',
-    email: 'rajesh.kumar@example.com',
-    rating: 4.8,
-    totalJobs: 156,
-    completedJobs: 148,
-    cancelledJobs: 8,
-    totalEarnings: '₹78,500',
-    status: 'active',
-    skills: ['Car Wash', 'Detailing', 'Polish', 'Interior Cleaning'],
-    joinedDate: '2022-05-15',
-    lastActive: '2023-08-15T10:30:00Z',
-    profileImage: undefined,
-    isVerified: true,
-    address: '123 Main Street, Apartment 4B',
-    city: 'Mumbai',
-    state: 'Maharashtra',
-    pincode: '400001',
-    serviceArea: ['Andheri', 'Bandra', 'Juhu', 'Santacruz'],
+  // Use the admin professional hook
+  const { updateVerificationStatus } = useAdminProfessionalActions();
+  
+  // Fetch professional details
+  useEffect(() => {
+    interface ApiProfessional {
+    _id: string;
+    id?: string;
+    name: string;
+    phone: string;
+    email: string;
+    rating?: number;
+    totalJobs?: number;
+    completedJobs?: number;
+    cancelledJobs?: number;
+    totalEarnings?: string;
+    status?: string;
+    skills?: string[];
+    joinedDate?: string;
+    lastActive?: string;
+    profileImage?: string;
+    isVerified?: boolean;
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    serviceArea?: string[];
+    performanceMetrics?: {
+      acceptanceRate: number;
+      cancellationRate: number;
+      avgResponseTime: string;
+      avgServiceTime: string;
+      customerSatisfaction: number;
+    };
+    reviews?: Array<{
+      id: string;
+      customerName: string;
+      rating: number;
+      comment: string;
+      date: string;
+    }>;
+    recentBookings?: Array<{
+      id: string;
+      date: string;
+      services: string[];
+      amount: string;
+      status: string;
+    }>;
+  }
 
-      performanceMetrics: {
-      acceptanceRate: 95,
-      cancellationRate: 3,
-      avgResponseTime: '2 mins',
-      avgServiceTime: '1.5 hours',
-      customerSatisfaction: 4.8
-    },
-    reviews: [],
-    recentBookings: []
-  };
+  interface ApiResponse {
+    data: {
+      data: {
+        professionals: ApiProfessional[];
+      };
+    };
+  }
 
-  // Removed mock useEffect - using real API call now
+  const fetchProfessionalDetails = async () => {
+      setLoading(true);
+      try {
+        const response = (await adminService.getProfessionals({ search: professionalId })) as unknown as ApiResponse;
+        const professionals = response.data.data.professionals;
+        const professionalData = professionals.find((p) => p._id === professionalId || p.id === professionalId);
+        if (!professionalData) {
+          throw new Error('Professional not found');
+        }
+        
+        if (!professionalData._id && !professionalData.id) {
+          throw new Error('Professional ID is missing');
+        }
+        
+        const normalizedProfessional: Professional = {
+          id: professionalData._id || professionalData.id || '',
+          name: professionalData.name,
+          phone: professionalData.phone,
+          email: professionalData.email,
+          rating: professionalData.rating || 0,
+          totalJobs: professionalData.totalJobs || 0,
+          completedJobs: professionalData.completedJobs || 0,
+          cancelledJobs: professionalData.cancelledJobs || 0,
+          totalEarnings: professionalData.totalEarnings || '₹0',
+          status: (professionalData.status as Professional['status']) || 'inactive',
+          skills: professionalData.skills || [],
+          joinedDate: professionalData.joinedDate || new Date().toISOString(),
+          lastActive: professionalData.lastActive || new Date().toISOString(),
+          profileImage: professionalData.profileImage || undefined,
+          isVerified: professionalData.isVerified || false,
+          address: professionalData.address || '',
+          city: professionalData.city || '',
+          state: professionalData.state || '',
+          pincode: professionalData.pincode || '',
+          serviceArea: professionalData.serviceArea || [],
+          performanceMetrics: {
+            acceptanceRate: professionalData.performanceMetrics?.acceptanceRate || 0,
+            cancellationRate: professionalData.performanceMetrics?.cancellationRate || 0,
+            avgResponseTime: professionalData.performanceMetrics?.avgResponseTime || '0 mins',
+            avgServiceTime: professionalData.performanceMetrics?.avgServiceTime || '0 hours',
+            customerSatisfaction: professionalData.performanceMetrics?.customerSatisfaction || 0
+          },
+          reviews: (professionalData.reviews || []).map(review => ({
+            id: review.id || '',
+            customerName: review.customerName || '',
+            rating: review.rating || 0,
+            comment: review.comment || '',
+            date: review.date || new Date().toISOString()
+          })),
+          recentBookings: (professionalData.recentBookings || []).map(booking => ({
+            id: booking.id || '',
+            date: booking.date || new Date().toISOString(),
+            services: booking.services || [],
+            amount: booking.amount || '₹0',
+            status: (booking.status as 'completed' | 'cancelled' | 'ongoing') || 'completed'
+          }))
+        };
+        setProfessional(normalizedProfessional);
+      } catch (error) {
+        console.error('Error fetching professional details:', error);
+        Alert.alert(
+          'Error',
+          'Failed to load professional details. Please try again.'
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleStatusChange = () => {
+    fetchProfessionalDetails();
+  }, [professionalId]);
+
+  const handleStatusChange = async () => {
     if (!professional) return;
     
     Alert.alert(
@@ -141,21 +215,35 @@ const AdminProfessionalDetailsScreen = () => {
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Confirm', 
-          onPress: () => {
-            // Update professional status
-            setProfessional(prev => {
-              if (!prev) return prev;
-              return {
-                ...prev,
-                status: prev.status === 'active' ? 'inactive' : 'active'
-              };
-            });
-            
-            // Show success message
-            Alert.alert(
-              'Success',
-              `Professional ${professional.status === 'active' ? 'deactivated' : 'activated'} successfully`
-            );
+          onPress: async () => {
+            try {
+              const newStatus = professional.status === 'active' ? 'inactive' : 'active';
+              await updateVerificationStatus({
+                professionalId: professional.id,
+                isVerified: newStatus === 'active'
+              });
+              
+              // Update professional status locally
+              setProfessional(prev => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  status: newStatus
+                };
+              });
+              
+              // Show success message
+              Alert.alert(
+                'Success',
+                `Professional ${professional.status === 'active' ? 'deactivated' : 'activated'} successfully`
+              );
+            } catch (error) {
+              console.error('Error updating professional status:', error);
+              Alert.alert(
+                'Error',
+                'Failed to update professional status. Please try again.'
+              );
+            }
           }
         }
       ]
@@ -505,7 +593,7 @@ const AdminProfessionalDetailsScreen = () => {
       
       <TouchableOpacity 
         style={styles.viewAllButton}
-        onPress={() => navigation.navigate('AdminBookings', { professionalId: professional.id })}
+        onPress={() => navigation.navigate('AdminBookings')}
       >
         <Text style={styles.viewAllText}>View All Bookings</Text>
       </TouchableOpacity>
