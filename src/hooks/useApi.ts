@@ -175,9 +175,13 @@ export const usePaginatedApi = <T = any>(
       payload.services ?? 
       payload.results ?? 
       payload.bookings ?? 
+      payload.professionals ?? 
+      payload.users ?? 
       payload.notifications ?? 
       payload.offers ?? 
       resp.bookings ??  // Check root level too
+      resp.professionals ?? 
+      resp.users ?? 
       resp.services ?? 
       resp.items ?? 
       [];
@@ -192,7 +196,20 @@ export const usePaginatedApi = <T = any>(
       items = resp.data.bookings;
     }
     
+    // Fix for professionals
+    if (resp.data && resp.data.professionals && Array.isArray(resp.data.professionals)) {
+      items = resp.data.professionals;
+    }
+    
+    // Fix for users/customers
+    if (resp.data && resp.data.users && Array.isArray(resp.data.users)) {
+      items = resp.data.users;
+    }
+    
+    // Get total from pagination object or calculate from items
     const total = 
+      payload.pagination?.total ?? 
+      resp.data?.pagination?.total ?? 
       payload.total ?? 
       payload.totalCount ?? 
       resp.totalCount ?? 
@@ -203,8 +220,12 @@ export const usePaginatedApi = <T = any>(
       console.log('defaultNormalizer - Debug:', {
         hasRespData: !!resp.data,
         hasPayloadBookings: !!payload.bookings,
+        hasPayloadProfessionals: !!payload.professionals,
+        hasPayloadUsers: !!payload.users,
         hasRespBookings: !!resp.bookings,
         hasDataBookings: !!(resp.data && resp.data.bookings),
+        hasDataProfessionals: !!(resp.data && resp.data.professionals),
+        hasDataUsers: !!(resp.data && resp.data.users),
         itemsLength: items?.length,
         itemsIsArray: Array.isArray(items),
         total,

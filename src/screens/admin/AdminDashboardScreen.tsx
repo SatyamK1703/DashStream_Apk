@@ -40,23 +40,11 @@ const AdminDashboardScreen = () => {
     execute: fetchDashboard
   } = useAdminDashboard();
 
-  // Fetch recent bookings (limited)
-  const {
-    data: recentBookings = [],
-    loading: isBookingsLoading,
-    error: bookingsError,
-    loadMore: fetchBookings
-  } = useAdminBookings({ limit: 5 });
-
-  // Fetch top professionals (limited)
-  const {
-    data: topProfessionals = [],
-    loading: isProfessionalsLoading,
-    error: professionalsError,
-    loadMore: fetchProfessionals
-  } = useAdminProfessionals({ limit: 5 });
-
-  const isLoading = Boolean(isDashboardLoading || isBookingsLoading || isProfessionalsLoading);
+  const isLoading = isDashboardLoading;
+  
+  // Extract recent bookings and top professionals from dashboard stats
+  const recentBookings = dashboardStats?.recentBookings || [];
+  const topProfessionals = dashboardStats?.topProfessionals || [];
 
   // Load data on mount
   useEffect(() => {
@@ -65,11 +53,7 @@ const AdminDashboardScreen = () => {
 
   const loadDashboardData = async () => {
     try {
-      await Promise.all([
-        fetchDashboard(),
-        fetchBookings(),
-        fetchProfessionals()
-      ]);
+      await fetchDashboard();
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
       Alert.alert('Error', 'Failed to load dashboard data. Please try again.');
@@ -250,7 +234,13 @@ const AdminDashboardScreen = () => {
             recentBookings.map((booking) => (
               <BookingCard
                 key={booking.id}
-                {...booking}
+                id={booking.id}
+                customerName={booking.customerName}
+                service={booking.serviceName}
+                date={booking.date}
+                time={booking.time}
+                status={booking.status}
+                amount={`₹${booking.amount}`}
                 onPress={() => navigation.navigate('AdminBookingDetails', { bookingId: booking.id })}
               />
             ))
@@ -272,8 +262,13 @@ const AdminDashboardScreen = () => {
           {(topProfessionals && topProfessionals.length > 0) ? (
             topProfessionals.map((professional) => (
               <ProfessionalCard
-                key={professional._id}
-                {...professional}
+                key={professional.id}
+                id={professional.id}
+                name={professional.name}
+                image={professional.image}
+                rating={professional.rating || 0}
+                jobsCompleted={professional.bookingCount || 0}
+                isOnline={false}
                 onPress={() => navigation.navigate('AdminProfessionalDetails', { professionalId: professional.id })}
               />
             ))

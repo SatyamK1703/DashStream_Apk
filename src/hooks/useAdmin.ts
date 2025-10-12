@@ -67,7 +67,7 @@ export const useAdminServices = ({ filters }: UseAdminServicesOptions = {}) => {
 
   useEffect(() => {
     fetchServices();
-},[JSON.stringify(filters)]);
+  }, [JSON.stringify(filters)]);
 
   return {
     data,
@@ -147,16 +147,45 @@ export const useAdminStats = () => {
 
 // Hook for admin dashboard - main dashboard data
 export const useAdminDashboard = () => {
-  return useApi(
+  const baseApi = useApi(
     () => adminService.getDashboard(),
     {
       showErrorAlert: false,
     }
   );
+
+  // Transform the response to match the expected format
+  const transformedData = baseApi.data ? {
+    totalRevenue: baseApi.data.stats?.revenue || 0,
+    totalBookings: baseApi.data.stats?.bookings || 0,
+    activeCustomers: baseApi.data.stats?.users || 0,
+    activeProfessionals: baseApi.data.stats?.professionals || 0,
+    revenueChange: 0, // Backend doesn't provide this yet
+    bookingsChange: 0, // Backend doesn't provide this yet
+    customersChange: 0, // Backend doesn't provide this yet
+    professionalsChange: 0, // Backend doesn't provide this yet
+    chartData: baseApi.data.chartData || {
+      revenue: { daily: null, weekly: null, monthly: null },
+      bookings: { daily: null, weekly: null, monthly: null }
+    },
+    recentBookings: baseApi.data.recentBookings || [],
+    topProfessionals: baseApi.data.topProfessionals || []
+  } : null;
+
+  return {
+    ...baseApi,
+    data: transformedData
+  };
 };
 
 // Hook for admin bookings with optional filters
-export const useAdminBookings = (filters?: { limit?: number; status?: string; search?: string }) => {
+export const useAdminBookings = (filters?: { 
+  limit?: number; 
+  status?: string; 
+  search?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}) => {
   return usePaginatedApi(
     (params) => adminService.getBookings({ ...filters, ...params }),
     {
