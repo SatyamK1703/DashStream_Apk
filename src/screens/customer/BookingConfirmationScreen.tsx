@@ -238,7 +238,8 @@ const BookingConfirmationScreen = () => {
                 <Text style={styles.paymentStatusText}>
                   {paymentStatus === 'captured' ? 'Payment Successful' :
                     paymentStatus === 'failed' ? 'Payment Failed' :
-                      paymentStatus === 'cod_pending' ? {"Cash on Delivery'"} :
+                      paymentStatus === 'cod_pending' ? "Cash on Delivery" :
+
                         paymentStatus === 'authorized' ? 'Payment Authorized' :
                           'Payment Processing...'}
                 </Text>
