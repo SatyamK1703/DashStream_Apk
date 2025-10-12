@@ -23,12 +23,11 @@ export interface User {
 export interface Address {
   _id: string;
   type: 'home' | 'work' | 'other';
-  title: string;
-  addressLine1: string;
-  addressLine2?: string;
+  name: string;
+  address: string;
+  landmark?: string;
   city: string;
-  state: string;
-  postalCode: string;
+  pincode: string;
   country: string;
   coordinates: {
     latitude: number;
@@ -289,12 +288,11 @@ export interface UpdateProfileRequest {
 
 export interface CreateAddressRequest {
   type: 'home' | 'work' | 'other';
-  title: string;
-  addressLine1: string;
-  addressLine2?: string;
+  name: string;
+  address: string;
+  landmark?: string;
   city: string;
-  // state: string;
-  postalCode: string;
+  pincode: string;
   country: string;
   coordinates: {
     latitude: number;

@@ -67,7 +67,7 @@ const AddressPicker = ({
     <>
       {addresses.map((address) => {
         const isSelected = selectedAddress?._id === address._id;
-        const displayLines = [address.addressLine1, address.addressLine2, address.city, address.state]
+        const displayLines = [address.address, address.landmark, address.city]
           .filter(Boolean)
           .join(', ');
         return (
@@ -78,7 +78,7 @@ const AddressPicker = ({
           >
             <View style={styles.addressTopRow}>
               <Text style={styles.addressTitle} numberOfLines={1}>
-                {address.title || address.type || 'Saved Address'}
+                {address.name || address.type || 'Saved Address'}
               </Text>
               {address.isDefault && (
                 <View style={styles.defaultBadge}>
@@ -275,10 +275,10 @@ const CheckoutScreen = () => {
         scheduledDate: selectedDate.toISOString(),
         scheduledTime: selectedTimeSlot,
         location: {
-          address: selectedAddress.addressLine1 || 'Address not specified',
-          name: selectedAddress.title || selectedAddress.type || 'Saved Address',
+          address: selectedAddress.address || 'Address not specified',
+          name: selectedAddress.name || selectedAddress.type || 'Saved Address',
           city: selectedAddress.city || 'City not specified',
-          pincode: selectedAddress.postalCode || 'Pincode not available'
+          pincode: selectedAddress.pincode || 'Pincode not available'
         },
         price: subtotal, // Base price without fees and taxes
         totalAmount: totalAmount, // Complete total including all fees and taxes

@@ -35,7 +35,6 @@ const AddAddressScreen = () => {
   const [address, setAddress] = useState(addressToEdit?.address || '');
   const [landmark, setLandmark] = useState(addressToEdit?.landmark || '');
   const [city, setCity] = useState(addressToEdit?.city || '');
-  const [state, setState] = useState(addressToEdit?.state || '');
   const [pincode, setPincode] = useState(addressToEdit?.pincode || '');
   const [isDefault, setIsDefault] = useState(addressToEdit?.isDefault || false);
   const [loading, setLoading] = useState(false);
@@ -60,7 +59,6 @@ const AddAddressScreen = () => {
           if (addressDetails) {
             setAddress(addressDetails.street || '');
             setCity(addressDetails.city || '');
-            setState(addressDetails.region || '');
             setPincode(addressDetails.postalCode || '');
           }
         } catch (error) {
@@ -90,12 +88,11 @@ const AddAddressScreen = () => {
       try {
         const payload: CreateAddressRequest = {
           type: addressType,
-          title: name,
-          addressLine1: address,
-          addressLine2: landmark || undefined,
+          name: name,
+          address: address,
+          landmark: landmark || undefined,
           city,
-          // state,
-          postalCode: pincode,
+          pincode: pincode,
           country: 'IN',
           coordinates: {
             latitude: location?.coords?.latitude || 0,

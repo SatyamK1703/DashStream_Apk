@@ -14,7 +14,7 @@ type BookingConfirmationScreenRouteProp = RouteProp<CustomerStackParamList, 'Boo
 const BookingConfirmationScreen = () => {
   const navigation = useNavigation<BookingConfirmationScreenNavigationProp>();
   const route = useRoute<BookingConfirmationScreenRouteProp>();
-  
+
   const { bookingId } = route.params || {};
   const { data: bookingResponse, loading, error, execute } = useBookingDetails(bookingId || null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
@@ -27,7 +27,7 @@ const BookingConfirmationScreen = () => {
       execute();
     }
   }, [bookingId, bookingResponse]);
-  
+
   // Debug logging
   useEffect(() => {
     if (__DEV__) {
@@ -41,8 +41,8 @@ const BookingConfirmationScreen = () => {
         servicesType: booking?.services ? (Array.isArray(booking.services) ? 'array' : typeof booking.services) : 'none',
         servicesLength: booking?.services && Array.isArray(booking.services) ? booking.services.length : 0,
         serviceKeys: booking?.service ? Object.keys(booking.service).join(',') : 'none',
-        firstServiceKeys: booking?.services && Array.isArray(booking.services) && booking.services.length > 0 
-          ? Object.keys(booking.services[0]).join(',') 
+        firstServiceKeys: booking?.services && Array.isArray(booking.services) && booking.services.length > 0
+          ? Object.keys(booking.services[0]).join(',')
           : 'none',
         bookingId,
         loading,
@@ -54,9 +54,9 @@ const BookingConfirmationScreen = () => {
   // Poll payment status if booking has a payment that's not yet captured
   useEffect(() => {
     if (!booking) return;
-    
+
     const paymentId = booking.paymentId;
-    
+
     if (!paymentId) {
       setPaymentStatus('pending');
       return;
@@ -69,7 +69,7 @@ const BookingConfirmationScreen = () => {
         const statusRes = await api.get(`/payments/${paymentId}`);
         const status = statusRes?.data?.payment?.status;
         setPaymentStatus(status || 'unknown');
-        
+
         // If payment is still pending, poll again after 3 seconds
         if (status === 'created' || status === 'pending' || status === 'authorized') {
           setTimeout(checkPaymentStatus, 3000);
@@ -84,16 +84,16 @@ const BookingConfirmationScreen = () => {
 
     checkPaymentStatus();
   }, [booking]);
-  
+
   const formatDate = (date: Date | string | undefined) => {
     if (!date) return 'Date not available';
-    
+
     const dateObj = typeof date === 'string' ? new Date(date) : date;
-    
+
     if (dateObj instanceof Date && !isNaN(dateObj.getTime())) {
       return dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     }
-    
+
     return 'Invalid date';
   };
 
@@ -106,7 +106,7 @@ const BookingConfirmationScreen = () => {
         bookingIdFromObject: booking?.bookingId || booking?._id,
       });
     }
-    
+
     if (booking) {
       // Use the booking ID from the loaded booking object, which could be either bookingId or _id
       const trackingId = booking.bookingId || booking._id;
@@ -116,7 +116,7 @@ const BookingConfirmationScreen = () => {
       } else {
         // Handle case where no valid booking ID is found
         console.error('No valid booking ID found for tracking in booking object');
-        
+
         // Try to use the route parameter as fallback
         if (bookingId) {
           console.log('Falling back to route parameter bookingId:', bookingId);
@@ -167,19 +167,19 @@ const BookingConfirmationScreen = () => {
           <Text style={[styles.successText, { fontSize: 14, marginTop: 8, marginBottom: 16 }]}>
             Booking ID: {bookingId || 'Not available'}
           </Text>
-          
+
           {/* Add retry button */}
           {bookingId && (
-            <TouchableOpacity 
-              style={[styles.primaryBtn, { marginBottom: 12 }]} 
+            <TouchableOpacity
+              style={[styles.primaryBtn, { marginBottom: 12 }]}
               onPress={() => execute()}
             >
               <Text style={styles.primaryBtnText}>Retry</Text>
             </TouchableOpacity>
           )}
-          
-          <TouchableOpacity 
-            style={[styles.secondaryBtn]} 
+
+          <TouchableOpacity
+            style={[styles.secondaryBtn]}
             onPress={() => navigation.goBack()}
           >
             <Text style={styles.secondaryBtnText}>Go Back</Text>
@@ -208,7 +208,7 @@ const BookingConfirmationScreen = () => {
             <Text style={styles.successText}>
               Your booking has been confirmed. A professional will be assigned shortly.
             </Text>
-            
+
             {/* Payment Status Indicator */}
             {paymentStatus && (
               <View style={[
@@ -219,23 +219,23 @@ const BookingConfirmationScreen = () => {
                 paymentStatus === 'cod_pending' && styles.paymentStatusCOD
               ]}>
                 {checkingPayment && <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />}
-                <Ionicons 
+                <Ionicons
                   name={
                     paymentStatus === 'captured' ? 'checkmark-circle' :
-                    paymentStatus === 'failed' ? 'close-circle' :
-                    paymentStatus === 'cod_pending' ? 'cash' :
-                    'time'
-                  } 
-                  size={16} 
-                  color="#fff" 
+                      paymentStatus === 'failed' ? 'close-circle' :
+                        paymentStatus === 'cod_pending' ? 'cash' :
+                          'time'
+                  }
+                  size={16}
+                  color="#fff"
                   style={{ marginRight: 4 }}
                 />
                 <Text style={styles.paymentStatusText}>
                   {paymentStatus === 'captured' ? 'Payment Successful' :
-                   paymentStatus === 'failed' ? 'Payment Failed' :
-                   paymentStatus === 'cod_pending' ? 'Cash on Delivery' :
-                   paymentStatus === 'authorized' ? 'Payment Authorized' :
-                   'Payment Processing...'}
+                    paymentStatus === 'failed' ? 'Payment Failed' :
+                      paymentStatus === 'cod_pending' ? 'Cash on Delivery' :
+                        paymentStatus === 'authorized' ? 'Payment Authorized' :
+                          'Payment Processing...'}
                 </Text>
               </View>
             )}
@@ -282,10 +282,10 @@ const BookingConfirmationScreen = () => {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.label}>Service Address</Text>
                   <Text style={styles.value}>
-                    {address ? 
-                      (address.addressLine1 ? 
-                        `${address.addressLine1}${address.city ? `, ${address.city}` : ''}${address.state ? `, ${address.state}` : ''}${address.postalCode ? ` ${address.postalCode}` : ''}` 
-                        : address.address || 'Address details not available') 
+                    {address ?
+                      (address.address ?
+                        `${address.address}${address.city ? `, ${address.city}` : ''}${address.pincode ? ` ${address.pincode}` : ''}`
+                        : 'Address details not available')
                       : 'Address not available'}
                   </Text>
                 </View>
@@ -297,9 +297,9 @@ const BookingConfirmationScreen = () => {
 
               <View style={styles.serviceRow}>
                 {serviceImages ? (
-                  <Image 
-                    source={{ uri: service.images[0].url }} 
-                    style={styles.serviceImage} 
+                  <Image
+                    source={{ uri: service.images[0].url }}
+                    style={styles.serviceImage}
                     resizeMode="cover"
                     onError={() => {
                       // If image fails to load, show placeholder
@@ -354,8 +354,8 @@ const BookingConfirmationScreen = () => {
                       {idx === 0
                         ? "A skilled professional will be assigned to your booking shortly."
                         : idx === 1
-                        ? "You&#39;ll be notified when the professional is on the way to your location."
-                        : "After service completion, you can rate and review your experience."}
+                          ? "You&#39;ll be notified when the professional is on the way to your location."
+                          : "After service completion, you can rate and review your experience."}
                     </Text>
                   </View>
                 </View>
@@ -374,7 +374,7 @@ const BookingConfirmationScreen = () => {
         </View>
       </View>
     </SafeAreaView>
-  ); 
+  );
 };
 
 export default BookingConfirmationScreen;
@@ -384,12 +384,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'white'
   },
-  container: { 
-    flex: 1, 
-    backgroundColor: 'white' 
+  container: {
+    flex: 1,
+    backgroundColor: 'white'
   },
-  scrollContainer: { 
-    flexGrow: 1 
+  scrollContainer: {
+    flexGrow: 1
   },
   successContainer: {
     alignItems: 'center',
@@ -414,45 +414,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  successTitle: { 
-    fontSize: 24, 
-    fontWeight: 'bold', 
-    color: '#1f2937', 
-    marginBottom: 8 
+  successTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    marginBottom: 8
   },
-  successText: { 
-    color: '#4b5563', 
-    textAlign: 'center', 
-    paddingHorizontal: 24 
+  successText: {
+    color: '#4b5563',
+    textAlign: 'center',
+    paddingHorizontal: 24
   },
-  section: { 
-    padding: 24 
+  section: {
+    padding: 24
   },
-  card: { 
-    backgroundColor: '#f9fafb', 
-    borderRadius: 12, 
-    padding: 16, 
-    marginBottom: 24 
+  card: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24
   },
-  sectionTitle: { 
-    fontSize: 18, 
-    fontWeight: '600', 
-    marginBottom: 16 
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16
   },
-  detailRow: { 
-    flexDirection: 'row', 
-    marginBottom: 12 
+  detailRow: {
+    flexDirection: 'row',
+    marginBottom: 12
   },
-  iconContainer: { 
-    width: 40, 
-    alignItems: 'center' 
+  iconContainer: {
+    width: 40,
+    alignItems: 'center'
   },
-  label: { 
-    color: '#6b7280', 
-    fontSize: 12 
+  label: {
+    color: '#6b7280',
+    fontSize: 12
   },
-  value: { 
-    fontWeight: '600' 
+  value: {
+    fontWeight: '600'
   },
   serviceRow: {
     flexDirection: 'row',
@@ -462,10 +462,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#e5e7eb',
   },
-  serviceImage: { 
-    width: 64, 
-    height: 64, 
-    borderRadius: 8 
+  serviceImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 8
   },
   serviceImagePlaceholder: {
     width: 64,
@@ -475,27 +475,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center'
   },
-  serviceInfo: { 
-    flex: 1, 
-    marginLeft: 12 
+  serviceInfo: {
+    flex: 1,
+    marginLeft: 12
   },
-  serviceTitle: { 
-    fontWeight: '600' 
+  serviceTitle: {
+    fontWeight: '600'
   },
-  serviceSubtitle: { 
-    color: '#6b7280' 
+  serviceSubtitle: {
+    color: '#6b7280'
   },
-  summaryRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginBottom: 8 
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8
   },
-  discountLabel: { 
-    color: '#16a34a' 
+  discountLabel: {
+    color: '#16a34a'
   },
-  discountValue: { 
-    fontWeight: '600', 
-    color: '#16a34a' 
+  discountValue: {
+    fontWeight: '600',
+    color: '#16a34a'
   },
   totalRow: {
     flexDirection: 'row',
@@ -505,12 +505,12 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     marginTop: 8,
   },
-  totalText: { 
-    fontWeight: 'bold' 
+  totalText: {
+    fontWeight: 'bold'
   },
-  nextStepRow: { 
-    flexDirection: 'row', 
-    marginBottom: 12 
+  nextStepRow: {
+    flexDirection: 'row',
+    marginBottom: 12
   },
   stepBadge: {
     width: 32,
@@ -521,20 +521,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  stepBadgeText: { 
-    fontWeight: 'bold', 
-    color: '#2563eb' 
+  stepBadgeText: {
+    fontWeight: 'bold',
+    color: '#2563eb'
   },
-  stepTitle: { 
-    fontWeight: '600' 
+  stepTitle: {
+    fontWeight: '600'
   },
-  stepSubtitle: { 
-    color: '#6b7280' 
+  stepSubtitle: {
+    color: '#6b7280'
   },
-  actionContainer: { 
-    padding: 16, 
-    borderTopWidth: 1, 
-    borderColor: '#e5e7eb' 
+  actionContainer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderColor: '#e5e7eb'
   },
   primaryBtn: {
     backgroundColor: '#2563eb',
@@ -543,9 +543,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  primaryBtnText: { 
-    color: 'white', 
-    fontWeight: '600' 
+  primaryBtnText: {
+    color: 'white',
+    fontWeight: '600'
   },
   secondaryBtn: {
     borderWidth: 1,

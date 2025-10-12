@@ -172,7 +172,7 @@ const OrderDetailsScreen = () => {
             {order.address && (
               <View style={styles.rowAddress}>
                 <Text style={[styles.muted, { width: 96 }]}>Address</Text>
-                <Text style={[styles.semibold, styles.addressValue]}>{`${order.address.addressLine1}, ${order.address.city}`}</Text>
+                <Text style={[styles.semibold, styles.addressValue]}>{`${order.address.address}, ${order.address.city}`}</Text>
               </View>
             )}
           </View>

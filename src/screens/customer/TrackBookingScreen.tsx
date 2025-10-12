@@ -28,7 +28,7 @@ type TrackBookingScreenRouteProp = RouteProp<CustomerStackParamList, 'TrackBooki
 // Booking status mapping
 const BOOKING_STATUSES = {
   CONFIRMED: 'confirmed',
-  PROFESSIONAL_ASSIGNED: 'professional_assigned', 
+  PROFESSIONAL_ASSIGNED: 'professional_assigned',
   ON_THE_WAY: 'on_the_way',
   ARRIVED: 'arrived',
   IN_PROGRESS: 'in-progress',
@@ -41,7 +41,7 @@ const TrackBookingScreen = () => {
   const navigation = useNavigation<TrackBookingScreenNavigationProp>();
   const route = useRoute<TrackBookingScreenRouteProp>();
   const { bookingId } = route.params;
-  
+
   // Local state for UI
   const [state, setState] = useState({
     isLoading: false,
@@ -53,10 +53,10 @@ const TrackBookingScreen = () => {
 
   // Get data from booking and tracking
   const bookingData = booking?.booking || booking?.data?.booking || booking?.data;
-  
+
   // Use tracking data or fallback to booking data
   const trackingInfo = trackingData || tracking?.data;
-  
+
   // Debug logging
   useEffect(() => {
     if (__DEV__) {
@@ -74,7 +74,7 @@ const TrackBookingScreen = () => {
       });
     }
   }, [booking, bookingData, tracking, trackingData, bookingId]);
-  
+
   // Log tracking status for debugging
   useEffect(() => {
     if (fallbackUsed) {
@@ -87,7 +87,7 @@ const TrackBookingScreen = () => {
       console.log('Tracking data available:', !!trackingData);
     }
   }, [fallbackUsed, trackingError, trackingData]);
-  
+
   // Default coordinates (Mumbai) - fallback
   const defaultLocation = {
     latitude: 19.076,
@@ -118,68 +118,68 @@ const TrackBookingScreen = () => {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   };
-  
+
   // Extract timeline data from tracking info or create a basic timeline from booking data
   const timelineData = React.useMemo(() => {
     // If we have tracking timeline data, use it
     if (trackingInfo?.timeline && Array.isArray(trackingInfo.timeline) && trackingInfo.timeline.length > 0) {
       return trackingInfo.timeline;
     }
-    
+
     // Otherwise, create a basic timeline from booking data
     if (bookingData) {
       const timeline = [];
-      
+
       // Always add booking confirmed
       timeline.push({
         status: 'confirmed',
         timestamp: bookingData.createdAt,
         description: 'Your booking has been confirmed'
       });
-      
+
       // Add other statuses based on current booking status
-      if (bookingData.status === BOOKING_STATUSES.PROFESSIONAL_ASSIGNED || 
-          bookingData.status === BOOKING_STATUSES.ON_THE_WAY || 
-          bookingData.status === BOOKING_STATUSES.ARRIVED || 
-          bookingData.status === BOOKING_STATUSES.IN_PROGRESS || 
-          bookingData.status === BOOKING_STATUSES.COMPLETED) {
+      if (bookingData.status === BOOKING_STATUSES.PROFESSIONAL_ASSIGNED ||
+        bookingData.status === BOOKING_STATUSES.ON_THE_WAY ||
+        bookingData.status === BOOKING_STATUSES.ARRIVED ||
+        bookingData.status === BOOKING_STATUSES.IN_PROGRESS ||
+        bookingData.status === BOOKING_STATUSES.COMPLETED) {
         timeline.push({
           status: 'professional_assigned',
           timestamp: bookingData.updatedAt,
           description: 'A professional has been assigned to your booking'
         });
       }
-      
-      if (bookingData.status === BOOKING_STATUSES.ON_THE_WAY || 
-          bookingData.status === BOOKING_STATUSES.ARRIVED || 
-          bookingData.status === BOOKING_STATUSES.IN_PROGRESS || 
-          bookingData.status === BOOKING_STATUSES.COMPLETED) {
+
+      if (bookingData.status === BOOKING_STATUSES.ON_THE_WAY ||
+        bookingData.status === BOOKING_STATUSES.ARRIVED ||
+        bookingData.status === BOOKING_STATUSES.IN_PROGRESS ||
+        bookingData.status === BOOKING_STATUSES.COMPLETED) {
         timeline.push({
           status: 'on_the_way',
           timestamp: bookingData.updatedAt,
           description: 'Professional is on the way'
         });
       }
-      
-      if (bookingData.status === BOOKING_STATUSES.ARRIVED || 
-          bookingData.status === BOOKING_STATUSES.IN_PROGRESS || 
-          bookingData.status === BOOKING_STATUSES.COMPLETED) {
+
+      if (bookingData.status === BOOKING_STATUSES.ARRIVED ||
+        bookingData.status === BOOKING_STATUSES.IN_PROGRESS ||
+        bookingData.status === BOOKING_STATUSES.COMPLETED) {
         timeline.push({
           status: 'arrived',
           timestamp: bookingData.updatedAt,
           description: 'Professional has arrived at your location'
         });
       }
-      
-      if (bookingData.status === BOOKING_STATUSES.IN_PROGRESS || 
-          bookingData.status === BOOKING_STATUSES.COMPLETED) {
+
+      if (bookingData.status === BOOKING_STATUSES.IN_PROGRESS ||
+        bookingData.status === BOOKING_STATUSES.COMPLETED) {
         timeline.push({
           status: 'in-progress',
           timestamp: bookingData.updatedAt,
           description: 'Service is in progress'
         });
       }
-      
+
       if (bookingData.status === BOOKING_STATUSES.COMPLETED) {
         timeline.push({
           status: 'completed',
@@ -187,10 +187,10 @@ const TrackBookingScreen = () => {
           description: 'Service has been completed'
         });
       }
-      
+
       return timeline;
     }
-    
+
     // Default empty timeline
     return [];
   }, [trackingInfo, bookingData]);
@@ -260,11 +260,11 @@ const TrackBookingScreen = () => {
     {
       onSuccess: () => {
         Alert.alert(
-          'Success', 
+          'Success',
           'Your booking has been cancelled successfully.',
           [
-            { 
-              text: 'OK', 
+            {
+              text: 'OK',
               onPress: () => {
                 // Navigate back to the bookings screen to see the updated list
                 navigation.navigate('CustomerTabs', { screen: 'Bookings' });
@@ -278,26 +278,26 @@ const TrackBookingScreen = () => {
 
   const handleCancelBooking = () => {
     Alert.alert(
-      'Cancel Booking', 
+      'Cancel Booking',
       `Are you sure you want to cancel this booking?`,
       [
         { text: 'No', style: 'cancel' },
-        { 
-          text: 'Yes', 
-          style: 'destructive', 
+        {
+          text: 'Yes',
+          style: 'destructive',
           onPress: async () => {
             try {
               setState(prev => ({ ...prev, isLoading: true }));
               await cancelBookingApi.execute(bookingId, 'Customer cancelled');
             } catch (error: any) {
               console.error('Failed to cancel booking:', error);
-              const errorMessage = error?.response?.data?.message || 
-                                  error?.data?.message || 
-                                  error?.message || 
-                                  'Unable to cancel booking';
-              
+              const errorMessage = error?.response?.data?.message ||
+                error?.data?.message ||
+                error?.message ||
+                'Unable to cancel booking';
+
               Alert.alert(
-                'Cancellation Failed', 
+                'Cancellation Failed',
                 errorMessage,
                 [{ text: 'OK' }]
               );
@@ -321,7 +321,7 @@ const TrackBookingScreen = () => {
       </SafeAreaView>
     );
   }
-  
+
   // Show cancellation loading overlay if cancellation is in progress
   const CancellationOverlay = state.isLoading ? (
     <View style={styles.cancellationOverlay}>
@@ -344,8 +344,8 @@ const TrackBookingScreen = () => {
           <Text style={[styles.loaderText, { fontSize: 14, marginTop: 8, marginBottom: 16 }]}>
             Booking ID: {bookingId}
           </Text>
-          <TouchableOpacity 
-            style={[styles.primaryBtn, { marginTop: 24 }]} 
+          <TouchableOpacity
+            style={[styles.primaryBtn, { marginTop: 24 }]}
             onPress={() => navigation.goBack()}
           >
             <Text style={styles.primaryBtnText}>Go Back</Text>
@@ -372,7 +372,7 @@ const TrackBookingScreen = () => {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Cancellation loading overlay */}
       {CancellationOverlay}
-      
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIconBtn}>
@@ -441,20 +441,20 @@ const TrackBookingScreen = () => {
               timelineData.map((item, index) => {
                 // Format timestamp
                 const timestamp = item.timestamp ? new Date(item.timestamp) : null;
-                const timeString = timestamp ? 
-                  timestamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : 
+                const timeString = timestamp ?
+                  timestamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) :
                   '--:-- --';
-                
+
                 // Determine if this status is active based on current booking status
                 const isActive = (() => {
                   const statusIndex = Object.values(BOOKING_STATUSES).indexOf(item.status as any);
                   const currentStatusIndex = Object.values(BOOKING_STATUSES).indexOf(currentStatus as any);
                   return statusIndex <= currentStatusIndex;
                 })();
-                
+
                 // Get display text for the status
                 const statusText = (() => {
-                  switch(item.status) {
+                  switch (item.status) {
                     case BOOKING_STATUSES.CONFIRMED: return 'Booking Confirmed';
                     case BOOKING_STATUSES.PROFESSIONAL_ASSIGNED: return 'Professional Assigned';
                     case BOOKING_STATUSES.ON_THE_WAY: return 'On The Way';
@@ -464,12 +464,12 @@ const TrackBookingScreen = () => {
                     default: return item.description || 'Status Update';
                   }
                 })();
-                
+
                 return (
-                  <View 
-                    key={index} 
+                  <View
+                    key={index}
                     style={[
-                      styles.timelineItem, 
+                      styles.timelineItem,
                       index === timelineData.length - 1 ? { marginBottom: 0 } : {}
                     ]}
                   >
@@ -497,15 +497,15 @@ const TrackBookingScreen = () => {
                   <View style={styles.timelineTextWrap}>
                     <Text style={timelineTextColor(false)}>Booking Confirmed</Text>
                     <Text style={styles.timelineTime}>
-                      {bookingData?.createdAt ? 
-                        new Date(bookingData.createdAt).toLocaleTimeString('en-US', { 
-                          hour: 'numeric', minute: '2-digit', hour12: true 
-                        }) : 
+                      {bookingData?.createdAt ?
+                        new Date(bookingData.createdAt).toLocaleTimeString('en-US', {
+                          hour: 'numeric', minute: '2-digit', hour12: true
+                        }) :
                         '--:-- --'}
                     </Text>
                   </View>
                 </View>
-                
+
                 <View style={[styles.timelineItem, { marginBottom: 0 }]}>
                   <View style={[styles.timelineDot, timelineDotColor(false)]}>
                     <View style={styles.timelineInnerDot} />
@@ -529,9 +529,9 @@ const TrackBookingScreen = () => {
           <Text style={styles.sectionTitle}>Professional Details</Text>
           <View style={styles.proCard}>
             {professional.profileImage?.url ? (
-              <Image 
-                source={{ uri: professional.profileImage.url }} 
-                style={styles.proAvatar} 
+              <Image
+                source={{ uri: professional.profileImage.url }}
+                style={styles.proAvatar}
                 resizeMode="cover"
                 onError={() => {
                   // If image fails to load, show placeholder
@@ -573,10 +573,10 @@ const TrackBookingScreen = () => {
             <View style={styles.rowBetween}>
               <Text style={styles.muted}>Service</Text>
               <Text style={styles.semibold}>
-                {bookingData.service?.name || 
-                 (bookingData.services && bookingData.services.length > 0 
-                  ? bookingData.services[0].title || bookingData.services[0].serviceId?.title || 'Service' 
-                  : 'Service')}
+                {bookingData.service?.name ||
+                  (bookingData.services && bookingData.services.length > 0
+                    ? bookingData.services[0].title || bookingData.services[0].serviceId?.title || 'Service'
+                    : 'Service')}
               </Text>
             </View>
             <View style={styles.rowBetween}>
@@ -585,11 +585,11 @@ const TrackBookingScreen = () => {
             </View>
             <View style={styles.rowBetween}>
               <Text style={styles.muted}>Payment Status</Text>
-              <Text style={[styles.semibold, { 
-                color: bookingData.paymentStatus === 'paid' ? '#16a34a' : '#f59e0b' 
+              <Text style={[styles.semibold, {
+                color: bookingData.paymentStatus === 'paid' ? '#16a34a' : '#f59e0b'
               }]}>
-                {bookingData.paymentStatus ? 
-                  bookingData.paymentStatus.charAt(0).toUpperCase() + bookingData.paymentStatus.slice(1) : 
+                {bookingData.paymentStatus ?
+                  bookingData.paymentStatus.charAt(0).toUpperCase() + bookingData.paymentStatus.slice(1) :
                   'Pending'}
               </Text>
             </View>
@@ -597,8 +597,8 @@ const TrackBookingScreen = () => {
               <View style={styles.rowBetween}>
                 <Text style={styles.muted}>Service Address</Text>
                 <Text style={[styles.semibold, { flex: 1, textAlign: 'right' }]}>
-                  {bookingData.address?.addressLine1 ? 
-                    `${bookingData.address.addressLine1}${bookingData.address.city ? `, ${bookingData.address.city}` : ''}` : 
+                  {bookingData.address?.address ?
+                    `${bookingData.address.address}${bookingData.address.city ? `, ${bookingData.address.city}` : ''}` :
                     bookingData.location?.address || 'Address not specified'}
                 </Text>
               </View>
@@ -630,15 +630,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
 
   // Loader
-  loaderContainer: { 
-    flex: 1, 
-    backgroundColor: '#fff', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  loaderContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
-  loaderText: { 
-    marginTop: 12, 
-    color: '#4b5563' 
+  loaderText: {
+    marginTop: 12,
+    color: '#4b5563'
   },
 
   // Header
@@ -652,20 +652,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb'
   },
-  headerIconBtn: { 
-    padding: 4 
+  headerIconBtn: {
+    padding: 4
   },
   headerTitleContainer: {
     flex: 1,
     alignItems: 'center'
   },
-  headerTitle: { 
-    fontSize: 18, 
-    fontWeight: '700', 
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
     color: '#1f2937',
     textAlign: 'center'
   },
-  headerSub: { 
+  headerSub: {
     color: '#6b7280',
     textAlign: 'center',
     marginTop: 2
@@ -725,10 +725,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   proAvatar: { width: 64, height: 64, borderRadius: 32 },
-  proAvatarPlaceholder: { 
-    backgroundColor: '#f3f4f6', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  proAvatarPlaceholder: {
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   proInfo: { flex: 1, marginLeft: 12 },
   proName: { fontSize: 16, fontWeight: '700', color: '#111827' },
