@@ -1,7 +1,7 @@
 // src/store/addressStore.ts
 import { create } from 'zustand';
 import { subscribeWithSelector, devtools } from 'zustand/middleware';
-import { userService } from '../services';
+import { addressService } from '../services';
 import { Address } from '../types/api';
 import { useAuthStore } from './authStore';
 
@@ -44,10 +44,9 @@ export const useAddressStore = create<AddressState>()(
 
         set({ isLoading: true, error: null });
         try {
-          const response = await userService.getAddresses();
+          const addresses = await addressService.getMyAddresses();
           
-          if (response.success && response.data) {
-            const addresses = response.data;
+          if (addresses) {
             const defaultAddress = addresses.find(addr => addr.isDefault) || null;
             
             set({ 
@@ -57,7 +56,7 @@ export const useAddressStore = create<AddressState>()(
             });
           } else {
             set({ 
-              error: response.message || 'Failed to fetch addresses',
+              error: 'Failed to fetch addresses',
               isLoading: false 
             });
           }
@@ -73,11 +72,10 @@ export const useAddressStore = create<AddressState>()(
       addAddress: async (addressData: Omit<Address, '_id' | 'createdAt' | 'updatedAt'>) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await userService.addAddress(addressData);
+          const newAddress = await addressService.createAddress(addressData);
           
-          if (response.success && response.data) {
+          if (newAddress) {
             const { addresses } = get();
-            const newAddress = response.data;
             
             set({ 
               addresses: [...addresses, newAddress],
@@ -87,7 +85,7 @@ export const useAddressStore = create<AddressState>()(
             
             return { success: true, address: newAddress };
           } else {
-            const error = response.message || 'Failed to add address';
+            const error = 'Failed to add address';
             set({ error, isLoading: false });
             return { success: false, error };
           }
@@ -101,25 +99,25 @@ export const useAddressStore = create<AddressState>()(
       updateAddress: async (id: string, updates: Partial<Address>) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await userService.updateAddress(id, updates);
+          const updatedAddress = await addressService.updateAddress(id, updates);
           
-          if (response.success) {
+          if (updatedAddress) {
             const { addresses } = get();
-            const updatedAddresses = addresses.map(address =>
+            const updatedAddressesList = addresses.map(address =>
               address._id === id ? { ...address, ...updates } : address
             );
             
-            const defaultAddress = updatedAddresses.find(addr => addr.isDefault) || null;
+            const defaultAddress = updatedAddressesList.find(addr => addr.isDefault) || null;
             
             set({ 
-              addresses: updatedAddresses,
+              addresses: updatedAddressesList,
               defaultAddress,
               isLoading: false 
             });
             
             return { success: true };
           } else {
-            const error = response.message || 'Failed to update address';
+            const error = 'Failed to update address';
             set({ error, isLoading: false });
             return { success: false, error };
           }
@@ -133,24 +131,18 @@ export const useAddressStore = create<AddressState>()(
       deleteAddress: async (id: string) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await userService.deleteAddress(id);
+          await addressService.deleteAddress(id);
           
-          if (response.success) {
-            const { addresses, defaultAddress } = get();
-            const updatedAddresses = addresses.filter(address => address._id !== id);
-            
-            set({ 
-              addresses: updatedAddresses,
-              defaultAddress: defaultAddress?._id === id ? null : defaultAddress,
-              isLoading: false 
-            });
-            
-            return { success: true };
-          } else {
-            const error = response.message || 'Failed to delete address';
-            set({ error, isLoading: false });
-            return { success: false, error };
-          }
+          const { addresses, defaultAddress } = get();
+          const updatedAddresses = addresses.filter(address => address._id !== id);
+          
+          set({ 
+            addresses: updatedAddresses,
+            defaultAddress: defaultAddress?._id === id ? null : defaultAddress,
+            isLoading: false 
+          });
+          
+          return { success: true };
         } catch (error: any) {
           const errorMsg = error.message || 'Failed to delete address';
           set({ error: errorMsg, isLoading: false });
@@ -161,9 +153,9 @@ export const useAddressStore = create<AddressState>()(
       setDefaultAddress: async (id: string) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await userService.setDefaultAddress(id);
+          const updatedDefaultAddress = await addressService.setDefaultAddress(id);
           
-          if (response.success) {
+          if (updatedDefaultAddress) {
             const { addresses } = get();
             const updatedAddresses = addresses.map(address => ({
               ...address,
@@ -180,7 +172,7 @@ export const useAddressStore = create<AddressState>()(
             
             return { success: true };
           } else {
-            const error = response.message || 'Failed to set default address';
+            const error = 'Failed to set default address';
             set({ error, isLoading: false });
             return { success: false, error };
           }

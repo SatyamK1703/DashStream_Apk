@@ -89,7 +89,7 @@ const PrivacyPolicyScreen = () => {
             services. We are not responsible for the privacy practices of these third parties.
           </Text>
 
-          <Text style={styles.sectionTitle}>8. Children's Privacy</Text>
+          <Text style={styles.sectionTitle}>8. Children&#39;s Privacy</Text>
           <Text style={styles.paragraph}>
             Our services are not intended for children under 13. We do not knowingly collect 
             personal information from children under 13.

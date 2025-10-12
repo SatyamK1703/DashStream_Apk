@@ -2,10 +2,8 @@ import httpClient, { ApiResponse } from './httpClient';
 import { API_ENDPOINTS } from '../config/config';
 import {
   User,
-  Address,
   Professional,
   UpdateProfileRequest,
-  CreateAddressRequest,
 } from '../types/api';
 
 class UserService {
@@ -60,138 +58,6 @@ class UserService {
       throw error;
     }
   }
-
-  // Address management
-  /**
-   * Get all user addresses
-   */
-  async getMyAddresses(): Promise<Address[]> {
-    try {
-      const response = await httpClient.get(API_ENDPOINTS.USERS.ADDRESSES);
-      const addresses = (response as any)?.data?.addresses;
-
-      if (Array.isArray(addresses)) {
-        return addresses as Address[];
-      }
-
-      if (__DEV__) {
-        console.warn('Unexpected address response shape', response);
-      }
-
-      return [];
-    } catch (error) {
-      console.error('Get addresses error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get all user addresses (alias for store compatibility)
-   */
-  async getAddresses(): Promise<{ success: boolean; data?: Address[]; message?: string }> {
-    try {
-      const response = await httpClient.get(API_ENDPOINTS.USERS.ADDRESSES);
-      
-      if (response && (response as any).data) {
-        const addresses = Array.isArray((response as any).data.addresses) 
-          ? (response as any).data.addresses 
-          : [];
-        
-        return {
-          success: true,
-          data: addresses as Address[]
-        };
-      }
-
-      return {
-        success: false,
-        message: 'Failed to fetch addresses'
-      };
-    } catch (error: any) {
-      console.error('Get addresses error:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to fetch addresses'
-      };
-    }
-  }
-
-  /**
-   * Create new address
-   */
-  async createAddress(data: CreateAddressRequest): Promise<ApiResponse<Address>> {
-    try {
-      return await httpClient.post(API_ENDPOINTS.USERS.ADDRESSES, data);
-    } catch (error) {
-      console.error('Create address error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create new address (alias for store compatibility)
-   */
-  async addAddress(data: CreateAddressRequest): Promise<{ success: boolean; data?: Address; message?: string }> {
-    try {
-      const response = await httpClient.post(API_ENDPOINTS.USERS.ADDRESSES, data);
-      
-      if (response && (response as any).success && (response as any).data) {
-        return {
-          success: true,
-          data: (response as any).data as Address
-        };
-      }
-
-      return {
-        success: false,
-        message: (response as any)?.message || 'Failed to create address'
-      };
-    } catch (error: any) {
-      console.error('Create address error:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to create address'
-      };
-    }
-  }
-
-  /**
-   * Update address
-   */
-  async updateAddress(addressId: string, data: Partial<CreateAddressRequest>): Promise<ApiResponse<Address>> {
-    try {
-      return await httpClient.patch(API_ENDPOINTS.USERS.ADDRESS_BY_ID(addressId), data);
-    } catch (error) {
-      console.error('Update address error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Delete address
-   */
-  async deleteAddress(addressId: string): Promise<ApiResponse<void>> {
-    try {
-      return await httpClient.delete(API_ENDPOINTS.USERS.ADDRESS_BY_ID(addressId));
-    } catch (error) {
-      console.error('Delete address error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Set default address
-   */
-  async setDefaultAddress(addressId: string): Promise<ApiResponse<Address>> {
-    try {
-      return await httpClient.patch(API_ENDPOINTS.USERS.SET_DEFAULT_ADDRESS(addressId));
-    } catch (error) {
-      console.error('Set default address error:', error);
-      throw error;
-    }
-  }
-
-  // Professional management
   /**
    * Get all professionals
    */

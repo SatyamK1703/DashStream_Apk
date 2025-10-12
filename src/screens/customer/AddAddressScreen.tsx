@@ -17,7 +17,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import { userService } from '../../services/userService';
+import { useAddressStore } from '../../store/addressStore';
 import { CreateAddressRequest } from '../../types/api';
 
 
@@ -39,20 +39,38 @@ const AddAddressScreen = () => {
   const [pincode, setPincode] = useState(addressToEdit?.pincode || '');
   const [isDefault, setIsDefault] = useState(addressToEdit?.isDefault || false);
   const [loading, setLoading] = useState(false);
-  const { location, loading: locationLoading, error: locationError, getCurrentLocation, reverseGeocode } = useLocation();
+  const { addAddress, updateAddress: updateAddressStore } = useAddressStore();
+  const { location, getCurrentLocation, reverseGeocode } = useLocation();
 
   const useCurrentLocation = async () => {
-    await getCurrentLocation();
-    if (location) {
-      const addressDetails = await reverseGeocode(location.coords.latitude, location.coords.longitude);
-      if (addressDetails) {
-        setAddress(addressDetails.street || '');
-        setCity(addressDetails.city || '');
-        setState(addressDetails.region || '');
-        setPincode(addressDetails.postalCode || '');
-      }
+    try {
+      await getCurrentLocation();
+    } catch (error) {
+      console.error('Error getting current location:', error);
+      Alert.alert('Error', 'Failed to get current location. Please try again.');
     }
   };
+
+  // Effect to handle location changes and reverse geocoding
+  useEffect(() => {
+    const handleLocationUpdate = async () => {
+      if (location) {
+        try {
+          const addressDetails = await reverseGeocode(location.coords.latitude, location.coords.longitude);
+          if (addressDetails) {
+            setAddress(addressDetails.street || '');
+            setCity(addressDetails.city || '');
+            setState(addressDetails.region || '');
+            setPincode(addressDetails.postalCode || '');
+          }
+        } catch (error) {
+          console.error('Error reverse geocoding:', error);
+        }
+      }
+    };
+
+    handleLocationUpdate();
+  }, [location, reverseGeocode]);
 
   const validateForm = () => {
     if (!name.trim()) return Alert.alert('Error', 'Please enter a name for this address'), false;
@@ -80,17 +98,26 @@ const AddAddressScreen = () => {
           postalCode: pincode,
           country: 'IN',
           coordinates: {
-            latitude: location?.coords.latitude || 0,
-            longitude: location?.coords.longitude || 0,
+            latitude: location?.coords?.latitude || 0,
+            longitude: location?.coords?.longitude || 0,
           },
+          isDefault: isDefault,
         };
 
         if (editMode && addressToEdit?._id) {
-          await userService.updateAddress(addressToEdit._id, payload as any);
-          Alert.alert('Success', 'Address updated successfully', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+          const result = await updateAddressStore(addressToEdit._id, payload as any);
+          if (result.success) {
+            Alert.alert('Success', 'Address updated successfully', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+          } else {
+            Alert.alert('Error', result.error || 'Failed to update address. Please try again.');
+          }
         } else {
-          await userService.createAddress(payload as any);
-          Alert.alert('Success', 'Address added successfully', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+          const result = await addAddress(payload as any);
+          if (result.success) {
+            Alert.alert('Success', 'Address added successfully', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+          } else {
+            Alert.alert('Error', result.error || 'Failed to add address. Please try again.');
+          }
         }
       } catch (err) {
         console.error('Address save failed', err);
@@ -150,8 +177,8 @@ const AddAddressScreen = () => {
                         type === 'home'
                           ? 'home-outline'
                           : type === 'work'
-                          ? 'briefcase-outline'
-                          : 'location-outline'
+                            ? 'briefcase-outline'
+                            : 'location-outline'
                       }
                       size={24}
                       color={addressType === type ? '#fff' : '#6b7280'}

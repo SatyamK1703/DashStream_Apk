@@ -312,7 +312,7 @@ const renderActionButtons = () => {
       <View style={styles.centeredScreen}>
         <MaterialIcons name="error-outline" size={48} color="#EF4444" />
         <Text style={styles.errorTitle}>Booking Not Found</Text>
-        <Text style={styles.errorSubtitle}>The booking you're looking for doesn't exist.</Text>
+        <Text style={styles.errorSubtitle}>The booking you&#39;re looking for doesn&#39;t exist.</Text>
         <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.goBack()}>
           <Text style={styles.primaryButtonText}>Go Back</Text>
         </TouchableOpacity>

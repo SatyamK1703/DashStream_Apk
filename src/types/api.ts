@@ -295,6 +295,7 @@ export interface CreateAddressRequest {
     latitude: number;
     longitude: number;
   };
+  isDefault?: boolean;
 }
 
 export interface CreateBookingRequest {
@@ -310,7 +311,7 @@ export interface CreateVehicleRequest {
   type: 'car' | 'motorcycle' | 'truck' | 'van';
   brand: string;
   model: string;
- 
+
 }
 
 export interface SearchParams {

@@ -238,7 +238,7 @@ const OtpVerificationScreen = () => {
 
           {/* Resend OTP Section */}
           <View style={styles.resendContainer}>
-            <Text style={styles.resendText}>Didn't receive the code?</Text>
+            <Text style={styles.resendText}>Didn&#39;t receive the code?</Text>
 
             {canResend ? (
               <TouchableOpacity onPress={handleResendOtp} disabled={isLoading}>
