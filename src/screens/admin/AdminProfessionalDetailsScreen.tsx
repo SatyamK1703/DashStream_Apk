@@ -16,7 +16,7 @@ import { Ionicons, MaterialIcons, MaterialCommunityIcons, FontAwesome } from '@e
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
 import { adminService } from '../../services/adminService';
 
-type AdminProfessionalDetailsRouteProp = RouteProp<AdminStackParamList, 'ProfessionalDetails'>;
+type AdminProfessionalDetailsRouteProp = RouteProp<AdminStackParamList, 'AdminProfessionalDetails'>;
 type AdminProfessionalDetailsNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 
 interface Professional {
@@ -40,36 +40,28 @@ interface Professional {
   state: string;
   pincode: string;
   serviceArea: string[];
-  documents: {
-    idProof: {
-      type: string;
-      number: string;
-      verified: boolean;
-      uploadDate: string;
-    };
-    addressProof: {
-      type: string;
-      verified: boolean;
-      uploadDate: string;
-    };
-    drivingLicense?: {
-      number: string;
-      expiry: string;
-      verified: boolean;
-      uploadDate: string;
-    };
+  performanceMetrics: {
+    acceptanceRate: number;
+    cancellationRate: number;
+    avgResponseTime: string;
+    avgServiceTime: string;
+    customerSatisfaction: number;
   };
-  bankDetails: {
-    accountNumber: string;
-    ifscCode: string;
-    accountHolderName: string;
-    bankName: string;
-    verified: boolean;
-  };
-  taxInfo: {
-    panNumber: string;
-    gstNumber?: string;
-  };
+  reviews: {
+    id: string;
+    customerName: string;
+    rating: number;
+    comment: string;
+    date: string;
+  }[];
+  recentBookings: {
+    id: string;
+    date: string;
+    services: string[];
+    amount: string;
+    status: 'completed' | 'cancelled' | 'ongoing';
+  }[];
+      };
   reviews: {
     id: string;
     customerName: string;
@@ -97,7 +89,6 @@ const AdminProfessionalDetailsScreen = () => {
   const route = useRoute<AdminProfessionalDetailsRouteProp>();
   const navigation = useNavigation<AdminProfessionalDetailsNavigationProp>();
   const { professionalId } = route.params;
-  
   const [professional, setProfessional] = useState<Professional | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -126,96 +117,16 @@ const AdminProfessionalDetailsScreen = () => {
     state: 'Maharashtra',
     pincode: '400001',
     serviceArea: ['Andheri', 'Bandra', 'Juhu', 'Santacruz'],
-    documents: {
-      idProof: {
-        type: 'Aadhaar Card',
-        number: 'XXXX-XXXX-1234',
-        verified: true,
-        uploadDate: '2022-05-10'
-      },
-      addressProof: {
-        type: 'Electricity Bill',
-        verified: true,
-        uploadDate: '2022-05-10'
-      },
-      drivingLicense: {
-        number: 'DL-1234567890',
-        expiry: '2027-04-30',
-        verified: true,
-        uploadDate: '2022-05-10'
-      }
-    },
-    bankDetails: {
-      accountNumber: 'XXXXXXXXXXXX4567',
-      ifscCode: 'SBIN0001234',
-      accountHolderName: 'Rajesh Kumar',
-      bankName: 'State Bank of India',
-      verified: true
-    },
-    taxInfo: {
-      panNumber: 'ABCDE1234F',
-      gstNumber: '27AADCB2230M1Z3'
-    },
-    reviews: [
-      {
-        id: 'REV-001',
-        customerName: 'Amit Patel',
-        rating: 5,
-        comment: 'Excellent service! My car looks brand new. Very professional and punctual.',
-        date: '2023-08-10'
-      },
-      {
-        id: 'REV-002',
-        customerName: 'Priya Sharma',
-        rating: 4,
-        comment: 'Good service overall. Could have been more thorough with the interior cleaning.',
-        date: '2023-08-05'
-      },
-      {
-        id: 'REV-003',
-        customerName: 'Rahul Verma',
-        rating: 5,
-        comment: 'Very satisfied with the detailing service. Will definitely book again!',
-        date: '2023-07-28'
-      }
-    ],
-    recentBookings: [
-      {
-        id: 'BK-1234',
-        date: '2023-08-15',
-        services: ['Premium Car Wash', 'Interior Detailing'],
-        amount: '₹1,200',
-        status: 'completed'
-      },
-      {
-        id: 'BK-1235',
-        date: '2023-08-14',
-        services: ['Basic Car Wash'],
-        amount: '₹500',
-        status: 'completed'
-      },
-      {
-        id: 'BK-1236',
-        date: '2023-08-13',
-        services: ['Full Detailing Package'],
-        amount: '₹2,500',
-        status: 'completed'
-      },
-      {
-        id: 'BK-1237',
-        date: '2023-08-12',
-        services: ['Premium Car Wash', 'Waxing'],
-        amount: '₹1,500',
-        status: 'cancelled'
-      }
-    ],
-    performanceMetrics: {
+
+      performanceMetrics: {
       acceptanceRate: 95,
       cancellationRate: 3,
       avgResponseTime: '2 mins',
       avgServiceTime: '1.5 hours',
       customerSatisfaction: 4.8
-    }
+    },
+    reviews: [],
+    recentBookings: []
   };
 
   // Removed mock useEffect - using real API call now
@@ -251,43 +162,7 @@ const AdminProfessionalDetailsScreen = () => {
     );
   };
 
-  const handleVerifyDocument = (documentType: string) => {
-    if (!professional) return;
-    
-    Alert.alert(
-      'Verify Document',
-      `Are you sure you want to mark this ${documentType} as verified?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Confirm', 
-          onPress: () => {
-            // Update document verification status
-            setProfessional(prev => {
-              if (!prev) return prev;
-              
-              const updatedProfessional = { ...prev };
-              
-              if (documentType === 'ID Proof') {
-                updatedProfessional.documents.idProof.verified = true;
-              } else if (documentType === 'Address Proof') {
-                updatedProfessional.documents.addressProof.verified = true;
-              } else if (documentType === 'Driving License' && updatedProfessional.documents.drivingLicense) {
-                updatedProfessional.documents.drivingLicense.verified = true;
-              } else if (documentType === 'Bank Details') {
-                updatedProfessional.bankDetails.verified = true;
-              }
-              
-              return updatedProfessional;
-            });
-            
-            // Show success message
-            Alert.alert('Success', `${documentType} verified successfully`);
-          }
-        }
-      ]
-    );
-  };
+
 
   const handleSaveNote = () => {
     // Save admin note logic would go here
@@ -421,7 +296,7 @@ const AdminProfessionalDetailsScreen = () => {
             <View style={styles.actionButtons}>
               <TouchableOpacity 
                 style={styles.editButton}
-                onPress={() => navigation.navigate('EditProfessional', { professionalId: professional.id })}
+                onPress={() => navigation.navigate('AdminProfessionalEdit', { professionalId: professional.id })}
               >
                 <MaterialIcons name="edit" size={18} color="white" />
                 <Text style={styles.buttonText}>Edit</Text>
@@ -461,19 +336,6 @@ const AdminProfessionalDetailsScreen = () => {
               styles.tabText,
               activeTab === 'overview' && styles.activeTabText
             ]}>Overview</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[
-              styles.tabButton,
-              activeTab === 'documents' && styles.activeTabButton
-            ]}
-            onPress={() => setActiveTab('documents')}
-          >
-            <Text style={[
-              styles.tabText,
-              activeTab === 'documents' && styles.activeTabText
-            ]}>Documents</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -598,232 +460,7 @@ const AdminProfessionalDetailsScreen = () => {
           </View>
         )}
 
-        {activeTab === 'documents' && (
-  <View style={styles.tabContent}>
-    {/* ID Proof */}
-    <View style={styles.documentCard}>
-      <View style={styles.documentHeader}>
-        <Text style={styles.documentTitle}>ID Proof</Text>
-        <View style={[
-          styles.verificationBadge,
-          professional.documents.idProof.verified ? styles.verifiedBadge : styles.pendingBadge
-        ]}>
-          <Text style={[
-            styles.verificationText,
-            professional.documents.idProof.verified ? styles.verifiedText : styles.pendingText
-          ]}>
-            {professional.documents.idProof.verified ? 'Verified' : 'Pending'}
-          </Text>
-        </View>
-      </View>
-      
-      <View style={styles.documentDetails}>
-        <View style={styles.documentRow}>
-          <Text style={styles.documentLabel}>Document Type</Text>
-          <Text style={styles.documentValue}>{professional.documents.idProof.type}</Text>
-        </View>
-        
-        <View style={styles.documentRow}>
-          <Text style={styles.documentLabel}>Document Number</Text>
-          <Text style={styles.documentValue}>{professional.documents.idProof.number}</Text>
-        </View>
-        
-        <View style={styles.documentRow}>
-          <Text style={styles.documentLabel}>Upload Date</Text>
-          <Text style={styles.documentValue}>
-            {new Date(professional.documents.idProof.uploadDate).toLocaleDateString()}
-          </Text>
-        </View>
-      </View>
-      
-      <View style={styles.documentActions}>
-        <TouchableOpacity style={styles.viewDocumentButton}>
-          <Text style={styles.viewDocumentText}>View Document</Text>
-        </TouchableOpacity>
-        
-        {!professional.documents.idProof.verified && (
-          <TouchableOpacity 
-            style={styles.verifyButton}
-            onPress={() => handleVerifyDocument('ID Proof')}
-          >
-            <Text style={styles.verifyButtonText}>Verify</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
 
-    {/* Address Proof */}
-    <View style={styles.documentCard}>
-      <View style={styles.documentHeader}>
-        <Text style={styles.documentTitle}>Address Proof</Text>
-        <View style={[
-          styles.verificationBadge,
-          professional.documents.addressProof.verified ? styles.verifiedBadge : styles.pendingBadge
-        ]}>
-          <Text style={[
-            styles.verificationText,
-            professional.documents.addressProof.verified ? styles.verifiedText : styles.pendingText
-          ]}>
-            {professional.documents.addressProof.verified ? 'Verified' : 'Pending'}
-          </Text>
-        </View>
-      </View>
-      
-      <View style={styles.documentDetails}>
-        <View style={styles.documentRow}>
-          <Text style={styles.documentLabel}>Document Type</Text>
-          <Text style={styles.documentValue}>{professional.documents.addressProof.type}</Text>
-        </View>
-        
-        <View style={styles.documentRow}>
-          <Text style={styles.documentLabel}>Upload Date</Text>
-          <Text style={styles.documentValue}>
-            {new Date(professional.documents.addressProof.uploadDate).toLocaleDateString()}
-          </Text>
-        </View>
-      </View>
-      
-      <View style={styles.documentActions}>
-        <TouchableOpacity style={styles.viewDocumentButton}>
-          <Text style={styles.viewDocumentText}>View Document</Text>
-        </TouchableOpacity>
-        
-        {!professional.documents.addressProof.verified && (
-          <TouchableOpacity 
-            style={styles.verifyButton}
-            onPress={() => handleVerifyDocument('Address Proof')}
-          >
-            <Text style={styles.verifyButtonText}>Verify</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-
-    {/* Driving License */}
-    {professional.documents.drivingLicense && (
-      <View style={styles.documentCard}>
-        <View style={styles.documentHeader}>
-          <Text style={styles.documentTitle}>Driving License</Text>
-          <View style={[
-            styles.verificationBadge,
-            professional.documents.drivingLicense.verified ? styles.verifiedBadge : styles.pendingBadge
-          ]}>
-            <Text style={[
-              styles.verificationText,
-              professional.documents.drivingLicense.verified ? styles.verifiedText : styles.pendingText
-            ]}>
-              {professional.documents.drivingLicense.verified ? 'Verified' : 'Pending'}
-            </Text>
-          </View>
-        </View>
-        
-        <View style={styles.documentDetails}>
-          <View style={styles.documentRow}>
-            <Text style={styles.documentLabel}>License Number</Text>
-            <Text style={styles.documentValue}>{professional.documents.drivingLicense.number}</Text>
-          </View>
-          
-          <View style={styles.documentRow}>
-            <Text style={styles.documentLabel}>Expiry Date</Text>
-            <Text style={styles.documentValue}>
-              {new Date(professional.documents.drivingLicense.expiry).toLocaleDateString()}
-            </Text>
-          </View>
-          
-          <View style={styles.documentRow}>
-            <Text style={styles.documentLabel}>Upload Date</Text>
-            <Text style={styles.documentValue}>
-              {new Date(professional.documents.drivingLicense.uploadDate).toLocaleDateString()}
-            </Text>
-          </View>
-        </View>
-        
-        <View style={styles.documentActions}>
-          <TouchableOpacity style={styles.viewDocumentButton}>
-            <Text style={styles.viewDocumentText}>View Document</Text>
-          </TouchableOpacity>
-          
-          {!professional.documents.drivingLicense.verified && (
-            <TouchableOpacity 
-              style={styles.verifyButton}
-              onPress={() => handleVerifyDocument('Driving License')}
-            >
-              <Text style={styles.verifyButtonText}>Verify</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    )}
-
-    {/* Bank Details */}
-    <View style={styles.documentCard}>
-      <View style={styles.documentHeader}>
-        <Text style={styles.documentTitle}>Bank Details</Text>
-        <View style={[
-          styles.verificationBadge,
-          professional.bankDetails.verified ? styles.verifiedBadge : styles.pendingBadge
-        ]}>
-          <Text style={[
-            styles.verificationText,
-            professional.bankDetails.verified ? styles.verifiedText : styles.pendingText
-          ]}>
-            {professional.bankDetails.verified ? 'Verified' : 'Pending'}
-          </Text>
-        </View>
-      </View>
-      
-      <View style={styles.documentDetails}>
-        <View style={styles.documentRow}>
-          <Text style={styles.documentLabel}>Account Holder</Text>
-          <Text style={styles.documentValue}>{professional.bankDetails.accountHolderName}</Text>
-        </View>
-        
-        <View style={styles.documentRow}>
-          <Text style={styles.documentLabel}>Bank Name</Text>
-          <Text style={styles.documentValue}>{professional.bankDetails.bankName}</Text>
-        </View>
-        
-        <View style={styles.documentRow}>
-          <Text style={styles.documentLabel}>Account Number</Text>
-          <Text style={styles.documentValue}>{professional.bankDetails.accountNumber}</Text>
-        </View>
-        
-        <View style={styles.documentRow}>
-          <Text style={styles.documentLabel}>IFSC Code</Text>
-          <Text style={styles.documentValue}>{professional.bankDetails.ifscCode}</Text>
-        </View>
-      </View>
-      
-      {!professional.bankDetails.verified && (
-        <TouchableOpacity 
-          style={styles.verifyButton}
-          onPress={() => handleVerifyDocument('Bank Details')}
-        >
-          <Text style={styles.verifyButtonText}>Verify</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-
-    {/* Tax Information */}
-    <View style={styles.documentCard}>
-      <Text style={styles.documentTitle}>Tax Information</Text>
-      
-      <View style={styles.documentDetails}>
-        <View style={styles.documentRow}>
-          <Text style={styles.documentLabel}>PAN Number</Text>
-          <Text style={styles.documentValue}>{professional.taxInfo.panNumber}</Text>
-        </View>
-        
-        {professional.taxInfo.gstNumber && (
-          <View style={styles.documentRow}>
-            <Text style={styles.documentLabel}>GST Number</Text>
-            <Text style={styles.documentValue}>{professional.taxInfo.gstNumber}</Text>
-          </View>
-        )}
-      </View>
-    </View>
-  </View>
-)}
 
         {activeTab === 'bookings' && (
   <View style={styles.tabContent}>
@@ -838,7 +475,7 @@ const AdminProfessionalDetailsScreen = () => {
               styles.bookingItem,
               index !== (professional.recentBookings?.length || 1) - 1 && styles.bookingItemBorder
             ]}
-            onPress={() => navigation.navigate('BookingDetails', { bookingId: booking.id })}
+            onPress={() => navigation.navigate('AdminBookingDetails', { bookingId: booking.id })}
           >
             <View style={styles.bookingHeader}>
               <Text style={styles.bookingId}>{booking.id}</Text>
@@ -1040,6 +677,209 @@ const AdminProfessionalDetailsScreen = () => {
 export default AdminProfessionalDetailsScreen;
 
 const styles = StyleSheet.create({
+  bookingItem: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  bookingItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  bookingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  bookingId: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  bookingStatus: {
+    fontSize: 12,
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  bookingCompleted: {
+    color: '#10b981',
+  },
+  bookingCancelled: {
+    color: '#ef4444',
+  },
+  bookingOngoing: {
+    color: '#3b82f6',
+  },
+  bookingDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  bookingDate: {
+    color: '#6b7280',
+    fontSize: 12,
+  },
+  bookingAmount: {
+    color: '#111827',
+    fontWeight: '500',
+  },
+  bookingServices: {
+    color: '#6b7280',
+    fontSize: 12,
+  },
+  emptyMessage: {
+    textAlign: 'center',
+    color: '#6b7280',
+    marginVertical: 16,
+  },
+  viewAllButton: {
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  viewAllText: {
+    textAlign: 'center',
+    color: '#4b5563',
+    fontWeight: '500',
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 16,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  statCompleted: {
+    color: '#10b981',
+  },
+  statCancelled: {
+    color: '#ef4444',
+  },
+  progressBarContainer: {
+    marginTop: 8,
+  },
+  progressBarBackground: {
+    height: 8,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 4,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#10b981',
+    borderRadius: 4,
+  },
+  completionRate: {
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  reviewCountText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginLeft: 4,
+  },
+  reviewItem: {
+    paddingVertical: 12,
+  },
+  reviewItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewCustomer: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  reviewRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  reviewRatingText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#d97706',
+    marginRight: 4,
+  },
+  reviewComment: {
+    fontSize: 14,
+    color: '#374151',
+    marginBottom: 8,
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  ratingBreakdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  ratingLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: 40,
+  },
+  ratingNumber: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginRight: 4,
+  },
+  starIcon: {
+    marginRight: 8,
+  },
+  ratingBarContainer: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 4,
+  },
+  ratingBarFill: {
+    height: '100%',
+    backgroundColor: '#fbbf24',
+    borderRadius: 4,
+  },
+  ratingBarBackground: {
+    flex: 1,
+    height: '100%',
+    backgroundColor: '#e5e7eb',
+    borderRadius: 4,
+  },
+  ratingCount: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginLeft: 8,
+    width: 30,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f9fafb',
