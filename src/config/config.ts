@@ -169,11 +169,7 @@ export const API_ENDPOINTS = {
 
   // Support
   SUPPORT: {
-    TICKETS: '/support/tickets',
-    CREATE_TICKET: '/support/tickets',
-    TICKET_DETAILS: (id: string) => `/support/tickets/${id}`,
-    FAQ: '/support/faq',
-    CONTACT: '/support/contact',
+    QUESTIONS: '/support/questions',
   },
 
   // Admin
