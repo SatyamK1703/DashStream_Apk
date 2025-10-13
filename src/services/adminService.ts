@@ -95,6 +95,37 @@ class AdminService {
       throw error;
     }
   }
+  
+  /**
+   * Create new professional
+   */
+  async createProfessional(professionalData: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    status?: 'active' | 'inactive' | 'pending';
+    address?: any;
+    skills?: string[];
+    serviceAreas?: string[];
+    experience?: string;
+    vehicleInfo?: any;
+    profileImage?: string | null;
+    sendCredentials?: boolean;
+  }): Promise<ApiResponse<Professional>> {
+    try {
+      // Log the request for debugging
+      if (__DEV__) {
+        console.log('Creating professional with data:', JSON.stringify(professionalData, null, 2));
+      }
+      
+      // Make the API call
+      return await httpClient.post(API_ENDPOINTS.ADMIN.PROFESSIONALS, professionalData);
+    } catch (error) {
+      console.error('Create professional error:', error.response?.data || error.message);
+      throw error;
+    }
+  }
 
   /**
    * Update user

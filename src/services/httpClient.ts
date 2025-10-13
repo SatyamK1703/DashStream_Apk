@@ -170,25 +170,6 @@ class HttpClient {
             status: response.status,
             data: response.data,
           });
-          
-          // Special logging for /auth/me to debug the issue
-          if (response.config.url?.includes('/auth/me')) {
-            console.log('🔍 /auth/me detailed response:', {
-              status: response.status,
-              statusText: response.statusText,
-              headers: response.headers,
-              dataType: typeof response.data,
-              dataKeys: response.data ? Object.keys(response.data) : 'No data',
-              fullData: JSON.stringify(response.data, null, 2),
-              hasUserInData: !!(response.data?.data?.user),
-              userDataType: typeof response.data?.data?.user
-            });
-            
-            // If data is undefined but status is 200, this might be a backend issue
-            if (response.status === 200 && response.data?.data === undefined) {
-              console.warn('⚠️ /auth/me returned 200 but data is undefined - possible backend issue');
-            }
-          }
         }
         return response;
       },

@@ -33,10 +33,17 @@ interface FormData {
   status: 'active' | 'inactive' | 'pending';
   sendCredentials: boolean;
   address: {
-    line1: string;
-    line2: string;
+    type: 'home' | 'work' | 'other';
+    name: string;
+    address: string;
+    landmark: string;
     city: string;
     pincode: string;
+    country: string;
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
   };
   skills: string[];
   serviceAreas: string[];
@@ -57,10 +64,17 @@ const AdminCreateProfessionalScreen = () => {
     status: 'pending',
     sendCredentials: true,
     address: {
-      line1: '',
-      line2: '',
+      type: 'home',
+      name: '',
+      address: '',
+      landmark: '',
       city: '',
-      pincode: ''
+      pincode: '',
+      country: 'IN',
+      coordinates: {
+        latitude: 0,
+        longitude: 0,
+      },
     },
     skills: [],
     serviceAreas: [],
@@ -105,14 +119,24 @@ const AdminCreateProfessionalScreen = () => {
     }
   };
   
-  const updateAddress = (key: keyof FormData['address'], value: string) => {
-    setFormData(prev => ({
+  const updateAddress = <K extends keyof FormData['address']>(
+    key: K,
+    value: FormData['address'][K]
+  ) => {
+    setFormData((prev) => ({
       ...prev,
       address: {
         ...prev.address,
-        [key]: value
-      }
+        [key]: value,
+      },
     }));
+
+    if (errors.address) {
+      setErrors((prev) => ({
+        ...prev,
+        address: undefined,
+      }));
+    }
   };
   
   const updateVehicleInfo = (key: keyof FormData['vehicleInfo'], value: string) => {
@@ -187,17 +211,73 @@ const AdminCreateProfessionalScreen = () => {
     return Object.keys(newErrors).length === 0;
   };
   
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return;
     setLoading(true);
-    setTimeout(() => {
+    
+    try {
+      // Validate required fields for professional creation
+      if (!formData.skills.length) {
+        setErrors(prev => ({ ...prev, skills: 'At least one skill is required' }));
+        setLoading(false);
+        return;
+      }
+      
+      if (!formData.serviceAreas.length) {
+        setErrors(prev => ({ ...prev, serviceAreas: 'At least one service area is required' }));
+        setLoading(false);
+        return;
+      }
+      
+      // Prepare data according to backend requirements
+      const professionalData = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.phone.substring(0, 6), // Simple default password using first 6 digits of phone
+        status: formData.status,
+        address: {
+          type: formData.address.type,
+          name: formData.address.name || formData.name + "'s Address",
+          address: formData.address.address,
+          landmark: formData.address.landmark,
+          city: formData.address.city,
+          pincode: formData.address.pincode,
+          country: formData.address.country,
+          coordinates: formData.address.coordinates
+        },
+        skills: formData.skills,
+        serviceAreas: formData.serviceAreas,
+        experience: formData.experience,
+        vehicleInfo: formData.vehicleInfo,
+        profileImage: formData.profileImage,
+        sendCredentials: formData.sendCredentials
+      };
+      
+      // Log the request for debugging
+      if (__DEV__) {
+        console.log('Creating professional with data:', JSON.stringify(professionalData, null, 2));
+      }
+      
+      // Call the admin service to create a professional
+      const response = await adminService.createProfessional(professionalData);
+      
+      if (response && (response.success || response.status === 'success')) {
+        Alert.alert(
+          'Success',
+          `Professional ${formData.name} created successfully.`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+      } else {
+        Alert.alert('Error', response?.message || 'Failed to create professional');
+      }
+    } catch (error) {
+      console.error('Create professional error:', error.response?.data || error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to create professional. Please try again.';
+      Alert.alert('Error', errorMessage);
+    } finally {
       setLoading(false);
-      Alert.alert(
-        'Success',
-        `Professional ${formData.name} created.`,
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
-    }, 2000);
+    }
   };
   return (
     <SafeAreaView style={styles.container}>
@@ -456,25 +536,25 @@ const AdminCreateProfessionalScreen = () => {
                 {/* Address Line 1 */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>
-                    Address Line 1 <Text style={styles.requiredAsterisk}>*</Text>
+                    Address<Text style={styles.requiredAsterisk}>*</Text>
                   </Text>
                   <TextInput
                     style={styles.textInput}
                     placeholder="House/Flat No., Building Name"
-                    value={formData.address.line1}
-                    onChangeText={(value) => updateAddress('line1', value)}
+                    value={formData.address.address}
+                    onChangeText={(value) => updateAddress('address', value)}
                     placeholderTextColor="#9CA3AF"
                   />
                 </View>
                 
                 {/* Address Line 2 */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Address Line 2</Text>
+                  <Text style={styles.inputLabel}>landmark</Text>
                   <TextInput
                     style={styles.textInput}
                     placeholder="Street, Area, Landmark"
-                    value={formData.address.line2}
-                    onChangeText={(value) => updateAddress('line2', value)}
+                    value={formData.address.landmark}
+                    onChangeText={(value) => updateAddress('landmark', value)}
                     placeholderTextColor="#9CA3AF"
                   />
                 </View>
@@ -490,19 +570,6 @@ const AdminCreateProfessionalScreen = () => {
                       placeholder="City"
                       value={formData.address.city}
                       onChangeText={(value) => updateAddress('city', value)}
-                      placeholderTextColor="#9CA3AF"
-                    />
-                  </View>
-                  
-                  <View style={styles.addressInputRight}>
-                    <Text style={styles.inputLabel}>
-                      State <Text style={styles.requiredAsterisk}>*</Text>
-                    </Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="State"
-                      value={formData.address.state}
-                      onChangeText={(value) => updateAddress('state', value)}
                       placeholderTextColor="#9CA3AF"
                     />
                   </View>
@@ -527,7 +594,7 @@ const AdminCreateProfessionalScreen = () => {
                 {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
               </View>
             )}
-            {/* Other form sections... */}
+          
             
             {/* Submit Button */}
             <TouchableOpacity

@@ -198,6 +198,7 @@ export const API_ENDPOINTS = {
     DELETE_SERVICE: (serviceId: string) => `/admin/services/${serviceId}`,
 
     PROFESSIONALS: '/admin/professionals',
+    CREATE_PROFESSIONAL: '/admin/professionals',
     ASSIGN_PROFESSIONAL: (bookingId: string) => `/admin/professionals/${bookingId}/assign-professional`,
     VERIFY_PROFESSIONAL: (professionalId: string) => `/admin/professionals/${professionalId}/verification`,
     PROFESSIONAL_BY_ID: (professionalId: string) => `/admin/professionals/${professionalId}`,
