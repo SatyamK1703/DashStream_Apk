@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,238 +6,340 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
   StyleSheet,
-  Platform,
-  ScrollView,
+  Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
-
-// Import proper types and hooks
-import { ProNavigator, ProRoutes } from '../../../app/routes/ProNavigator';
-import { useApi } from '../../hooks/useApi';
-import httpClient from '../../services/httpClient';
-
-type ProNotificationsScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;
-
-interface Notification {
-  id: string;
-  type: 'job' | 'payment' | 'system' | 'promo';
-  title: string;
-  message: string;
-  timestamp: Date;
-  isRead: boolean;
-  data?: {
-    jobId?: string;
-    paymentId?: string;
-    route?: keyof ProStackParamList;
-  };
-}
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNotificationStore } from '../../store/useNotificationStore';
 
 const ProNotificationsScreen = () => {
-  const navigation = useNavigation<ProNotificationsScreenNavigationProp>();
-  const [activeFilter, setActiveFilter] = useState<'all' | 'job' | 'payment' | 'system' | 'promo'>('all');
-
-  // Use API hook for notifications
+  const navigation = useNavigation();
   const { 
-    data: notifications = [], 
-    isLoading, 
+    notifications, 
+    loading, 
     error, 
-    execute: refreshNotifications 
-  } = useApi(
-    () => httpClient.get('/notifications'), // Professional notifications endpoint
-    {
-      showErrorAlert: false,
-    }
-  );
+    fetchNotifications, 
+    markAsRead, 
+    markAllAsRead 
+  } = useNotificationStore();
 
-  // Filter notifications based on active filter
-  const filteredNotifications = notifications.filter(notification => 
-    activeFilter === 'all' || notification.type === activeFilter
-  );
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
 
-  const onRefresh = () => {
-    refreshNotifications();
-  };
-
-  // --- Handlers ---
-  const handleMarkAsRead = async (id: string) => {
-    try {
-      await httpClient.patch(`/notifications/${id}/read`);
-      refreshNotifications(); // Refresh the notifications list
-    } catch (error) {
-      console.error('Failed to mark notification as read:', error);
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    const unreadNotifications = notifications.filter(n => !n.isRead);
-    if (unreadNotifications.length > 0) {
+  const handleNotificationPress = async (notification: any) => {
+    if (!notification.read) {
       try {
-        await httpClient.patch('/notifications/mark-all-read');
-        refreshNotifications();
-        Alert.alert('Success', 'All notifications marked as read.');
+        await markAsRead(notification._id);
+        fetchNotifications();
       } catch (error) {
-        Alert.alert('Error', 'Failed to mark notifications as read. Please try again.');
+        console.error('Failed to mark notification as read:', error);
       }
     }
   };
 
-  const handleNotificationPress = (notification: Notification) => {
-    if (!notification.isRead) handleMarkAsRead(notification.id);
-    if (notification.data?.route) {
-        const { route, ...params } = notification.data;
-        // This is a type-safe way to navigate
-        navigation.navigate(route, params as any);
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllAsRead();
+      fetchNotifications();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to mark all notifications as read');
     }
   };
 
-  const handleDeleteNotification = async (id: string) => {
-    Alert.alert('Delete Notification', 'Are you sure you want to delete this notification?', [
-      { text: 'Cancel', style: 'cancel' },
-      { 
-        text: 'Delete', 
-        style: 'destructive', 
-        onPress: async () => {
-          try {
-            await httpClient.delete(`/notifications/${id}`);
-            refreshNotifications();
-          } catch (error) {
-            Alert.alert('Error', 'Failed to delete notification. Please try again.');
-          }
-        }
-      },
-    ]);
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'booking':
+        return <Ionicons name="car-outline" size={24} color="#2563eb" />;
+      case 'offer':
+        return <Ionicons name="gift-outline" size={24} color="#f59e0b" />;
+      case 'general':
+        return <Ionicons name="information-circle-outline" size={24} color="#10b981" />;
+      case 'payment':
+        return <Ionicons name="card-outline" size={24} color="#6366f1" />;
+      default:
+        return <Ionicons name="notifications-outline" size={24} color="#2563eb" />;
+    }
   };
 
-  // --- Helpers & Render Functions ---
-
-  const getNotificationIcon = (type: Notification['type']) => {
-    const iconMap = {
-      job: { component: FontAwesome5, name: 'briefcase', color: colors.blue800 },
-      payment: { component: MaterialIcons, name: 'payments', color: colors.green800 },
-      system: { component: Ionicons, name: 'settings', color: colors.gray700 },
-      promo: { component: Ionicons, name: 'megaphone', color: colors.amber800 },
-    };
-    const { component: Icon, name, color } = iconMap[type];
-    return <Icon name={name as any} size={20} color={color} />;
-  };
-
-  const formatTimestamp = (timestamp: Date) => {
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
     const now = new Date();
-    const diffSeconds = Math.floor((now.getTime() - timestamp.getTime()) / 1000);
-    if (diffSeconds < 60) return 'Just now';
-    const diffMinutes = Math.floor(diffSeconds / 60);
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d ago`;
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInHours = diffInMs / (1000 * 60 * 60);
+    const diffInDays = diffInHours / 24;
+
+    if (diffInHours < 1) {
+      return 'Just now';
+    } else if (diffInHours < 24) {
+      const hours = Math.round(diffInHours);
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    } else if (diffInDays < 7) {
+      const days = Math.round(diffInDays);
+      return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+    } else {
+      return date.toLocaleDateString('en-IN');
+    }
   };
 
-  const renderNotificationItem = ({ item }: { item: Notification }) => (
-    <TouchableOpacity style={[styles.notificationItem, !item.isRead && styles.unreadItem]} onPress={() => handleNotificationPress(item)}>
-      <View style={styles.notificationContent}>
-        <View style={[styles.iconContainer, { backgroundColor: colors[`${item.type}100`] }]}>
-          {getNotificationIcon(item.type)}
-        </View>
-        <View style={styles.textContainer}>
-          <Text style={styles.notificationTitle} numberOfLines={1}>{item.title}</Text>
-          <Text style={styles.notificationMessage} numberOfLines={2}>{item.message}</Text>
-          <Text style={styles.timestamp}>{formatTimestamp(item.timestamp)}</Text>
+  const renderNotificationItem = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      style={[styles.notificationItem, !item.read ? styles.unread : styles.read]}
+      onPress={() => handleNotificationPress(item)}
+    >
+      <View style={styles.row}>
+        <View style={styles.iconContainer}>{getNotificationIcon(item.type)}</View>
+        <View style={styles.flex}>
+          <View style={styles.headerRow}>
+            <Text style={[styles.title, !item.read ? styles.boldTitle : styles.normalTitle]}>
+              {item.title}
+            </Text>
+            <View style={styles.notificationActions}>
+              <Text style={styles.timestamp}>{formatTimestamp(item.createdAt)}</Text>
+            </View>
+          </View>
+          <Text style={[styles.message, !item.read ? styles.unreadMessage : styles.readMessage]}>
+            {item.message}
+          </Text>
         </View>
       </View>
-      <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteNotification(item.id)}>
-        <Ionicons name="trash-outline" size={20} color={colors.red500} />
-      </TouchableOpacity>
     </TouchableOpacity>
   );
 
-  const renderEmptyList = () => (
+  const renderEmptyComponent = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="notifications-off-outline" size={64} color={colors.gray300} />
-      <Text style={styles.emptyText}>
-        {activeFilter === 'all' ? 'You have no notifications' : `No ${activeFilter} notifications`}
-      </Text>
+      <Ionicons name="notifications-off-outline" size={60} color="#d1d5db" />
+      <Text style={styles.emptyText}>No notifications yet</Text>
+      <Text style={styles.emptySubText}>You'll see notifications here when you receive them</Text>
     </View>
   );
 
-  if (isLoading) {
-    return <View style={styles.centeredScreen}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  const renderErrorState = () => (
+    <View style={styles.errorContainer}>
+      <Ionicons name="alert-circle-outline" size={60} color="#ef4444" />
+      <Text style={styles.errorTitle}>Failed to load notifications</Text>
+      <Text style={styles.errorMessage}>Please check your connection and try again</Text>
+      <TouchableOpacity style={styles.retryButton} onPress={fetchNotifications}>
+        <Text style={styles.retryButtonText}>Retry</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (loading && notifications.length === 0 && !error) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#000" />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Notifications</Text>
+          </View>
+          <View style={{ width: 60 }} />
+        </View>
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>Loading notifications...</Text>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={20} color={colors.white} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Notifications</Text>
-          <TouchableOpacity style={styles.markAllButton} onPress={handleMarkAllAsRead}>
-            <Text style={styles.markAllText}>Mark all as read</Text>
-          </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>
+            Notifications
+          </Text>
         </View>
-      </View>
-
-      <View style={styles.filterBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-          {(['all', 'job', 'payment', 'system', 'promo'] as const).map(filter => (
-            <TouchableOpacity key={filter} style={[styles.filterButton, activeFilter === filter && styles.activeFilterButton]} onPress={() => setActiveFilter(filter)}>
-              <Text style={[styles.filterText, activeFilter === filter && styles.activeFilterText]}>{filter.charAt(0).toUpperCase() + filter.slice(1)}</Text>
+        {notifications.length > 0 && (
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={handleMarkAllRead} style={styles.headerAction}>
+              <Text style={styles.markAll}>Mark all read</Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
+          </View>
+        )}
       </View>
 
-      <FlatList
-        data={filteredNotifications}
-        renderItem={renderNotificationItem}
-        keyExtractor={item => item.id}
-        ListEmptyComponent={renderEmptyList}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} colors={[colors.primary]} />}
-        contentContainerStyle={styles.listContainer}
-      />
-    </View>
+      {error && notifications.length === 0 ? (
+        renderErrorState()
+      ) : (
+        <FlatList
+          data={notifications}
+          renderItem={renderNotificationItem}
+          keyExtractor={item => item._id}
+          contentContainerStyle={{ flexGrow: 1 }}
+          ListEmptyComponent={renderEmptyComponent}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={fetchNotifications}
+              colors={['#2563eb']}
+              tintColor="#2563eb"
+            />
+          }
+        />
+      )}
+    </SafeAreaView>
   );
 };
 
-const colors = {
-  primary: '#2563EB', white: '#FFFFFF', gray50: '#F9FAFB', gray100: '#F3F4F6', gray200: '#E5E7EB', gray300: '#D1D5DB',
-  gray500: '#6B7280', gray700: '#374151', gray800: '#1F2937', gray900: '#111827',
-  red500: '#EF4444', blue50: '#EFF6FF', blue100: '#DBEAFE', blue800: '#1E40AF',
-  green100: '#D1FAE5', green800: '#065F46', amber100: '#FEF3C7', amber800: '#92400E',
-};
+export default ProNotificationsScreen;
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.gray50 },
-  centeredScreen: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.white },
-  header: { backgroundColor: colors.primary, paddingTop: Platform.OS === 'android' ? 24 : 48, paddingBottom: 16, paddingHorizontal: 16 },
-  headerTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)' },
-  headerTitle: { color: colors.white, fontSize: 20, fontWeight: 'bold', position: 'absolute', left: 60, right: 60, textAlign: 'center' },
-  markAllButton: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)' },
-  markAllText: { color: colors.white, fontSize: 12 },
-  filterBar: { backgroundColor: colors.white, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.gray200 },
-  filterScroll: { paddingHorizontal: 12 },
-  filterButton: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginRight: 8, backgroundColor: colors.gray100 },
-  activeFilterButton: { backgroundColor: colors.primary },
-  filterText: { color: colors.gray700, fontWeight: '500' },
-  activeFilterText: { color: colors.white },
-  listContainer: { flexGrow: 1 },
-  notificationItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.white, padding: 16, borderBottomWidth: 1, borderBottomColor: colors.gray100 },
-  unreadItem: { backgroundColor: colors.blue50, borderLeftWidth: 4, borderLeftColor: colors.primary },
-  notificationContent: { flexDirection: 'row', flex: 1 },
-  iconContainer: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  textContainer: { flex: 1, marginRight: 8 },
-  notificationTitle: { fontSize: 16, fontWeight: 'bold', color: colors.gray900 },
-  notificationMessage: { fontSize: 14, color: colors.gray700, marginTop: 2 },
-  timestamp: { fontSize: 12, color: colors.gray500, marginTop: 4 },
-  deleteButton: { padding: 8 },
-  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
-  emptyText: { fontSize: 16, color: colors.gray500, marginTop: 16, textAlign: 'center' },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff'
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  backButton: {
+    padding: 4
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center'
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937'
+  },
+  markAll: {
+    color: '#2563eb',
+    fontWeight: '600'
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  flex: {
+    flex: 1
+  },
+  notificationItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  unread: {
+    backgroundColor: '#eff6ff'
+  },
+  read: {
+    backgroundColor: '#fff'
+  },
+  iconContainer: {
+    marginRight: 12,
+    marginTop: 4
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start'
+  },
+  title: {
+    fontSize: 16
+  },
+  boldTitle: {
+    fontWeight: '700',
+    color: '#111827'
+  },
+  normalTitle: {
+    fontWeight: '500',
+    color: '#1f2937'
+  },
+  timestamp: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginLeft: 8
+  },
+  message: {
+    marginTop: 4
+  },
+  unreadMessage: {
+    color: '#374151'
+  },
+  readMessage: {
+    color: '#4b5563'
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 80
+  },
+  emptyText: {
+    color: '#9ca3af',
+    fontSize: 18,
+    marginTop: 16
+  },
+  emptySubText: {
+    color: '#6b7280',
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center'
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 80
+  },
+  errorTitle: {
+    color: '#ef4444',
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16
+  },
+  errorMessage: {
+    color: '#6b7280',
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+    marginBottom: 24
+  },
+  retryButton: {
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontWeight: '600'
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  headerAction: {
+    marginLeft: 12
+  },
+  notificationActions: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff'
+  },
+  loadingText: {
+    marginTop: 16,
+    color: '#4b5563'
+  }
 });
-
-export default ProNotificationsScreen;

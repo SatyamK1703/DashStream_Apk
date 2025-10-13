@@ -14,47 +14,30 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { 
-  useNotifications, 
-  useMarkNotificationRead, 
-  useMarkAllNotificationsRead,
-  useClearAllNotifications,
-  useDeleteNotification 
-} from '../../hooks';
-import { Notification } from '../../types/api';
-
-type NotificationsScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
+import { useNotificationStore } from '../../store/useNotificationStore';
 
 const NotificationsScreen = () => {
   const navigation = useNavigation<NotificationsScreenNavigationProp>();
-
-  // API hooks
-  const {
-    data: notifications,
-    loading,
-    error,
-    unreadCount,
-    refresh,
-    loadMore,
-    pagination,
-  } = useNotifications();
-
-  const { execute: markAsRead } = useMarkNotificationRead();
-  const { execute: markAllAsRead } = useMarkAllNotificationsRead();
-  const { execute: clearAll } = useClearAllNotifications();
-  const { execute: deleteNotification } = useDeleteNotification();
+  const { 
+    notifications, 
+    loading, 
+    error, 
+    fetchNotifications, 
+    markAsRead, 
+    markAllAsRead 
+  } = useNotificationStore();
 
   // Load notifications on mount
   useEffect(() => {
-    refresh();
+    fetchNotifications();
   }, []);
 
-  const handleNotificationPress = async (notification: Notification) => {
+  const handleNotificationPress = async (notification: any) => {
     // Mark as read if unread
-    if (!notification.isRead) {
+    if (!notification.read) {
       try {
         await markAsRead(notification._id);
-        refresh(); // Refresh to update read status
+        fetchNotifications(); // Refresh to update read status
       } catch (error) {
         console.error('Failed to mark notification as read:', error);
       }
@@ -86,104 +69,29 @@ const NotificationsScreen = () => {
   const handleMarkAllRead = async () => {
     try {
       await markAllAsRead();
-      refresh();
+      fetchNotifications();
     } catch (error) {
       Alert.alert('Error', 'Failed to mark all notifications as read');
     }
   };
 
-  const handleClearAll = () => {
-    Alert.alert(
-      'Clear All Notifications',
-      'Are you sure you want to clear all notifications? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear All',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await clearAll();
-              refresh();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to clear notifications');
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const handleDeleteNotification = async (notificationId: string) => {
-    try {
-      await deleteNotification(notificationId);
-      refresh();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to delete notification');
-    }
-  };
-
-  const getNotificationIcon = (type: Notification['type']) => {
-    switch (type) {
-      case 'booking':
-        return <Ionicons name="car-outline" size={24} color="#2563eb" />;
-      case 'offer':
-        return <Ionicons name="gift-outline" size={24} color="#f59e0b" />;
-      case 'general':
-        return <Ionicons name="information-circle-outline" size={24} color="#10b981" />;
-      case 'payment':
-        return <Ionicons name="card-outline" size={24} color="#6366f1" />;
-      default:
-        return <Ionicons name="notifications-outline" size={24} color="#2563eb" />;
-    }
-  };
-
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInMs = now.getTime() - date.getTime();
-    const diffInHours = diffInMs / (1000 * 60 * 60);
-    const diffInDays = diffInHours / 24;
-
-    if (diffInHours < 1) {
-      return 'Just now';
-    } else if (diffInHours < 24) {
-      const hours = Math.round(diffInHours);
-      return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
-    } else if (diffInDays < 7) {
-      const days = Math.round(diffInDays);
-      return `${days} ${days === 1 ? 'day' : 'days'} ago`;
-    } else {
-      return date.toLocaleDateString('en-IN');
-    }
-  };
-
-  const renderNotificationItem = ({ item }: { item: Notification }) => (
+  const renderNotificationItem = ({ item }: { item: any }) => (
     <TouchableOpacity
-      style={[styles.notificationItem, !item.isRead ? styles.unread : styles.read]}
+      style={[styles.notificationItem, !item.read ? styles.unread : styles.read]}
       onPress={() => handleNotificationPress(item)}
     >
       <View style={styles.row}>
         <View style={styles.iconContainer}>{getNotificationIcon(item.type)}</View>
         <View style={styles.flex}>
           <View style={styles.headerRow}>
-            <Text style={[styles.title, !item.isRead ? styles.boldTitle : styles.normalTitle]}>
+            <Text style={[styles.title, !item.read ? styles.boldTitle : styles.normalTitle]}>
               {item.title}
             </Text>
             <View style={styles.notificationActions}>
               <Text style={styles.timestamp}>{formatTimestamp(item.createdAt)}</Text>
-              <TouchableOpacity
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleDeleteNotification(item._id);
-                }}
-                style={styles.deleteButton}
-              >
-                <Ionicons name="close" size={16} color="#9ca3af" />
-              </TouchableOpacity>
             </View>
           </View>
-          <Text style={[styles.message, !item.isRead ? styles.unreadMessage : styles.readMessage]}>
+          <Text style={[styles.message, !item.read ? styles.unreadMessage : styles.readMessage]}>
             {item.message}
           </Text>
         </View>
@@ -239,18 +147,13 @@ const NotificationsScreen = () => {
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>
-            Notifications {unreadCount > 0 && `(${unreadCount})`}
+            Notifications
           </Text>
         </View>
         {notifications.length > 0 && (
           <View style={styles.headerActions}>
-            {unreadCount > 0 && (
-              <TouchableOpacity onPress={handleMarkAllRead} style={styles.headerAction}>
-                <Text style={styles.markAll}>Mark all read</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={handleClearAll} style={styles.headerAction}>
-              <Ionicons name="trash-outline" size={18} color="#ef4444" />
+            <TouchableOpacity onPress={handleMarkAllRead} style={styles.headerAction}>
+              <Text style={styles.markAll}>Mark all read</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -267,25 +170,11 @@ const NotificationsScreen = () => {
           ListEmptyComponent={renderEmptyComponent}
           refreshControl={
             <RefreshControl
-              refreshing={loading && notifications.length > 0}
-              onRefresh={refresh}
+              refreshing={loading}
+              onRefresh={fetchNotifications}
               colors={['#2563eb']}
               tintColor="#2563eb"
             />
-          }
-          onEndReached={() => {
-            if (pagination.hasMore && !loading) {
-              loadMore();
-            }
-          }}
-          onEndReachedThreshold={0.1}
-          ListFooterComponent={() => 
-            loading && notifications.length > 0 && pagination.hasMore ? (
-              <View style={styles.loadingMore}>
-                <ActivityIndicator size="small" color="#2563eb" />
-                <Text style={styles.loadingMoreText}>Loading more...</Text>
-              </View>
-            ) : null
           }
         />
       )}
