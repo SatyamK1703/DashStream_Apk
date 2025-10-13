@@ -30,12 +30,14 @@ type SupportOption = {
   value: string;
 };
 
+import { useSupportStore } from '../../store/useSupportStore';
+
 const SupportScreen = () => {
   const navigation = useNavigation<SupportScreenNavigationProp>();
   const { user } = useAuth();
   const [selectedIssue, setSelectedIssue] = useState('');
   const [message, setMessage] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const { submitting, submitQuestion } = useSupportStore();
   const [submitted, setSubmitted] = useState(false);
 
   // Animation for the success message
@@ -109,17 +111,17 @@ const SupportScreen = () => {
 
   const handleSubmit = async () => {
     if (!selectedIssue || !message.trim()) {
-      // You can implement a more subtle feedback mechanism like shaking the button
       console.log('Validation failed');
       return;
     }
 
-    setSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      await submitQuestion({ issueType: selectedIssue, message });
       showSuccessMessage();
-    }, 1500);
+    } catch (error) {
+      // The store will handle the error state, but you might want to show an alert here
+      console.error('Failed to submit question:', error);
+    }
   };
 
   return (
