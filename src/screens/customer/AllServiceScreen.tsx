@@ -7,9 +7,7 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
-  Dimensions,
   ActivityIndicator,
-  ScrollView,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
@@ -22,15 +20,14 @@ import { useCart } from '../../store';
 
 type NavigationProp = NativeStackNavigationProp<CustomerStackParamList, 'AllServices'>;
 
-const CATEGORY_TABS = ['All','Car Wash', 'Deep Clean', 'Special Car Care'];
+const CATEGORY_TABS = ['All', 'Car Wash', 'Deep Clean', 'Special Car Care'];
+
 const AllServicesScreen = () => {
   const navigation = useNavigation<NavigationProp>();
-  const route = useRoute();
   const [filteredServices, setFilteredServices] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTab, setSelectedTab] = useState('All');
-  
-  // Fetch services from API
+
   const { 
     data: servicesData = [], 
     loading: isLoading, 
@@ -40,32 +37,15 @@ const AllServicesScreen = () => {
     category: selectedTab === 'All' ? undefined : selectedTab.toLowerCase().replace(' ', '-') 
   });
 
-  // Initialize data on mount
   useEffect(() => {
     fetchServices();
-  }, []);
-
-  // Debug log when data changes
-  useEffect(() => {
-   
-  }, [servicesData, isLoading, error]);
-
-  // Handle category filter changes
-  useEffect(() => {
-    if (selectedTab === 'All') {
-      fetchServices();
-    } else {
-      fetchServices();
-    }
   }, [selectedTab]);
 
-  // Handle search filtering
   useEffect(() => {
     if (!servicesData) {
       setFilteredServices([]);
       return;
     }
-
     if (searchQuery.trim() === '') {
       setFilteredServices(servicesData);
     } else {
@@ -80,6 +60,7 @@ const AllServicesScreen = () => {
   const handleServicePress = (service: any) => {
     navigation.navigate('ServiceDetails', { serviceId: service._id || service.id, service });
   };
+
   const { addItem } = useCart();
 
   const handleAddToCart = (service: any) => {
@@ -93,94 +74,95 @@ const AllServicesScreen = () => {
       meta: { vehicleType: service.vehicleType }
     });
   };
-  
+
   const renderServiceItem = ({ item }: { item: any }) => {
     const discountPercentage = item.originalPrice && item.price ? 
       Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100) : 0;
-    
+
     return (
       <TouchableOpacity style={styles.card} onPress={() => handleServicePress(item)} activeOpacity={0.9}>
-        <View style={styles.cardContent}>
-          <View style={styles.cardInfo}>
-            <Text style={styles.cardTitle}>{item.name || item.title}</Text>
-            <Text style={styles.cardRating}>⭐ {item.rating || 4.5} ({item.reviewCount || item.reviews || 0} ratings)</Text>
-            {item.features && item.features.length > 0 && (
-              <>
-                <Text style={styles.cardFeature}>• {item.features[0]}</Text>
-                {item.features[1] && <Text style={styles.cardFeature}>• {item.features[1]}</Text>}
-                {item.features[2] && <Text style={styles.cardFeature}>• {item.features[2]}</Text>}
-              </>
-            )}
-            <View style={styles.cardPriceRow}>
-              {item.originalPrice && item.originalPrice > item.price && (
-                <Text style={styles.oldPrice}>₹{item.originalPrice}</Text>
-              )}
-              <Text style={styles.newPrice}>₹{item.price}</Text>
-              {discountPercentage > 0 && (
-                <Text style={styles.discount}>{discountPercentage}% OFF</Text>
-              )}
-            </View>
+        <Image 
+          source={{ uri: item.image }} 
+          style={styles.cardImage} 
+          onError={() => console.log('Failed to load service image')}
+        />
+        {discountPercentage > 0 && (
+          <View style={styles.discountBadge}>
+            <Text style={styles.discountText}>{discountPercentage}% OFF</Text>
           </View>
-          {item.image ? (
-            <Image 
-              source={{ uri: item.image }} 
-              style={styles.cardImage} 
-              onError={() => console.log('Failed to load service image')}
-            />
-          ) : (
-            <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
-              <Ionicons name="car-outline" size={32} color="#666" />
-            </View>
-          )}
+        )}
+        <View style={styles.cardContent}>
+          <Text style={styles.cardTitle} numberOfLines={1}>{item.name || item.title}</Text>
+          <Text style={styles.cardRating}>⭐ {item.rating || 4.5} ({item.reviewCount || item.reviews || 0})</Text>
+          <View style={styles.priceContainer}>
+            <Text style={styles.newPrice}>₹{item.price}</Text>
+            {item.originalPrice && item.originalPrice > item.price && (
+              <Text style={styles.oldPrice}>₹{item.originalPrice}</Text>
+            )}
+          </View>
+          <TouchableOpacity style={styles.addButton} onPress={() => handleAddToCart(item)}>
+            <Text style={styles.addText}>ADD</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={() => handleAddToCart(item)}
-        >
-          <Text style={styles.addText}>ADD</Text>
-        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
 
+  const ListHeader = () => (
+    <View>
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search for services..."
+          placeholderTextColor="#9ca3af"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+      <CategoryTabs
+        tabs={CATEGORY_TABS}
+        selected={selectedTab}
+        onSelect={(tab) => setSelectedTab(tab)}
+      />
+    </View>
+  );
+
+  const EmptyListComponent = () => (
+    <View style={styles.emptyContainer}>
+        <Ionicons name="sad-outline" size={64} color="#d1d5db" />
+        <Text style={styles.emptyText}>No Services Found</Text>
+        <Text style={styles.emptySubtext}>Try adjusting your search or filters.</Text>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <MaterialIcons name="arrow-back" size={28} color="#1f2937" />
         </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>All Services</Text>
-        </View>
+        <Text style={styles.headerTitle}>All Services</Text>
         <View style={styles.headerRight} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
-        <CategoryTabs
-          tabs={CATEGORY_TABS}
-          selected={selectedTab}
-          onSelect={(tab) => setSelectedTab(tab)}
+      {isLoading && filteredServices.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>Loading Services...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredServices}
+          keyExtractor={item => item.id || item._id}
+          renderItem={renderServiceItem}
+          numColumns={2}
+          ListHeaderComponent={ListHeader}
+          ListEmptyComponent={EmptyListComponent}
+          contentContainerStyle={styles.flatListContent}
+          showsVerticalScrollIndicator={false}
         />
-        
-
-        {/* Service List */}
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#2563eb" />
-            <Text style={styles.loadingText}>Loading Services...</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={filteredServices}
-            keyExtractor={item => item.id}
-            renderItem={renderServiceItem}
-            contentContainerStyle={styles.flatListContent}
-            showsVerticalScrollIndicator={false}
-            scrollEnabled={false}
-          />
-        )}
-      </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
@@ -188,11 +170,7 @@ const AllServicesScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff'
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f9fafb'
   },
   header: {
     flexDirection: 'row',
@@ -201,138 +179,145 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#fff',
-    borderBottomColor: '#eee',
+    borderBottomColor: '#e5e7eb',
     borderBottomWidth: 1,
   },
   backButton: {
     padding: 4
   },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center'
-  },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#111827',
-    textAlign: 'center'
   },
   headerRight: {
     width: 40
   },
-  scrollView: {
-    flex: 1
-  },
-  filterRow: {
+  searchContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingBottom: 8,
+    alignItems: 'center',
     backgroundColor: '#fff',
-  },
-  filterTag: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 18,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginVertical: 16,
+    paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#d1d5db', // Gray-300
-    backgroundColor: '#fff',
+    borderColor: '#e5e7eb',
+  },
+  searchIcon: {
     marginRight: 8,
   },
-  filterText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#4b5563', // Gray-600
+  searchInput: {
+    flex: 1,
+    height: 48,
+    fontSize: 16,
+    color: '#111827',
+  },
+  flatListContent: {
+    paddingHorizontal: 12,
+    paddingBottom: 20,
   },
   card: {
+    flex: 1,
     backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 12,
-    padding: 16,
+    margin: 8,
+    borderRadius: 16,
     shadowColor: '#000',
     shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
     elevation: 3,
+    overflow: 'hidden',
+  },
+  cardImage: {
+    width: '100%',
+    height: 120,
+    backgroundColor: '#f3f4f6',
+  },
+  discountBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  discountText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   cardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  cardInfo: {
-    flex: 1,
-    marginRight: 12,
+    padding: 12,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: '#1f2937',
     marginBottom: 4,
   },
   cardRating: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6b7280',
-    marginBottom: 6,
+    marginBottom: 8,
   },
-  cardFeature: {
-    fontSize: 13,
-    color: '#4b5563',
-  },
-  cardPriceRow: {
+  priceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-  },
-  oldPrice: {
-    textDecorationLine: 'line-through',
-    color: '#9ca3af',
-    marginRight: 6,
+    marginBottom: 12,
   },
   newPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
     color: '#111827',
-    fontWeight: '600',
-    marginRight: 6,
   },
-  discount: {
-    color: '#10b981',
-    fontWeight: '600',
-  },
-  cardImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: '#f3f4f6',
-  },
-  cardImagePlaceholder: {
-    justifyContent: 'center',
-    alignItems: 'center',
+  oldPrice: {
+    fontSize: 12,
+    color: '#9ca3af',
+    textDecorationLine: 'line-through',
+    marginLeft: 8,
   },
   addButton: {
-    marginTop: 12,
-    alignSelf: 'flex-end',
-    backgroundColor: '#111827',
-    paddingVertical: 6,
-    paddingHorizontal: 20,
-    borderRadius: 6,
+    backgroundColor: '#2563eb',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   addText: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40
   },
   loadingText: {
-    marginTop: 16,
+    marginTop: 8,
     fontSize: 16,
     color: '#6b7280',
   },
-  flatListContent: {
-    paddingBottom: 100
-  }
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 80,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#4b5563',
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 8,
+    textAlign: 'center',
+    paddingHorizontal: 40,
+  },
 });
 
 export default AllServicesScreen;
