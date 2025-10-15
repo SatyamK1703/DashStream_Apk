@@ -495,9 +495,35 @@ class AdminService {
    */
   async getProfessionalById(professionalId: string): Promise<ApiResponse<Professional>> {
     try {
-      return await httpClient.get(API_ENDPOINTS.ADMIN.PROFESSIONAL_BY_ID(professionalId));
+      console.log('adminService.getProfessionalById called with ID:', professionalId);
+      
+      // Make the API call
+      const response = await httpClient.get(API_ENDPOINTS.ADMIN.PROFESSIONAL_BY_ID(professionalId));
+      
+      console.log('API response status:', response.status);
+      console.log('API response success:', response.success);
+      
+      // Handle nested data structure
+      // The API might return { data: { data: { ... } } } structure
+      if (response.data && response.data.data && typeof response.data.data === 'object') {
+        // If we have a nested data structure, normalize it
+        return {
+          ...response,
+          data: response.data.data,
+          success: response.success || response.data.status === 'success'
+        };
+      }
+      
+      return response;
     } catch (error) {
       console.error('Get professional by ID error:', error);
+      
+      // Log more details about the error
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+      }
+      
       throw error;
     }
   }
@@ -516,6 +542,27 @@ class AdminService {
       );
     } catch (error) {
       console.error('Update professional verification error:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Update professional details
+   */
+  async updateProfessional(
+    professionalId: string,
+    professionalData: Partial<Professional>
+  ): Promise<ApiResponse<Professional>> {
+    try {
+      if (__DEV__) {
+        console.log('Updating professional with ID:', professionalId, 'Data:', professionalData);
+      }
+      return await httpClient.patch(
+        API_ENDPOINTS.ADMIN.PROFESSIONAL_BY_ID(professionalId),
+        professionalData
+      );
+    } catch (error) {
+      console.error('Update professional error:', error);
       throw error;
     }
   }

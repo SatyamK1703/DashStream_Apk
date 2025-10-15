@@ -13,11 +13,32 @@ import {
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
+import axios from 'axios';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
 import { adminService } from '../../services/adminService';
+import { API_BASE_URL } from '../../config/config';
+import { getToken } from '../../utils/authUtils';
 
 type AdminProfessionalDetailsRouteProp = RouteProp<AdminStackParamList, 'AdminProfessionalDetails'>;
 type AdminProfessionalDetailsNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
+
+// Basic professional info that can be passed from the list screen
+interface ProfessionalBasicInfo {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  status: string;
+  profileImage?: string;
+  isVerified: boolean;
+  createdAt: string;
+}
+
+// Define the expected route params
+interface AdminProfessionalDetailsParams {
+  professionalId: string;
+  professionalBasicInfo?: ProfessionalBasicInfo;
+}
 
 interface Professional {
   id: string;
@@ -71,50 +92,186 @@ interface Professional {
 }
 
 const AdminProfessionalDetailsScreen = () => {
-  const route = useRoute<AdminProfessionalDetailsRouteProp>();
+  const route = useRoute<RouteProp<{ params: AdminProfessionalDetailsParams }, 'params'>>();
   const navigation = useNavigation<AdminProfessionalDetailsNavigationProp>();
-  const { professionalId } = route.params;
+  const { professionalId, professionalBasicInfo } = route.params;
   const [professional, setProfessional] = useState<Professional | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [adminNote, setAdminNote] = useState('');
   
-  // Mock data
-  const mockProfessional: Professional = {
-    id: 'PRO-001',
-    name: 'Rajesh Kumar',
-    phone: '+91 9876543210',
-    email: 'rajesh.kumar@example.com',
-    rating: 4.8,
-    totalJobs: 156,
-    completedJobs: 148,
-    cancelledJobs: 8,
-    totalEarnings: '₹78,500',
-    status: 'active',
-    skills: ['Car Wash', 'Detailing', 'Polish', 'Interior Cleaning'],
-    joinedDate: '2022-05-15',
-    lastActive: '2023-08-15T10:30:00Z',
-    profileImage: undefined,
-    isVerified: true,
-    address: '123 Main Street, Apartment 4B',
-    city: 'Mumbai',
-    state: 'Maharashtra',
-    pincode: '400001',
-    serviceArea: ['Andheri', 'Bandra', 'Juhu', 'Santacruz'],
+  // No mock data - removed
 
-      performanceMetrics: {
-      acceptanceRate: 95,
-      cancellationRate: 3,
-      avgResponseTime: '2 mins',
-      avgServiceTime: '1.5 hours',
-      customerSatisfaction: 4.8
-    },
-    reviews: [],
-    recentBookings: []
-  };
+  // Fetch professional details
+  useEffect(() => {
+    const fetchProfessionalDetails = async () => {
+      try {
+        setLoading(true);
+        console.log('Fetching professional details for ID:', professionalId);
+        console.log('ID type:', typeof professionalId);
+        
+        // Check if the ID is in the correct format
+        // MongoDB IDs are typically 24 character hex strings
+        const isValidMongoId = /^[0-9a-fA-F]{24}$/.test(professionalId);
+        console.log('Is valid MongoDB ID format:', isValidMongoId);
+        
+        // First, try our debug endpoint to check if the professional exists
+        try {
+          const debugUrl = `${API_BASE_URL}/admin/debug/professional/${professionalId}`;
+          console.log('Calling debug endpoint:', debugUrl);
+          const debugResponse = await axios.get(debugUrl, {
+            headers: {
+              Authorization: `Bearer ${await getToken()}`
+            }
+          });
+          console.log('Debug response:', debugResponse.data);
+        } catch (debugError) {
+          console.error('Debug endpoint error:', debugError.response?.data || debugError);
+        }
+        
+        // Log the exact URL that will be called
+        const url = `/admin/professionals/${professionalId}`;
+        console.log('API URL that will be called:', url);
+        
+        // Try to fetch the professional
+        const response = await adminService.getProfessionalById(professionalId);
+        
+        // Extract the professional data from the nested response structure
+        // The API returns { data: { data: { ... } } } structure
+        const professionalApiData = response.data?.data || response.data;
+        
+        if (professionalApiData) {
+          console.log('Professional details fetched successfully:', professionalApiData);
+          console.log('Response data ID:', professionalApiData._id || professionalApiData.id);
+          
+          // Transform the API response to match our Professional interface
+          const professionalData = {
+            id: professionalApiData._id || professionalApiData.id,
+            name: professionalApiData.name || 'Unknown',
+            phone: professionalApiData.phone || '',
+            email: professionalApiData.email || '',
+            rating: professionalApiData.rating || professionalApiData.totalRatings || 0,
+            totalJobs: professionalApiData.totalJobs || 0,
+            completedJobs: professionalApiData.completedJobs || 0,
+            cancelledJobs: professionalApiData.cancelledJobs || 0,
+            totalEarnings: professionalApiData.totalEarnings || '₹0',
+            status: professionalApiData.status || 'inactive',
+            skills: professionalApiData.professionalInfo?.skills || [],
+            joinedDate: professionalApiData.createdAt || new Date().toISOString(),
+            lastActive: professionalApiData.lastActive || new Date().toISOString(),
+            profileImage: professionalApiData.profileImage?.url,
+            isVerified: professionalApiData.isPhoneVerified || false,
+            address: professionalApiData.addresses?.[0]?.address || '',
+            city: professionalApiData.addresses?.[0]?.city || '',
+            state: professionalApiData.addresses?.[0]?.state || '',
+            pincode: professionalApiData.addresses?.[0]?.pincode || '',
+            serviceArea: professionalApiData.professionalInfo?.serviceAreas || [],
+            performanceMetrics: {
+              acceptanceRate: professionalApiData.performanceMetrics?.acceptanceRate || 0,
+              cancellationRate: professionalApiData.performanceMetrics?.cancellationRate || 0,
+              avgResponseTime: professionalApiData.performanceMetrics?.avgResponseTime || '0 mins',
+              avgServiceTime: professionalApiData.performanceMetrics?.avgServiceTime || '0 hours',
+              customerSatisfaction: professionalApiData.performanceMetrics?.customerSatisfaction || 0
+            },
+            reviews: professionalApiData.reviews || [],
+            recentBookings: professionalApiData.recentBookings || []
+          };
+          
+          setProfessional(professionalData);
+        } else {
+          console.error('Failed to fetch professional details:', response);
+          
+          // Check if we have fallback data from navigation params
+          const { professionalBasicInfo } = route.params;
+          if (professionalBasicInfo) {
+            console.log('Using fallback data from navigation params:', professionalBasicInfo);
+            
+            // Create a minimal professional object from the basic info
+            const fallbackData = {
+              id: professionalBasicInfo.id,
+              name: professionalBasicInfo.name || 'Unknown',
+              phone: professionalBasicInfo.phone || '',
+              email: professionalBasicInfo.email || '',
+              rating: 0,
+              totalJobs: 0,
+              completedJobs: 0,
+              cancelledJobs: 0,
+              totalEarnings: '₹0',
+              status: professionalBasicInfo.status || 'inactive',
+              skills: [],
+              joinedDate: professionalBasicInfo.createdAt || new Date().toISOString(),
+              lastActive: new Date().toISOString(),
+              profileImage: professionalBasicInfo.profileImage,
+              isVerified: professionalBasicInfo.isVerified || false,
+              address: '',
+              city: '',
+              state: '',
+              pincode: '',
+              serviceArea: [],
+              performanceMetrics: {
+                acceptanceRate: 0,
+                cancellationRate: 0,
+                avgResponseTime: '0 mins',
+                avgServiceTime: '0 hours',
+                customerSatisfaction: 0
+              },
+              reviews: [],
+              recentBookings: []
+            };
+            
+            setProfessional(fallbackData);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching professional details:', error);
+        
+        // Check if we have fallback data from navigation params
+        if (professionalBasicInfo) {
+          console.log('Using fallback data from navigation params after error:', professionalBasicInfo);
+          
+          // Create a minimal professional object from the basic info
+          const fallbackData = {
+            id: professionalBasicInfo.id,
+            name: professionalBasicInfo.name || 'Unknown',
+            phone: professionalBasicInfo.phone || '',
+            email: professionalBasicInfo.email || '',
+            rating: 0,
+            totalJobs: 0,
+            completedJobs: 0,
+            cancelledJobs: 0,
+            totalEarnings: '₹0',
+            status: professionalBasicInfo.status || 'inactive',
+            skills: [],
+            joinedDate: professionalBasicInfo.createdAt || new Date().toISOString(),
+            lastActive: new Date().toISOString(),
+            profileImage: professionalBasicInfo.profileImage,
+            isVerified: professionalBasicInfo.isVerified || false,
+            address: '',
+            city: '',
+            state: '',
+            pincode: '',
+            serviceArea: [],
+            performanceMetrics: {
+              acceptanceRate: 0,
+              cancellationRate: 0,
+              avgResponseTime: '0 mins',
+              avgServiceTime: '0 hours',
+              customerSatisfaction: 0
+            },
+            reviews: [],
+            recentBookings: []
+          };
+          
+          setProfessional(fallbackData);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Removed mock useEffect - using real API call now
+    fetchProfessionalDetails();
+  }, [professionalId]);
 
   const handleStatusChange = () => {
     if (!professional) return;
@@ -126,21 +283,51 @@ const AdminProfessionalDetailsScreen = () => {
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Confirm', 
-          onPress: () => {
-            // Update professional status
-            setProfessional(prev => {
-              if (!prev) return prev;
-              return {
-                ...prev,
-                status: prev.status === 'active' ? 'inactive' : 'active'
-              };
-            });
-            
-            // Show success message
-            Alert.alert(
-              'Success',
-              `Professional ${professional.status === 'active' ? 'deactivated' : 'activated'} successfully`
-            );
+          onPress: async () => {
+            try {
+              // Show loading indicator
+              setLoading(true);
+              
+              // Determine new status
+              const newStatus = professional.status === 'active' ? 'inactive' : 'active';
+              
+              // Call API to update professional status
+              const response = await adminService.updateProfessional(
+                professional.id, 
+                { status: newStatus }
+              );
+              
+              if (response.success) {
+                // Update local state
+                setProfessional(prev => {
+                  if (!prev) return prev;
+                  return {
+                    ...prev,
+                    status: newStatus
+                  };
+                });
+                
+                // Show success message
+                Alert.alert(
+                  'Success',
+                  `Professional ${professional.status === 'active' ? 'deactivated' : 'activated'} successfully`
+                );
+              } else {
+                // Show error message
+                Alert.alert(
+                  'Error',
+                  `Failed to update professional status: ${response.message || 'Unknown error'}`
+                );
+              }
+            } catch (error) {
+              console.error('Error updating professional status:', error);
+              Alert.alert(
+                'Error',
+                `Failed to update professional status: ${error.message || 'Unknown error'}`
+              );
+            } finally {
+              setLoading(false);
+            }
           }
         }
       ]

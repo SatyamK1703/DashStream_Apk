@@ -68,11 +68,30 @@ const ProfessionalCard = React.memo(({
     <TouchableOpacity
       style={styles.cardContainer}
       onPress={() => {
-        if (item.id) {
-          console.log('Navigating to professional details:', item.id);
-          navigation.navigate('AdminProfessionalDetails', { professionalId: item.id });
+        // Check for both id and _id fields
+        const professionalId = item.id || item._id;
+        if (professionalId) {
+          console.log('Navigating to professional details:', professionalId);
+          console.log('Professional object:', item);
+          
+          // Pass the entire professional object as a parameter
+          // This way, even if the API call fails, we have basic info to display
+          navigation.navigate('AdminProfessionalDetails', { 
+            professionalId,
+            professionalBasicInfo: {
+              id: professionalId,
+              name: item.name || 'Unknown',
+              email: item.email || '',
+              phone: item.phone || '',
+              status: item.status || 'inactive',
+              profileImage: item.profileImage || '',
+              isVerified: item.isVerified || false,
+              createdAt: item.createdAt || new Date().toISOString()
+            }
+          });
         } else {
           console.error('Professional ID is missing');
+          console.error('Professional object:', item);
         }
       }}
     >
