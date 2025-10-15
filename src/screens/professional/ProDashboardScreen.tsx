@@ -56,6 +56,12 @@ const ProDashboardScreen = () => {
     refresh
   } = useProfessionalDashboardScreen();
 
+  // FIX: Define missing variables to prevent crash and data mismatch
+  const earnings = stats?.earnings || { today: 0, thisWeek: 0, thisMonth: 0, pendingPayout: 0, lastPayout: { amount: 0 } };
+  const upcomingJobs = stats?.todayJobs || [];
+  const performance = stats?.performance || { rating: 0, completionRate: 0, onTimeRate: 0, totalJobs: 0 };
+  const refreshDashboard = refresh;
+
   // Professional actions
   const { toggleAvailability } = useProfessionalProfileActions();
   const { acceptJob, startJob } = useProfessionalJobActions();

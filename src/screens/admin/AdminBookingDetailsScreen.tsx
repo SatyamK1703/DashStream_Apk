@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -30,6 +30,7 @@ interface ProfessionalOption {
   rating: number;
   experience?: number;
   isAvailable?: boolean;
+  verified?: boolean;
 }
 
 // --- Main Component ---
@@ -72,7 +73,7 @@ const AdminBookingDetailsScreen = () => {
       console.log('Modal opened with empty professionals list, fetching again...');
       fetchProfessionals();
     }
-  }, [showAssignModal, professionals.length, booking]);
+  }, [showAssignModal, professionals.length, booking, fetchProfessionals]);
 
   // --- API Functions ---
   const fetchBookingDetails = async () => {
@@ -96,38 +97,40 @@ const AdminBookingDetailsScreen = () => {
     }
   };
 
-  const fetchProfessionals = async () => {
+   const fetchProfessionals = useCallback(async () => {
     if (!booking?._id) {
       console.log('No booking ID available, cannot fetch professionals');
       return;
     }
-    
+
     console.log('Fetching professionals for booking:', booking._id);
     setAssignLoading(true);
-    
+
     try {
-      // First try to get available professionals for this specific booking
       const response = await adminService.getAvailableProfessionals(booking._id);
       console.log('API Response:', JSON.stringify(response, null, 2));
-      
-      if (response.success) {
-        // The API response structure is: data.data.professionals
-        const professionalsArray = response.data?.data?.professionals || response.data?.professionals || [];
-        
+
+      if ((response.status || response.data?.status) === 'success') {
+        const professionalsArray =
+          response.data?.data?.professionals || response.data?.professionals || [];
+
         console.log('Extracted professionals array:', JSON.stringify(professionalsArray, null, 2));
-        
+
         if (Array.isArray(professionalsArray) && professionalsArray.length > 0) {
           console.log('Available professionals found:', professionalsArray.length);
-          
-          const professionalOptions: ProfessionalOption[] = professionalsArray.map((prof: any) => ({
-            id: prof._id || prof.id,
-            name: prof.name || prof.user?.name || prof.phone || 'Unknown',
-            rating: prof.rating || 0,
-            experience: Array.isArray(prof.specializations) ? prof.specializations.join(', ') : prof.experience || '',
-            isAvailable: true,
-            verified: prof.verified
-          }));
-          
+
+          const professionalOptions: ProfessionalOption[] =
+            professionalsArray.map((prof: any) => ({
+              id: prof._id || prof.id,
+              name: prof.name || prof.user?.name || prof.phone || 'Unknown',
+              rating: prof.rating || 0,
+              experience: Array.isArray(prof.specializations)
+                ? prof.specializations.join(', ')
+                : prof.experience || '',
+              isAvailable: true,
+              verified: prof.verified
+            }));
+
           console.log('Mapped professional options:', JSON.stringify(professionalOptions, null, 2));
           setProfessionals(professionalOptions);
           console.log('Professionals state updated with', professionalOptions.length, 'options');
@@ -145,10 +148,11 @@ const AdminBookingDetailsScreen = () => {
     } finally {
       setAssignLoading(false);
     }
-  };
+  }, [booking?._id, fetchFallbackProfessionals]);
+
   
   // Separate fallback function to avoid code duplication
-  const fetchFallbackProfessionals = async () => {
+  const fetchFallbackProfessionals = useCallback(async () => {
     try {
       console.log('Using fallback method to get professionals');
       const fallbackResponse = await adminService.getProfessionals({ 
@@ -159,7 +163,7 @@ const AdminBookingDetailsScreen = () => {
       
       console.log('Fallback response:', JSON.stringify(fallbackResponse, null, 2));
       
-      if (fallbackResponse.success) {
+      if ((fallbackResponse.status || fallbackResponse.data?.status) === 'success') {
         // Check for different response structures
         let profData: any[] = [];
         
@@ -203,7 +207,7 @@ const AdminBookingDetailsScreen = () => {
       console.error('Error in fallback professional fetch:', fallbackErr);
       setProfessionals([]);
     }
-  };
+  }, []);
 
   // --- Handlers ---
   const handleAssignProfessional = async () => {
@@ -321,6 +325,106 @@ const AdminBookingDetailsScreen = () => {
   };
 
   // --- Render Functions ---
+
+  // --- Sub-components ---
+  const timeLineItemstyles = StyleSheet.create({
+    container: {
+      flexDirection: 'row'
+    },
+    indicatorContainer: {
+      alignItems: 'center'
+    },
+    dot: {
+      width: 16,
+      height: 16,
+      borderRadius: 8
+    },
+    line: {
+      width: 1,
+      height: 64
+    },
+    bgPrimary: {
+      backgroundColor: '#3B82F6' // Use your app's primary color
+    },
+    bgGray: {
+      backgroundColor: '#D1D5DB'
+    },
+    bgRed: {
+      backgroundColor: '#EF4444'
+    },
+    content: {
+      marginLeft: 16,
+      paddingBottom: 24
+    },
+    title: {
+      fontWeight: '500'
+    },
+    textDefault: {
+      color: '#1F2937'
+    },
+    textRed: {
+      color: '#DC2626'
+    },
+    time: {
+      color: '#6B7280',
+      fontSize: 12
+    },
+    reasonContainer: {
+      marginTop: 8,
+      backgroundColor: '#FEF2F2',
+      padding: 12,
+      borderRadius: 8
+    },
+    reasonText: {
+      color: '#991B1B',
+      fontSize: 12
+    }
+  });
+
+  interface TimelineItemProps {
+    title: string;
+    time: string;
+    isActive: boolean;
+    isLast: boolean;
+    isCancelled?: boolean;
+    reason?: string | null;
+  }
+
+  const TimelineItem = ({ title, time, isActive, isLast, isCancelled, reason }: TimelineItemProps) => {
+    const dotStyle = [
+      timeLineItemstyles.dot,
+      isActive ? (isCancelled ? timeLineItemstyles.bgRed : timeLineItemstyles.bgPrimary) : timeLineItemstyles.bgGray
+    ];
+
+    const lineStyle = [
+      timeLineItemstyles.line,
+      isActive ? (isCancelled ? timeLineItemstyles.bgRed : timeLineItemstyles.bgPrimary) : timeLineItemstyles.bgGray
+    ];
+
+    const titleStyle = [
+      timeLineItemstyles.title,
+      isCancelled ? timeLineItemstyles.textRed : timeLineItemstyles.textDefault
+    ];
+
+    return (
+      <View style={timeLineItemstyles.container}>
+        <View style={timeLineItemstyles.indicatorContainer}>
+          <View style={dotStyle} />
+          {!isLast && <View style={lineStyle} />}
+        </View>
+        <View style={timeLineItemstyles.content}>
+          <Text style={titleStyle}>{title}</Text>
+          <Text style={timeLineItemstyles.time}>{time}</Text>
+          {reason && (
+            <View style={timeLineItemstyles.reasonContainer}>
+              <Text style={timeLineItemstyles.reasonText}>{reason}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
+
 const renderActionButtons = () => {
   if (!booking) return null;
   const st = String(booking.status ?? '');
@@ -558,11 +662,11 @@ const renderActionButtons = () => {
             <>
               <View style={Prostyles.professionalRow}>
                 <View style={Prostyles.avatar}>
-                  <Text style={Prostyles.avatarText}>{booking.professional?.user?.name ? booking.professional.user.name.charAt(0) : ''}</Text>
+                  <Text style={Prostyles.avatarText}>{booking.professional?.name ? booking.professional.name.charAt(0) : ''}</Text>
                 </View>
                 <View style={Prostyles.professionalInfo}>
-                  <Text style={Prostyles.professionalName}>{booking.professional?.user?.name ?? 'Unassigned'}</Text>
-                  <Text style={Prostyles.professionalPhone}>{booking.professional?.user?.phone ?? ''}</Text>
+                  <Text style={Prostyles.professionalName}>{booking.professional?.name ?? 'Unassigned'}</Text>
+                  <Text style={Prostyles.professionalPhone}>{booking.professional?.phone ?? ''}</Text>
                         <View style={Prostyles.ratingContainer}>
                           <Ionicons name="star" size={14} color="#FFC107" />
                           <Text style={Prostyles.ratingText}>{typeof booking.professional?.rating === 'number' ? booking.professional.rating.toFixed(1) : '0.0'}</Text>
@@ -588,17 +692,17 @@ const renderActionButtons = () => {
           <Text style={servicestyles.heading}>Service Details</Text>
           <View style={servicestyles.serviceItem}>
             <View>
-              <Text style={servicestyles.serviceName}>{booking.service?.name ?? ''}</Text>
-              <Text style={servicestyles.serviceDuration}>{booking.service?.duration ?? 0} minutes</Text>
-              <Text style={servicestyles.serviceDescription}>{booking.service?.description ?? ''}</Text>
+              <Text style={servicestyles.serviceName}>{booking.services?.[0]?.title ?? ''}</Text>
+              <Text style={servicestyles.serviceDuration}>{booking.services?.[0]?.duration ?? 0} minutes</Text>
+              <Text style={servicestyles.serviceDescription}>{booking.services?.[0]?.description ?? ''}</Text>
             </View>
-            <Text style={servicestyles.servicePrice}>₹{booking.service?.basePrice ?? booking.service?.price ?? 0}</Text>
+            <Text style={servicestyles.servicePrice}>₹{booking.services?.[0]?.price ?? 0}</Text>
           </View>
 
           <View style={servicestyles.section}>
             <View style={servicestyles.row}>
               <Text style={servicestyles.label}>Base Price</Text>
-              <Text style={servicestyles.value}>₹{booking.service?.basePrice ?? booking.service?.price ?? 0}</Text>
+              <Text style={servicestyles.value}>₹{booking.services?.[0]?.price ?? 0}</Text>
             </View>
             <View style={servicestyles.row}>
               <Text style={servicestyles.label}>Tax (18% GST)</Text>
@@ -881,50 +985,6 @@ const renderActionButtons = () => {
   );
 };
 
-// --- Sub-components ---
-interface TimelineItemProps {
-  title: string;
-  time: string;
-  isActive: boolean;
-  isLast: boolean;
-  isCancelled?: boolean;
-  reason?: string | null;
-}
-
-const TimelineItem = ({ title, time, isActive, isLast, isCancelled, reason }: TimelineItemProps) => {
-  const dotStyle = [
-    timeLineItemstyles.dot,
-    isActive ? (isCancelled ? timeLineItemstyles.bgRed : timeLineItemstyles.bgPrimary) : timeLineItemstyles.bgGray
-  ];
-
-  const lineStyle = [
-    timeLineItemstyles.line,
-    isActive ? (isCancelled ? timeLineItemstyles.bgRed : timeLineItemstyles.bgPrimary) : timeLineItemstyles.bgGray
-  ];
-
-  const titleStyle = [
-    timeLineItemstyles.title,
-    isCancelled ? timeLineItemstyles.textRed : timeLineItemstyles.textDefault
-  ];
-
-  return (
-    <View style={timeLineItemstyles.container}>
-      <View style={timeLineItemstyles.indicatorContainer}>
-        <View style={dotStyle} />
-        {!isLast && <View style={lineStyle} />}
-      </View>
-      <View style={timeLineItemstyles.content}>
-        <Text style={titleStyle}>{title}</Text>
-        <Text style={timeLineItemstyles.time}>{time}</Text>
-        {reason && (
-          <View style={timeLineItemstyles.reasonContainer}>
-            <Text style={timeLineItemstyles.reasonText}>{reason}</Text>
-          </View>
-        )}
-      </View>
-    </View>
-  );
-};
 export default AdminBookingDetailsScreen;
 
 // --- Consolidated Stylesheet ---

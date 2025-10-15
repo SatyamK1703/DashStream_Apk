@@ -289,8 +289,10 @@ export const usePaginatedApi = <T = any>(
           if (pagination.page === 1) {
             return safeNewItems;
           }
-          // For subsequent pages, append data
-          return [...prev, ...safeNewItems];
+          // For subsequent pages, append data and remove duplicates
+          const combined = [...prev, ...safeNewItems];
+          const uniqueItems = Array.from(new Map(combined.map(item => [item.id, item])).values());
+          return uniqueItems;
         });
         
         setPagination(prev => ({
