@@ -21,39 +21,39 @@ interface NotificationState {
   unreadCount: number;
   isLoading: boolean;
   error: string | null;
-  
+
   // Permission state
   hasPermission: boolean;
   permissionStatus: string | null;
-  
+
   // Push notification token
   expoPushToken: string | null;
-  
+
   // Settings
   notificationSettings: NotificationSettings;
-  
+
   // Actions
   requestPermission: () => Promise<boolean>;
   registerForPushNotifications: () => Promise<string | null>;
-  
+
   fetchNotifications: () => Promise<void>;
   markAsRead: (notificationId: string) => void;
   markAllAsRead: () => void;
   deleteNotification: (notificationId: string) => void;
   clearAllNotifications: () => void;
-  
+
   // Local notifications
   scheduleLocalNotification: (title: string, body: string, trigger?: any) => Promise<string>;
   cancelNotification: (notificationId: string) => Promise<void>;
   cancelAllNotifications: () => Promise<void>;
-  
+
   // Settings
   updateNotificationSettings: (settings: Partial<NotificationSettings>) => void;
-  
+
   // Utility getters
   getUnreadNotifications: () => Notification[];
   getNotificationsByType: (type: string) => Notification[];
-  
+
   // Error handling
   clearError: () => void;
 }
@@ -87,28 +87,28 @@ export const useNotificationStore = create<NotificationState>()(
       requestPermission: async () => {
         try {
           set({ isLoading: true, error: null });
-          
+
           const { status: existingStatus } = await Notifications.getPermissionsAsync();
           let finalStatus = existingStatus;
-          
+
           if (existingStatus !== 'granted') {
             const { status } = await Notifications.requestPermissionsAsync();
             finalStatus = status;
           }
-          
+
           const hasPermission = finalStatus === 'granted';
-          set({ 
+          set({
             hasPermission,
             permissionStatus: finalStatus,
-            isLoading: false 
+            isLoading: false
           });
-          
+
           return hasPermission;
         } catch (error: any) {
           console.error('Error requesting notification permission:', error);
-          set({ 
+          set({
             error: error.message || 'Failed to request notification permission',
-            isLoading: false 
+            isLoading: false
           });
           return false;
         }
@@ -116,6 +116,12 @@ export const useNotificationStore = create<NotificationState>()(
 
       registerForPushNotifications: async () => {
         try {
+          let deviceType: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
+          let deviceInfo: any = {};
+          // Optional: fill out deviceInfo
+          // deviceInfo.model = Device.modelName; // If using expo-device
+          // deviceInfo.manufacturer = Device.manufacturer;
+
           if (Platform.OS === 'android') {
             await Notifications.setNotificationChannelAsync('default', {
               name: 'default',
@@ -136,7 +142,7 @@ export const useNotificationStore = create<NotificationState>()(
           const { isAuthenticated } = useAuthStore.getState();
           if (isAuthenticated) {
             try {
-              await notificationService.registerPushToken(token);
+              await notificationService.registerPushToken(token, deviceType, deviceInfo);
             } catch (serverError) {
               console.warn('Failed to register push token with server:', serverError);
             }
@@ -160,27 +166,27 @@ export const useNotificationStore = create<NotificationState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await notificationService.getNotifications();
-          
+
           if (response.success && response.data) {
             const notifications = response.data;
             const unreadCount = notifications.filter(n => !n.isRead).length;
-            
-            set({ 
+
+            set({
               notifications,
               unreadCount,
-              isLoading: false 
+              isLoading: false
             });
           } else {
-            set({ 
+            set({
               error: response.message || 'Failed to fetch notifications',
-              isLoading: false 
+              isLoading: false
             });
           }
         } catch (error: any) {
           console.error('Error fetching notifications:', error);
-          set({ 
+          set({
             error: error.message || 'Failed to fetch notifications',
-            isLoading: false 
+            isLoading: false
           });
         }
       },
@@ -192,7 +198,7 @@ export const useNotificationStore = create<NotificationState>()(
             ? { ...notification, isRead: true, readAt: new Date().toISOString() }
             : notification
         );
-        
+
         const unreadCount = updatedNotifications.filter(n => !n.isRead).length;
         set({ notifications: updatedNotifications, unreadCount });
 
@@ -206,7 +212,7 @@ export const useNotificationStore = create<NotificationState>()(
           isRead: true,
           readAt: notification.readAt || new Date().toISOString(),
         }));
-        
+
         set({ notifications: updatedNotifications, unreadCount: 0 });
 
         notificationService.markAllAsRead().catch(console.error);
@@ -216,7 +222,7 @@ export const useNotificationStore = create<NotificationState>()(
         const { notifications } = get();
         const updatedNotifications = notifications.filter(n => n.id !== notificationId);
         const unreadCount = updatedNotifications.filter(n => !n.isRead).length;
-        
+
         set({ notifications: updatedNotifications, unreadCount });
 
         notificationService.deleteNotification(notificationId).catch(console.error);
@@ -224,7 +230,7 @@ export const useNotificationStore = create<NotificationState>()(
 
       clearAllNotifications: () => {
         set({ notifications: [], unreadCount: 0 });
-        
+
         notificationService.clearAllNotifications().catch(console.error);
       },
 
@@ -237,7 +243,7 @@ export const useNotificationStore = create<NotificationState>()(
             },
             trigger: trigger || null,
           });
-          
+
           return notificationId;
         } catch (error: any) {
           console.error('Error scheduling local notification:', error);
@@ -267,9 +273,9 @@ export const useNotificationStore = create<NotificationState>()(
       updateNotificationSettings: (settings: Partial<NotificationSettings>) => {
         const { notificationSettings } = get();
         const newSettings = { ...notificationSettings, ...settings };
-        
+
         set({ notificationSettings: newSettings });
-        
+
         notificationService.updateSettings(newSettings).catch(console.error);
       },
 

@@ -13,6 +13,14 @@ class NotificationService {
   async markAllAsRead() {
     return await httpClient.patch(`${API_ENDPOINTS.NOTIFICATIONS.LIST}/read-all`, {});
   }
+
+  async registerPushToken(token: string, deviceType: string = 'android', deviceInfo: object = {}) {
+    return await httpClient.post(API_ENDPOINTS.NOTIFICATIONS.LIST + '/register-device', { token, deviceType, deviceInfo });
+  }
+
+  async removePushToken(token: string) {
+    return await httpClient.delete(API_ENDPOINTS.NOTIFICATIONS.LIST + '/deregister-device', { data: { token } });
+  }
 }
 
 export const notificationService = new NotificationService();
