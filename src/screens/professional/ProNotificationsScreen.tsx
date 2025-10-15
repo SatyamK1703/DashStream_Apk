@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,15 +7,23 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
-  Alert
+  Alert,
+  LayoutAnimation,
+  UIManager,
+  Platform
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { ProStackParamList } from '../../../app/routes/ProNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNotificationStore } from '../../store/useNotificationStore';
+import { Notification } from '../../types/notification';
+
+type ProNotificationsScreenNavigationProp = NativeStackNavigationProp<ProStackParamList>;
 
 const ProNotificationsScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<ProNotificationsScreenNavigationProp>();
   const { 
     notifications, 
     loading, 
@@ -25,25 +33,42 @@ const ProNotificationsScreen = () => {
     markAllAsRead 
   } = useNotificationStore();
 
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Enable LayoutAnimation for Android
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      if (UIManager.setLayoutAnimationEnabledExperimental) {
+        UIManager.setLayoutAnimationEnabledExperimental(true);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     fetchNotifications();
   }, []);
 
-  const handleNotificationPress = async (notification: any) => {
+  const handleNotificationPress = async (notification: Notification) => {
     if (!notification.read) {
       try {
         await markAsRead(notification._id);
-        fetchNotifications();
       } catch (error) {
         console.error('Failed to mark notification as read:', error);
       }
+    }
+
+    // Professional navigation logic
+    if (notification.actionType === 'open_booking' && notification.actionParams?.bookingId) {
+      navigation.navigate('JobDetails', { jobId: notification.actionParams.bookingId });
+    } else if (notification.actionType === 'open_support_ticket' && notification.actionParams?.questionId) {
+      // Assuming a screen for support tickets exists for professionals
+      // navigation.navigate('ProSupportTicketDetails', { ticketId: notification.actionParams.questionId });
     }
   };
 
   const handleMarkAllRead = async () => {
     try {
       await markAllAsRead();
-      fetchNotifications();
     } catch (error) {
       Alert.alert('Error', 'Failed to mark all notifications as read');
     }
@@ -52,61 +77,82 @@ const ProNotificationsScreen = () => {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'booking':
-        return <Ionicons name="car-outline" size={24} color="#2563eb" />;
+        return <Ionicons name="calendar-outline" size={24} color="#2563eb" />;
       case 'offer':
         return <Ionicons name="gift-outline" size={24} color="#f59e0b" />;
-      case 'general':
-        return <Ionicons name="information-circle-outline" size={24} color="#10b981" />;
+      case 'system':
+        return <Ionicons name="settings-outline" size={24} color="#6b7280" />;
       case 'payment':
-        return <Ionicons name="card-outline" size={24} color="#6366f1" />;
+        return <Ionicons name="wallet-outline" size={24} color="#10b981" />;
       default:
-        return <Ionicons name="notifications-outline" size={24} color="#2563eb" />;
+        return <Ionicons name="notifications-outline" size={24} color="#6b7280" />;
     }
   };
 
   const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
     const now = new Date();
-    const diffInMs = now.getTime() - date.getTime();
-    const diffInHours = diffInMs / (1000 * 60 * 60);
-    const diffInDays = diffInHours / 24;
+    const date = new Date(timestamp);
+    const diff = now.getTime() - date.getTime();
 
-    if (diffInHours < 1) {
-      return 'Just now';
-    } else if (diffInHours < 24) {
-      const hours = Math.round(diffInHours);
-      return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
-    } else if (diffInDays < 7) {
-      const days = Math.round(diffInDays);
-      return `${days} ${days === 1 ? 'day' : 'days'} ago`;
-    } else {
-      return date.toLocaleDateString('en-IN');
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) {
+      return `${days}d ago`;
     }
+    if (hours > 0) {
+      return `${hours}h ago`;
+    }
+    if (minutes > 0) {
+      return `${minutes}m ago`;
+    }
+    return 'just now';
   };
 
-  const renderNotificationItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={[styles.notificationItem, !item.read ? styles.unread : styles.read]}
-      onPress={() => handleNotificationPress(item)}
-    >
-      <View style={styles.row}>
-        <View style={styles.iconContainer}>{getNotificationIcon(item.type)}</View>
-        <View style={styles.flex}>
-          <View style={styles.headerRow}>
-            <Text style={[styles.title, !item.read ? styles.boldTitle : styles.normalTitle]}>
-              {item.title}
-            </Text>
-            <View style={styles.notificationActions}>
+  const renderNotificationItem = ({ item }: { item: Notification }) => {
+    const isExpanded = expandedId === item._id;
+
+    const toggleExpansion = () => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setExpandedId(isExpanded ? null : item._id);
+    };
+
+    return (
+      <TouchableOpacity
+        style={[styles.notificationItem, !item.read ? styles.unread : styles.read]}
+        onPress={toggleExpansion}
+        activeOpacity={0.7}
+      >
+        <View style={styles.row}>
+          <View style={styles.iconContainer}>{getNotificationIcon(item.type)}</View>
+          <View style={styles.flex}>
+            <View style={styles.headerRow}>
+              <Text style={[styles.title, !item.read ? styles.boldTitle : styles.normalTitle]}>
+                {item.title}
+              </Text>
               <Text style={styles.timestamp}>{formatTimestamp(item.createdAt)}</Text>
             </View>
+            <Text
+              style={[styles.message, !item.read ? styles.unreadMessage : styles.readMessage]}
+              numberOfLines={isExpanded ? undefined : 2}
+            >
+              {item.message}
+            </Text>
+            {isExpanded && (
+              <TouchableOpacity
+                style={styles.detailsButton}
+                onPress={() => handleNotificationPress(item)}
+              >
+                <Text style={styles.detailsButtonText}>View Details</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <Text style={[styles.message, !item.read ? styles.unreadMessage : styles.readMessage]}>
-            {item.message}
-          </Text>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const renderEmptyComponent = () => (
     <View style={styles.emptyContainer}>
@@ -274,6 +320,18 @@ const styles = StyleSheet.create({
   },
   readMessage: {
     color: '#4b5563'
+  },
+  detailsButton: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    backgroundColor: '#e5e7eb',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  detailsButtonText: {
+    color: '#1f2937',
+    fontWeight: '500',
   },
   emptyContainer: {
     flex: 1,

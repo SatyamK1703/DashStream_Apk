@@ -7,7 +7,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
-  Alert
+  Alert,
+  LayoutAnimation,
+  UIManager,
+  Platform
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -32,6 +35,17 @@ const NotificationsScreen = () => {
     markAsRead,
     markAllAsRead
   } = useNotificationStore();
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Enable LayoutAnimation for Android
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      if (UIManager.setLayoutAnimationEnabledExperimental) {
+        UIManager.setLayoutAnimationEnabledExperimental(true);
+      }
+    }
+  }, []);
 
   // Load notifications on mount
   useEffect(() => {
@@ -128,29 +142,58 @@ const NotificationsScreen = () => {
     fetchNotifications();
   };
 
-  const renderNotificationItem = ({ item }: { item: Notification }) => (
-    <TouchableOpacity
-      style={[styles.notificationItem, !item.read ? styles.unread : styles.read]}
-      onPress={() => handleNotificationPress(item)}
-    >
-      <View style={styles.row}>
-        <View style={styles.iconContainer}>{getNotificationIcon(item.type)}</View>
-        <View style={styles.flex}>
-          <View style={styles.headerRow}>
-            <Text style={[styles.title, !item.read ? styles.boldTitle : styles.normalTitle]}>
-              {item.title}
-            </Text>
-            <View style={styles.notificationActions}>
+  const renderNotificationItem = ({ item }: { item: Notification }) => {
+    const isExpanded = expandedId === item._id;
+
+    const toggleExpansion = () => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setExpandedId(isExpanded ? null : item._id);
+    };
+
+    // Determine if the notification has a navigation action
+    const hasNavigationAction =
+      (item.type === 'booking' && item.actionParams?.bookingId) ||
+      (item.type === 'payment' && item.actionParams?.paymentId) ||
+      (item.type === 'offer') || // Offer navigates to CustomerTabs/Home
+      (item.type === 'system' && item.actionType === 'open_support_ticket');
+
+    return (
+      <TouchableOpacity
+        style={[styles.notificationItem, !item.read ? styles.unread : styles.read]}
+        onPress={hasNavigationAction ? () => handleNotificationPress(item) : undefined} // Navigate if action exists
+        activeOpacity={hasNavigationAction ? 0.7 : 1}
+      >
+        <View style={styles.row}>
+          <View style={styles.iconContainer}>{getNotificationIcon(item.type)}</View>
+          <View style={styles.flex}>
+            <View style={styles.headerRow}>
+              <Text style={[styles.title, !item.read ? styles.boldTitle : styles.normalTitle]}>
+                {item.title}
+              </Text>
               <Text style={styles.timestamp}>{formatTimestamp(item.createdAt)}</Text>
             </View>
+            <Text
+              style={[styles.message, !item.read ? styles.unreadMessage : styles.readMessage]}
+              numberOfLines={isExpanded ? undefined : 2}
+            >
+              {item.message}
+            </Text>
+            {/* Expansion / Collapse Button */}
+            {item.message.length > 100 && ( // Only show if message is long enough to be truncated
+              <TouchableOpacity
+                style={styles.expandCollapseButton}
+                onPress={toggleExpansion}
+              >
+                <Text style={styles.expandCollapseButtonText}>
+                  {isExpanded ? 'Hide Details' : 'View Details'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <Text style={[styles.message, !item.read ? styles.unreadMessage : styles.readMessage]}>
-            {item.message}
-          </Text>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const renderEmptyComponent = () => (
     <View style={styles.emptyContainer}>
@@ -319,6 +362,31 @@ const styles = StyleSheet.create({
   },
   readMessage: {
     color: '#4b5563'
+  },
+  detailsButton: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    backgroundColor: '#e5e7eb',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  detailsButtonText: {
+    color: '#1f2937',
+    fontWeight: '500',
+  },
+  expandCollapseButton: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    backgroundColor: '#e0e7ff', // Light blue background
+  },
+  expandCollapseButtonText: {
+    color: '#2563eb', // Primary blue text
+    fontSize: 12,
+    fontWeight: '600',
   },
   emptyContainer: {
     flex: 1,
