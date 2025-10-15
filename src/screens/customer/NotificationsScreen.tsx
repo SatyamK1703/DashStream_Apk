@@ -64,6 +64,11 @@ const NotificationsScreen = () => {
       case 'offer':
         navigation.navigate('CustomerTabs', { screen: 'Home' });
         break;
+      case 'system':
+        if (notification.actionType === 'open_support_ticket') {
+          navigation.navigate('Support');
+        }
+        break;
       default:
         // For general notifications, just mark as read
         break;
