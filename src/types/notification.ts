@@ -1,51 +1,17 @@
-// src/types/notification.ts
 export interface Notification {
-  id: string;
+  _id: string;
+  recipient: string;
   title: string;
-  body: string;
-  data?: Record<string, any>;
-  isRead: boolean;
-  type: 'booking' | 'payment' | 'promotional' | 'system' | 'reminder';
-  priority: 'low' | 'normal' | 'high';
-  createdAt: string;
+  message: string;
+  type: 'booking' | 'promo' | 'payment' | 'system' | 'chat';
+  relatedId?: string;
+  read: boolean;
   readAt?: string;
-  
-  // Action buttons (optional)
-  actions?: {
-    id: string;
-    title: string;
-    action: string;
-  }[];
-  
-  // Associated entities
-  bookingId?: string;
-  serviceId?: string;
-  userId?: string;
-  
-  // Delivery information
-  channel: 'push' | 'in_app' | 'email' | 'sms';
-  deliveryStatus: 'pending' | 'sent' | 'delivered' | 'failed';
-}
-
-export interface NotificationSettings {
-  pushEnabled: boolean;
-  bookingUpdates: boolean;
-  promotionalOffers: boolean;
-  systemAlerts: boolean;
-  reminderNotifications: boolean;
-  soundEnabled: boolean;
-  vibrationEnabled: boolean;
-  quietHours?: {
-    enabled: boolean;
-    startTime: string; // HH:MM format
-    endTime: string; // HH:MM format
-  };
-}
-
-export interface PushNotificationToken {
-  token: string;
-  platform: 'ios' | 'android' | 'web';
-  deviceId: string;
+  actionType: 'open_booking' | 'open_chat' | 'open_profile' | 'open_service' | 'open_payment' | 'none';
+  actionParams?: { [key: string]: any };
+  image?: string;
+  expiresAt?: string;
+  meta?: { [key: string]: any };
   createdAt: string;
   updatedAt: string;
 }

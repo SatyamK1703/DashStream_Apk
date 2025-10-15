@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { notificationService } from '../services/notificationService';
+import { Notification } from '../types/notification';
 
 interface NotificationState {
-  notifications: any[];
+  notifications: Notification[];
   loading: boolean;
   error: string | null;
   fetchNotifications: () => Promise<void>;

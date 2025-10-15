@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNotificationStore } from '../../store/useNotificationStore';
+import { Notification } from '../../types/notification';
 
 type NotificationsScreenNavigationProp = NativeStackNavigationProp<
   CustomerStackParamList,
@@ -23,13 +24,13 @@ type NotificationsScreenNavigationProp = NativeStackNavigationProp<
 
 const NotificationsScreen = () => {
   const navigation = useNavigation<NotificationsScreenNavigationProp>();
-  const { 
-    notifications, 
-    loading, 
-    error, 
-    fetchNotifications, 
-    markAsRead, 
-    markAllAsRead 
+  const {
+    notifications,
+    loading,
+    error,
+    fetchNotifications,
+    markAsRead,
+    markAllAsRead
   } = useNotificationStore();
 
   // Load notifications on mount
@@ -37,12 +38,10 @@ const NotificationsScreen = () => {
     fetchNotifications();
   }, []);
 
-  const handleNotificationPress = async (notification: any) => {
-    // Mark as read if unread
+  const handleNotificationPress = async (notification: Notification) => {    // Mark as read if unread
     if (!notification.read) {
       try {
         await markAsRead(notification._id);
-        fetchNotifications(); // Refresh to update read status
       } catch (error) {
         console.error('Failed to mark notification as read:', error);
       }
@@ -51,14 +50,14 @@ const NotificationsScreen = () => {
     // Navigate based on notification type
     switch (notification.type) {
       case 'booking':
-        if (notification.relatedData?.bookingId) {
+        if (notification.actionParams?.bookingId) {
           navigation.navigate('TrackBooking', { 
-            bookingId: notification.relatedData.bookingId 
+            bookingId: notification.actionParams.bookingId 
           });
         }
         break;
       case 'payment':
-        if (notification.relatedData?.paymentId) {
+        if (notification.actionParams?.paymentId) {
           navigation.navigate('PaymentMethods');
         }
         break;
@@ -74,7 +73,6 @@ const NotificationsScreen = () => {
   const handleMarkAllRead = async () => {
     try {
       await markAllAsRead();
-      fetchNotifications();
     } catch (error) {
       Alert.alert('Error', 'Failed to mark all notifications as read');
     }
@@ -125,7 +123,7 @@ const NotificationsScreen = () => {
     fetchNotifications();
   };
 
-  const renderNotificationItem = ({ item }: { item: any }) => (
+  const renderNotificationItem = ({ item }: { item: Notification }) => (
     <TouchableOpacity
       style={[styles.notificationItem, !item.read ? styles.unread : styles.read]}
       onPress={() => handleNotificationPress(item)}

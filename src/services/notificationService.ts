@@ -11,7 +11,7 @@ class NotificationService {
   }
 
   async markAllAsRead() {
-    return await httpClient.patch(`${API_ENDPOINTS.NOTIFICATIONS.LIST}/read-all`, {});
+    return await httpClient.patch(API_ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ, {});
   }
 
   async registerPushToken(token: string, deviceType: string = 'android', deviceInfo: object = {}) {
