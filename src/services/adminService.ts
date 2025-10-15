@@ -345,10 +345,24 @@ class AdminService {
   }
 
   /**
+   * Get available professionals for a booking
+   */
+  async getAvailableProfessionals(bookingId: string): Promise<ApiResponse<any>> {
+    try {
+      console.log('Getting available professionals for booking:', bookingId);
+      return await httpClient.get(API_ENDPOINTS.ADMIN.AVAILABLE_PROFESSIONALS(bookingId));
+    } catch (error) {
+      console.error('Get available professionals error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Assign professional to booking
    */
   async assignProfessional(bookingId: string, professionalId: string): Promise<ApiResponse<Booking>> {
     try {
+      console.log('Assigning professional to booking:', bookingId, professionalId);
       return await httpClient.patch(API_ENDPOINTS.ADMIN.ASSIGN_PROFESSIONAL(bookingId), { 
         professionalId 
       });

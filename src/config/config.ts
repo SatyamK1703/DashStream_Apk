@@ -195,7 +195,8 @@ export const API_ENDPOINTS = {
 
     PROFESSIONALS: '/admin/professionals',
     CREATE_PROFESSIONAL: '/admin/professionals',
-    ASSIGN_PROFESSIONAL: (bookingId: string) => `/admin/professionals/${bookingId}/assign-professional`,
+    ASSIGN_PROFESSIONAL: (bookingId: string) => `/admin/bookings/${bookingId}/assign-professional`,
+    AVAILABLE_PROFESSIONALS: (bookingId: string) => `/admin/bookings/${bookingId}/available-professionals`,
     VERIFY_PROFESSIONAL: (professionalId: string) => `/admin/professionals/${professionalId}/verification`,
     PROFESSIONAL_BY_ID: (professionalId: string) => `/admin/professionals/${professionalId}`,
 

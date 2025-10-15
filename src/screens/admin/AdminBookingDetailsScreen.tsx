@@ -53,8 +53,26 @@ const AdminBookingDetailsScreen = () => {
   // --- Effects ---
   useEffect(() => {
     fetchBookingDetails();
-    fetchProfessionals();
   }, [bookingId]);
+  
+  // Separate effect to fetch professionals only after booking is loaded
+  useEffect(() => {
+    if (booking?._id) {
+      console.log('Booking loaded, fetching professionals for:', booking._id);
+      fetchProfessionals();
+    }
+  }, [booking]);
+  
+  // Debug modal visibility
+  useEffect(() => {
+    console.log('Modal visibility changed:', showAssignModal, 'Professionals count:', professionals.length);
+    
+    // Fetch professionals when modal is opened if the list is empty
+    if (showAssignModal && professionals.length === 0 && booking?._id) {
+      console.log('Modal opened with empty professionals list, fetching again...');
+      fetchProfessionals();
+    }
+  }, [showAssignModal, professionals.length, booking]);
 
   // --- API Functions ---
   const fetchBookingDetails = async () => {
@@ -79,47 +97,150 @@ const AdminBookingDetailsScreen = () => {
   };
 
   const fetchProfessionals = async () => {
+    if (!booking?._id) {
+      console.log('No booking ID available, cannot fetch professionals');
+      return;
+    }
+    
+    console.log('Fetching professionals for booking:', booking._id);
+    setAssignLoading(true);
+    
     try {
-      const response = await adminService.getProfessionals({ 
+      // First try to get available professionals for this specific booking
+      const response = await adminService.getAvailableProfessionals(booking._id);
+      console.log('API Response:', JSON.stringify(response, null, 2));
+      
+      if (response.success) {
+        // The API response structure is: data.data.professionals
+        const professionalsArray = response.data?.data?.professionals || response.data?.professionals || [];
+        
+        console.log('Extracted professionals array:', JSON.stringify(professionalsArray, null, 2));
+        
+        if (Array.isArray(professionalsArray) && professionalsArray.length > 0) {
+          console.log('Available professionals found:', professionalsArray.length);
+          
+          const professionalOptions: ProfessionalOption[] = professionalsArray.map((prof: any) => ({
+            id: prof._id || prof.id,
+            name: prof.name || prof.user?.name || prof.phone || 'Unknown',
+            rating: prof.rating || 0,
+            experience: Array.isArray(prof.specializations) ? prof.specializations.join(', ') : prof.experience || '',
+            isAvailable: true,
+            verified: prof.verified
+          }));
+          
+          console.log('Mapped professional options:', JSON.stringify(professionalOptions, null, 2));
+          setProfessionals(professionalOptions);
+          console.log('Professionals state updated with', professionalOptions.length, 'options');
+        } else {
+          console.log('No professionals found in response or empty array, using fallback');
+          await fetchFallbackProfessionals();
+        }
+      } else {
+        console.log('No success in response, using fallback');
+        await fetchFallbackProfessionals();
+      }
+    } catch (err: any) {
+      console.error('Error fetching professionals:', err);
+      await fetchFallbackProfessionals();
+    } finally {
+      setAssignLoading(false);
+    }
+  };
+  
+  // Separate fallback function to avoid code duplication
+  const fetchFallbackProfessionals = async () => {
+    try {
+      console.log('Using fallback method to get professionals');
+      const fallbackResponse = await adminService.getProfessionals({ 
         page: 1, 
         limit: 50,
         status: 'active'
       });
-      if (response.success && response.data) {
-        const professionalOptions: ProfessionalOption[] = response.data.map(prof => ({
-          id: prof._id,
-          name: prof.user?.name ?? '',
-          rating: prof.rating,
-          experience: prof.experience,
-          isAvailable: prof.isAvailable
-        }));
-        setProfessionals(professionalOptions);
+      
+      console.log('Fallback response:', JSON.stringify(fallbackResponse, null, 2));
+      
+      if (fallbackResponse.success) {
+        // Check for different response structures
+        let profData: any[] = [];
+        
+        if (fallbackResponse.data?.data?.professionals && Array.isArray(fallbackResponse.data.data.professionals)) {
+          profData = fallbackResponse.data.data.professionals;
+          console.log('Found professionals in data.data.professionals');
+        } else if (fallbackResponse.data?.professionals && Array.isArray(fallbackResponse.data.professionals)) {
+          profData = fallbackResponse.data.professionals;
+          console.log('Found professionals in data.professionals');
+        } else if (Array.isArray(fallbackResponse.data)) {
+          profData = fallbackResponse.data;
+          console.log('Found professionals in data array');
+        } else if (fallbackResponse.data?.data?.pagination?.items && Array.isArray(fallbackResponse.data.data.pagination.items)) {
+          profData = fallbackResponse.data.data.pagination.items;
+          console.log('Found professionals in pagination items');
+        }
+          
+        console.log('Fallback successful, found:', profData.length, 'professionals');
+        console.log('Professional data sample:', profData.length > 0 ? JSON.stringify(profData[0], null, 2) : 'No data');
+        
+        if (profData.length > 0) {
+          const professionalOptions: ProfessionalOption[] = profData.map(prof => ({
+            id: prof._id || prof.id,
+            name: prof.user?.name || prof.name || prof.phone || 'Unknown',
+            rating: prof.rating || 0,
+            experience: Array.isArray(prof.specializations) ? prof.specializations.join(', ') : prof.experience || '',
+            isAvailable: prof.isAvailable !== false || prof.status === 'available' || prof.status === 'active'
+          }));
+          setProfessionals(professionalOptions);
+          console.log('Professionals state updated with fallback data:', professionalOptions.length, 'options');
+          console.log('Professional options sample:', professionalOptions.length > 0 ? JSON.stringify(professionalOptions[0], null, 2) : 'No data');
+        } else {
+          console.log('No professionals found in fallback data');
+          setProfessionals([]);
+        }
+      } else {
+        console.log('Fallback request failed or returned no data');
+        setProfessionals([]);
       }
-    } catch (err: any) {
-      console.error('Error fetching professionals:', err);
-      // Don't set error here as this is secondary data
+    } catch (fallbackErr) {
+      console.error('Error in fallback professional fetch:', fallbackErr);
+      setProfessionals([]);
     }
   };
 
   // --- Handlers ---
   const handleAssignProfessional = async () => {
-    if (!selectedProfessionalId || !booking) {
+    if (!booking?._id) {
+      return Alert.alert('Error', 'Booking information is missing.');
+    }
+    
+    if (!selectedProfessionalId) {
       return Alert.alert('Error', 'Please select a professional.');
     }
     
+    if (professionals.length === 0) {
+      return Alert.alert('Error', 'No professionals are available for assignment.');
+    }
+    
+    console.log(`Assigning professional ${selectedProfessionalId} to booking ${booking._id}`);
     setAssignLoading(true);
+    
     try {
       const response = await adminService.assignProfessional(booking._id, selectedProfessionalId);
+      console.log('Assignment response:', JSON.stringify(response, null, 2));
+      
       if (response.success && response.data) {
         setBooking(response.data);
         setShowAssignModal(false);
         Alert.alert('Success', 'Professional assigned successfully');
+        
+        // Refresh booking details to show the updated professional
+        fetchBookingDetails();
       } else {
-        Alert.alert('Error', 'Failed to assign professional');
+        const errorMessage = response.message || 'Failed to assign professional';
+        console.error('Assignment failed:', errorMessage);
+        Alert.alert('Error', errorMessage);
       }
     } catch (err: any) {
       console.error('Error assigning professional:', err);
-      Alert.alert('Error', err.message || 'Failed to assign professional');
+      Alert.alert('Error', err.message || 'Failed to assign professional. Please try again.');
     } finally {
       setAssignLoading(false);
     }
@@ -191,7 +312,8 @@ const AdminBookingDetailsScreen = () => {
   const formatAddress = (addr?: any) => {
     if (!addr) return '';
     const parts: string[] = [];
-    if (addr.addressLine1) parts.push(addr.addressLine1);
+    if (addr.landmark) parts.push(addr.landmark);
+    if (addr.address) parts.push(addr.address);
     if (addr.city) parts.push(addr.city);
     if (addr.state) parts.push(addr.state);
     if (addr.postalCode) parts.push(addr.postalCode);
@@ -208,7 +330,18 @@ const renderActionButtons = () => {
         <View style={buttonstyles.row}>
           <TouchableOpacity
             style={[buttonstyles.button, buttonstyles.buttonPrimary, buttonstyles.mr2]}
-            onPress={() => setShowAssignModal(true)}
+            onPress={() => {
+              console.log('Opening assign modal, booking ID:', booking._id);
+              console.log('Current professionals count:', professionals.length);
+              
+              // If no professionals are loaded yet, fetch them before showing the modal
+              if (professionals.length === 0) {
+                console.log('No professionals loaded yet, fetching before showing modal');
+                fetchProfessionals();
+              }
+              
+              setShowAssignModal(true);
+            }}
           >
             <MaterialIcons name="person-add" size={20} color="white" />
             <Text style={buttonstyles.buttonText}>
@@ -582,75 +715,112 @@ const renderActionButtons = () => {
         </View>
       </ScrollView>
 
-      {/* Modals... */}
-          {/* Assign Professional Modal */}
+      {/* Modals */}
+      {/* Assign Professional Modal */}
       <Modal
-      visible={showAssignModal}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={() => setShowAssignModal(false)}
+        visible={showAssignModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowAssignModal(false)}
       >
-      <View style={Assignstyles.modalBackdrop}>
-      <View style={Assignstyles.modalContainer}>
-      {/* Header */}
-      <View style={Assignstyles.modalHeader}>
-        <Text style={Assignstyles.modalTitle}>Assign Professional</Text>
-        <TouchableOpacity onPress={() => setShowAssignModal(false)}>
-          <Ionicons name="close" size={24} color="#4B5563" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Scroll List */}
-      <ScrollView style={Assignstyles.scrollArea}>
-        {professionals.map((pro) => {
-          const isSelected = selectedProfessionalId === pro.id;
-          return (
-            <TouchableOpacity
-              key={pro.id}
-              style={[
-                Assignstyles.professionalCard,
-                isSelected && Assignstyles.professionalCardSelected,
-              ]}
-              onPress={() => setSelectedProfessionalId(pro.id)}
-            >
-              <View style={Assignstyles.avatar}>
-                <Text style={Assignstyles.avatarText}>{pro.name.charAt(0)}</Text>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{flex: 1}}
+        >
+          <View style={Assignstyles.modalBackdrop}>
+            <View style={Assignstyles.modalContainer}>
+              {/* Header */}
+              <View style={Assignstyles.modalHeader}>
+                <Text style={Assignstyles.modalTitle}>
+                  {assignLoading ? 'Loading Professionals...' : 'Assign Professional'}
+                </Text>
+                <TouchableOpacity onPress={() => setShowAssignModal(false)}>
+                  <Ionicons name="close" size={24} color="#4B5563" />
+                </TouchableOpacity>
               </View>
-              <View style={Assignstyles.proInfo}>
-                <Text style={Assignstyles.proName}>{pro.name}</Text>
-                <View style={Assignstyles.ratingRow}>
-                  <Ionicons name="star" size={14} color="#F59E0B" />
-                  <Text style={Assignstyles.ratingText}>{pro.rating}</Text>
+
+              {/* Scroll List */}
+              {assignLoading ? (
+                <View style={[Assignstyles.scrollArea, Assignstyles.loadingContainer]}>
+                  <ActivityIndicator size="large" color="#2563EB" />
+                  <Text style={Assignstyles.loadingText}>Loading available professionals...</Text>
                 </View>
-              </View>
-              {isSelected && (
-                <Ionicons name="checkmark-circle" size={24} color="#2563EB" />
+              ) : (
+                <ScrollView style={Assignstyles.scrollArea}>
+                  {professionals.length > 0 ? (
+                    professionals.map((pro) => {
+                      const isSelected = selectedProfessionalId === pro.id;
+                      return (
+                        <TouchableOpacity
+                          key={pro.id}
+                          style={[
+                            Assignstyles.professionalCard,
+                            isSelected && Assignstyles.professionalCardSelected,
+                          ]}
+                          onPress={() => setSelectedProfessionalId(pro.id)}
+                        >
+                          <View style={Assignstyles.avatar}>
+                            <Text style={Assignstyles.avatarText}>{pro.name.charAt(0).toUpperCase()}</Text>
+                          </View>
+                          <View style={Assignstyles.proInfo}>
+                            <Text style={Assignstyles.proName}>{pro.name}</Text>
+                            <View style={Assignstyles.ratingRow}>
+                              <Ionicons name="star" size={14} color="#F59E0B" />
+                              <Text style={Assignstyles.ratingText}>{pro.rating}</Text>
+                              {pro.experience ? (
+                                <Text style={Assignstyles.experienceText}> • {pro.experience}</Text>
+                              ) : null}
+                            </View>
+                          </View>
+                          {isSelected && (
+                            <Ionicons name="checkmark-circle" size={24} color="#2563EB" />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })
+                  ) : (
+                    <View style={Assignstyles.emptyState}>
+                      <MaterialIcons name="person-search" size={48} color="#9CA3AF" />
+                      <Text style={Assignstyles.emptyStateText}>No professionals available</Text>
+                      <Text style={Assignstyles.emptyStateSubtext}>
+                        No professionals are currently available for this booking.
+                      </Text>
+                      <TouchableOpacity 
+                        style={Assignstyles.retryButton}
+                        onPress={fetchProfessionals}
+                      >
+                        <MaterialIcons name="refresh" size={20} color="white" />
+                        <Text style={Assignstyles.retryButtonText}>Retry</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </ScrollView>
               )}
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
 
-      {/* Confirm Button */}
-      <TouchableOpacity
-        style={[
-          Assignstyles.confirmButton,
-          (assignLoading || !selectedProfessionalId) && Assignstyles.confirmButtonDisabled,
-        ]}
-        onPress={handleAssignProfessional}
-        disabled={assignLoading || !selectedProfessionalId}
-      >
-        {assignLoading ? (
-          <ActivityIndicator size="small" color="white" />
-        ) : (
-          <>
-            <MaterialIcons name="check" size={20} color="white" />
-            <Text style={Assignstyles.confirmText}>Confirm Assignment</Text>
-          </>
-        )}
-      </TouchableOpacity>
-      </View>
-      </View>
+              {/* Confirm Button */}
+              <TouchableOpacity
+                style={[
+                  Assignstyles.confirmButton,
+                  (assignLoading || !selectedProfessionalId || professionals.length === 0) && 
+                  Assignstyles.confirmButtonDisabled,
+                ]}
+                onPress={handleAssignProfessional}
+                disabled={assignLoading || !selectedProfessionalId || professionals.length === 0}
+              >
+                {assignLoading ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <>
+                    <MaterialIcons name="check" size={20} color="white" />
+                    <Text style={Assignstyles.confirmText}>
+                      {professionals.length === 0 ? 'No Professionals Available' : 'Confirm Assignment'}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
 
@@ -1248,6 +1418,7 @@ const Assignstyles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 16,
+    maxHeight: '80%', // Ensure it doesn't take up too much space
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1262,6 +1433,17 @@ const Assignstyles = StyleSheet.create({
   },
   scrollArea: {
     maxHeight: 384, // max-h-96
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    minHeight: 200,
+  },
+  loadingText: {
+    color: '#4B5563',
+    marginTop: 16,
+    fontSize: 14,
   },
   professionalCard: {
     flexDirection: 'row',
@@ -1299,9 +1481,46 @@ const Assignstyles = StyleSheet.create({
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
   ratingText: {
     color: '#4B5563', // text-gray-600
+    marginLeft: 4,
+  },
+  experienceText: {
+    color: '#6B7280', // text-gray-500
+    fontSize: 12,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    minHeight: 200,
+  },
+  emptyStateText: {
+    color: '#4B5563',
+    fontWeight: '500',
+    fontSize: 16,
+    marginTop: 12,
+  },
+  emptyStateSubtext: {
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  retryButtonText: {
+    color: 'white',
+    fontWeight: '500',
     marginLeft: 4,
   },
   confirmButton: {

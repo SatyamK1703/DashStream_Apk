@@ -233,6 +233,13 @@ export const useAdminBookingActions = () => {
     }
   );
 
+  const getAvailableProfessionals = useApi(
+    (bookingId: string) => adminService.getAvailableProfessionals(bookingId),
+    {
+      showErrorAlert: false, // Don't show error alert for this one
+    }
+  );
+
   const assignProfessional = useApi(
     ({ bookingId, professionalId }: { bookingId: string; professionalId: string }) =>
       adminService.assignProfessional(bookingId, professionalId),
@@ -251,10 +258,18 @@ export const useAdminBookingActions = () => {
 
   return {
     updateBookingStatus: updateBookingStatus.execute,
+    getAvailableProfessionals: getAvailableProfessionals.execute,
     assignProfessional: assignProfessional.execute,
     cancelBooking: cancelBooking.execute,
-    isLoading: updateBookingStatus.loading || assignProfessional.loading || cancelBooking.loading,
-    error: updateBookingStatus.error || assignProfessional.error || cancelBooking.error,
+    isLoading: 
+      updateBookingStatus.loading || 
+      assignProfessional.loading || 
+      cancelBooking.loading || 
+      getAvailableProfessionals.loading,
+    error: 
+      updateBookingStatus.error || 
+      assignProfessional.error || 
+      cancelBooking.error,
   };
 };
 
