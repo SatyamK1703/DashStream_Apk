@@ -15,16 +15,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNotificationStore } from '../../store/useNotificationStore';
+import { Notification } from '../../types/notification';
+
+type NotificationsScreenNavigationProp = NativeStackNavigationProp<
+  CustomerStackParamList,
+  'Notifications'
+>;
 
 const NotificationsScreen = () => {
   const navigation = useNavigation<NotificationsScreenNavigationProp>();
-  const { 
-    notifications, 
-    loading, 
-    error, 
-    fetchNotifications, 
-    markAsRead, 
-    markAllAsRead 
+  const {
+    notifications,
+    loading,
+    error,
+    fetchNotifications,
+    markAsRead,
+    markAllAsRead
   } = useNotificationStore();
 
   // Load notifications on mount
@@ -32,12 +38,10 @@ const NotificationsScreen = () => {
     fetchNotifications();
   }, []);
 
-  const handleNotificationPress = async (notification: any) => {
-    // Mark as read if unread
+  const handleNotificationPress = async (notification: Notification) => {    // Mark as read if unread
     if (!notification.read) {
       try {
         await markAsRead(notification._id);
-        fetchNotifications(); // Refresh to update read status
       } catch (error) {
         console.error('Failed to mark notification as read:', error);
       }
@@ -46,19 +50,24 @@ const NotificationsScreen = () => {
     // Navigate based on notification type
     switch (notification.type) {
       case 'booking':
-        if (notification.relatedData?.bookingId) {
+        if (notification.actionParams?.bookingId) {
           navigation.navigate('TrackBooking', { 
-            bookingId: notification.relatedData.bookingId 
+            bookingId: notification.actionParams.bookingId 
           });
         }
         break;
       case 'payment':
-        if (notification.relatedData?.paymentId) {
+        if (notification.actionParams?.paymentId) {
           navigation.navigate('PaymentMethods');
         }
         break;
       case 'offer':
         navigation.navigate('CustomerTabs', { screen: 'Home' });
+        break;
+      case 'system':
+        if (notification.actionType === 'open_support_ticket') {
+          navigation.navigate('Support');
+        }
         break;
       default:
         // For general notifications, just mark as read
@@ -69,13 +78,57 @@ const NotificationsScreen = () => {
   const handleMarkAllRead = async () => {
     try {
       await markAllAsRead();
-      fetchNotifications();
     } catch (error) {
       Alert.alert('Error', 'Failed to mark all notifications as read');
     }
   };
 
-  const renderNotificationItem = ({ item }: { item: any }) => (
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'booking':
+        return <Ionicons name="calendar-outline" size={24} color="#2563eb" />;
+      case 'payment':
+        return <Ionicons name="wallet-outline" size={24} color="#10b981" />;
+      case 'promo':
+        return <Ionicons name="pricetag-outline" size={24} color="#f59e0b" />;
+      case 'offer':
+        return <Ionicons name="gift-outline" size={24} color="#f59e0b" />;
+      case 'system':
+        return <Ionicons name="settings-outline" size={24} color="#6b7280" />;
+      case 'chat':
+        return <Ionicons name="chatbubble-ellipses-outline" size={24} color="#3b82f6" />;
+      default:
+        return <Ionicons name="notifications-outline" size={24} color="#6b7280" />;
+    }
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    const now = new Date();
+    const date = new Date(timestamp);
+    const diff = now.getTime() - date.getTime();
+
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) {
+      return `${days}d ago`;
+    }
+    if (hours > 0) {
+      return `${hours}h ago`;
+    }
+    if (minutes > 0) {
+      return `${minutes}m ago`;
+    }
+    return 'just now';
+  };
+
+  const refresh = () => {
+    fetchNotifications();
+  };
+
+  const renderNotificationItem = ({ item }: { item: Notification }) => (
     <TouchableOpacity
       style={[styles.notificationItem, !item.read ? styles.unread : styles.read]}
       onPress={() => handleNotificationPress(item)}
