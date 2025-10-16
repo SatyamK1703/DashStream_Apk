@@ -16,7 +16,7 @@ export const useInitializeStores = () => {
   const initAuth = useAuthStore(state => state.initAuth);
   const fetchServices = useServiceStore(state => state.fetchServices);
   const fetchOffers = useOfferStore(state => state.fetchOffers);
-  const registerForPushNotifications = useNotificationStore(state => state.registerForPushNotifications);
+  
   const requestLocationPermission = useLocationStore(state => state.requestLocationPermission);
 
   const initializeApp = async () => {
@@ -28,7 +28,7 @@ export const useInitializeStores = () => {
       const initPromises = [
         fetchServices().catch(console.error),
         fetchOffers().catch(console.error),
-        registerForPushNotifications().catch(console.error),
+        
         requestLocationPermission().catch(console.error),
       ];
       

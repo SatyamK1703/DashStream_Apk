@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../../store';
+import { useAuth, useNotificationStore } from '../../store';
 import { ProRoutes, ProNavigator } from '../../../app/routes/ProNavigator';
 import { useProfessionalDashboardScreen, useProfessionalJobActions, useProfessionalProfileActions } from '../../hooks/useProfessional';
 
@@ -46,6 +46,7 @@ const colors = {
 const ProDashboardScreen = () => {
   const navigation = useNavigation<ProDashboardScreenNavigationProp>();
   const { user } = useAuth();
+  const { unreadCount } = useNotificationStore();
   
   // Use the dashboard hook that combines multiple API calls
   const {
@@ -56,10 +57,7 @@ const ProDashboardScreen = () => {
     refresh
   } = useProfessionalDashboardScreen();
 
-  // FIX: Define missing variables to prevent crash and data mismatch
-  const earnings = stats?.earnings || { today: 0, thisWeek: 0, thisMonth: 0, pendingPayout: 0, lastPayout: { amount: 0 } };
-  const upcomingJobs = stats?.todayJobs || [];
-  const performance = stats?.performance || { rating: 0, completionRate: 0, onTimeRate: 0, totalJobs: 0 };
+  const { earnings, todayJobs: upcomingJobs, performance } = stats || {};
   const refreshDashboard = refresh;
 
   // Professional actions
@@ -108,7 +106,7 @@ const ProDashboardScreen = () => {
         <View style={styles.headerProfile}>
           <Image 
             source={{ 
-              uri: profile?.profileImage || 'https://randomuser.me/api/portraits/men/32.jpg' 
+              uri: profile?.profileImage 
             }} 
             style={styles.profileImage} 
           />
@@ -128,9 +126,11 @@ const ProDashboardScreen = () => {
             onPress={() => navigation.navigate('ProNotifications')}
           >
             <Ionicons name="notifications" size={20} color={colors.white} />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>3</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{unreadCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.headerButton} 
@@ -178,7 +178,7 @@ const ProDashboardScreen = () => {
         <View style={styles.jobCustomerInfo}>
           <Image 
             source={{ 
-              uri: job.customer?.profileImage || 'https://randomuser.me/api/portraits/women/44.jpg' 
+              uri: job.customer?.profileImage 
             }} 
             style={styles.customerImage} 
           />

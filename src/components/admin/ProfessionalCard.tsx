@@ -24,7 +24,7 @@ const ProfessionalCard = ({ id, name, rating, jobsCompleted, isOnline, onPress }
     >
       <View style={styles.professionalCardContent}>
         <View style={styles.professionalAvatar}>
-          <Text style={styles.professionalAvatarText}>{name.charAt(0)}</Text>
+          <Text style={styles.professionalAvatarText}>{(name || '').charAt(0) || 'P'}</Text>
         </View>
         
         <View style={styles.professionalInfo}>

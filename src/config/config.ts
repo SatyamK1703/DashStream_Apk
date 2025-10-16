@@ -172,6 +172,15 @@ export const API_ENDPOINTS = {
     QUESTIONS: '/support/questions',
   },
 
+  // Professionals
+  PROFESSIONALS: {
+    JOBS: '/professionals/jobs',
+    JOB_BY_ID: (jobId: string) => `/professionals/jobs/${jobId}`,
+    UPDATE_JOB_STATUS: (jobId: string) => `/professionals/jobs/${jobId}/status`,
+    DASHBOARD: '/professionals/dashboard',
+    PROFILE: '/professionals/profile',
+  },
+
   // Admin
   ADMIN: {
     DASHBOARD: '/admin/dashboard',

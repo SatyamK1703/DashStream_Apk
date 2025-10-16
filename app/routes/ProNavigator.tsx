@@ -30,6 +30,7 @@ export type ProStackParamList = {
   ServiceArea: undefined;
   Skills: undefined;
   Verification: undefined;
+  ProNotifications: undefined;
 };
 
 // Define the professional tab param list
@@ -104,6 +105,7 @@ const ProNavigator = () => {
       <Stack.Screen name="ServiceArea" component={ProServiceAreaScreen} />
       <Stack.Screen name="Skills" component={ProSkillsScreen} />
       <Stack.Screen name="Verification" component={ProVerificationScreen} />
+      <Stack.Screen name="ProNotifications" component={ProNotificationsScreen}  />
     </Stack.Navigator>
   );
 };
