@@ -361,7 +361,42 @@ export interface DashboardStats {
     month: string;
     bookings: number;
     revenue: number;
+}[]
+}
+
+export interface ProfessionalProfile {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  profileImage?: string;
+  isAvailable: boolean;
+  serviceAreas?: {
+    name: string;
   }[];
+}
+
+export interface ProfessionalDashboardStats {
+  earnings: Earnings;
+  todayJobs: Booking[];
+  performance: Performance;
+}
+
+export interface Earnings {
+  today: number;
+  thisWeek: number;
+  thisMonth: number;
+  pendingPayout: number;
+  lastPayout: {
+    amount: number;
+  };
+}
+
+export interface Performance {
+  rating: number;
+  completionRate: number;
+  onTimeRate: number;
+  totalJobs: number;
 }
 
 // Error types
