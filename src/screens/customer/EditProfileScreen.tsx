@@ -73,7 +73,7 @@ const EditProfileScreen = () => {
 
       await updateUserProfile(payload);
       Alert.alert('Success', 'Your profile has been updated successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+        { text: 'OK' },
       ]);
     } catch {
       Alert.alert('Error', 'Failed to update profile. Please try again.');

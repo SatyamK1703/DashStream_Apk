@@ -150,6 +150,16 @@ export const useAuthStore = create<AuthState>()(
         },
 
         updateUserProfile: async (userData: Partial<User>) => {
+          function removeUndefined<T extends object>(obj: T): Partial<T> {
+            const newObj: Partial<T> = {};
+            for (const key in obj) {
+              if (obj[key] !== undefined) {
+                newObj[key] = obj[key];
+              }
+            }
+            return newObj;
+          }
+
           const { user } = get();
           if (!user) throw new Error('User not authenticated');
 
@@ -178,7 +188,8 @@ export const useAuthStore = create<AuthState>()(
               const imgResp = await userService.updateProfileImage(formData);
               if (imgResp && imgResp.success && imgResp.data) {
                 const updated = convertApiUserToAppUser(imgResp.data);
-                set({ user: updated, isLoading: false });
+                const cleanedUpdated = removeUndefined(updated);
+                set(state => ({ user: state.user ? { ...state.user, ...cleanedUpdated } : cleanedUpdated }));
                 return;
               } else {
                 throw new Error(imgResp?.message || 'Failed to upload profile image');
@@ -194,15 +205,17 @@ export const useAuthStore = create<AuthState>()(
 
               if (response && (response.success === true || response.status === 'success') && response.data) {
                 const updatedUser = convertApiUserToAppUser(response.data);
-                set({ user: updatedUser, isLoading: false });
+                const cleanedUpdatedUser = removeUndefined(updatedUser);
+                set(state => ({ user: state.user ? { ...state.user, ...cleanedUpdatedUser } : cleanedUpdatedUser }));
               } else {
                 throw new Error(response?.message || 'Failed to update profile');
               }
             }
           } catch (error: any) {
             if (__DEV__) console.error('Update profile error:', error);
-            set({ isLoading: false });
             throw error;
+          } finally {
+            set({ isLoading: false });
           }
         },
 

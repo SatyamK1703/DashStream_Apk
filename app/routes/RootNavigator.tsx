@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, View, Platform,StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Platform, StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // Import navigators for different user roles
@@ -12,7 +12,7 @@ import LoginScreen from '../../src/screens/LoginScreen';
 import OtpVerificationScreen from '../../src/screens/customer/OtpVerificationScreen';
 
 // Import auth context
-import { useAuth } from '../../src/store';
+import { useAuth, type UserRole } from '../../src/store';
 
 // Define the root stack param list
 export type RootStackParamList = {
@@ -38,17 +38,24 @@ const RootNavigator = () => {
     );
   }
 
+  const getAppNavigator = (role: UserRole) => {
+    switch (role) {
+      case 'customer':
+        return <Stack.Screen name="CustomerApp" component={CustomerNavigator} />;
+      case 'professional':
+        return <Stack.Screen name="ProfessionalApp" component={ProNavigator} />;
+      case 'admin':
+        return <Stack.Screen name="AdminApp" component={AdminNavigator} />;
+      default:
+        return null;
+    }
+  };
+
+  const appNavigator = user ? getAppNavigator(user.role) : null;
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-      {user ? (
-        user.role === 'customer' ? (
-          <Stack.Screen name="CustomerApp" component={CustomerNavigator} />
-        ) : user.role === 'professional' ? (
-          <Stack.Screen name="ProfessionalApp" component={ProNavigator} />
-        ) : (
-          <Stack.Screen name="AdminApp" component={AdminNavigator} />
-        )
-      ) : (
+      {appNavigator || (
         <>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
@@ -56,6 +63,7 @@ const RootNavigator = () => {
       )}
     </Stack.Navigator>
   );
+
 };
 
 
