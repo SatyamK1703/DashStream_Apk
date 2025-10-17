@@ -15,7 +15,7 @@ import {
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../app/routes/RootNavigator';
-import { useAuth } from '../../store';
+import { useAuthStore } from '../../store';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -28,38 +28,22 @@ type OtpVerificationNavigationProp = NativeStackNavigationProp<
   'OtpVerification'
 >;
 
-const OTP_LENGTH = 4;
+const OTP_LENGTH = 6; // Firebase OTPs are 6 digits
 
 const OtpVerificationScreen = () => {
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
-  const [timer, setTimer] = useState(30);
-  const [canResend, setCanResend] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const inputRefs = useRef<(TextInput | null)[]>(Array(OTP_LENGTH).fill(null));
 
   const navigation = useNavigation<OtpVerificationNavigationProp>();
   const route = useRoute<OtpVerificationRouteProp>();
   const { phone } = route.params;
-  const { verifyOtp, isLoading, login } = useAuth();
-
-  // Countdown timer
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | undefined;
-    if (timer > 0) {
-      interval = setInterval(() => setTimer((t) => t - 1), 1000);
-    } else {
-      setCanResend(true);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [timer]);
+  const { confirmOtp, isLoading } = useAuthStore();
 
   // Auto-submit when all digits are filled
   useEffect(() => {
     const code = otp.join('');
     if (code.length === OTP_LENGTH && !otp.includes('') && !isLoading) {
-      // Small debounce to allow UI focus to settle
       const id = setTimeout(() => handleVerifyOtp(), 100);
       return () => clearTimeout(id);
     }
@@ -70,11 +54,9 @@ const OtpVerificationScreen = () => {
     setActiveIndex(index);
   };
 
-  // Handle input change including paste and digit restriction
   const handleOtpChange = (text: string, index: number) => {
     const digitsOnly = text.replace(/\D/g, '');
 
-    // If user cleared the field
     if (digitsOnly.length === 0) {
       setOtp((prev) => {
         const updated = [...prev];
@@ -84,7 +66,6 @@ const OtpVerificationScreen = () => {
       return;
     }
 
-    // Handle paste or multiple characters
     if (digitsOnly.length > 1) {
       setOtp((prev) => {
         const updated = [...prev];
@@ -100,7 +81,6 @@ const OtpVerificationScreen = () => {
       return;
     }
 
-    // Single character entry
     setOtp((prev) => {
       const updated = [...prev];
       updated[index] = digitsOnly;
@@ -112,7 +92,6 @@ const OtpVerificationScreen = () => {
     }
   };
 
-  // Backspace navigation: if current empty, move to previous and clear it
   const handleKeyPress = (
     e: NativeSyntheticEvent<TextInputKeyPressEventData>,
     index: number,
@@ -139,22 +118,11 @@ const OtpVerificationScreen = () => {
       Alert.alert('Invalid OTP', `Please enter a valid ${OTP_LENGTH}-digit OTP`);
       return;
     }
-    const ok = await verifyOtp(phone, otpString);
-    if (!ok) return;
-  };
-
-  const handleResendOtp = async () => {
-    setTimer(30);
-    setCanResend(false);
-    setOtp(Array(OTP_LENGTH).fill(''));
-    focusField(0);
-
-    try {
-      await login(phone);
-      Alert.alert('OTP Sent', 'A new OTP has been sent to your phone number.');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to resend OTP. Please try again.');
+    const success = await confirmOtp(otpString);
+    if (!success) {
+      Alert.alert('Verification Failed', 'The OTP you entered is incorrect. Please try again.');
     }
+    // On success, the auth store will set the user and navigate automatically
   };
 
   return (
@@ -166,7 +134,6 @@ const OtpVerificationScreen = () => {
         extraScrollHeight={20}
       >
         <View style={styles.content}>
-          {/* Header with back button */}
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
@@ -176,14 +143,12 @@ const OtpVerificationScreen = () => {
             <MaterialIcons name="arrow-back" size={28} color="#4e73df" />
           </TouchableOpacity>
 
-          {/* Verification Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Verify Your Number</Text>
             <Text style={styles.subtitle}>Enter the {OTP_LENGTH}-digit code sent to</Text>
-            <Text style={styles.phoneText}>+{phone}</Text>
+            <Text style={styles.phoneText}>+91{phone}</Text>
           </View>
 
-          {/* OTP Input Container */}
           <View style={styles.otpContainer}>
             {otp.map((digit, index) => (
               <TextInput
@@ -213,7 +178,6 @@ const OtpVerificationScreen = () => {
             ))}
           </View>
 
-          {/* Verify Button */}
           <TouchableOpacity
             onPress={handleVerifyOtp}
             disabled={isLoading || otp.join('').length !== OTP_LENGTH}
@@ -236,19 +200,11 @@ const OtpVerificationScreen = () => {
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Resend OTP Section */}
           <View style={styles.resendContainer}>
-            <Text style={styles.resendText}>Didn&#39;t receive the code?</Text>
-
-            {canResend ? (
-              <TouchableOpacity onPress={handleResendOtp} disabled={isLoading}>
-                <Text style={styles.resendLink}>Resend OTP</Text>
-              </TouchableOpacity>
-            ) : (
-              <Text style={styles.resendCountdown}>
-                Resend in <Text style={styles.resendCountdownBold}>{timer} seconds</Text>
-              </Text>
-            )}
+            <Text style={styles.resendText}>Didn't receive the code?</Text>
+            <TouchableOpacity onPress={() => navigation.goBack()} disabled={isLoading}>
+              <Text style={styles.resendLink}>Request a new one</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </KeyboardAwareScrollView>
@@ -267,7 +223,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 24,
-    justifyContent: 'center', // centered layout per requirement
+    justifyContent: 'center',
   },
   backButton: {
     position: 'absolute',
@@ -308,26 +264,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   otpInput: {
-    width: 64,
-    height: 64,
+    width: 48,
+    height: 48,
     borderWidth: 1.5,
     borderColor: '#e2e8f0',
-    borderRadius: 16,
+    borderRadius: 12,
     backgroundColor: '#fff',
     textAlign: 'center',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#2d3748',
-    shadowColor: '#4e73df',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
   activeOtpInput: {
     borderColor: '#4e73df',
-    shadowOpacity: 0.2,
-    transform: [{ scale: 1.05 }],
   },
   disabledInput: {
     backgroundColor: '#f1f5f9',
@@ -338,11 +287,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
-    shadowColor: '#4e73df',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 8,
   },
   verifyButtonText: {
     color: '#fff',
@@ -367,15 +311,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     padding: 8,
-  },
-  resendCountdown: {
-    color: '#a0aec0',
-    fontSize: 16,
-    marginTop: 4,
-  },
-  resendCountdownBold: {
-    fontWeight: '700',
-    color: '#4e73df',
   },
 });
 

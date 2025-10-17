@@ -3,7 +3,6 @@ import { create } from 'zustand';
 import { subscribeWithSelector, devtools } from 'zustand/middleware';
 import { addressService } from '../services';
 import { Address } from '../types/api';
-import { useAuthStore } from './authStore';
 
 interface AddressState {
   // State

@@ -3,7 +3,6 @@ import { create } from 'zustand';
 import { subscribeWithSelector, devtools } from 'zustand/middleware';
 import { bookingService } from '../services';
 import { Booking, BookingFilter, BookingStats } from '../types/booking';
-import { useAuthStore } from './authStore';
 
 interface BookingState {
   // State
@@ -42,6 +41,8 @@ export const useBookingStore = create<BookingState>()(
 
       // Actions
       fetchBookings: async (filters?: BookingFilter) => {
+        // Import auth store dynamically to avoid circular dependency
+        const { useAuthStore } = require('./authStore');
         const { isAuthenticated } = useAuthStore.getState();
         if (!isAuthenticated) {
           set({ bookings: [], isLoading: false });

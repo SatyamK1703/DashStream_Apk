@@ -8,20 +8,20 @@ import { Platform } from 'react-native';
 const ENV = {
   development: {
     API_URL: Platform.OS === 'ios'
-      ? 'https://dash-stream-apk-backend.vercel.app/api'
-      : 'https://dash-stream-apk-backend.vercel.app/api',
+      ? 'http://localhost:5000/api'
+      : 'http://localhost:5000/api',
     GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY',
     RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || 'YOUR_RAZORPAY_KEY_ID',
   },
   staging: {
-    API_URL: 'https://dash-stream-apk-backend.vercel.app/api',
+    API_URL: 'http://localhost:5000/api',
     GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY',
     RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || 'YOUR_RAZORPAY_KEY_ID',
   },
   production: {
-    API_URL: 'https://dash-stream-apk-backend.vercel.app/api',
-    GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY',
-    RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || 'YOUR_RAZORPAY_KEY_ID',
+    API_URL: 'https://localhost:5000/api',
+    GOOGLE_MAPS_API_KEY: 'AIzaSyDnvD-g_1JwFU6d4AExl70f_h9FICdeons',
+    RAZORPAY_KEY_ID: 'rzp_live_REERfmRqrw93oG',
   }
 };
 
@@ -43,6 +43,7 @@ export const API_ENDPOINTS = {
     LOGOUT: '/auth/logout',
     ME: '/auth/me',
     VERIFY_TOKEN: '/auth/verify-token',
+    VERIFY_PHONE: '/auth/verify-phone',
   },
 
   // User Profile

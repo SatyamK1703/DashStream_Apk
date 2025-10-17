@@ -5,7 +5,6 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { notificationService } from '../services';
 import { Notification, NotificationSettings, PushNotificationToken } from '../types/notification';
-import { useAuthStore } from './authStore';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -139,6 +138,8 @@ export const useNotificationStore = create<NotificationState>()(
           const token = (await Notifications.getExpoPushTokenAsync()).data;
           set({ expoPushToken: token });
 
+          // Import auth store dynamically to avoid circular dependency
+          const { useAuthStore } = require('./authStore');
           const { isAuthenticated } = useAuthStore.getState();
           if (isAuthenticated) {
             try {
@@ -157,6 +158,8 @@ export const useNotificationStore = create<NotificationState>()(
       },
 
       fetchNotifications: async () => {
+        // Import auth store dynamically to avoid circular dependency
+        const { useAuthStore } = require('./authStore');
         const { isAuthenticated } = useAuthStore.getState();
         if (!isAuthenticated) {
           set({ notifications: [], unreadCount: 0 });

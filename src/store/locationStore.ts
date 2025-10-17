@@ -4,7 +4,6 @@ import { subscribeWithSelector, devtools } from 'zustand/middleware';
 import * as Location from 'expo-location';
 import { locationService } from '../services';
 import { LocationData, Geofence, LocationPermission, TrackingSettings } from '../types/location';
-import { useAuthStore } from './authStore';
 
 interface LocationState {
   // State
@@ -153,6 +152,8 @@ export const useLocationStore = create<LocationState>()(
             error: null 
           });
 
+          // Import auth store dynamically to avoid circular dependency
+          const { useAuthStore } = require('./authStore');
           const { isAuthenticated, user } = useAuthStore.getState();
           if (isAuthenticated && user?.role === 'professional') {
             try {
@@ -170,7 +171,9 @@ export const useLocationStore = create<LocationState>()(
       updateStatus: async (status: 'available' | 'busy' | 'offline') => {
         try {
           set({ isLoading: true, error: null });
-          
+
+          // Import auth store dynamically to avoid circular dependency
+          const { useAuthStore } = require('./authStore');
           const { isAuthenticated } = useAuthStore.getState();
           if (isAuthenticated) {
             await locationService.updateStatus(status);
@@ -188,6 +191,8 @@ export const useLocationStore = create<LocationState>()(
 
       getLocationHistory: async (limit = 50) => {
         try {
+          // Import auth store dynamically to avoid circular dependency
+          const { useAuthStore } = require('./authStore');
           const { isAuthenticated } = useAuthStore.getState();
           if (!isAuthenticated) {
             return [];
@@ -268,7 +273,9 @@ export const useLocationStore = create<LocationState>()(
           const newSettings = { ...trackingSettings, ...options };
           
           set({ trackingSettings: newSettings });
-          
+
+          // Import auth store dynamically to avoid circular dependency
+          const { useAuthStore } = require('./authStore');
           const { isAuthenticated } = useAuthStore.getState();
           if (isAuthenticated) {
             await locationService.updateSettings(newSettings);

@@ -1,10 +1,12 @@
-// src/store/authStore.ts
+
 import { create } from 'zustand';
 import { createJSONStorage, persist, devtools } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService, userService } from '../services';
 import { useNotificationStore } from './notificationStore';
 import httpClient from '../services/httpClient';
+import { auth } from '../config/firebase'; // Import Firebase auth
+import { ConfirmationResult, RecaptchaVerifier } from 'firebase/auth';
 
 export type UserRole = 'customer' | 'professional' | 'admin';
 
@@ -25,13 +27,15 @@ interface AuthState {
   isBooting: boolean;
   isAuthenticated: boolean;
   isGuest: boolean;
+  confirmationResult: ConfirmationResult | null;
 
   // Actions
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
   setBooting: (booting: boolean) => void;
-  login: (phone: string) => Promise<void>;
-  verifyOtp: (phone: string, otp: string) => Promise<boolean>;
+  setConfirmationResult: (result: ConfirmationResult | null) => void;
+  signInWithPhoneNumber: (phone: string, recaptchaVerifier: RecaptchaVerifier) => Promise<void>;
+  confirmOtp: (otp: string) => Promise<boolean>;
   logout: () => Promise<void>;
   updateUserProfile: (userData: Partial<User>) => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -59,6 +63,7 @@ export const useAuthStore = create<AuthState>()(
         isBooting: true,
         isAuthenticated: false,
         isGuest: false,
+        confirmationResult: null,
 
         // Actions
         setUser: (user) => set({
@@ -71,57 +76,67 @@ export const useAuthStore = create<AuthState>()(
 
         setBooting: (isBooting) => set({ isBooting }),
 
-        login: async (phone: string) => {
+        setConfirmationResult: (result) => set({ confirmationResult: result }),
+
+        signInWithPhoneNumber: async (phone, recaptchaVerifier) => {
           set({ isLoading: true });
           try {
-            const response = await authService.sendOtp({ phone });
-            const isSuccess = response.success === true || response.status === 'success';
-
-            if (isSuccess) {
-              if (__DEV__) console.log('OTP sent successfully');
-            } else {
-              throw new Error(response.message || 'Failed to send OTP');
-            }
+            const confirmation = await auth.signInWithPhoneNumber(phone, recaptchaVerifier);
+            set({ confirmationResult: confirmation });
+            if (__DEV__) console.log('OTP sent successfully via Firebase');
           } catch (error: any) {
-            if (__DEV__) console.error('Login error:', error);
+            if (__DEV__) console.error('Firebase signInWithPhoneNumber error:', error);
             throw error;
           } finally {
             set({ isLoading: false });
           }
         },
 
-        verifyOtp: async (phone: string, otp: string): Promise<boolean> => {
+        confirmOtp: async (otp: string): Promise<boolean> => {
+          const { confirmationResult } = get();
+          if (!confirmationResult) {
+            throw new Error('No confirmation result found. Please send OTP first.');
+          }
+
           set({ isLoading: true });
           try {
-            const response = await authService.verifyOtp({ phone, otp });
-            const isSuccess = response.success === true || response.status === 'success';
+            const userCredential = await confirmationResult.confirm(otp);
+            if (userCredential.user) {
+              const idToken = await userCredential.user.getIdToken();
+              const response = await authService.verifyFirebaseToken(idToken);
 
-            if (isSuccess && response.data?.user) {
-              const appUser = convertApiUserToAppUser(response.data.user);
-              set({
-                user: appUser,
-                isAuthenticated: !appUser.isGuest,
-                isGuest: !!appUser.isGuest,
-                isLoading: false
-              });
-              if (__DEV__) console.log('✅ OTP verified and user authenticated');
+              const isSuccess = response.success === true || response.status === 'success';
 
-              // Register for push notifications after successful login
-              try {
-                const { registerForPushNotifications } = useNotificationStore.getState();
-                await registerForPushNotifications();
-                if (__DEV__) console.log('✅ Push notification registration triggered');
-              } catch (e) {
-                if (__DEV__) console.error('Error triggering push notification registration:', e);
+              if (isSuccess && response.data?.user) {
+                const appUser = convertApiUserToAppUser(response.data.user);
+                set({
+                  user: appUser,
+                  isAuthenticated: !appUser.isGuest,
+                  isGuest: !!appUser.isGuest,
+                  isLoading: false
+                });
+                if (__DEV__) console.log('✅ Firebase OTP verified and user authenticated with backend');
+
+                // Register for push notifications after successful login
+                try {
+                  const { registerForPushNotifications } = useNotificationStore.getState();
+                  await registerForPushNotifications();
+                  if (__DEV__) console.log('✅ Push notification registration triggered');
+                } catch (e) {
+                  if (__DEV__) console.error('Error triggering push notification registration:', e);
+                }
+
+                return true;
+              } else {
+                set({ isLoading: false });
+                return false;
               }
-
-              return true;
             } else {
               set({ isLoading: false });
               return false;
             }
           } catch (error: any) {
-            if (__DEV__) console.error('OTP verification error:', error);
+            if (__DEV__) console.error('Firebase OTP confirmation error:', error);
             set({ isLoading: false });
             return false;
           }
@@ -130,12 +145,14 @@ export const useAuthStore = create<AuthState>()(
         logout: async () => {
           set({ isLoading: true });
           try {
-            await authService.logout();
+            await auth.signOut(); // Sign out from Firebase
+            await authService.logout(); // Clear backend session
             set({
               user: null,
               isAuthenticated: false,
               isGuest: false,
-              isLoading: false
+              isLoading: false,
+              confirmationResult: null,
             });
           } catch (error) {
             if (__DEV__) console.error('Logout error:', error);
@@ -144,10 +161,14 @@ export const useAuthStore = create<AuthState>()(
               user: null,
               isAuthenticated: false,
               isGuest: false,
-              isLoading: false
+              isLoading: false,
+              confirmationResult: null,
             });
           }
         },
+
+        // Keep other methods like updateUserProfile, refreshUser, etc.
+        // You might need to adjust them based on your new auth flow.
 
         updateUserProfile: async (userData: Partial<User>) => {
           function removeUndefined<T extends object>(obj: T): Partial<T> {

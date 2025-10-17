@@ -1,31 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../app/routes/RootNavigator';
-import { useAuth } from '../store';
+import { useAuthStore } from '../store';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
+import { auth } from '../config/firebase';
+import firebaseApp from '../config/firebase';
 
 const LoginScreen = () => {
   const [phone, setPhone] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { isLoading, signInWithPhoneNumber, setUser } = useAuthStore();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { login, setUser } = useAuth() as any;
+  const recaptchaVerifier = useRef<FirebaseRecaptchaVerifierModal>(null);
 
   const handleLogin = async () => {
     if (!/^\d{10}$/.test(phone)) {
       Alert.alert('Invalid Phone', 'Please enter a valid 10-digit phone number.');
       return;
     }
-    setIsLoading(true);
     try {
-      await login(phone);
+      // Assuming Indian phone numbers, add +91
+      const phoneNumber = `+91${phone}`;
+      await signInWithPhoneNumber(phoneNumber, recaptchaVerifier.current!);
       navigation.navigate('OtpVerification', { phone });
-    } catch (error) {
-      Alert.alert('Login Failed', 'Could not send OTP. Please try again.');
-    } finally {
-      setIsLoading(false);
+    } catch (error: any) {
+      Alert.alert('Login Failed', error.message || 'Could not send OTP. Please try again.');
     }
   };
 
@@ -37,6 +39,7 @@ const LoginScreen = () => {
       phone: '0000000000',
       role: 'customer',
       profileImage: undefined,
+      isGuest: true,
     });
   };
 
@@ -45,6 +48,13 @@ const LoginScreen = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
+      {firebaseApp && firebaseApp.options && (
+        <FirebaseRecaptchaVerifierModal
+          ref={recaptchaVerifier}
+          firebaseConfig={firebaseApp.options}
+          // invisible={true} // Use this for invisible recaptcha
+        />
+      )}
       <ScrollView 
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
