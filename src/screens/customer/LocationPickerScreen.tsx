@@ -117,11 +117,11 @@ const LocationPickerScreen = () => {
       const locationName = address.street || address.city || address.region || "Selected Location";
 
       // ✅ Pass location back to previous screen
-      if (route.params?.onLocationSelected) {
-        route.params.onLocationSelected(locationName);
-      }
-
-      navigation.goBack();
+      navigation.navigate({
+        name: 'CustomerTabs',
+        params: { selectedLocation: locationName },
+        merge: true,
+      });
     } catch (error) {
       console.log(error);
       Alert.alert("Error", "Could not get address details. Please try again.");
