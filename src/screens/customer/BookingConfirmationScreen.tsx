@@ -196,7 +196,8 @@ const BookingConfirmationScreen = () => {
   // Calculate subtotal from services array
   const subtotal = services.reduce((acc, service) => {
     const price = service?.basePrice || service?.price || service?.serviceId?.price || 0;
-    return acc + price;
+    const quantity = service?.quantity || 1;
+    return acc + (price * quantity);
   }, 0);
 
   return (
@@ -366,6 +367,7 @@ export default BookingConfirmationScreen;
 const ServiceBooked = ({ service }) => {
   const serviceImages = service && service.images && service.images.length > 0;
   const price = service?.basePrice || service?.price || service?.serviceId?.price || 0;
+  const quantity = service?.quantity || 1;
 
   return (
     <View style={styles.serviceRow}>
@@ -384,9 +386,9 @@ const ServiceBooked = ({ service }) => {
         <Text style={styles.serviceTitle}>
           {service?.name || service?.title || service?.serviceId?.title || 'Service'}
         </Text>
-        <Text style={styles.serviceSubtitle}>1 x ₹{price.toFixed(2)}</Text>
+        <Text style={styles.serviceSubtitle}>{quantity} x ₹{price.toFixed(2)}</Text>
       </View>
-      <Text style={styles.value}>₹{price.toFixed(2)}</Text>
+      <Text style={styles.value}>₹{(price * quantity).toFixed(2)}</Text>
     </View>
   );
 };

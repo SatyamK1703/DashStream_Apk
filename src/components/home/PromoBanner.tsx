@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 const PromoBanner = ({ onPress }) => (
   <View style={styles.wrapper}>
     <TouchableOpacity style={styles.card} onPress={onPress}>
-      <Image source={require('../../assets/images/image.png')} style={styles.image} />
+      <Image source={require('../../assets/images/become-a-member.png')} style={styles.image} />
       <View style={styles.textWrapper}>
         <Text style={styles.title}>Become a Member</Text>
         <Text style={styles.subtitle}>Get exclusive discounts and free services</Text>

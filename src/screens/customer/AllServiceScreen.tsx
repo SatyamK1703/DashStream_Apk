@@ -9,7 +9,7 @@ import {
   TextInput,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -37,6 +37,8 @@ const AllServicesScreen = () => {
     category: selectedTab === 'All' ? undefined : selectedTab.toLowerCase().replace(' ', '-') 
   });
 
+  const { addItem, items: cartItems } = useCart();
+
   useEffect(() => {
     fetchServices();
   }, [selectedTab]);
@@ -61,8 +63,6 @@ const AllServicesScreen = () => {
     navigation.navigate('ServiceDetails', { serviceId: service._id || service.id, service });
   };
 
-  const { addItem } = useCart();
-
   const handleAddToCart = (service: any) => {
     if (!service) return;
     addItem({
@@ -79,6 +79,8 @@ const AllServicesScreen = () => {
     const discountPercentage = item.originalPrice && item.price ? 
       Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100) : 0;
 
+    const isInCart = cartItems.some(cartItem => cartItem.id === (item.id || item._id));
+
     return (
       <TouchableOpacity style={styles.card} onPress={() => handleServicePress(item)} activeOpacity={0.9}>
         <Image 
@@ -86,23 +88,34 @@ const AllServicesScreen = () => {
           style={styles.cardImage} 
           onError={() => console.log('Failed to load service image')}
         />
-        {discountPercentage > 0 && (
-          <View style={styles.discountBadge}>
-            <Text style={styles.discountText}>{discountPercentage}% OFF</Text>
-          </View>
-        )}
         <View style={styles.cardContent}>
-          <Text style={styles.cardTitle} numberOfLines={1}>{item.name || item.title}</Text>
-          <Text style={styles.cardRating}>⭐ {item.rating || 4.5} ({item.reviewCount || item.reviews || 0})</Text>
-          <View style={styles.priceContainer}>
-            <Text style={styles.newPrice}>₹{item.price}</Text>
-            {item.originalPrice && item.originalPrice > item.price && (
-              <Text style={styles.oldPrice}>₹{item.originalPrice}</Text>
-            )}
+          <View style={styles.cardDetails}>
+            <Text style={styles.cardTitle} numberOfLines={2}>{item.name || item.title}</Text>
+            <Text style={styles.cardRating}>⭐ {item.rating || 4.5} ({item.reviewCount || item.reviews || 0})</Text>
+            <View style={styles.priceContainer}>
+              <Text style={styles.newPrice}>₹{item.price}</Text>
+              {item.originalPrice && item.originalPrice > item.price && (
+                <Text style={styles.oldPrice}>₹{item.originalPrice}</Text>
+              )}
+            </View>
           </View>
-          <TouchableOpacity style={styles.addButton} onPress={() => handleAddToCart(item)}>
-            <Text style={styles.addText}>ADD</Text>
-          </TouchableOpacity>
+          <View style={styles.cardActions}>
+            {discountPercentage > 0 && (
+              <View style={styles.discountBadge}>
+                <Text style={styles.discountText}>{discountPercentage}% OFF</Text>
+              </View>
+            )}
+            <TouchableOpacity 
+              style={[styles.addButton, isInCart && styles.addButtonDisabled]} 
+              onPress={(e) => {
+                e.stopPropagation();
+                if (!isInCart) handleAddToCart(item);
+              }}
+              disabled={isInCart}
+            >
+              <Text style={[styles.addText, isInCart && styles.addTextDisabled]}>{isInCart ? 'ADDED' : 'ADD'}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -156,7 +169,6 @@ const AllServicesScreen = () => {
           data={filteredServices}
           keyExtractor={item => item.id || item._id}
           renderItem={renderServiceItem}
-          numColumns={2}
           ListHeaderComponent={ListHeader}
           ListEmptyComponent={EmptyListComponent}
           contentContainerStyle={styles.flatListContent}
@@ -214,42 +226,35 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   flatListContent: {
-    paddingHorizontal: 12,
     paddingBottom: 20,
   },
   card: {
-    flex: 1,
+    flexDirection: 'row',
     backgroundColor: '#fff',
-    margin: 8,
+    marginVertical: 8,
+    marginHorizontal: 16,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
     elevation: 3,
-    overflow: 'hidden',
+    height: 140,
   },
   cardImage: {
-    width: '100%',
-    height: 120,
+    width: 110,
+    height: '100%',
     backgroundColor: '#f3f4f6',
-  },
-  discountBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: '#ef4444',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  discountText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
   },
   cardContent: {
+    flex: 1,
     padding: 12,
+    justifyContent: 'space-between',
+  },
+  cardDetails: {
+    flex: 1,
   },
   cardTitle: {
     fontSize: 15,
@@ -260,12 +265,11 @@ const styles = StyleSheet.create({
   cardRating: {
     fontSize: 12,
     color: '#6b7280',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   priceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
   },
   newPrice: {
     fontSize: 16,
@@ -278,16 +282,40 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
     marginLeft: 8,
   },
-  addButton: {
-    backgroundColor: '#2563eb',
-    paddingVertical: 10,
-    borderRadius: 8,
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
+  discountBadge: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#ef4444',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  discountText: {
+    color: '#ef4444',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  addButton: {
+    backgroundColor: '#eef2ff',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  addButtonDisabled: {
+    backgroundColor: '#10b981',
+  },
   addText: {
-    color: '#fff',
+    color: '#4338ca',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  addTextDisabled: {
+    color: '#fff',
   },
   loadingContainer: {
     flex: 1,

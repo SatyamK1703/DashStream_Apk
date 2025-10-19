@@ -77,8 +77,19 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, onPress }) => {
     'Service';
 
   // Handle address data
-  const addressLine = (booking as any).location?.address || 'Address not available';
-  const addressText = addressLine;
+  const addressObject = (booking as any).location?.address;
+  const addressText =
+    addressObject && typeof addressObject === 'object'
+      ? [
+          addressObject.name,
+          addressObject.address,
+          addressObject.landmark,
+          addressObject.city,
+          addressObject.pincode,
+        ]
+          .filter(Boolean)
+          .join(', ')
+      : addressObject || 'Address not available';
 
   // Handle professional data
   const hasProfessional = !!booking.professional;

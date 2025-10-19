@@ -235,7 +235,7 @@ const CheckoutScreen = () => {
 
       // Calculate complete total including all fees and taxes
       const subtotal = cartItems.reduce((s, it) => s + it.price * it.quantity, 0);
-      const deliveryFee = 49;
+      const deliveryFee = 0;
       const discount = 0; // Can be calculated from promo codes
 
       // Calculate processing fee from selected payment method
@@ -248,11 +248,11 @@ const CheckoutScreen = () => {
       // Calculate amount before tax
       const amountBeforeTax = subtotal + deliveryFee + processingFee - discount;
 
-      // Calculate 18% GST
-      const gst = amountBeforeTax * 0.18;
+      // GST is included in the price.
+      const gst = 0;
 
       // Calculate final total
-      const totalAmount = amountBeforeTax + gst;
+      const totalAmount = amountBeforeTax;
 
       // COD validation
       if (selectedPaymentMethod.type === 'cod') {
@@ -688,12 +688,11 @@ const CheckoutScreen = () => {
             })}
           </View>
 
-          {/* Order Summary */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Order Summary</Text>
             {cartItems && (() => {
               const subtotal = cartItems.reduce((s, it) => s + it.price * it.quantity, 0);
-              const deliveryFee = 49;
+              const deliveryFee = 0;
               const discount = 0; // Can be calculated from promo codes
 
               // Calculate processing fee from selected payment method
@@ -706,11 +705,11 @@ const CheckoutScreen = () => {
               // Calculate amount before tax
               const amountBeforeTax = subtotal + deliveryFee + processingFee - discount;
 
-              // Calculate 18% GST
-              const gst = amountBeforeTax * 0.18;
+              // GST is included in the price.
+              const gst = 0;
 
               // Calculate final total
-              const finalTotal = amountBeforeTax + gst;
+              const finalTotal = amountBeforeTax;
 
               return (
                 <>
@@ -718,10 +717,12 @@ const CheckoutScreen = () => {
                     <Text style={styles.grayText}>Subtotal</Text>
                     <Text style={styles.summaryValue}>₹{subtotal}</Text>
                   </View>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.grayText}>Delivery Fee</Text>
-                    <Text style={styles.summaryValue}>₹{deliveryFee}</Text>
-                  </View>
+                  {deliveryFee > 0 && (
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.grayText}>Delivery Fee</Text>
+                      <Text style={styles.summaryValue}>₹{deliveryFee}</Text>
+                    </View>
+                  )}
                   {processingFee > 0 && (
                     <View style={styles.summaryRow}>
                       <Text style={styles.grayText}>Processing Fee</Text>
@@ -734,10 +735,6 @@ const CheckoutScreen = () => {
                       <Text style={styles.greenText}>-₹{discount}</Text>
                     </View>
                   )}
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.grayText}>GST (18%)</Text>
-                    <Text style={styles.summaryValue}>₹{gst.toFixed(2)}</Text>
-                  </View>
                   <View style={styles.totalRow}>
                     <Text style={styles.totalText}>Total</Text>
                     <Text style={styles.totalPrimary}>₹{finalTotal.toFixed(2)}</Text>
