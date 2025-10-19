@@ -12,6 +12,7 @@ import CustomerTestimonials from '~/components/home/CustomerTestimonials';
 import QuickFixes from '~/components/home/QuickFixes';
 import Footer from '~/components/home/FooterMain';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { scaleWidth, scaleHeight } from '../../utils/scaling';
 
 // Import API hooks
 import { usePopularServices, useActiveOffers } from '../../hooks';
@@ -187,14 +188,14 @@ const styles = StyleSheet.create({
   skeletonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginTop: 12,
+    paddingHorizontal: scaleWidth(16),
+    marginTop: scaleHeight(12),
   },
   skeletonCard: {
-    height: 120,
+    height: scaleHeight(120),
     backgroundColor: '#f0f0f0',
-    borderRadius: 12,
+    borderRadius: scaleWidth(12),
     flex: 1,
-    marginHorizontal: 6,
+    marginHorizontal: scaleWidth(6),
   },
 });

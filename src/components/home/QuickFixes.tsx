@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import { scaleWidth, scaleHeight, scaleFont } from '../../utils/scaling';
 
 const fixes = [
   { id: '1', label: 'Hybrid Ceramic', image: require('../../assets/images/image.png') },
@@ -22,8 +23,8 @@ const fixes = [
 ];
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const CARD_SPACING = 12;
-const CARD_WIDTH = (SCREEN_WIDTH - CARD_SPACING * 4 - 32) / 3; // 3 columns + paddings
+const CARD_SPACING = scaleWidth(12);
+const CARD_WIDTH = (SCREEN_WIDTH - CARD_SPACING * 4 - scaleWidth(32)) / 3; // 3 columns + paddings
 type NavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 const QuickFixes = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -32,10 +33,10 @@ const QuickFixes = () => {
   };
   return (
 
-    <View style={{ marginTop: 20 }}>
+    <View style={{ marginTop: scaleHeight(20) }}>
       <Text style={styles.title}>Common Problems Quick Fixes</Text>
       {/* ✅ FIXED: Replace FlatList with View to avoid VirtualizedList nesting */}
-      <View style={{ paddingHorizontal: 16 }}>
+      <View style={{ paddingHorizontal: scaleWidth(16) }}>
         {fixes
           .reduce((rows: any[], item: any, index: number) => {
             if (index % 3 === 0) rows.push([]);
@@ -61,38 +62,35 @@ const QuickFixes = () => {
 
 const styles = StyleSheet.create({
   title: {
-    fontSize: 18,
+    fontSize: scaleFont(18),
     fontWeight: 'bold',
-    marginBottom: 10,
-    marginHorizontal: 16,
+    marginBottom: scaleHeight(10),
+    marginHorizontal: scaleWidth(16),
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: scaleHeight(16),
   },
   card: {
     width: CARD_WIDTH,
-    borderRadius: 12,
+    borderRadius: scaleWidth(12),
     backgroundColor: '#f5f5f5',
     overflow: 'hidden', // ⬅️ Ensures children respect border radius
   },
   image: {
-    height: 80,
+    height: scaleHeight(80),
     width: '100%',
   },
   labelWrapper: {
     backgroundColor: 'rgba(37,99,235,0.1)',
-    paddingVertical: 8,
-    paddingHorizontal: 6,
+    paddingVertical: scaleHeight(8),
+    paddingHorizontal: scaleWidth(6),
   },
   label: {
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: scaleFont(13),
   },
 });
 
 export default QuickFixes;
-
-
-

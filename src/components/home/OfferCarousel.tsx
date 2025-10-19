@@ -1,5 +1,3 @@
-
-
 import React, { useRef, useEffect } from 'react';
 import {
   View,
@@ -10,10 +8,12 @@ import {
   TouchableOpacity,
   FlatList,
 } from 'react-native';
+import { scaleWidth, scaleHeight } from '../../utils/scaling';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.92;
 const CARD_SPACING = (width - CARD_WIDTH) / 2;
+const CARD_MARGIN_RIGHT = scaleWidth(10);
 
 const OffersCarousel = ({ offers = [], currentIndex, setCurrentIndex, loading, error }: any) => {
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -55,7 +55,7 @@ const OffersCarousel = ({ offers = [], currentIndex, setCurrentIndex, loading, e
         keyExtractor={(item, idx) => (item?._id ?? item?.id ?? String(idx))}
         horizontal
         showsHorizontalScrollIndicator={false}
-        snapToInterval={CARD_WIDTH + 10}
+        snapToInterval={CARD_WIDTH + CARD_MARGIN_RIGHT}
         decelerationRate="fast"
         scrollEventThrottle={16}
         removeClippedSubviews
@@ -64,8 +64,8 @@ const OffersCarousel = ({ offers = [], currentIndex, setCurrentIndex, loading, e
         windowSize={2}
         contentContainerStyle={{ paddingHorizontal: CARD_SPACING }}
         getItemLayout={(_, index) => ({
-          length: CARD_WIDTH + 10,
-          offset: (CARD_WIDTH + 10) * index,
+          length: CARD_WIDTH + CARD_MARGIN_RIGHT,
+          offset: (CARD_WIDTH + CARD_MARGIN_RIGHT) * index,
           index,
         })}
         onScrollToIndexFailed={(info) => {
@@ -82,7 +82,7 @@ const OffersCarousel = ({ offers = [], currentIndex, setCurrentIndex, loading, e
         }}
         onMomentumScrollEnd={(e) => {
           const index = Math.round(
-            e.nativeEvent.contentOffset.x / (CARD_WIDTH + 10)
+            e.nativeEvent.contentOffset.x / (CARD_WIDTH + CARD_MARGIN_RIGHT)
           );
           setCurrentIndex(index);
           isInteracting.current = false;
@@ -93,9 +93,9 @@ const OffersCarousel = ({ offers = [], currentIndex, setCurrentIndex, loading, e
         )}
         renderItem={({ item, index }) => {
           const inputRange = [
-            (index - 1) * (CARD_WIDTH + 10),
-            index * (CARD_WIDTH + 10),
-            (index + 1) * (CARD_WIDTH + 10),
+            (index - 1) * (CARD_WIDTH + CARD_MARGIN_RIGHT),
+            index * (CARD_WIDTH + CARD_MARGIN_RIGHT),
+            (index + 1) * (CARD_WIDTH + CARD_MARGIN_RIGHT),
           ];
           const scale = scrollX.interpolate({
             inputRange,
@@ -146,25 +146,25 @@ export default OffersCarousel;
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 20,
+    marginBottom: scaleHeight(20),
   },
   emptyContainer: {
-    marginBottom: 20,
-    paddingHorizontal: 16,
+    marginBottom: scaleHeight(20),
+    paddingHorizontal: scaleWidth(16),
   },
   placeholderCard: {
     width: CARD_WIDTH,
-    height: 180,
-    borderRadius: 16,
+    height: scaleHeight(180),
+    borderRadius: scaleWidth(16),
     backgroundColor: '#f0f0f0',
     alignSelf: 'center',
   },
   cardWrapper: {
     width: CARD_WIDTH,
-    height: 180,
-    borderRadius: 16,
+    height: scaleHeight(180),
+    borderRadius: scaleWidth(16),
     overflow: 'hidden',
-    marginRight: 10,
+    marginRight: CARD_MARGIN_RIGHT,
     backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 5 },
@@ -175,25 +175,25 @@ const styles = StyleSheet.create({
   cardImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 16,
+    borderRadius: scaleWidth(16),
   },
   indicatorRow: {
     position: 'absolute',
-    bottom: 12,
+    bottom: scaleHeight(12),
     left: 0,
     right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
   },
   indicatorDot: {
-    height: 8,
-    width: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
+    height: scaleWidth(8),
+    width: scaleWidth(8),
+    borderRadius: scaleWidth(4),
+    marginHorizontal: scaleWidth(4),
   },
   activeDot: {
     backgroundColor: '#ffffff',
-    width: 18,
+    width: scaleWidth(18),
   },
   inactiveDot: {
     backgroundColor: '#cccccc',

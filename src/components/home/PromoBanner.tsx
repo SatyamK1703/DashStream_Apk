@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { scaleWidth, scaleHeight, scaleFont } from '../../utils/scaling';
 
 const PromoBanner = ({ onPress }) => (
   <View style={styles.wrapper}>
@@ -10,7 +11,7 @@ const PromoBanner = ({ onPress }) => (
         <Text style={styles.title}>Become a Member</Text>
         <Text style={styles.subtitle}>Get exclusive discounts and free services</Text>
       </View>
-      <Ionicons name="chevron-forward" size={24} color="#2563eb" />
+      <Ionicons name="chevron-forward" size={scaleFont(24)} color="#2563eb" />
     </TouchableOpacity>
   </View>
 );
@@ -19,31 +20,31 @@ export default PromoBanner;
 
 const styles = StyleSheet.create({
   wrapper: {
-    paddingHorizontal: 16,
-    marginBottom: 32,
+    paddingHorizontal: scaleWidth(16),
+    marginBottom: scaleHeight(32),
   },
   card: {
     backgroundColor: 'rgba(37,99,235,0.1)',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: scaleWidth(16),
+    padding: scaleWidth(16),
     flexDirection: 'row',
     alignItems: 'center',
   },
   image: {
-    width: 64,
-    height: 64,
-    marginRight: 16,
+    width: scaleWidth(64),
+    height: scaleWidth(64),
+    marginRight: scaleWidth(16),
   },
   textWrapper: {
     flex: 1,
   },
   title: {
-    fontSize: 18,
+    fontSize: scaleFont(18),
     fontWeight: 'bold',
     color: '#1f2937',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: scaleFont(14),
     color: '#4b5563',
   },
 });

@@ -4,9 +4,10 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { MaterialIcons } from '@expo/vector-icons';
+import { scaleWidth, scaleHeight, scaleFont } from '../../utils/scaling';
 
 const { width } = Dimensions.get('window');
-const ITEM_WIDTH = (width - 48) / 3; // Account for horizontal padding
+const ITEM_WIDTH = (width - scaleWidth(48)) / 3; // Account for horizontal padding
 
 type NavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -44,7 +45,7 @@ const PopularServices = ({ services }: any) => {
           hitSlop={8}
         >
           <Text style={styles.seeAllText}>See All</Text>
-          <MaterialIcons name="arrow-forward" size={18} color="#2563eb" />
+          <MaterialIcons name="arrow-forward" size={scaleFont(18)} color="#2563eb" />
         </TouchableOpacity>
       </View>
 
@@ -93,10 +94,10 @@ export default PopularServices;
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 24,
+    marginBottom: scaleHeight(24),
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: scaleWidth(12),
+    padding: scaleWidth(16),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -107,10 +108,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: scaleHeight(16),
   },
   title: {
-    fontSize: 18,
+    fontSize: scaleFont(18),
     fontWeight: '700',
     color: '#1f2937',
     flex: 1,
@@ -118,57 +119,57 @@ const styles = StyleSheet.create({
   seeAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: scaleHeight(4),
   },
   seeAllText: {
     color: '#2563eb',
-    fontSize: 14,
+    fontSize: scaleFont(14),
     fontWeight: '600',
-    marginRight: 4,
+    marginRight: scaleWidth(4),
   },
   row: {
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: scaleHeight(8),
   },
   rowTwoCol: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: scaleHeight(12),
   },
   item: {
     width: ITEM_WIDTH,
     alignItems: 'center',
-    marginBottom: 16,
-    padding: 8,
-    borderRadius: 12,
+    marginBottom: scaleHeight(16),
+    padding: scaleWidth(8),
+    borderRadius: scaleWidth(12),
     backgroundColor: '#f9fafb',
   },
   itemTwoCol: {
-    width: (width - 48) / 2,
+    width: (width - scaleWidth(48)) / 2,
     alignItems: 'center',
-    marginBottom: 8,
-    padding: 12,
-    borderRadius: 12,
+    marginBottom: scaleHeight(8),
+    padding: scaleWidth(12),
+    borderRadius: scaleWidth(12),
     backgroundColor: '#f9fafb',
   },
   iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: scaleWidth(64),
+    height: scaleWidth(64),
+    borderRadius: scaleWidth(32),
     backgroundColor: '#eff6ff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: scaleHeight(8),
   },
   icon: {
-    width: 48,
-    height: 48,
+    width: scaleWidth(48),
+    height: scaleWidth(48),
   },
   label: {
-    fontSize: 13,
+    fontSize: scaleFont(13),
     fontWeight: '600',
     textAlign: 'center',
     color: '#374151',
-    lineHeight: 16,
+    lineHeight: scaleFont(16),
   },
 });

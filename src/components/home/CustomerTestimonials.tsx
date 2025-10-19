@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Dimensions, TouchableOpacity, Image, Linking } from 'react-native';
+import { scaleWidth, scaleHeight, scaleFont } from '../../utils/scaling';
 
 const testimonials = [
   {
@@ -46,12 +47,12 @@ const TestimonialItem = ({ item }) => {
 
 const CustomerTestimonials = () => {
   return (
-    <View style={{ marginVertical: 10 }}>
+    <View style={{ marginVertical: scaleHeight(10) }}>
       <Text style={styles.title}>Customer Testimonials</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16 }}
+        contentContainerStyle={{ paddingHorizontal: scaleWidth(16) }}
       >
         {testimonials.map((item) => (
           <TestimonialItem key={item.id} item={item} />
@@ -63,16 +64,16 @@ const CustomerTestimonials = () => {
 
 const styles = StyleSheet.create({
   title: {
-    fontSize: 18,
+    fontSize: scaleFont(18),
     fontWeight: 'bold',
-    marginHorizontal: 16,
-    marginBottom: 10,
+    marginHorizontal: scaleWidth(16),
+    marginBottom: scaleHeight(10),
   },
   card: {
     width: ITEM_WIDTH,
-    height: 300,
-    marginRight: 12,
-    borderRadius: 12,
+    height: scaleHeight(300),
+    marginRight: scaleWidth(12),
+    borderRadius: scaleWidth(12),
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: '#000',
@@ -86,12 +87,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 10,
+    padding: scaleWidth(10),
   },
   name: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: scaleFont(16),
   },
 });
 
