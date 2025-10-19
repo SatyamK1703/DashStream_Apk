@@ -35,10 +35,9 @@ const HomeScreen = () => {
     refresh: fetchActiveOffers,
     error: offersError,
   } = useActiveOffers();
-  console.log('Active Offers Data:', useActiveOffers());
-  
+
   const isRefreshing = servicesLoading || offersLoading;
-  
+
   // Load initial data
   useEffect(() => {
     loadHomeData();
@@ -57,15 +56,12 @@ const HomeScreen = () => {
 
   const loadHomeData = async () => {
     try {
-      await Promise.all([
-        fetchPopularServices(),
-        fetchActiveOffers(),
-      ]);
+      await Promise.all([fetchPopularServices(), fetchActiveOffers()]);
     } catch (error) {
       console.error('Failed to load home data:', error);
     }
   };
-  
+
   const handleRefresh = () => {
     loadHomeData();
   };
@@ -79,8 +75,10 @@ const HomeScreen = () => {
 
     // If image is an object with a common 'url' or 'uri' property
     if (offer.image && typeof offer.image === 'object') {
-      if (typeof offer.image.url === 'string' && offer.image.url.trim() !== '') return offer.image.url;
-      if (typeof offer.image.uri === 'string' && offer.image.uri.trim() !== '') return offer.image.uri;
+      if (typeof offer.image.url === 'string' && offer.image.url.trim() !== '')
+        return offer.image.url;
+      if (typeof offer.image.uri === 'string' && offer.image.uri.trim() !== '')
+        return offer.image.uri;
       // Some responses might nest image under 'image.data' or similar
       if (offer.image.data && typeof offer.image.data === 'object') {
         if (typeof offer.image.data.url === 'string') return offer.image.data.url;
@@ -91,8 +89,10 @@ const HomeScreen = () => {
     // Fallbacks - some APIs return 'banner' or 'imageUrl' or nested data
     if (typeof offer.banner === 'string' && offer.banner.trim() !== '') return offer.banner;
     if (offer.banner && typeof offer.banner === 'object') {
-      if (typeof offer.banner.url === 'string' && offer.banner.url.trim() !== '') return offer.banner.url;
-      if (typeof offer.banner.uri === 'string' && offer.banner.uri.trim() !== '') return offer.banner.uri;
+      if (typeof offer.banner.url === 'string' && offer.banner.url.trim() !== '')
+        return offer.banner.url;
+      if (typeof offer.banner.uri === 'string' && offer.banner.uri.trim() !== '')
+        return offer.banner.uri;
       if (offer.banner.data && typeof offer.banner.data === 'object') {
         if (typeof offer.banner.data.url === 'string') return offer.banner.data.url;
         if (typeof offer.banner.data.uri === 'string') return offer.banner.data.uri;
@@ -117,24 +117,25 @@ const HomeScreen = () => {
     image: extractOfferImage(offer),
     discountPercentage: offer.discountValue ?? offer.discount ?? offer.value,
     validUntil: offer.validUntil ?? offer.valid_until ?? offer.validTo,
-    onPress: () => navigation.navigate('ServiceDetails', ({ 
-      serviceId: offer.applicableServices?.[0] || offer.id,
-      service: offer 
-    } as any))
+    onPress: () =>
+      navigation.navigate('ServiceDetails', {
+        serviceId: offer.applicableServices?.[0] || offer.id,
+        service: offer,
+      } as any),
   }));
 
   const servicesToShow = Array.isArray(popularServicesData)
     ? popularServicesData
     : Array.isArray((popularServicesData as any)?.services)
-    ? (popularServicesData as any).services
-    : [];
+      ? (popularServicesData as any).services
+      : [];
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <Header userName={user?.name || 'Guest'} />
-      <ScrollView 
-        style={styles.scrollView} 
+      <ScrollView
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -143,8 +144,7 @@ const HomeScreen = () => {
             colors={['#007AFF']}
             tintColor="#007AFF"
           />
-        }
-      >
+        }>
         {/* Offers carousel with API data or placeholder */}
         <OffersCarousel
           offers={carouselOffers}
@@ -162,17 +162,17 @@ const HomeScreen = () => {
             <View style={styles.skeletonCard} />
           </View>
         ) : (
-          <PopularServices 
-            services={servicesToShow} 
+          <PopularServices
+            services={servicesToShow}
             loading={servicesLoading}
             error={servicesError}
           />
         )}
 
         <PromoBanner onPress={() => navigation.navigate('Membership')} />
-        <CustomerTestimonials/>
-        <QuickFixes/>
-        <Footer/>
+        <CustomerTestimonials />
+        <QuickFixes />
+        <Footer />
       </ScrollView>
     </SafeAreaView>
   );

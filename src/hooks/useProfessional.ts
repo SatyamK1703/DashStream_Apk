@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useApi } from './useApi';
 import { 
   professionalService, 
@@ -22,8 +22,9 @@ export const useProfessionalProfile = () => {
 
 // Hook for professional jobs
 export const useProfessionalJobs = () => {
+  const apiCall = useCallback(() => professionalService.getJobs(), []);
   return useApi(
-    () => professionalService.getJobs(),
+    apiCall,
     {
       showErrorAlert: false,
     }

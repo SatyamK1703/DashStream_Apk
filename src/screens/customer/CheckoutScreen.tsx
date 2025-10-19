@@ -275,10 +275,14 @@ const CheckoutScreen = () => {
         scheduledDate: selectedDate.toISOString(),
         scheduledTime: selectedTimeSlot,
         location: {
-          address: selectedAddress.address || 'Address not specified',
-          name: selectedAddress.name || selectedAddress.type || 'Saved Address',
-          city: selectedAddress.city || 'City not specified',
-          pincode: selectedAddress.pincode || 'Pincode not available'
+          address: {
+            address: selectedAddress.address || 'Address not specified',
+            name: selectedAddress.name || selectedAddress.type || 'Saved Address',
+            city: selectedAddress.city || 'City not specified',
+            pincode: selectedAddress.pincode || 'Pincode not available',
+            landmark: selectedAddress.landmark || '',
+            type: selectedAddress.type || ''
+          }
         },
         price: subtotal, // Base price without fees and taxes
         totalAmount: totalAmount, // Complete total including all fees and taxes

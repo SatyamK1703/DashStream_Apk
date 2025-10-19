@@ -191,7 +191,7 @@ const BookingConfirmationScreen = () => {
 
   // Handle different service data structures
   const services = booking.services || (booking.service ? [booking.service] : []);
-  const address = booking.address || booking.location;
+  const address = booking.location && booking.location.address;
 
   // Calculate subtotal from services array
   const subtotal = services.reduce((acc, service) => {
