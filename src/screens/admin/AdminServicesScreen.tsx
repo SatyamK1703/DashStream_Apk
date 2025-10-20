@@ -116,21 +116,9 @@ const AdminServicesScreen = () => {
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [fetchCategories]);
   
-  useEffect(() => {
-    filterAndSortServices();
-  }, [services, searchQuery, selectedCategory, sortBy, sortOrder]);
-
-  const onRefresh = async () => {
-    try {
-      await fetchServices();
-    } catch (error) {
-      console.error('Refresh error:', error);
-    }
-  };
-
-  const filterAndSortServices = () => {
+  const filterAndSortServices = useCallback(() => {
  
     
     if (!services || !Array.isArray(services)) {
@@ -176,7 +164,19 @@ const AdminServicesScreen = () => {
       return sortOrder === 'asc' ? comparison : -comparison;
     });   
     setFilteredServices(filtered);
+  }, [services, searchQuery, selectedCategory, sortBy, sortOrder]);
+
+  const onRefresh = async () => {
+    try {
+      await fetchServices();
+    } catch (error) {
+      console.error('Refresh error:', error);
+    }
   };
+
+  useEffect(() => {
+    filterAndSortServices();
+  }, [filterAndSortServices]);
 
   const handleSortByChange = () => {
     const options = ['title', 'price', 'category', 'date'];

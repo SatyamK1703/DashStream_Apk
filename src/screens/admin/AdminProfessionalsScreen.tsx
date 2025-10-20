@@ -159,7 +159,7 @@ const AdminProfessionalsScreen = () => {
 
   useEffect(() => {
     fetchProfessionals();
-  }, [debouncedSearchQuery, statusFilter]); // Re-fetch when filters change
+  }, [debouncedSearchQuery, statusFilter, fetchProfessionals]); // Re-fetch when filters change
 
   const onRefresh = useCallback(() => {
     fetchProfessionals();

@@ -51,10 +51,31 @@ const AdminBookingDetailsScreen = () => {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchBookingDetails = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminService.getBookingById(bookingId);
+      if (response.success && response.data) {
+        setBooking(response.data);
+        if (response.data.professional?._id) {
+          setSelectedProfessionalId(response.data.professional._id);
+        }
+      } else {
+        setError('Failed to load booking details');
+      }
+    } catch (err: any) {
+      console.error('Error fetching booking details:', err);
+      setError(err.message || 'Failed to load booking details');
+    } finally {
+      setLoading(false);
+    }
+  }, [bookingId]);
+
   // --- Effects ---
   useEffect(() => {
     fetchBookingDetails();
-  }, [bookingId]);
+  }, [fetchBookingDetails]);
   
   // Separate effect to fetch professionals only after booking is loaded
   useEffect(() => {
@@ -62,7 +83,7 @@ const AdminBookingDetailsScreen = () => {
       console.log('Booking loaded, fetching professionals for:', booking._id);
       fetchProfessionals();
     }
-  }, [booking]);
+  }, [booking, fetchProfessionals]);
   
   // Debug modal visibility
   useEffect(() => {

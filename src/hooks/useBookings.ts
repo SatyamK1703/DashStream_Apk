@@ -75,7 +75,7 @@ export const useBookingDetails = (bookingId: string | null) => {
     if (bookingId) {
       api.execute();
     }
-  }, [bookingId]);
+  }, [bookingId, api]);
 
   return {
     ...api,
@@ -195,7 +195,7 @@ export const useBookingTracking = (bookingId: string | null) => {
     if (bookingId) {
       api.execute();
     }
-  }, [bookingId]);
+  }, [bookingId, api]);
 
   return {
     ...api,

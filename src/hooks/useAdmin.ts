@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useApi, usePaginatedApi } from './useApi';
 import { adminService } from '../services/adminService';
 import { serviceService } from '../services/serviceService';
@@ -14,7 +14,7 @@ export const useAdminServices = ({ filters }: UseAdminServicesOptions = {}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any>(null);
 
-  const fetchServices = async () => {
+  const fetchServices = useCallback(async () => {
   setLoading(true);
   setError(null);
 
@@ -62,12 +62,12 @@ export const useAdminServices = ({ filters }: UseAdminServicesOptions = {}) => {
   } finally {
     setLoading(false);
   }
-};
+}, [filters]);
 
 
   useEffect(() => {
     fetchServices();
-  }, [JSON.stringify(filters)]);
+  }, [fetchServices]);
 
   return {
     data,

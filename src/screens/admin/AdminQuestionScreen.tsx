@@ -25,7 +25,7 @@ const AdminQuestionScreen = () => {
 
   useEffect(() => {
     fetchQuestions();
-  }, []);
+  }, [fetchQuestions]);
 
   const handleOpenReplyModal = (questionId: string) => {
     setSelectedQuestionId(questionId);

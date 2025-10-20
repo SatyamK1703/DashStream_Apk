@@ -44,7 +44,7 @@ export const useProfessionalJob = (jobId: string | null) => {
     if (jobId) {
       api.execute();
     }
-  }, [jobId]);
+  }, [jobId, api]);
 
   return api;
 };
@@ -200,7 +200,7 @@ export const useProfessionalDashboardData = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refreshDashboard = async () => {
+  const refreshDashboard = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -216,11 +216,11 @@ export const useProfessionalDashboardData = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [profileApi, dashboardApi, jobsApi]);
 
   useEffect(() => {
     refreshDashboard();
-  }, []);
+  }, [refreshDashboard]);
 
   return {
     profile: profileApi.data,

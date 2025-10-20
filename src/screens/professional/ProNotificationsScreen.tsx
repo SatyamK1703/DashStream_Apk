@@ -155,7 +155,7 @@ const ProNotificationsScreen = () => {
     <View style={styles.emptyContainer}>
       <Ionicons name="notifications-off-outline" size={60} color="#d1d5db" />
       <Text style={styles.emptyText}>No notifications yet</Text>
-      <Text style={styles.emptySubText}>You'll see notifications here when you receive them</Text>
+      <Text style={styles.emptySubText}>You&apos;ll see notifications here when you receive them</Text>
     </View>
   );
 

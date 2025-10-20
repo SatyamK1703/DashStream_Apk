@@ -103,9 +103,7 @@ const AdminProfessionalDetailsScreen = () => {
   
   // No mock data - removed
 
-  // Fetch professional details
-  useEffect(() => {
-    const fetchProfessionalDetails = async () => {
+  const fetchProfessionalDetails = useCallback(async () => {
       try {
         setLoading(true);
         console.log('Fetching professional details for ID:', professionalId);
@@ -268,10 +266,12 @@ const AdminProfessionalDetailsScreen = () => {
       } finally {
         setLoading(false);
       }
-    };
+    }, [professionalId, professionalBasicInfo, route.params]);
 
+  // Fetch professional details
+  useEffect(() => {
     fetchProfessionalDetails();
-  }, [professionalId]);
+  }, [fetchProfessionalDetails]);
 
   const handleStatusChange = () => {
     if (!professional) return;

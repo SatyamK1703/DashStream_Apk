@@ -171,7 +171,7 @@ export const usePopularLocations = (city: string | null) => {
     if (city) {
       api.execute();
     }
-  }, [city]);
+  }, [city, api]);
 
   return api;
 };

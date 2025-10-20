@@ -339,7 +339,7 @@ const BookingConfirmationScreen = () => {
                       {idx === 0
                         ? "A skilled professional will be assigned to your booking shortly."
                         : idx === 1
-                          ? "You'll be notified when the professional is on the way to your location."
+                          ? "You&apos;ll be notified when the professional is on the way to your location."
                           : "After service completion, you can rate and review your experience."}
                     </Text>
                   </View>

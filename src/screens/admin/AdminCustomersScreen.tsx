@@ -53,7 +53,7 @@ const AdminCustomersScreen = () => {
   // Refresh data when search or status filter changes
   useEffect(() => {
     refresh();
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, statusFilter, refresh]);
 
   const handleRefresh = () => {
     refresh();

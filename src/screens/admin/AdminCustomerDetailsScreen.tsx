@@ -40,7 +40,7 @@ const AdminCustomerDetailsScreen = () => {
   const [retryCount, setRetryCount] = useState(0);
   
   // Load customer from backend
-  const loadCustomer = async () => {
+  const loadCustomer = useCallback(async () => {
     try {
       setLoading(true);
       if (__DEV__) {
@@ -142,12 +142,12 @@ const AdminCustomerDetailsScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [customerId, retryCount]);
 
   useEffect(() => {
     setRetryCount(0); // Reset retry count when customerId changes
     loadCustomer();
-  }, [customerId]);
+  }, [customerId, loadCustomer]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

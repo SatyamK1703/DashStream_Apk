@@ -147,7 +147,7 @@ export const useNotificationPreferences = () => {
 
   useEffect(() => {
     // Fetch preferences but swallow permission errors so UI stays usable
-    (async () => {
+    const fetchPreferences = async () => {
       try {
         const res = await fetchApi.execute();
         // If server returned a local-fallback marker, res may be the local data
@@ -178,8 +178,10 @@ export const useNotificationPreferences = () => {
         // Ensure preferences is null so callers know it's unavailable
         setPreferences(null);
       }
-    })();
-  }, []); // ✅ Run only on mount
+    };
+
+    fetchPreferences();
+  }, [fetchApi]); // ✅ Run only on mount
 
   return {
     preferences,

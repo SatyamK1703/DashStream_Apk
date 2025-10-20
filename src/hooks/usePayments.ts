@@ -153,7 +153,7 @@ export const usePaymentDetails = (paymentId: string | null) => {
     if (paymentId) {
       api.execute();
     }
-  }, [paymentId]);
+  }, [paymentId, api]);
 
   return api;
 };

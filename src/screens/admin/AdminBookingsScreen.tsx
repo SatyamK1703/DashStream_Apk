@@ -71,7 +71,7 @@ const AdminBookingsScreen = () => {
 
   useEffect(() => {
     fetchBookings();
-  }, [searchQuery, statusFilter, sortBy]);
+  }, [searchQuery, statusFilter, sortBy, fetchBookings]);
 
   const onRefresh = useCallback(() => {
     fetchBookings();

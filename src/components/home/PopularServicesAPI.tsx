@@ -43,7 +43,7 @@ const PopularServicesAPI: React.FC<PopularServicesAPIProps> = ({ limit = 6 }) =>
 
   useEffect(() => {
     loadPopularServices();
-  }, []);
+  }, [loadPopularServices]);
 
   const handleServicePress = (service: Service) => {
     navigation.navigate('ServiceDetails', { serviceId: service._id });

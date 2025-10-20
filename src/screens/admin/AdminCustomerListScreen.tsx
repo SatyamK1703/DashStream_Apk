@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -83,17 +83,7 @@ const AdminCustomerListScreen = () => {
     loadCustomers();
   }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [searchQuery, customers]);
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadCustomers();
-    setRefreshing(false);
-  };
-
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let result = [...customers];
     
     if (searchQuery) {
@@ -107,6 +97,16 @@ const AdminCustomerListScreen = () => {
     }
     
     setFilteredCustomers(result);
+  }, [customers, searchQuery]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadCustomers();
+    setRefreshing(false);
   };
 
   const getStatusDotStyle = (status: string) => {

@@ -113,7 +113,7 @@ export const useOfferStats = (offerId: string) => {
     if (offerId) {
       fetchStats();
     }
-  }, [offerId]);
+  }, [offerId, fetchStats]);
 
   return { data, loading, error, refresh: fetchStats };
 };

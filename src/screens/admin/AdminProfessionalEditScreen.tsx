@@ -91,7 +91,7 @@ const AdminProfessionalEditScreen = () => {
       // Initialize form state with fetched data
       setName(mockProfessional.name);
       setPhone(mockProfessional.phone);
-      setEmail(mockProfessional.email);
+      setEmail(mock.email);
       setStatus(mockProfessional.status);
       setIsVerified(mockProfessional.isVerified);
       setAddress(mockProfessional.address);
@@ -105,7 +105,7 @@ const AdminProfessionalEditScreen = () => {
     }, 1500);
 
     return () => clearTimeout(timer);
-  }, [professionalId]);
+  }, [professionalId, mockProfessional]);
 
   // Handlers for adding and removing skills
   const handleAddSkill = () => {

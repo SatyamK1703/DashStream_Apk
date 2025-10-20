@@ -104,7 +104,7 @@ export const useServiceDetails = (serviceId: string | null) => {
     if (serviceId) {
       api.execute();
     }
-  }, [serviceId]);
+  }, [serviceId, api]);
 
   return api;
 };

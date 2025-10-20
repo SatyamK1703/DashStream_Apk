@@ -87,7 +87,7 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
   useEffect(() => {
     setFormData({ ...defaultFormData, ...initialFormData });
     setFormErrors({});
-  }, [visible, initialFormData]);
+  }, [visible, initialFormData, defaultFormData]);
 
   const updateFormData = (key: keyof ServiceFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [key]: value }));

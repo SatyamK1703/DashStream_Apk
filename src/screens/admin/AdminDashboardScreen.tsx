@@ -46,19 +46,19 @@ const AdminDashboardScreen = () => {
   const recentBookings = dashboardStats?.recentBookings || [];
   const topProfessionals = dashboardStats?.topProfessionals || [];
 
-  // Load data on mount
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       await fetchDashboard();
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
       Alert.alert('Error', 'Failed to load dashboard data. Please try again.');
     }
-  };
+  }, [fetchDashboard]);
+
+  // Load data on mount
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   const onRefresh = async () => {
     await loadDashboardData();

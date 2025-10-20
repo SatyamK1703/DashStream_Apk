@@ -99,19 +99,7 @@ const ManageOffersScreen = () => {
   const { execute: toggleStatus } = useToggleOfferStatus();
   const [modalKey, setModalKey] = useState(0);
 
-  useEffect(() => {
-    filterAndSortOffers();
-  }, [offers, searchQuery, sortBy, sortOrder]);
-
-  const onRefresh = async () => {
-    try {
-      await fetchOffers();
-    } catch (error) {
-      console.error('Refresh error:', error);
-    }
-  };
-
-  const filterAndSortOffers = () => {
+  const filterAndSortOffers = useCallback(() => {
     if (!offers || !Array.isArray(offers)) {
       setFilteredOffers([]);
       return;
@@ -147,7 +135,11 @@ const ManageOffersScreen = () => {
     });
 
     setFilteredOffers(filtered);
-  };
+  }, [offers, searchQuery, sortBy, sortOrder]);
+
+  useEffect(() => {
+    filterAndSortOffers();
+  }, [filterAndSortOffers]);
 
   const handleSortByChange = () => {
     const options = ['title', 'discount', 'date'];
