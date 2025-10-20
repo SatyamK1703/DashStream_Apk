@@ -158,6 +158,8 @@ const AddVehicleScreen = () => {
         type: vehicleType,
         brand: brand,
         model,
+        year: parseInt(year, 10),
+        licensePlate,
       };
 
       // If there's an image, upload it using FormData via httpClient

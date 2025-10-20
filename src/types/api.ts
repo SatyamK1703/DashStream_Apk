@@ -327,7 +327,10 @@ export interface CreateVehicleRequest {
   type: 'car' | 'motorcycle' | 'truck' | 'van';
   brand: string;
   model: string;
-
+  year?: number;
+  licensePlate?: string;
+  color?: string;
+  fuelType?: 'petrol' | 'diesel' | 'electric' | 'hybrid';
 }
 
 export interface SearchParams {

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  Image, 
-  Switch, 
-  Alert, 
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Switch,
+  Alert,
   StyleSheet,
   ActivityIndicator,
-  RefreshControl 
+  RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,7 +24,7 @@ type ProfileScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamL
 const ProfileScreen = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const { user, logout } = useAuth();
-  
+
   // API hooks
   const {
     data: userProfile,
@@ -42,7 +42,7 @@ const ProfileScreen = () => {
 
   const [localNotificationState, setLocalNotificationState] = useState(true);
   const [localLocationState, setLocalLocationState] = useState(true);
-  
+
   // Update local state when preferences load
   useEffect(() => {
     if (preferences && typeof preferences === 'object') {
@@ -57,16 +57,12 @@ const ProfileScreen = () => {
   useEffect(() => {
     (async () => {
       try {
-        await Promise.all([
-          fetchProfile(),
-          refreshPreferences(),
-        ]);
+        await Promise.all([fetchProfile(), refreshPreferences()]);
       } catch (e) {
         console.error('Failed to load profile data:', e);
       }
     })();
   }, []); // ✅ Empty dependency array - run only on mount
-   
 
   // Show alert if profile loading produced an error
   useEffect(() => {
@@ -88,7 +84,7 @@ const ProfileScreen = () => {
 
   const handleNotificationToggle = async (value: boolean) => {
     setLocalNotificationState(value);
-    
+
     if (preferences) {
       try {
         await updatePreferences({
@@ -106,24 +102,19 @@ const ProfileScreen = () => {
 
   const handleLocationToggle = (value: boolean) => {
     setLocalLocationState(value);
-   
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
-          style: 'destructive',
-          onPress: () => {
-            logout();
-          }
-        }
-      ]
-    );
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: () => {
+          logout();
+        },
+      },
+    ]);
   };
 
   const profileMenuItems = [
@@ -131,43 +122,43 @@ const ProfileScreen = () => {
       id: 'personal',
       title: 'Personal Information',
       icon: 'person-outline',
-      onPress: () => navigation.navigate('EditProfile')
+      onPress: () => navigation.navigate('EditProfile'),
     },
     {
       id: 'addresses',
       title: 'My Addresses',
       icon: 'location-outline',
-      onPress: () => navigation.navigate('AddressList')
+      onPress: () => navigation.navigate('AddressList'),
     },
     {
       id: 'vehicles',
       title: 'My Vehicles',
       icon: 'car-outline',
-      onPress: () => navigation.navigate('VehicleList')
+      onPress: () => navigation.navigate('VehicleList'),
     },
     {
       id: 'history',
       title: 'Order History',
       icon: 'time-outline',
-      onPress: () => navigation.navigate('OrderHistory')
+      onPress: () => navigation.navigate('OrderHistory'),
     },
     {
       id: 'payments',
       title: 'Payment Methods',
       icon: 'card-outline',
-      onPress: () => navigation.navigate('PaymentMethods')
+      onPress: () => navigation.navigate('PaymentMethods'),
     },
     {
       id: 'membership',
       title: 'Membership & Subscriptions',
       icon: 'star-outline',
-      onPress: () => navigation.navigate('Membership')
+      onPress: () => navigation.navigate('Membership'),
     },
     {
       id: 'referrals',
       title: 'Refer & Earn',
       icon: 'gift-outline',
-      onPress: () => navigation.navigate('ReferAndEarn')
+      onPress: () => navigation.navigate('ReferAndEarn'),
     },
   ];
 
@@ -176,31 +167,31 @@ const ProfileScreen = () => {
       id: 'help',
       title: 'Help & Support',
       icon: 'help-circle-outline',
-      onPress: () => navigation.navigate('Support')
+      onPress: () => navigation.navigate('Support'),
     },
     {
       id: 'faq',
       title: 'FAQ',
       icon: 'information-circle-outline',
-      onPress: () => navigation.navigate('FAQ')
+      onPress: () => navigation.navigate('FAQ'),
     },
     {
       id: 'about',
       title: 'About Us',
       icon: 'business-outline',
-      onPress: () => navigation.navigate('AboutUs')
+      onPress: () => navigation.navigate('AboutUs'),
     },
     {
       id: 'privacy',
       title: 'Privacy Policy',
       icon: 'shield-outline',
-      onPress: () => navigation.navigate('PrivacyPolicy')
+      onPress: () => navigation.navigate('PrivacyPolicy'),
     },
     {
       id: 'terms',
       title: 'Terms & Conditions',
       icon: 'document-text-outline',
-      onPress: () => navigation.navigate('TermsAndConditions')
+      onPress: () => navigation.navigate('TermsAndConditions'),
     },
   ];
 
@@ -214,11 +205,7 @@ const ProfileScreen = () => {
   };
 
   const renderMenuItem = (item: any) => (
-    <TouchableOpacity 
-      key={item.id}
-      style={styles.menuItem}
-      onPress={() => handleMenuPress(item)}
-    >
+    <TouchableOpacity key={item.id} style={styles.menuItem} onPress={() => handleMenuPress(item)}>
       <View style={styles.menuIconContainer}>
         <Ionicons name={item.icon} size={20} color="#2563eb" />
       </View>
@@ -236,8 +223,8 @@ const ProfileScreen = () => {
         </View>
       </View>
 
-      <ScrollView 
-        style={styles.scroll} 
+      <ScrollView
+        style={styles.scroll}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -246,44 +233,36 @@ const ProfileScreen = () => {
             colors={['#2563eb']}
             tintColor="#2563eb"
           />
-        }
-      >
+        }>
         {/* Profile Card */}
         <View style={styles.card}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.profileRow}
-            onPress={() => navigation.navigate('EditProfile')}
-          >
+            onPress={() => navigation.navigate('EditProfile')}>
             {profileLoading ? (
               <View style={styles.profileImagePlaceholder}>
                 <ActivityIndicator size="small" color="#2563eb" />
               </View>
             ) : (
-              <Image 
+              <Image
                 source={
-                  userProfile?.profileImage?.url 
+                  userProfile?.profileImage?.url
                     ? { uri: userProfile.profileImage.url }
-                    : user?.profileImage || require('../../assets/images/image.png')
-                } 
-                style={styles.profileImage} 
+                    : user?.profileImage || require('../../assets/images/user.png')
+                }
+                style={styles.profileImage}
                 resizeMode="cover"
               />
             )}
             <View style={styles.profileInfo}>
-                    <Text style={styles.profileName}>
-                      {userProfile?.name || user?.name || ''}
-                    </Text>
-                    <Text style={styles.profileMeta}>
-                      {userProfile?.phone || user?.phone || ''}
-                    </Text>
-                    <Text style={styles.profileMeta}>
-                      {userProfile?.email || user?.email || ''}
-                    </Text>
+              <Text style={styles.profileName}>{userProfile?.name || user?.name || ''}</Text>
+              <Text style={styles.profileMeta}>{userProfile?.phone || user?.phone || ''}</Text>
+              <Text style={styles.profileMeta}>{userProfile?.email || user?.email || ''}</Text>
               {userProfile && (userProfile as any).dateOfBirth && (
-                  <Text style={styles.profileMeta}>
-                    {new Date((userProfile as any).dateOfBirth as string).toLocaleDateString('en-IN')}
-                  </Text>
-                )}
+                <Text style={styles.profileMeta}>
+                  {new Date((userProfile as any).dateOfBirth as string).toLocaleDateString('en-IN')}
+                </Text>
+              )}
             </View>
             <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
           </TouchableOpacity>
@@ -343,10 +322,7 @@ const ProfileScreen = () => {
 
         {/* Logout Button */}
         <View style={styles.logoutContainer}>
-          <TouchableOpacity 
-            style={styles.logoutButton}
-            onPress={handleLogout}
-          >
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={16} color="#b91c1c" style={{ marginRight: 6 }} />
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
@@ -366,7 +342,7 @@ export default ProfileScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f9fafb'
+    backgroundColor: '#f9fafb',
   },
   header: {
     backgroundColor: '#fff',
@@ -374,30 +350,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   headerTitleContainer: {
-  paddingLeft:4,
+    paddingLeft: 4,
   },
   headerTitle: {
     fontSize: 25,
     fontWeight: '700',
-    color: '#1f2937'
+    color: '#1f2937',
   },
   scroll: {
-    flex: 1
+    flex: 1,
   },
   card: {
     backgroundColor: '#fff',
     padding: 16,
-    marginBottom: 16
+    marginBottom: 16,
   },
   profileRow: {
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   profileImage: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    marginRight: 16
+    marginRight: 16,
   },
   profileImagePlaceholder: {
     width: 80,
@@ -406,24 +382,24 @@ const styles = StyleSheet.create({
     marginRight: 16,
     backgroundColor: '#f3f4f6',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   profileInfo: {
-    flex: 1
+    flex: 1,
   },
   profileName: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1f2937'
+    color: '#1f2937',
   },
   profileMeta: {
-    color: '#6b7280'
+    color: '#6b7280',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1f2937',
-    marginBottom: 16
+    marginBottom: 16,
   },
   settingRow: {
     flexDirection: 'row',
@@ -431,22 +407,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6'
+    borderBottomColor: '#f3f4f6',
   },
   settingLabel: {
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   settingText: {
     color: '#1f2937',
-    fontWeight: '600'
+    fontWeight: '600',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6'
+    borderBottomColor: '#f3f4f6',
   },
   menuIconContainer: {
     width: 40,
@@ -455,16 +431,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#eff6ff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16
+    marginRight: 16,
   },
   menuText: {
     flex: 1,
     color: '#1f2937',
-    fontWeight: '600'
+    fontWeight: '600',
   },
   logoutContainer: {
     alignItems: 'center',
-    marginBottom: 24
+    marginBottom: 24,
   },
   logoutButton: {
     flexDirection: 'row',
@@ -474,19 +450,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#fca5a5'
+    borderColor: '#fca5a5',
   },
   logoutText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#b91c1c'
+    color: '#b91c1c',
   },
   versionRow: {
     alignItems: 'center',
-    paddingBottom: 32
+    paddingBottom: 32,
   },
   versionText: {
     color: '#9ca3af',
-    fontSize: 12
-  }
+    fontSize: 12,
+  },
 });

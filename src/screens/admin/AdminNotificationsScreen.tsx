@@ -38,10 +38,7 @@ const AdminNotificationsScreen = () => {
   // Enable LayoutAnimation for Android
   useEffect(() => {
     if (Platform.OS === 'android') {
-      if (UIManager.setLayoutAnimationEnabledExperimental) {
-        UIManager.setLayoutAnimationEnabledExperimental(true);
-      }
-    }
+          }
   }, []);
 
   useEffect(() => {

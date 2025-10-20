@@ -3,7 +3,6 @@ import { create } from 'zustand';
 import { createJSONStorage, persist, devtools } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authService, userService } from '../services';
-import { useNotificationStore } from './notificationStore';
 import httpClient from '../services/httpClient';
 
 export type UserRole = 'customer' | 'professional' | 'admin';
@@ -105,15 +104,6 @@ export const useAuthStore = create<AuthState>()(
                 isLoading: false
               });
               if (__DEV__) console.log('✅ OTP verified and user authenticated');
-
-              // Register for push notifications after successful login
-              try {
-                const { registerForPushNotifications } = useNotificationStore.getState();
-                await registerForPushNotifications();
-                if (__DEV__) console.log('✅ Push notification registration triggered');
-              } catch (e) {
-                if (__DEV__) console.error('Error triggering push notification registration:', e);
-              }
 
               return true;
             } else {

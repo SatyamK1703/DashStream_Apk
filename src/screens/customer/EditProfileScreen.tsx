@@ -69,12 +69,11 @@ const EditProfileScreen = () => {
       const payload: any = {};
       if (formData.name !== user?.name) payload.name = formData.name;
       if (formData.email !== user?.email) payload.email = formData.email;
-      if (formData.profileImage && !formData.profileImage.startsWith('http')) payload.profileImage = formData.profileImage;
+      if (formData.profileImage && !formData.profileImage.startsWith('http'))
+        payload.profileImage = formData.profileImage;
 
       await updateUserProfile(payload);
-      Alert.alert('Success', 'Your profile has been updated successfully', [
-        { text: 'OK' },
-      ]);
+      Alert.alert('Success', 'Your profile has been updated successfully', [{ text: 'OK' }]);
     } catch {
       Alert.alert('Error', 'Failed to update profile. Please try again.');
     } finally {
@@ -85,7 +84,10 @@ const EditProfileScreen = () => {
   const handlePickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      Alert.alert('Permission Required', 'You need to grant camera roll permissions to change your profile picture.');
+      Alert.alert(
+        'Permission Required',
+        'You need to grant camera roll permissions to change your profile picture.'
+      );
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -95,7 +97,7 @@ const EditProfileScreen = () => {
       quality: 0.8,
     });
     if (!result.canceled) {
-      setFormData(prev => ({ ...prev, profileImage: result.assets[0].uri }));
+      setFormData((prev) => ({ ...prev, profileImage: result.assets[0].uri }));
     }
   };
 
@@ -111,7 +113,7 @@ const EditProfileScreen = () => {
       quality: 0.8,
     });
     if (!result.canceled) {
-      setFormData(prev => ({ ...prev, profileImage: result.assets[0].uri }));
+      setFormData((prev) => ({ ...prev, profileImage: result.assets[0].uri }));
     }
   };
 
@@ -136,10 +138,9 @@ const EditProfileScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-        style={styles.flexContainer}
-      >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.flexContainer}>
         <View style={styles.flexContainer}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -156,7 +157,11 @@ const EditProfileScreen = () => {
               <TouchableOpacity onPress={showImageOptions}>
                 <View>
                   <Image
-                    source={formData.profileImage ? { uri: formData.profileImage } : require('../../assets/images/image.png')}
+                    source={
+                      formData.profileImage
+                        ? { uri: formData.profileImage }
+                        : require('../../assets/images/user.png')
+                    }
                     style={styles.profileImage}
                     resizeMode="cover"
                   />
@@ -174,7 +179,7 @@ const EditProfileScreen = () => {
                 style={[styles.input, errors.name && styles.errorBorder]}
                 placeholder="Enter your full name"
                 value={formData.name}
-                onChangeText={text => setFormData({ ...formData, name: text })}
+                onChangeText={(text) => setFormData({ ...formData, name: text })}
               />
               {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
             </View>
@@ -185,7 +190,7 @@ const EditProfileScreen = () => {
                 style={[styles.input, errors.email && styles.errorBorder]}
                 placeholder="Enter your email"
                 value={formData.email}
-                onChangeText={text => setFormData({ ...formData, email: text })}
+                onChangeText={(text) => setFormData({ ...formData, email: text })}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
@@ -198,7 +203,7 @@ const EditProfileScreen = () => {
                 style={[styles.input, errors.phone && styles.errorBorder]}
                 placeholder="Enter your phone number"
                 value={formData.phone}
-                onChangeText={text => setFormData({ ...formData, phone: text })}
+                onChangeText={(text) => setFormData({ ...formData, phone: text })}
                 keyboardType="phone-pad"
               />
               {errors.phone ? <Text style={styles.errorText}>{errors.phone}</Text> : null}
@@ -217,33 +222,33 @@ const EditProfileScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
   },
-  flexContainer: { 
-    flex: 1 
+  flexContainer: {
+    flex: 1,
   },
-  loadingContainer: { 
-    flex: 1, 
-    backgroundColor: '#fff', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  loadingText: { 
-    marginTop: 16, 
-    color: '#4b5563' 
+  loadingText: {
+    marginTop: 16,
+    color: '#4b5563',
   },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16, 
-    paddingTop: 16, 
-    paddingBottom: 16, 
-    backgroundColor: '#fff', 
-    borderBottomWidth: 1, 
-    borderColor: '#e5e7eb' 
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
   },
-  backButton: { 
+  backButton: {
     width: 40, // Fixed width for balance
   },
   headerTitleContainer: {
@@ -251,70 +256,70 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { 
-    fontSize: 20, 
-    fontWeight: 'bold', 
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
     color: '#1f2937',
     textAlign: 'center',
   },
-  scrollContent: { 
-    padding: 16 
+  scrollContent: {
+    padding: 16,
   },
-  imageWrapper: { 
-    alignItems: 'center', 
-    marginBottom: 24 
+  imageWrapper: {
+    alignItems: 'center',
+    marginBottom: 24,
   },
-  profileImage: { 
-    width: 96, 
-    height: 96, 
-    borderRadius: 48 
+  profileImage: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
   },
-  cameraIconWrapper: { 
-    position: 'absolute', 
-    bottom: 0, 
-    right: 0, 
-    backgroundColor: '#2563eb', 
-    borderRadius: 9999, 
-    padding: 4 
+  cameraIconWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#2563eb',
+    borderRadius: 9999,
+    padding: 4,
   },
-  changePicText: { 
-    color: '#2563eb', 
-    fontWeight: '500', 
-    marginTop: 8 
+  changePicText: {
+    color: '#2563eb',
+    fontWeight: '500',
+    marginTop: 8,
   },
-  inputGroup: { 
-    marginBottom: 16 
+  inputGroup: {
+    marginBottom: 16,
   },
-  label: { 
-    color: '#374151', 
-    marginBottom: 4, 
-    fontWeight: '500' 
+  label: {
+    color: '#374151',
+    marginBottom: 4,
+    fontWeight: '500',
   },
-  input: { 
-    backgroundColor: '#f9fafb', 
-    padding: 16, 
-    borderRadius: 12, 
-    color: '#1f2937' 
+  input: {
+    backgroundColor: '#f9fafb',
+    padding: 16,
+    borderRadius: 12,
+    color: '#1f2937',
   },
-  errorBorder: { 
-    borderColor: '#ef4444', 
-    borderWidth: 1 
+  errorBorder: {
+    borderColor: '#ef4444',
+    borderWidth: 1,
   },
-  errorText: { 
-    color: '#ef4444', 
-    marginTop: 4 
+  errorText: {
+    color: '#ef4444',
+    marginTop: 4,
   },
-  saveButton: { 
-    backgroundColor: '#2563eb', 
-    paddingVertical: 16, 
-    borderRadius: 12, 
-    alignItems: 'center', 
-    marginTop: 24 
+  saveButton: {
+    backgroundColor: '#2563eb',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 24,
   },
-  saveButtonText: { 
-    color: '#fff', 
-    fontWeight: 'bold', 
-    fontSize: 18 
+  saveButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 18,
   },
 });
 

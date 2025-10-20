@@ -599,7 +599,9 @@ const TrackBookingScreen = () => {
                 <Text style={[styles.semibold, { flex: 1, textAlign: 'right' }]}>
                   {bookingData.address?.address ?
                     `${bookingData.address.address}${bookingData.address.city ? `, ${bookingData.address.city}` : ''}` :
-                    bookingData.location?.address || 'Address not specified'}
+                    (bookingData.location?.address && typeof bookingData.location.address === 'object' ?
+                      `${bookingData.location.address.name}, ${bookingData.location.address.address}, ${bookingData.location.address.city} - ${bookingData.location.address.pincode}` :
+                      bookingData.location?.address) || 'Address not specified'}
                 </Text>
               </View>
             )}

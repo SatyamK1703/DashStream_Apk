@@ -7,14 +7,6 @@ import { notificationService } from '../services';
 import { Notification, NotificationSettings, PushNotificationToken } from '../types/notification';
 import { useAuthStore } from './authStore';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
-
 interface NotificationState {
   // State
   notifications: Notification[];
@@ -139,13 +131,10 @@ export const useNotificationStore = create<NotificationState>()(
           const token = (await Notifications.getExpoPushTokenAsync()).data;
           set({ expoPushToken: token });
 
-          const { isAuthenticated } = useAuthStore.getState();
-          if (isAuthenticated) {
-            try {
-              await notificationService.registerPushToken(token, deviceType, deviceInfo);
-            } catch (serverError) {
-              console.warn('Failed to register push token with server:', serverError);
-            }
+          try {
+            await notificationService.registerPushToken(token, deviceType, deviceInfo);
+          } catch (serverError) {
+            console.warn('Failed to register push token with server:', serverError);
           }
 
           return token;
@@ -157,12 +146,6 @@ export const useNotificationStore = create<NotificationState>()(
       },
 
       fetchNotifications: async () => {
-        const { isAuthenticated } = useAuthStore.getState();
-        if (!isAuthenticated) {
-          set({ notifications: [], unreadCount: 0 });
-          return;
-        }
-
         set({ isLoading: true, error: null });
         try {
           const response = await notificationService.getNotifications();

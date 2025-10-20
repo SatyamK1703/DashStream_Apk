@@ -166,7 +166,7 @@ const SupportScreen = () => {
 
             {/* Contact Form */}
             <View style={styles.formContainer}>
-               <Text style={styles.sectionTitle}>Send us a message </Text>
+              <Text style={styles.sectionTitle}>Send us a message </Text>
               {submitted ? (
                 <Animated.View style={[styles.successBox, { opacity: fadeAnim }]}>
                   <Ionicons name="checkmark-circle" size={56} color="#10b981" />

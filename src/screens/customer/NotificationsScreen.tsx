@@ -41,10 +41,7 @@ const NotificationsScreen = () => {
   // Enable LayoutAnimation for Android
   useEffect(() => {
     if (Platform.OS === 'android') {
-      if (UIManager.setLayoutAnimationEnabledExperimental) {
-        UIManager.setLayoutAnimationEnabledExperimental(true);
-      }
-    }
+          }
   }, []);
 
   // Load notifications on mount

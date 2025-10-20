@@ -21,6 +21,14 @@ class NotificationService {
   async removePushToken(token: string) {
     return await httpClient.delete(API_ENDPOINTS.NOTIFICATIONS.LIST + '/deregister-device', { data: { token } });
   }
+
+  async getPreferences() {
+    return await httpClient.get(API_ENDPOINTS.NOTIFICATIONS.PREFERENCES);
+  }
+
+  async updatePreferences(preferences: object) {
+    return await httpClient.put(API_ENDPOINTS.NOTIFICATIONS.PREFERENCES, preferences);
+  }
 }
 
 export const notificationService = new NotificationService();
