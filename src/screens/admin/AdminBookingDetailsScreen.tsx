@@ -96,27 +96,6 @@ const AdminBookingDetailsScreen = () => {
     }
   }, [showAssignModal, professionals.length, booking, fetchProfessionals]);
 
-  // --- API Functions ---
-  const fetchBookingDetails = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await adminService.getBookingById(bookingId);
-      if (response.success && response.data) {
-        setBooking(response.data);
-        if (response.data.professional?._id) {
-          setSelectedProfessionalId(response.data.professional._id);
-        }
-      } else {
-        setError('Failed to load booking details');
-      }
-    } catch (err: any) {
-      console.error('Error fetching booking details:', err);
-      setError(err.message || 'Failed to load booking details');
-    } finally {
-      setLoading(false);
-    }
-  };
 
    const fetchProfessionals = useCallback(async () => {
     if (!booking?._id) {
