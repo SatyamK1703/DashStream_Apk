@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   FlatList,
   ActivityIndicator,
   RefreshControl,
   Alert,
-  Text,StyleSheet
+  Text,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -16,9 +17,6 @@ import SortControls from '~/components/admin/SortControls';
 import OfferCard from '~/components/admin/Offercard';
 import EmptyState from '~/components/admin/EmptyState';
 import AddEditOfferModal from '~/components/admin/AddEditOfferModal';
-
-
-
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
 
@@ -31,9 +29,7 @@ import {
 } from '../../hooks/adminOffers';
 import { useAuth } from '../../store';
 
-type AdminOffersNavigationProp = NativeStackNavigationProp<
-  AdminStackParamList
->;
+type AdminOffersNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 
 interface Offer {
   _id: string;
@@ -86,12 +82,7 @@ const ManageOffersScreen = () => {
   });
   const [isEditing, setIsEditing] = useState(false);
 
-  const {
-    data: offers = [],
-    loading,
-    error,
-    refresh: fetchOffers,
-  } = useAdminOffers();
+  const { data: offers = [], loading, error, refresh: fetchOffers } = useAdminOffers();
 
   const { execute: createOffer } = useCreateOffer();
   const { execute: updateOffer } = useUpdateOffer();
@@ -127,8 +118,7 @@ const ManageOffersScreen = () => {
           comparison = a.discount - b.discount;
           break;
         case 'date':
-          comparison =
-            new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+          comparison = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
           break;
       }
       return sortOrder === 'asc' ? comparison : -comparison;
@@ -248,7 +238,7 @@ const ManageOffersScreen = () => {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onClear={() => setSearchQuery('')}
-          placeholder ="search offers"
+          placeholder="search offers"
         />
 
         <SortControls
@@ -256,14 +246,17 @@ const ManageOffersScreen = () => {
           sortBy={sortBy}
           sortOrder={sortOrder}
           onSortByChange={handleSortByChange}
-          onSortOrderToggle={() =>
-            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-          }
+          onSortOrderToggle={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
         />
       </View>
 
-      {(!filteredOffers || filteredOffers.length === 0) ? (
-        <EmptyState placetext='Create Offers' title='No offers found.' description='Start creating offers and attract more customers!' onAddService={handleAddOffer} />
+      {!filteredOffers || filteredOffers.length === 0 ? (
+        <EmptyState
+          placetext="Create Offers"
+          title="No offers found."
+          description="Start creating offers and attract more customers!"
+          onAddService={handleAddOffer}
+        />
       ) : (
         <FlatList
           data={filteredOffers || []}
@@ -283,11 +276,7 @@ const ManageOffersScreen = () => {
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={onRefresh}
-              colors={['#2563EB']}
-            />
+            <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#2563EB']} />
           }
         />
       )}

@@ -23,6 +23,7 @@ import TrackBookingScreen from '../../src/screens/customer/TrackBookingScreen';
 import ManageOffersScreen from '~/screens/admin/AdminOffersScreen';
 import OfferStatsScreen from '~/screens/admin/AdminOfferStatsScreen';
 import AdminQuestionScreen from '~/screens/admin/AdminQuestionScreen';
+import AdminServicesArea from '../../src/screens/admin/AdminServicesArea';
 
 // Define the admin stack param list
 export type AdminStackParamList = {
@@ -46,6 +47,7 @@ export type AdminStackParamList = {
   AdminOffer: undefined;
   AdminOfferStats: { offerId: string; offerTitle: string };
   AdminQuestion: undefined;
+  AdminServicesArea: undefined;
 };
 
 // Define the admin tab param list
@@ -97,8 +99,7 @@ const AdminTabNavigator = () => {
           fontSize: 12,
           fontWeight: '500',
         },
-      })}
-    >
+      })}>
       <Tab.Screen name="Dashboard" component={AdminDashboardScreen} />
       <Tab.Screen name="Bookings" component={AdminBookingsScreen} />
       <Tab.Screen name="Professionals" component={AdminProfessionalsScreen} />
@@ -116,8 +117,7 @@ const AdminNavigator = () => {
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
-      }}
-    >
+      }}>
       <Stack.Screen name="AdminTabs" component={AdminTabNavigator} />
       <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
       <Stack.Screen name="AdminBookings" component={AdminBookingsScreen} />
@@ -135,9 +135,10 @@ const AdminNavigator = () => {
       <Stack.Screen name="AdminProfile" component={AdminProfileScreen} />
       <Stack.Screen name="AdminNotifications" component={AdminNotificationsScreen} />
       <Stack.Screen name="TrackBooking" component={TrackBookingScreen} />
-      <Stack.Screen name="AdminOffer" component={ManageOffersScreen}/>
-      <Stack.Screen name="AdminOfferStats" component={OfferStatsScreen}/>
-      <Stack.Screen name="AdminQuestion" component={AdminQuestionScreen}/>
+      <Stack.Screen name="AdminOffer" component={ManageOffersScreen} />
+      <Stack.Screen name="AdminOfferStats" component={OfferStatsScreen} />
+      <Stack.Screen name="AdminQuestion" component={AdminQuestionScreen} />
+      <Stack.Screen name="AdminServicesArea" component={AdminServicesArea} />
     </Stack.Navigator>
   );
 };

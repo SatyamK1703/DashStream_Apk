@@ -1,12 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  FlatList,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-  Text
-} from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, FlatList, ActivityIndicator, RefreshControl, Alert, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 
@@ -22,13 +15,13 @@ import { styles } from '../../components/admin/AdminService.styles';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
 
-import { 
-  useAdminServices, 
-  useCreateService, 
-  useUpdateService, 
-  useDeleteService, 
+import {
+  useAdminServices,
+  useCreateService,
+  useUpdateService,
+  useDeleteService,
   useToggleServiceStatus,
-  useServiceCategories 
+  useServiceCategories,
 } from '../../hooks';
 import { useAuth } from '../../store';
 
@@ -73,7 +66,7 @@ interface ServiceFormData {
 const AdminServicesScreen = () => {
   const navigation = useNavigation<AdminServicesNavigationProp>();
   const { user, isAuthenticated } = useAuth();
-  
+
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -93,7 +86,7 @@ const AdminServicesScreen = () => {
     isActive: true,
     isPopular: false,
     features: [],
-    tags: []
+    tags: [],
   });
   const [isEditing, setIsEditing] = useState(false);
 
@@ -102,11 +95,9 @@ const AdminServicesScreen = () => {
     loading,
     error,
     refresh: fetchServices,
-    loadMore
+    loadMore,
   } = useAdminServices();
-  useEffect(() => {
-  
-  }, [services, loading, error]);
+  useEffect(() => {}, [services, loading, error]);
 
   const { execute: createService, loading: createLoading } = useCreateService();
   const { execute: updateService, loading: updateLoading } = useUpdateService();
@@ -117,35 +108,33 @@ const AdminServicesScreen = () => {
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
-  
+
   const filterAndSortServices = useCallback(() => {
- 
-    
     if (!services || !Array.isArray(services)) {
       setFilteredServices([]);
       return;
     }
-    
+
     let filtered = [...services];
-    
+
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(service => service.category === selectedCategory);
+      filtered = filtered.filter((service) => service.category === selectedCategory);
     }
-    
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        service =>
+        (service) =>
           service.title.toLowerCase().includes(query) ||
           service.description.toLowerCase().includes(query) ||
           service.category.toLowerCase().includes(query) ||
-          service.tags.some(tag => tag.toLowerCase().includes(query))
+          service.tags.some((tag) => tag.toLowerCase().includes(query))
       );
     }
-    
+
     filtered.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortBy) {
         case 'title':
           comparison = a.title.localeCompare(b.title);
@@ -160,9 +149,9 @@ const AdminServicesScreen = () => {
           comparison = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
           break;
       }
-      
+
       return sortOrder === 'asc' ? comparison : -comparison;
-    });   
+    });
     setFilteredServices(filtered);
   }, [services, searchQuery, selectedCategory, sortBy, sortOrder]);
 
@@ -191,12 +180,12 @@ const AdminServicesScreen = () => {
 
   const toggleServiceStatus = async (serviceId: string) => {
     try {
-      const service = services.find(s => s.id === serviceId);
+      const service = services.find((s) => s.id === serviceId);
       if (!service) return;
 
       await toggleStatus({
         serviceId,
-        isActive: !service.isActive
+        isActive: !service.isActive,
       });
 
       await fetchServices();
@@ -221,7 +210,7 @@ const AdminServicesScreen = () => {
       isActive: true,
       isPopular: false,
       features: [],
-      tags: []
+      tags: [],
     });
     setShowAddEditModal(true);
   };
@@ -242,7 +231,7 @@ const AdminServicesScreen = () => {
       isActive: service.isActive,
       isPopular: service.isPopular,
       features: [...service.features],
-      tags: [...service.tags]
+      tags: [...service.tags],
     });
     setShowAddEditModal(true);
   };
@@ -265,8 +254,8 @@ const AdminServicesScreen = () => {
               console.error('Delete service error:', error);
               Alert.alert('Error', 'Failed to delete service. Please try again.');
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
@@ -282,7 +271,7 @@ const AdminServicesScreen = () => {
     { id: 'all', name: 'All Services' },
     ...categoriesSource
       .filter((cat: any) => cat && (cat.id || cat._id) && cat.name)
-      .map((cat: any) => ({ id: cat.id || cat._id, name: cat.name }))
+      .map((cat: any) => ({ id: cat.id || cat._id, name: cat.name })),
   ];
 
   if (loading) {
@@ -299,8 +288,8 @@ const AdminServicesScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title ="Manage Services" onBack={() => navigation.goBack()} onAdd={handleAddService} />
-      
+      <Header title="Manage Services" onBack={() => navigation.goBack()} onAdd={handleAddService} />
+
       <View style={styles.searchContainer}>
         <SearchBar
           searchQuery={searchQuery}
@@ -308,13 +297,13 @@ const AdminServicesScreen = () => {
           onClear={() => setSearchQuery('')}
           placeholder="search sercives..."
         />
-        
+
         <CategoryFilter
           categories={categories}
           selectedCategory={selectedCategory}
           onCategorySelect={setSelectedCategory}
         />
-        
+
         <SortControls
           itemCount={filteredServices?.length || 0}
           sortBy={sortBy}
@@ -324,39 +313,34 @@ const AdminServicesScreen = () => {
           placetext="No Services Founds"
         />
       </View>
-      {(!filteredServices || filteredServices.length === 0) ? (
+      {!filteredServices || filteredServices.length === 0 ? (
         <>
-
           <EmptyState onAddService={handleAddService} />
         </>
       ) : (
         <>
-        <FlatList
-          data={filteredServices || []}
-          keyExtractor={(item) => item._id}
-          renderItem={({ item }) => (
-            <ServiceCard
-              service={item}
-              onToggleStatus={toggleServiceStatus}
-              onEdit={handleEditService}
-              onDelete={handleDeleteService}
-            />
-          )}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={onRefresh}
-              colors={['#2563EB']}
-            />
-          }
-          ListEmptyComponent={() => (
-            <View style={{ padding: 20, alignItems: 'center' }}>
-              <Text style={{ color: '#666', fontSize: 16 }}>No services to display</Text>
-            </View>
-          )}
-        />
+          <FlatList
+            data={filteredServices || []}
+            keyExtractor={(item) => item._id}
+            renderItem={({ item }) => (
+              <ServiceCard
+                service={item}
+                onToggleStatus={toggleServiceStatus}
+                onEdit={handleEditService}
+                onDelete={handleDeleteService}
+              />
+            )}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#2563EB']} />
+            }
+            ListEmptyComponent={() => (
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Text style={{ color: '#666', fontSize: 16 }}>No services to display</Text>
+              </View>
+            )}
+          />
         </>
       )}
 

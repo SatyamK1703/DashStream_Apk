@@ -10,7 +10,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Image,StyleSheet
+  Image,
+  StyleSheet,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -31,7 +32,7 @@ interface FormData {
   address: {
     line1: string;
     line2: string;
-    landmark:string;
+    landmark: string;
     city: string;
     pincode: string;
   };
@@ -39,7 +40,7 @@ interface FormData {
 
 const AdminCreateCustomerScreen = () => {
   const navigation = useNavigation<AdminCreateCustomerNavigationProp>();
-  
+
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
@@ -51,105 +52,107 @@ const AdminCreateCustomerScreen = () => {
       line1: '',
       line2: '',
       city: '',
-      state: '',
-      pincode: ''
-    }
+      landmark: '',
+      pincode: '',
+    },
   });
-  
+
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [loading, setLoading] = useState(false);
   const [showAddressSection, setShowAddressSection] = useState(false);
-  
+
   const updateFormData = (key: keyof FormData, value: any) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [key]: value
+      [key]: value,
     }));
-    
+
     if (errors[key]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [key]: undefined
+        [key]: undefined,
       }));
     }
   };
-  
+
   const updateAddress = (key: keyof FormData['address'], value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       address: {
         ...prev.address,
-        [key]: value
-      }
+        [key]: value,
+      },
     }));
   };
-  
+
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+
     if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please allow access to your photo library to select a profile image.');
+      Alert.alert(
+        'Permission Required',
+        'Please allow access to your photo library to select a profile image.'
+      );
       return;
     }
-    
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
     });
-    
+
     if (!result.canceled) {
       updateFormData('profileImage', result.assets[0].uri);
     }
   };
-  
+
   const validateForm = () => {
-  const newErrors: Partial<Record<keyof FormData, string>> = {};
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
 
-  if (!formData.name.trim()) {
-    newErrors.name = 'Name is required';
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!formData.email.trim()) {
-    newErrors.email = 'Email is required';
-  } else if (!emailRegex.test(formData.email)) {
-    newErrors.email = 'Please enter a valid email';
-  }
-
-  const phoneRegex = /^[0-9+\s]{10,15}$/;
-  if (!formData.phone.trim()) {
-    newErrors.phone = 'Phone number is required';
-  } else if (!phoneRegex.test(formData.phone.replace(/\s/g, ''))) {
-    newErrors.phone = 'Please enter a valid phone number';
-  }
-
-  // ✅ Address validation only if section is open
-  if (showAddressSection) {
-    if (!formData.address.line1.trim()) {
-      newErrors.address = 'Address line 1 is required';
-    } else if (!formData.address.city.trim()) {
-      newErrors.address = 'City is required';
-    } else if (!formData.address.pincode.trim()) {
-      newErrors.address = 'Pincode is required';
-    } else if (!/^\d{6}$/.test(formData.address.pincode)) {
-      newErrors.address = 'Please enter a valid 6-digit pincode';
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
     }
-  }
 
-  setErrors(newErrors);
-  return Object.keys(newErrors).length === 0;
-};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email';
+    }
 
-  
+    const phoneRegex = /^[0-9+\s]{10,15}$/;
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+    } else if (!phoneRegex.test(formData.phone.replace(/\s/g, ''))) {
+      newErrors.phone = 'Please enter a valid phone number';
+    }
+
+    // ✅ Address validation only if section is open
+    if (showAddressSection) {
+      if (!formData.address.line1.trim()) {
+        newErrors.address = 'Address line 1 is required';
+      } else if (!formData.address.city.trim()) {
+        newErrors.address = 'City is required';
+      } else if (!formData.address.pincode.trim()) {
+        newErrors.address = 'Pincode is required';
+      } else if (!/^\d{6}$/.test(formData.address.pincode)) {
+        newErrors.address = 'Please enter a valid 6-digit pincode';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = () => {
     if (!validateForm()) {
       return;
     }
-    
+
     setLoading(true);
-    
+
     setTimeout(() => {
       setLoading(false);
       Alert.alert(
@@ -158,277 +161,251 @@ const AdminCreateCustomerScreen = () => {
         [
           {
             text: 'OK',
-            onPress: () => navigation.goBack()
-          }
+            onPress: () => navigation.goBack(),
+          },
         ]
       );
     }, 2000);
   };
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    ><SafeAreaView style={styles.safeArea}>
-      <View style={styles.mainContainer}>
-        {/* Header */}
-        <View style={styles.headerContainer}>
-          <View style={styles.headerContent}>
-            <TouchableOpacity 
-              onPress={() => navigation.goBack()}
-              style={styles.backButton}
-            >
-              <Ionicons name="arrow-back" size={22} color="white" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Create New Customer</Text>
-          </View>
-        </View>
-        
-        <ScrollView 
-          style={styles.scrollContainer}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContentContainer}
-        >
-          {/* Profile Image Section */}
-          <View style={styles.profileImageContainer}>
-            <TouchableOpacity 
-              onPress={pickImage}
-              style={styles.profileImageButton}
-            >
-              {formData.profileImage ? (
-                <View style={styles.profileImageContainer2}>
-                  <Image 
-                    source={{ uri: formData.profileImage }}
-                    style={styles.profileImage}
-                  />
-                  <View style={styles.cameraIconContainer}>
-                    <Ionicons name="camera" size={14} color="white" />
-                  </View>
-                </View>
-              ) : (
-                <>
-                  <Ionicons name="person" size={40} color="#9CA3AF" />
-                  <View style={styles.cameraIconContainer}>
-                    <Ionicons name="camera" size={14} color="white" />
-                  </View>
-                </>
-              )}
-            </TouchableOpacity>
-            <Text style={styles.profileImageText}>Upload Profile Picture</Text>
-          </View>
-          
-          {/* Form */}
-          <View style={styles.formContainer}>
-            <View style={styles.formSection}>
-              <Text style={styles.sectionTitle}>Basic Information</Text>
-              
-              {/* Name */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>
-                  Full Name <Text style={styles.requiredAsterisk}>*</Text>
-                </Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    errors.name && styles.textInputError
-                  ]}
-                  placeholder="Enter full name"
-                  value={formData.name}
-                  onChangeText={(value) => updateFormData('name', value)}
-                  placeholderTextColor="#9CA3AF"
-                />
-                {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
-              </View>
-              
-              {/* Email */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>
-                  Email <Text style={styles.requiredAsterisk}>*</Text>
-                </Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    errors.email && styles.textInputError
-                  ]}
-                  placeholder="Enter email address"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  value={formData.email}
-                  onChangeText={(value) => updateFormData('email', value)}
-                  placeholderTextColor="#9CA3AF"
-                />
-                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-              </View>
-              
-              {/* Phone */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>
-                  Phone Number <Text style={styles.requiredAsterisk}>*</Text>
-                </Text>
-                <TextInput
-                  style={[
-                    styles.textInput,
-                    errors.phone && styles.textInputError
-                  ]}
-                  placeholder="Enter phone number"
-                  keyboardType="phone-pad"
-                  value={formData.phone}
-                  onChangeText={(value) => updateFormData('phone', value)}
-                  placeholderTextColor="#9CA3AF"
-                />
-                {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
-              </View>
-              
-              {/* Status */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Account Status</Text>
-                <View style={styles.statusContainer}>
-                  {['active', 'inactive'].map((status) => (
-                    <TouchableOpacity 
-                      key={status}
-                      style={[
-                        styles.statusOption,
-                        formData.status === status 
-                          ? styles.statusOptionActive 
-                          : styles.statusOptionInactive
-                      ]}
-                      onPress={() => updateFormData('status', status)}
-                    >
-                      <View style={[
-                        styles.radioButton,
-                        formData.status === status 
-                          ? styles.radioButtonActive 
-                          : styles.radioButtonInactive
-                      ]}>
-                        {formData.status === status && (
-                          <View style={styles.radioButtonInner} />
-                        )}
-                      </View>
-                      <Text style={[
-                        styles.statusText,
-                        formData.status === status 
-                          ? styles.statusTextActive 
-                          : styles.statusTextInactive
-                      ]}>
-                        {status}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
+      style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.mainContainer}>
+          {/* Header */}
+          <View style={styles.headerContainer}>
+            <View style={styles.headerContent}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                <Ionicons name="arrow-back" size={22} color="white" />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>Create New Customer</Text>
             </View>
-            {/* Address Section Toggle */}
-            <TouchableOpacity 
-              style={styles.addressToggle}
-              onPress={() => setShowAddressSection(!showAddressSection)}
-            >
-              <View style={styles.addressToggleLeft}>
-                <MaterialIcons name="location-on" size={20} color="#4B5563" />
-                <Text style={styles.addressToggleText}>Add Address</Text>
-              </View>
-              <Ionicons 
-                name={showAddressSection ? 'chevron-up' : 'chevron-down'} 
-                size={20} 
-                color="#4B5563" 
-              />
-            </TouchableOpacity>
-            
-            {/* Address Form */}
-            {showAddressSection && (
+          </View>
+
+          <ScrollView
+            style={styles.scrollContainer}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContentContainer}>
+            {/* Profile Image Section */}
+            <View style={styles.profileImageContainer}>
+              <TouchableOpacity onPress={pickImage} style={styles.profileImageButton}>
+                {formData.profileImage ? (
+                  <View style={styles.profileImageContainer2}>
+                    <Image source={{ uri: formData.profileImage }} style={styles.profileImage} />
+                    <View style={styles.cameraIconContainer}>
+                      <Ionicons name="camera" size={14} color="white" />
+                    </View>
+                  </View>
+                ) : (
+                  <>
+                    <Ionicons name="person" size={40} color="#9CA3AF" />
+                    <View style={styles.cameraIconContainer}>
+                      <Ionicons name="camera" size={14} color="white" />
+                    </View>
+                  </>
+                )}
+              </TouchableOpacity>
+              <Text style={styles.profileImageText}>Upload Profile Picture</Text>
+            </View>
+
+            {/* Form */}
+            <View style={styles.formContainer}>
               <View style={styles.formSection}>
-                {/* Address Line 1 */}
+                <Text style={styles.sectionTitle}>Basic Information</Text>
+
+                {/* Name */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>
-                    Address Line 1 <Text style={styles.requiredAsterisk}>*</Text>
+                    Full Name <Text style={styles.requiredAsterisk}>*</Text>
                   </Text>
                   <TextInput
-                    style={styles.textInput}
-                    placeholder="House/Flat No., Building Name"
-                    value={formData.address.line1}
-                    onChangeText={(value) => updateAddress('line1', value)}
+                    style={[styles.textInput, errors.name && styles.textInputError]}
+                    placeholder="Enter full name"
+                    value={formData.name}
+                    onChangeText={(value) => updateFormData('name', value)}
                     placeholderTextColor="#9CA3AF"
                   />
+                  {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
                 </View>
-                
-                {/* Address Line 2 */}
+
+                {/* Email */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Address Line 2</Text>
+                  <Text style={styles.inputLabel}>
+                    Email <Text style={styles.requiredAsterisk}>*</Text>
+                  </Text>
                   <TextInput
-                    style={styles.textInput}
-                    placeholder="Street, Area, Landmark"
-                    value={formData.address.line2}
-                    onChangeText={(value) => updateAddress('line2', value)}
+                    style={[styles.textInput, errors.email && styles.textInputError]}
+                    placeholder="Enter email address"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    value={formData.email}
+                    onChangeText={(value) => updateFormData('email', value)}
                     placeholderTextColor="#9CA3AF"
                   />
+                  {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
                 </View>
-                
-                {/* City & State */}
-                <View style={styles.addressRow}>
-                  <View style={styles.addressInputLeft}>
+
+                {/* Phone */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>
+                    Phone Number <Text style={styles.requiredAsterisk}>*</Text>
+                  </Text>
+                  <TextInput
+                    style={[styles.textInput, errors.phone && styles.textInputError]}
+                    placeholder="Enter phone number"
+                    keyboardType="phone-pad"
+                    value={formData.phone}
+                    onChangeText={(value) => updateFormData('phone', value)}
+                    placeholderTextColor="#9CA3AF"
+                  />
+                  {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
+                </View>
+
+                {/* Status */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Account Status</Text>
+                  <View style={styles.statusContainer}>
+                    {['active', 'inactive'].map((status) => (
+                      <TouchableOpacity
+                        key={status}
+                        style={[
+                          styles.statusOption,
+                          formData.status === status
+                            ? styles.statusOptionActive
+                            : styles.statusOptionInactive,
+                        ]}
+                        onPress={() => updateFormData('status', status)}>
+                        <View
+                          style={[
+                            styles.radioButton,
+                            formData.status === status
+                              ? styles.radioButtonActive
+                              : styles.radioButtonInactive,
+                          ]}>
+                          {formData.status === status && <View style={styles.radioButtonInner} />}
+                        </View>
+                        <Text
+                          style={[
+                            styles.statusText,
+                            formData.status === status
+                              ? styles.statusTextActive
+                              : styles.statusTextInactive,
+                          ]}>
+                          {status}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
+              {/* Address Section Toggle */}
+              <TouchableOpacity
+                style={styles.addressToggle}
+                onPress={() => setShowAddressSection(!showAddressSection)}>
+                <View style={styles.addressToggleLeft}>
+                  <MaterialIcons name="location-on" size={20} color="#4B5563" />
+                  <Text style={styles.addressToggleText}>Add Address</Text>
+                </View>
+                <Ionicons
+                  name={showAddressSection ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color="#4B5563"
+                />
+              </TouchableOpacity>
+
+              {/* Address Form */}
+              {showAddressSection && (
+                <View style={styles.formSection}>
+                  {/* Address Line 1 */}
+                  <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>
-                      City <Text style={styles.requiredAsterisk}>*</Text>
+                      Address Line 1 <Text style={styles.requiredAsterisk}>*</Text>
                     </Text>
                     <TextInput
                       style={styles.textInput}
-                      placeholder="City"
-                      value={formData.address.city}
-                      onChangeText={(value) => updateAddress('city', value)}
+                      placeholder="House/Flat No., Building Name"
+                      value={formData.address.line1}
+                      onChangeText={(value) => updateAddress('line1', value)}
                       placeholderTextColor="#9CA3AF"
                     />
                   </View>
+
+                  {/* Address Line 2 */}
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Address Line 2</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Street, Area, Landmark"
+                      value={formData.address.line2}
+                      onChangeText={(value) => updateAddress('line2', value)}
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  </View>
+
+                  {/* City & State */}
+                  <View style={styles.addressRow}>
+                    <View style={styles.addressInputLeft}>
+                      <Text style={styles.inputLabel}>
+                        City <Text style={styles.requiredAsterisk}>*</Text>
+                      </Text>
+                      <TextInput
+                        style={styles.textInput}
+                        placeholder="City"
+                        value={formData.address.city}
+                        onChangeText={(value) => updateAddress('city', value)}
+                        placeholderTextColor="#9CA3AF"
+                      />
+                    </View>
+                  </View>
+
+                  {/* Pincode */}
+                  <View style={styles.addressInputGroup}>
+                    <Text style={styles.inputLabel}>
+                      Pincode <Text style={styles.requiredAsterisk}>*</Text>
+                    </Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="6-digit pincode"
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      value={formData.address.pincode}
+                      onChangeText={(value) => updateAddress('pincode', value)}
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  </View>
+
+                  {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
                 </View>
-                
-                {/* Pincode */}
-                <View style={styles.addressInputGroup}>
-                  <Text style={styles.inputLabel}>
-                    Pincode <Text style={styles.requiredAsterisk}>*</Text>
-                  </Text>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="6-digit pincode"
-                    keyboardType="number-pad"
-                    maxLength={6}
-                    value={formData.address.pincode}
-                    onChangeText={(value) => updateAddress('pincode', value)}
-                    placeholderTextColor="#9CA3AF"
-                  />
-                </View>
-                
-                {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
-              </View>
-            )}
-            
-            {/* Submit Button */}
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                loading && styles.submitButtonDisabled
-              ]}
-              onPress={handleSubmit}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Text style={styles.submitButtonText}>Create Customer</Text>
               )}
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+
+              {/* Submit Button */}
+              <TouchableOpacity
+                style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+                onPress={handleSubmit}
+                disabled={loading}>
+                {loading ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Create Customer</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </SafeAreaView>
     </KeyboardAvoidingView>
   );
 };
 
 export default AdminCreateCustomerScreen;
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  safeArea:{
-    flex:1,
+  safeArea: {
+    flex: 1,
   },
   mainContainer: {
     flex: 1,
@@ -699,4 +676,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

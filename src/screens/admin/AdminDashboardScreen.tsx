@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -37,11 +37,11 @@ const AdminDashboardScreen = () => {
     data: dashboardStats,
     loading: isDashboardLoading,
     error: dashboardError,
-    execute: fetchDashboard
+    execute: fetchDashboard,
   } = useAdminDashboard();
 
   const isLoading = isDashboardLoading;
-  
+
   // Extract recent bookings and top professionals from dashboard stats
   const recentBookings = dashboardStats?.recentBookings || [];
   const topProfessionals = dashboardStats?.topProfessionals || [];
@@ -58,7 +58,7 @@ const AdminDashboardScreen = () => {
   // Load data on mount
   useEffect(() => {
     loadDashboardData();
-  }, [loadDashboardData]);
+  }, []);
 
   const onRefresh = async () => {
     await loadDashboardData();
@@ -68,7 +68,10 @@ const AdminDashboardScreen = () => {
     backgroundGradientFrom: '#ffffff',
     backgroundGradientTo: '#ffffff',
     decimalPlaces: 0,
-    color: (opacity = 1) => statsFilter === 'revenue' ? `rgba(37, 99, 235, ${opacity})` : `rgba(139, 92, 246, ${opacity})`,
+    color: (opacity = 1) =>
+      statsFilter === 'revenue'
+        ? `rgba(37, 99, 235, ${opacity})`
+        : `rgba(139, 92, 246, ${opacity})`,
     labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
     style: {
       borderRadius: 16,
@@ -85,18 +88,21 @@ const AdminDashboardScreen = () => {
     if (!dashboardStats?.chartData) {
       return {
         labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        datasets: [{ data: [0, 0, 0, 0, 0, 0, 0] }]
+        datasets: [{ data: [0, 0, 0, 0, 0, 0, 0] }],
       };
     }
 
-    const data = statsFilter === 'revenue' 
-      ? dashboardStats.chartData.revenue?.[timeFilter]
-      : dashboardStats.chartData.bookings?.[timeFilter];
+    const data =
+      statsFilter === 'revenue'
+        ? dashboardStats.chartData.revenue?.[timeFilter]
+        : dashboardStats.chartData.bookings?.[timeFilter];
 
-    return data || {
-      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      datasets: [{ data: [0, 0, 0, 0, 0, 0, 0] }]
-    };
+    return (
+      data || {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [{ data: [0, 0, 0, 0, 0, 0, 0] }],
+      }
+    );
   };
 
   if (isLoading) {
@@ -127,8 +133,7 @@ const AdminDashboardScreen = () => {
         <Text style={styles.headerTitle}>Admin Dashboard</Text>
         <TouchableOpacity
           style={styles.notificationButton}
-          onPress={() => navigation.navigate('AdminNotifications')}
-        >
+          onPress={() => navigation.navigate('AdminNotifications')}>
           <Ionicons name="notifications-outline" size={24} color="#1F2937" />
           <View style={styles.notificationBadge} />
         </TouchableOpacity>
@@ -138,8 +143,7 @@ const AdminDashboardScreen = () => {
         contentContainerStyle={styles.scrollContainer}
         refreshControl={
           <RefreshControl refreshing={isLoading} onRefresh={onRefresh} colors={['#2563EB']} />
-        }
-      >
+        }>
         {/* Stats Cards */}
         <View style={styles.sectionContainer}>
           <View style={styles.statsContainer}>
@@ -187,15 +191,22 @@ const AdminDashboardScreen = () => {
             <View style={styles.filterToggle}>
               <TouchableOpacity
                 style={[styles.filterButton, statsFilter === 'revenue' && styles.activeFilter]}
-                onPress={() => setStatsFilter('revenue')}
-              >
-                <Text style={[styles.filterText, statsFilter === 'revenue' && styles.activeFilterText]}>Revenue</Text>
+                onPress={() => setStatsFilter('revenue')}>
+                <Text
+                  style={[styles.filterText, statsFilter === 'revenue' && styles.activeFilterText]}>
+                  Revenue
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.filterButton, statsFilter === 'bookings' && styles.activeFilter]}
-                onPress={() => setStatsFilter('bookings')}
-              >
-                <Text style={[styles.filterText, statsFilter === 'bookings' && styles.activeFilterText]}>Bookings</Text>
+                onPress={() => setStatsFilter('bookings')}>
+                <Text
+                  style={[
+                    styles.filterText,
+                    statsFilter === 'bookings' && styles.activeFilterText,
+                  ]}>
+                  Bookings
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -214,9 +225,10 @@ const AdminDashboardScreen = () => {
               <TouchableOpacity
                 key={filter}
                 style={[styles.timeFilterButton, timeFilter === filter && styles.activeTimeFilter]}
-                onPress={() => setTimeFilter(filter as any)}
-              >
-                <Text style={styles.timeFilterText}>{filter.charAt(0).toUpperCase() + filter.slice(1)}</Text>
+                onPress={() => setTimeFilter(filter as any)}>
+                <Text style={styles.timeFilterText}>
+                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -230,7 +242,7 @@ const AdminDashboardScreen = () => {
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
-          {(recentBookings && recentBookings.length > 0) ? (
+          {recentBookings && recentBookings.length > 0 ? (
             recentBookings.map((booking) => (
               <BookingCard
                 key={booking.id}
@@ -241,7 +253,9 @@ const AdminDashboardScreen = () => {
                 time={booking.time}
                 status={booking.status}
                 amount={`₹${booking.amount}`}
-                onPress={() => navigation.navigate('AdminBookingDetails', { bookingId: booking.id })}
+                onPress={() =>
+                  navigation.navigate('AdminBookingDetails', { bookingId: booking.id })
+                }
               />
             ))
           ) : (
@@ -259,7 +273,7 @@ const AdminDashboardScreen = () => {
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
-          {(topProfessionals && topProfessionals.length > 0) ? (
+          {topProfessionals && topProfessionals.length > 0 ? (
             topProfessionals.map((professional) => (
               <ProfessionalCard
                 key={professional.id}
@@ -269,7 +283,11 @@ const AdminDashboardScreen = () => {
                 rating={professional.rating || 0}
                 jobsCompleted={professional.bookingCount || 0}
                 isOnline={false}
-                onPress={() => navigation.navigate('AdminProfessionalDetails', { professionalId: professional.id })}
+                onPress={() =>
+                  navigation.navigate('AdminProfessionalDetails', {
+                    professionalId: professional.id,
+                  })
+                }
               />
             ))
           ) : (
@@ -284,16 +302,25 @@ const AdminDashboardScreen = () => {
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActionsContainer}>
             {[
-              { icon: 'calendar-plus', color: '#2563EB', text: 'Manage Bookings', nav: 'AdminBookings' },
-              { icon: 'user-tie', color: '#8B5CF6', text: 'Manage Pros', nav: 'AdminProfessionals' },
+              {
+                icon: 'calendar-plus',
+                color: '#2563EB',
+                text: 'Manage Bookings',
+                nav: 'AdminBookings',
+              },
+              {
+                icon: 'user-tie',
+                color: '#8B5CF6',
+                text: 'Manage Pros',
+                nav: 'AdminProfessionals',
+              },
               { icon: 'users', color: '#10B981', text: 'Manage Customers', nav: 'AdminCustomers' },
-              { icon: 'cogs', color: "#F59E0B", text: 'Settings', nav: 'AdminSettings' }
+              { icon: 'cogs', color: '#F59E0B', text: 'Settings', nav: 'AdminSettings' },
             ].map((action) => (
               <TouchableOpacity
                 key={action.text}
                 style={styles.quickActionButton}
-                onPress={() => navigation.navigate(action.nav as any)}
-              >
+                onPress={() => navigation.navigate(action.nav as any)}>
                 <FontAwesome5 name={action.icon} size={24} color={action.color} />
                 <Text style={styles.quickActionText}>{action.text}</Text>
               </TouchableOpacity>

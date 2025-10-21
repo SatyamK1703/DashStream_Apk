@@ -41,21 +41,23 @@ interface ProfileItemProps {
 const ProProfileScreen = () => {
   const navigation = useNavigation<ProProfileScreenNavigationProp>();
   const { user, logout } = useAuth();
-  
+
   // Use professional profile hooks
-  const { 
-    data: profile, 
-    isLoading: profileLoading, 
-    execute: refreshProfile 
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    execute: refreshProfile,
   } = useProfessionalProfile();
-  
-  const { 
-    setAvailability, 
-    updateStatus, 
-    isLoading: actionLoading 
+
+  const {
+    setAvailability,
+    updateStatus,
+    isLoading: actionLoading,
   } = useProfessionalProfileActions();
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const profileImageUri = profile?.profileImage?.url ?? user?.profileImage;
 
   const handleAvailabilityToggle = async (value: boolean) => {
     try {
@@ -67,27 +69,23 @@ const ProProfileScreen = () => {
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
-          style: 'destructive',
-          onPress: async () => {
-            setIsLoggingOut(true);
-            try {
-              await logout();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to logout. Please try again.');
-            } finally {
-              setIsLoggingOut(false);
-            }
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          setIsLoggingOut(true);
+          try {
+            await logout();
+          } catch (error) {
+            Alert.alert('Error', 'Failed to logout. Please try again.');
+          } finally {
+            setIsLoggingOut(false);
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   const ProfileSection: React.FC<ProfileSectionProps> = ({ title, children }) => (
@@ -97,19 +95,15 @@ const ProProfileScreen = () => {
     </View>
   );
 
-  const ProfileItem: React.FC<ProfileItemProps> = ({ 
-    icon, 
-    title, 
-    value, 
-    onPress, 
-    showArrow = true, 
-    rightElement 
+  const ProfileItem: React.FC<ProfileItemProps> = ({
+    icon,
+    title,
+    value,
+    onPress,
+    showArrow = true,
+    rightElement,
   }) => (
-    <TouchableOpacity 
-      style={styles.profileItem} 
-      onPress={onPress}
-      disabled={!onPress}
-    >
+    <TouchableOpacity style={styles.profileItem} onPress={onPress} disabled={!onPress}>
       <View style={styles.profileItemLeft}>
         <View style={styles.iconContainer}>{icon}</View>
         <Text style={styles.itemTitle}>{title}</Text>
@@ -145,39 +139,41 @@ const ProProfileScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        style={styles.content} 
+      <ScrollView
+        style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl 
-            refreshing={profileLoading} 
-            onRefresh={refreshProfile} 
-            colors={[colors.primary]} 
+          <RefreshControl
+            refreshing={profileLoading}
+            onRefresh={refreshProfile}
+            colors={[colors.primary]}
           />
-        }
-      >
+        }>
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.profileImageContainer}>
             <Image
-              source={{ 
-                uri: profile?.profileImage?.url || user?.profileImage || 'https://randomuser.me/api/portraits/men/32.jpg' 
-              }}
+              source={
+                profileImageUri ? { uri: profileImageUri } : require('../../assets/images/user.png')
+              }
               style={styles.profileImage}
             />
-            <View style={[
-              styles.statusDot, 
-              { backgroundColor: profile?.isAvailable ? colors.success : colors.gray400 }
-            ]} />
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: profile?.isAvailable ? colors.success : colors.gray400 },
+              ]}
+            />
           </View>
           <Text style={styles.profileName}>{profile?.name || user?.name || 'Professional'}</Text>
           <Text style={styles.profileEmail}>{profile?.email || user?.email}</Text>
           <Text style={styles.profilePhone}>{profile?.phone || user?.phone}</Text>
-          
+
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={16} color={colors.warning} />
             <Text style={styles.ratingText}>
-              {profile?.rating ? profile.rating.toFixed(1) : '4.8'} ({profile?.totalRatings || 0} reviews)
+              {profile?.rating ? profile.rating.toFixed(1) : '4.8'} ({profile?.totalRatings || 0}{' '}
+              reviews)
             </Text>
           </View>
         </View>
@@ -197,9 +193,7 @@ const ProProfileScreen = () => {
               disabled={actionLoading}
             />
           </View>
-          <Text style={styles.availabilitySubtext}>
-            Status: {profile?.status || 'Active'}
-          </Text>
+          <Text style={styles.availabilitySubtext}>Status: {profile?.status || 'Active'}</Text>
         </ProfileSection>
 
         {/* Account Information */}
@@ -292,19 +286,16 @@ const ProProfileScreen = () => {
 
         {/* Logout */}
         <View style={styles.section}>
-          <TouchableOpacity 
-            style={styles.logoutButton} 
+          <TouchableOpacity
+            style={styles.logoutButton}
             onPress={handleLogout}
-            disabled={isLoggingOut}
-          >
+            disabled={isLoggingOut}>
             {isLoggingOut ? (
               <ActivityIndicator size="small" color={colors.danger} />
             ) : (
               <MaterialIcons name="logout" size={20} color={colors.danger} />
             )}
-            <Text style={styles.logoutText}>
-              {isLoggingOut ? 'Logging out...' : 'Logout'}
-            </Text>
+            <Text style={styles.logoutText}>{isLoggingOut ? 'Logging out...' : 'Logout'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

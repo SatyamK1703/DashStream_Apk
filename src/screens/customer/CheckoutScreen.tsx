@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCart, useAddresses, useCheckout } from '../../store';
 import { useCreateBooking } from '../../hooks/useBookings';
 import { useCreateCODPayment } from '../../hooks/usePayments';
+import { useServiceArea } from '../../hooks/useServiceArea';
 import api from '../../services/httpClient'; // <-- Ensure you have a generic API client for direct calls
 import { Address } from '../../types/api';
 // @ts-ignore: expo-web-browser may not have types in some setups
@@ -119,6 +120,7 @@ const CheckoutScreen = () => {
   // Booking and payment hooks
   const createBookingApi = useCreateBooking();
   const createCODPaymentApi = useCreateCODPayment();
+  const { checkPincodeAvailability } = useServiceArea();
 
   // Simplified payment methods - only UPI and COD
   const paymentMethods = [
@@ -230,6 +232,19 @@ const CheckoutScreen = () => {
     try {
       if (!selectedAddress) {
         Alert.alert('Error', 'Please select a valid address.');
+        return;
+      }
+
+      // Pincode availability check
+      const pincode = selectedAddress.pincode;
+      if (!pincode) {
+        Alert.alert('Error', 'Selected address does not have a pincode.');
+        return;
+      }
+
+      const availabilityRes = await checkPincodeAvailability(pincode);
+      if (!availabilityRes?.data?.isAvailable) {
+        Alert.alert('Service Not Available', 'Service not available for your area.');
         return;
       }
 

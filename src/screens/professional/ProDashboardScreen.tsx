@@ -11,12 +11,21 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ProfessionalProfile, ProfessionalDashboardStats, Earnings, Performance } from '../../types/api';
+import {
+  ProfessionalProfile,
+  ProfessionalDashboardStats,
+  Earnings,
+  Performance,
+} from '../../types/api';
 import JobCard from '../../components/professional/JobCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth, useNotificationStore } from '../../store';
 import { ProStackParamList } from '../../../app/routes/ProNavigator';
-import { useProfessionalDashboardScreen, useProfessionalJobActions, useProfessionalProfileActions } from '../../hooks/useProfessional';
+import {
+  useProfessionalDashboardScreen,
+  useProfessionalJobActions,
+  useProfessionalProfileActions,
+} from '../../hooks/useProfessional';
 import { styles } from './ProDashboardScreen.styles';
 import { SCREEN_TEXTS } from '../../config/config';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,17 +36,32 @@ const ProDashboardScreen = () => {
   const navigation = useNavigation<ProDashboardScreenNavigationProp>();
   const { user } = useAuth();
   const { unreadCount } = useNotificationStore();
-  
+
   // Use the dashboard hook that combines multiple API calls
   const {
     profile,
     stats,
     isLoading,
     error,
-    refresh
-  }: { profile: ProfessionalProfile | null, stats: ProfessionalDashboardStats | null, isLoading: boolean, error: any, refresh: () => void } = useProfessionalDashboardScreen();
+    refresh,
+  }: {
+    profile: ProfessionalProfile | null;
+    stats: ProfessionalDashboardStats | null;
+    isLoading: boolean;
+    error: any;
+    refresh: () => void;
+  } = useProfessionalDashboardScreen();
 
-  const { earnings, todayJobs: upcomingJobs, performance }: { earnings: Earnings | undefined, todayJobs: any[] | undefined, performance: Performance | undefined } = stats || {};
+  const {
+    earnings,
+    todayJobs: upcomingJobs,
+    performance,
+  }: {
+    earnings: Earnings | undefined;
+    todayJobs: any[] | undefined;
+    performance: Performance | undefined;
+  } = stats || {};
+  const profileImageUri = profile?.profileImage?.url ?? profile?.profileImage ?? user?.profileImage;
   const refreshDashboard = refresh;
 
   // Professional actions
@@ -75,14 +99,17 @@ const ProDashboardScreen = () => {
     <View style={styles.header}>
       <View style={styles.headerTopRow}>
         <View style={styles.headerProfile}>
-          <Image 
-            source={{ 
-              uri: profile?.profileImage 
-            }} 
-            style={styles.profileImage} 
+          <Image
+            source={
+              profileImageUri ? { uri: profileImageUri } : require('../../assets/images/user.png')
+            }
+            style={styles.profileImage}
           />
           <View>
-            <Text style={styles.headerGreeting}>{SCREEN_TEXTS.ProDashboard.greeting}{profile?.name || user?.name || SCREEN_TEXTS.ProDashboard.defaultName}</Text>
+            <Text style={styles.headerGreeting}>
+              {SCREEN_TEXTS.ProDashboard.greeting}
+              {profile?.name || user?.name || SCREEN_TEXTS.ProDashboard.defaultName}
+            </Text>
             <View style={styles.locationRow}>
               <Ionicons name="location" size={14} color={'rgba(255, 255, 255, 0.8)'} />
               <Text style={styles.locationText}>
@@ -92,10 +119,9 @@ const ProDashboardScreen = () => {
           </View>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity 
-            style={styles.headerButton} 
-            onPress={() => navigation.navigate('ProNotifications')}
-          >
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => navigation.navigate('ProNotifications')}>
             <Ionicons name="notifications" size={20} color={'#FFFFFF'} />
             {unreadCount > 0 && (
               <View style={styles.notificationBadge}>
@@ -103,10 +129,9 @@ const ProDashboardScreen = () => {
               </View>
             )}
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.headerButton} 
-            onPress={() => navigation.navigate('ProSettings')}
-          >
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => navigation.navigate('ProSettings')}>
             <Ionicons name="settings-outline" size={20} color={'#FFFFFF'} />
           </TouchableOpacity>
         </View>
@@ -120,19 +145,24 @@ const ProDashboardScreen = () => {
         <View>
           <Text style={styles.headerStatsLabel}>{SCREEN_TEXTS.ProDashboard.jobsToday}</Text>
           <Text style={styles.headerStatsValue}>
-            {upcomingJobs?.filter(job => {
+            {upcomingJobs?.filter((job) => {
               const today = new Date().toDateString();
               const jobDate = new Date(job.scheduledDate).toDateString();
               return today === jobDate;
             }).length || 0}
           </Text>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.goOnlineButton, profile?.isAvailable && styles.goOnlineButtonActive]}
-          onPress={handleToggleOnline}
-        >
-          <Text style={[styles.goOnlineButtonText, profile?.isAvailable && styles.goOnlineButtonTextActive]}>
-            {profile?.isAvailable ? SCREEN_TEXTS.ProDashboard.online : SCREEN_TEXTS.ProDashboard.goOnline}
+          onPress={handleToggleOnline}>
+          <Text
+            style={[
+              styles.goOnlineButtonText,
+              profile?.isAvailable && styles.goOnlineButtonTextActive,
+            ]}>
+            {profile?.isAvailable
+              ? SCREEN_TEXTS.ProDashboard.online
+              : SCREEN_TEXTS.ProDashboard.goOnline}
           </Text>
         </TouchableOpacity>
       </View>
@@ -140,10 +170,7 @@ const ProDashboardScreen = () => {
   );
 
   const renderEarningsCard = () => (
-    <TouchableOpacity 
-      style={styles.card} 
-      onPress={() => navigation.navigate('Earnings')}
-    >
+    <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('Earnings')}>
       <Text style={styles.cardTitle}>{SCREEN_TEXTS.ProDashboard.earningsSummary}</Text>
       <View style={styles.earningsGrid}>
         <View style={styles.earningsItem}>
@@ -230,9 +257,9 @@ const ProDashboardScreen = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {renderHeader()}
-      
-      <ScrollView 
-        style={styles.scrollView} 
+
+      <ScrollView
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -240,11 +267,10 @@ const ProDashboardScreen = () => {
             onRefresh={refreshDashboard}
             colors={['#2563EB']}
           />
-        }
-      >
+        }>
         {renderEarningsCard()}
         {renderPerformanceCard()}
-        
+
         {/* Upcoming Jobs */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
@@ -253,15 +279,19 @@ const ProDashboardScreen = () => {
               <Text style={styles.viewAllText}>{SCREEN_TEXTS.ProDashboard.viewAll}</Text>
             </TouchableOpacity>
           </View>
-          
+
           {upcomingJobs && upcomingJobs.length > 0 ? (
-            upcomingJobs.map(job => <JobCard key={job.id} job={job} onAcceptJob={handleAcceptJob} />)
+            upcomingJobs.map((job) => (
+              <JobCard key={job.id} job={job} onAcceptJob={handleAcceptJob} />
+            ))
           ) : (
             <View style={styles.emptyContainer}>
               <Ionicons name="calendar-outline" size={48} color={'#D1D5DB'} />
               <Text style={styles.emptyText}>{SCREEN_TEXTS.ProDashboard.noUpcomingJobs}</Text>
               <Text style={styles.emptySubtext}>
-                {profile?.isAvailable ? SCREEN_TEXTS.ProDashboard.newJobsWillAppear : SCREEN_TEXTS.ProDashboard.goOnlineToReceiveJobs}
+                {profile?.isAvailable
+                  ? SCREEN_TEXTS.ProDashboard.newJobsWillAppear
+                  : SCREEN_TEXTS.ProDashboard.goOnlineToReceiveJobs}
               </Text>
             </View>
           )}

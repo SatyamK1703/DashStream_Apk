@@ -1,5 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../app/routes/RootNavigator';
@@ -43,16 +55,14 @@ const LoginScreen = () => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView 
+      style={styles.container}>
+      <ScrollView
         contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
-      >
+        keyboardShouldPersistTaps="handled">
         {/* Logo Section */}
         <View style={styles.logoContainer}>
           <Image
-            source={require('../assets/images/image.png')} // Replace with your logo
+            source={require('../../assets/adaptive-icon.png')} // Replace with your logo
             style={styles.logo}
           />
           <Text style={styles.title}>Welcome to DashStream</Text>
@@ -78,14 +88,12 @@ const LoginScreen = () => {
           <TouchableOpacity
             style={[styles.button, isLoading && { opacity: 0.7 }]}
             onPress={handleLogin}
-            disabled={isLoading}
-          >
+            disabled={isLoading}>
             <LinearGradient
               colors={['#4e73df', '#224abe']}
               style={styles.gradient}
               start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
+              end={{ x: 1, y: 0 }}>
               {isLoading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
@@ -100,10 +108,10 @@ const LoginScreen = () => {
           <TouchableOpacity onPress={handleSkip} disabled={isLoading}>
             <Text style={styles.skipText}>Continue as Guest</Text>
           </TouchableOpacity>
-          
+
           <Text style={styles.footerText}>
-            By continuing, you agree to our 
-            <Text style={styles.link}> Terms</Text> and 
+            By continuing, you agree to our
+            <Text style={styles.link}> Terms</Text> and
             <Text style={styles.link}> Privacy Policy</Text>
           </Text>
         </View>

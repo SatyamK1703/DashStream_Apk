@@ -1,7 +1,4 @@
-
-
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,14 +9,17 @@ import {
   Alert,
   FlatList,
   RefreshControl,
-  TextInput,StyleSheet,KeyboardAvoidingView,Platform
+  TextInput,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
-import {Customer , Address , Vehicle ,Booking ,Note} from '../../types/AdminType';
+import { Customer, Address, Vehicle, Booking, Note } from '../../types/AdminType';
 import { adminService } from '../../services';
 import { handleApiError } from '../../utils/errorHandler';
 import httpClient, { ApiResponse } from '../../services/httpClient';
@@ -31,14 +31,16 @@ const AdminCustomerDetailsScreen = () => {
   const navigation = useNavigation<AdminCustomerDetailsNavigationProp>();
   const route = useRoute<AdminCustomerDetailsRouteProp>();
   const { customerId } = route.params;
-  
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [customer, setCustomer] = useState<Customer | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'addresses' | 'vehicles' | 'notes'>('overview');
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'bookings' | 'addresses' | 'vehicles' | 'notes'
+  >('overview');
   const [newNote, setNewNote] = useState('');
   const [retryCount, setRetryCount] = useState(0);
-  
+
   // Load customer from backend
   const loadCustomer = useCallback(async () => {
     try {
@@ -46,27 +48,27 @@ const AdminCustomerDetailsScreen = () => {
       if (__DEV__) {
         console.log('🔍 Loading customer details for ID:', customerId);
       }
-      
+
       const res = await adminService.getUserById(customerId);
       if (__DEV__) {
         console.log('📋 Customer API response:', {
           success: res.success,
           status: res.status,
           hasData: !!res.data,
-          dataKeys: res.data ? Object.keys(res.data) : []
+          dataKeys: res.data ? Object.keys(res.data) : [],
         });
       }
-      
+
       const apiUser: any = (res as any)?.data?.user || (res as any)?.data;
 
       // Map addresses
       const addresses: Address[] = (apiUser?.addresses || []).map((a: any) => ({
         id: a._id || a.id,
-        type: (a.type || 'home'),
+        type: a.type || 'home',
         name: a.title || a.name || 'Address',
         address: [a.addressLine1, a.addressLine2].filter(Boolean).join(', '),
         city: a.city || '',
-        landmark:a.landmark ||'',
+        landmark: a.landmark || '',
         pincode: a.postalCode || a.pincode || '',
         isDefault: !!a.isDefault,
       }));
@@ -80,22 +82,23 @@ const AdminCustomerDetailsScreen = () => {
       }));
 
       // Recent bookings if included in response (backend sends separate in details)
-      const bookings: Booking[] = (res as any)?.data?.bookings?.map((b: any) => ({
-        id: b.id || b._id,
-        date: b.date || b.scheduledDate || '',
-        time: b.time || b.scheduledTime || '',
-        services: Array.isArray(b.services)
-          ? b.services.map((s: any) => ({ name: s.name || s, price: s.price || 0 }))
-          : [{ name: b.service?.name || 'Service', price: b.totalAmount || 0 }],
-        totalAmount: b.totalAmount || 0,
-        status: b.status,
-        paymentStatus: b.paymentStatus || 'paid',
-        paymentMethod: b.paymentMethod || 'N/A',
-        professionalName: b.professionalName,
-        professionalId: b.professionalId,
-        rating: b.rating,
-        address: b.address || '',
-      })) || [];
+      const bookings: Booking[] =
+        (res as any)?.data?.bookings?.map((b: any) => ({
+          id: b.id || b._id,
+          date: b.date || b.scheduledDate || '',
+          time: b.time || b.scheduledTime || '',
+          services: Array.isArray(b.services)
+            ? b.services.map((s: any) => ({ name: s.name || s, price: s.price || 0 }))
+            : [{ name: b.service?.name || 'Service', price: b.totalAmount || 0 }],
+          totalAmount: b.totalAmount || 0,
+          status: b.status,
+          paymentStatus: b.paymentStatus || 'paid',
+          paymentMethod: b.paymentMethod || 'N/A',
+          professionalName: b.professionalName,
+          professionalId: b.professionalId,
+          rating: b.rating,
+          address: b.address || '',
+        })) || [];
 
       const mapped: Customer = {
         id: apiUser?._id || apiUser?.id || customerId,
@@ -103,7 +106,10 @@ const AdminCustomerDetailsScreen = () => {
         email: apiUser?.email || '',
         phone: apiUser?.phone || '',
         profileImage: apiUser?.profileImage?.url || '',
-        status: (apiUser?.status === true || apiUser?.active === true) ? 'active' : (apiUser?.status || 'active'),
+        status:
+          apiUser?.status === true || apiUser?.active === true
+            ? 'active'
+            : apiUser?.status || 'active',
         totalBookings: apiUser?.totalBookings || bookings.length || 0,
         totalSpent: apiUser?.totalSpent || 0,
         membershipStatus: apiUser?.membershipStatus || 'none',
@@ -124,19 +130,19 @@ const AdminCustomerDetailsScreen = () => {
       if (__DEV__) {
         console.error('❌ Failed to load customer:', error);
       }
-      
+
       // If it's a 401 error and we haven't retried yet, try once more after a short delay
       if ((error as any)?.statusCode === 401 && retryCount < 1) {
         if (__DEV__) {
           console.log('🔄 Retrying customer load after auth error...');
         }
-        setRetryCount(prev => prev + 1);
+        setRetryCount((prev) => prev + 1);
         setTimeout(() => {
           loadCustomer();
         }, 1000);
         return;
       }
-      
+
       handleApiError(error, 'LoadCustomer');
       setCustomer(null);
     } finally {
@@ -157,14 +163,14 @@ const AdminCustomerDetailsScreen = () => {
 
   const handleToggleStatus = (newStatus: 'active' | 'inactive' | 'blocked') => {
     if (!customer) return;
-    
+
     Alert.alert(
       'Change Customer Status',
       `Are you sure you want to change this customer's status to ${newStatus}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Confirm', 
+        {
+          text: 'Confirm',
           onPress: async () => {
             try {
               // Backend supports update user via admin
@@ -174,58 +180,58 @@ const AdminCustomerDetailsScreen = () => {
             } catch (error) {
               handleApiError(error, 'UpdateCustomerStatus');
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
 
   const handleAddNote = () => {
     if (!customer || !newNote.trim()) return;
-    
+
     const newNoteObj: Note = {
       id: `NOTE-${(customer.notes?.length || 0) + 1}`,
       text: newNote.trim(),
       createdBy: 'Admin',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
-    
+
     setCustomer({
       ...customer,
-      notes: [newNoteObj, ...customer.notes]
+      notes: [newNoteObj, ...customer.notes],
     });
-    
+
     setNewNote('');
   };
 
   const handleDeleteNote = (noteId: string) => {
     if (!customer) return;
-    
-    Alert.alert(
-      'Delete Note',
-      'Are you sure you want to delete this note?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => {
-            setCustomer({
-              ...customer,
-              notes: customer.notes.filter(note => note.id !== noteId)
-            });
-          }
-        }
-      ]
-    );
+
+    Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          setCustomer({
+            ...customer,
+            notes: customer.notes.filter((note) => note.id !== noteId),
+          });
+        },
+      },
+    ]);
   };
 
- const getStatusDotStyle = (status: string) => {
+  const getStatusDotStyle = (status: string) => {
     switch (status) {
-      case 'active': return styles.statusDotActive;
-      case 'inactive': return styles.statusDotInactive;
-      case 'blocked': return styles.statusDotBlocked;
-      default: return styles.statusDotInactive;
+      case 'active':
+        return styles.statusDotActive;
+      case 'inactive':
+        return styles.statusDotInactive;
+      case 'blocked':
+        return styles.statusDotBlocked;
+      default:
+        return styles.statusDotInactive;
     }
   };
 
@@ -245,10 +251,14 @@ const AdminCustomerDetailsScreen = () => {
 
   const getPaymentDotStyle = (paymentStatus: string) => {
     switch (paymentStatus) {
-      case 'paid': return styles.paymentDotPaid;
-      case 'pending': return styles.paymentDotPending;
-      case 'refunded': return styles.paymentDotRefunded;
-      default: return styles.paymentDotPending;
+      case 'paid':
+        return styles.paymentDotPaid;
+      case 'pending':
+        return styles.paymentDotPending;
+      case 'refunded':
+        return styles.paymentDotRefunded;
+      default:
+        return styles.paymentDotPending;
     }
   };
 
@@ -269,10 +279,7 @@ const AdminCustomerDetailsScreen = () => {
         <Text style={styles.errorDescription}>
           The customer you&#39;re looking for doesn&#39;t exist or has been removed.
         </Text>
-        <TouchableOpacity 
-          style={styles.errorButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.errorButton} onPress={() => navigation.goBack()}>
           <Text style={styles.errorButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -280,7 +287,7 @@ const AdminCustomerDetailsScreen = () => {
   }
 
   const renderOverviewTab = () => (
-    <ScrollView 
+    <ScrollView
       style={styles.scrollContainer}
       showsVerticalScrollIndicator={false}
       refreshControl={
@@ -290,82 +297,75 @@ const AdminCustomerDetailsScreen = () => {
           colors={['#2563EB']}
           tintColor="#2563EB"
         />
-      }
-    >
+      }>
       {/* Customer Summary */}
       <View style={styles.card}>
         <View style={styles.customerSummaryRow}>
-          <Image 
-            source={{ uri: customer.profileImage }}
-            style={styles.profileImage}
-          />
+          <Image source={{ uri: customer.profileImage }} style={styles.profileImage} />
           <View style={styles.customerInfo}>
             <Text style={styles.customerName}>{customer.name}</Text>
             <View style={styles.customerStatusRow}>
               <View style={[styles.statusDot, getStatusDotStyle(customer.status)]} />
               <Text style={styles.statusText}>{customer.status}</Text>
-              
+
               {customer.membershipStatus !== 'none' && (
                 <View style={styles.membershipBadge}>
-                  <Text style={styles.membershipText}>
-                    {customer.membershipStatus} Member
-                  </Text>
+                  <Text style={styles.membershipText}>{customer.membershipStatus} Member</Text>
                 </View>
               )}
             </View>
           </View>
-          
-          <View style={styles.customerActions}> 
-            <TouchableOpacity 
+
+          <View style={styles.customerActions}>
+            <TouchableOpacity
               style={styles.actionButton}
               onPress={() => {
-                Alert.alert(
-                  'Contact Customer',
-                  'Choose contact method',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Call', onPress: () => console.log('Call pressed') },
-                    { text: 'Email', onPress: () => console.log('Email pressed') },
-                    { text: 'SMS', onPress: () => console.log('SMS pressed') }
-                  ]
-                );
-              }}
-            >
+                Alert.alert('Contact Customer', 'Choose contact method', [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Call', onPress: () => console.log('Call pressed') },
+                  { text: 'Email', onPress: () => console.log('Email pressed') },
+                  { text: 'SMS', onPress: () => console.log('SMS pressed') },
+                ]);
+              }}>
               <Ionicons name="call" size={24} color="#4B5563" />
             </TouchableOpacity>
           </View>
         </View>
-        
+
         <View style={styles.customerMetrics}>
           <View style={styles.metricItem}>
             <Text style={styles.metricLabel}>Customer ID</Text>
             <Text style={styles.metricValue}>{customer.id}</Text>
           </View>
-          
+
           <View style={styles.metricItem}>
             <Text style={styles.metricLabel}>Joined On</Text>
             <Text style={styles.metricValue}>
-              {new Date(customer.joinDate).toLocaleDateString('en-IN', { 
-                day: '2-digit', month: 'short', year: 'numeric' 
+              {new Date(customer.joinDate).toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
               })}
             </Text>
           </View>
-          
+
           <View style={styles.metricItem}>
             <Text style={styles.metricLabel}>Last Active</Text>
             <Text style={styles.metricValue}>
-              {new Date(customer.lastActive).toLocaleDateString('en-IN', { 
-                day: '2-digit', month: 'short', year: 'numeric' 
+              {new Date(customer.lastActive).toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
               })}
             </Text>
           </View>
         </View>
       </View>
-      
+
       {/* Contact Information */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Contact Information</Text>
-        
+
         <View style={styles.contactRow}>
           <View style={styles.contactIcon}>
             <Ionicons name="mail-outline" size={18} color="#4B5563" />
@@ -375,7 +375,7 @@ const AdminCustomerDetailsScreen = () => {
             <Text style={styles.contactValue}>{customer.email}</Text>
           </View>
         </View>
-        
+
         <View style={styles.contactRow}>
           <View style={styles.contactIcon}>
             <Ionicons name="call-outline" size={18} color="#4B5563" />
@@ -386,73 +386,77 @@ const AdminCustomerDetailsScreen = () => {
           </View>
         </View>
       </View>
-      
+
       {/* Membership Information */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Membership</Text>
-        
+
         <View style={styles.membershipRow}>
           <View style={styles.membershipInfo}>
             <View style={styles.membershipStatus}>
-              <FontAwesome5 
-                name="crown" 
-                size={16} 
-                color={customer.membershipStatus !== 'none' ? '#F59E0B' : '#9CA3AF'} 
+              <FontAwesome5
+                name="crown"
+                size={16}
+                color={customer.membershipStatus !== 'none' ? '#F59E0B' : '#9CA3AF'}
               />
               <Text style={styles.membershipTitle}>
-                {customer.membershipStatus !== 'none' 
-                  ? `${customer.membershipStatus} Membership` 
-                  : 'No Active Membership'
-                }
+                {customer.membershipStatus !== 'none'
+                  ? `${customer.membershipStatus} Membership`
+                  : 'No Active Membership'}
               </Text>
             </View>
-            
+
             {customer.membershipStatus !== 'none' && customer.membershipExpiry && (
               <Text style={styles.membershipExpiry}>
-                Expires on {new Date(customer.membershipExpiry).toLocaleDateString('en-IN', { 
-                  day: '2-digit', month: 'short', year: 'numeric' 
+                Expires on{' '}
+                {new Date(customer.membershipExpiry).toLocaleDateString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
                 })}
               </Text>
             )}
           </View>
-          
-          <TouchableOpacity 
-            style={styles.manageButton}
-          >
+
+          <TouchableOpacity style={styles.manageButton}>
             <Text style={styles.manageButtonText}>Manage</Text>
           </TouchableOpacity>
         </View>
       </View>
-      
+
       {/* Statistics */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Statistics</Text>
-        
+
         <View style={styles.statsRow}>
           <View style={[styles.statsItem, styles.statsItemBlue, styles.statsItemLeft]}>
             <Text style={styles.statsLabel}>Total Bookings</Text>
             <Text style={[styles.statsValue, styles.statsValueBlue]}>{customer.totalBookings}</Text>
           </View>
-          
+
           <View style={[styles.statsItem, styles.statsItemGreen, styles.statsItemRight]}>
             <Text style={styles.statsLabel}>Total Spent</Text>
             <Text style={[styles.statsValue, styles.statsValueGreen]}>₹{customer.totalSpent}</Text>
           </View>
         </View>
-        
+
         <View style={[styles.statsRow, { marginTop: 12 }]}>
           <View style={[styles.statsItem, styles.statsItemPurple, styles.statsItemLeft]}>
             <Text style={styles.statsLabel}>Addresses</Text>
-            <Text style={[styles.statsValue, styles.statsValuePurple]}>{customer.addresses?.length || 0}</Text>
+            <Text style={[styles.statsValue, styles.statsValuePurple]}>
+              {customer.addresses?.length || 0}
+            </Text>
           </View>
-          
+
           <View style={[styles.statsItem, styles.statsItemAmber, styles.statsItemRight]}>
             <Text style={styles.statsLabel}>Vehicles</Text>
-            <Text style={[styles.statsValue, styles.statsValueAmber]}>{customer.vehicles?.length || 0}</Text>
+            <Text style={[styles.statsValue, styles.statsValueAmber]}>
+              {customer.vehicles?.length || 0}
+            </Text>
           </View>
         </View>
       </View>
-      
+
       {/* Recent Bookings */}
       <View style={styles.card}>
         <View style={styles.sectionHeader}>
@@ -461,71 +465,67 @@ const AdminCustomerDetailsScreen = () => {
             <Text style={styles.viewAllButton}>View All</Text>
           </TouchableOpacity>
         </View>
-        
+
         {customer.bookings.slice(0, 2).map((booking, index) => {
           const statusStyles = getBookingStatusStyles(booking.status);
           return (
-            <TouchableOpacity 
+            <TouchableOpacity
               key={booking.id}
               style={[styles.bookingItem, index === 1 && styles.lastBookingItem]}
-              onPress={() => navigation.navigate('AdminBookingDetails', { bookingId: booking.id })}
-            >
+              onPress={() => navigation.navigate('AdminBookingDetails', { bookingId: booking.id })}>
               <View style={styles.bookingHeader}>
                 <Text style={styles.bookingId}>{booking.id}</Text>
                 <View style={[styles.statusBadge, statusStyles.badge]}>
-                  <Text style={[styles.statusBadgeText, statusStyles.text]}>
-                    {booking.status}
-                  </Text>
+                  <Text style={[styles.statusBadgeText, statusStyles.text]}>{booking.status}</Text>
                 </View>
               </View>
-              
+
               <View style={styles.bookingMeta}>
                 <Text style={styles.bookingDate}>
-                  {new Date(booking.date).toLocaleDateString('en-IN', { 
-                    day: '2-digit', month: 'short' 
-                  })} • {booking.time}
+                  {new Date(booking.date).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                  })}{' '}
+                  • {booking.time}
                 </Text>
                 <Text style={styles.bookingAmount}>₹{booking.totalAmount}</Text>
               </View>
-              
+
               <Text style={styles.bookingServices} numberOfLines={1}>
-                {booking.services.map(s => s.name).join(', ')}
+                {booking.services.map((s) => s.name).join(', ')}
               </Text>
             </TouchableOpacity>
           );
         })}
       </View>
-      
+
       {/* Admin Actions */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Admin Actions</Text>
-        
+
         <View style={styles.adminActionsRow}>
           {customer.status !== 'active' && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.adminActionButton, styles.adminActionButtonGreen]}
-              onPress={() => handleToggleStatus('active')}
-            >
+              onPress={() => handleToggleStatus('active')}>
               <Ionicons name="checkmark-circle-outline" size={18} color="#10B981" />
               <Text style={[styles.adminActionText, styles.adminActionTextGreen]}>Activate</Text>
             </TouchableOpacity>
           )}
-          
+
           {customer.status !== 'inactive' && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.adminActionButton, styles.adminActionButtonAmber]}
-              onPress={() => handleToggleStatus('inactive')}
-            >
+              onPress={() => handleToggleStatus('inactive')}>
               <Ionicons name="pause-circle-outline" size={18} color="#F59E0B" />
               <Text style={[styles.adminActionText, styles.adminActionTextAmber]}>Deactivate</Text>
             </TouchableOpacity>
           )}
-          
+
           {customer.status !== 'blocked' && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.adminActionButton, styles.adminActionButtonRed]}
-              onPress={() => handleToggleStatus('blocked')}
-            >
+              onPress={() => handleToggleStatus('blocked')}>
               <Ionicons name="ban-outline" size={18} color="#EF4444" />
               <Text style={[styles.adminActionText, styles.adminActionTextRed]}>Block</Text>
             </TouchableOpacity>
@@ -542,32 +542,32 @@ const AdminCustomerDetailsScreen = () => {
       renderItem={({ item }) => {
         const statusStyles = getBookingStatusStyles(item.status);
         return (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.card}
-            onPress={() => navigation.navigate('AdminBookingDetails', { bookingId: item.id })}
-          >
+            onPress={() => navigation.navigate('AdminBookingDetails', { bookingId: item.id })}>
             <View style={styles.bookingHeader}>
               <Text style={styles.bookingId}>{item.id}</Text>
               <View style={[styles.statusBadge, statusStyles.badge]}>
-                <Text style={[styles.statusBadgeText, statusStyles.text]}>
-                  {item.status}
-                </Text>
+                <Text style={[styles.statusBadgeText, statusStyles.text]}>{item.status}</Text>
               </View>
             </View>
-            
+
             <View style={styles.bookingMeta}>
               <Text style={styles.bookingDate}>
-                {new Date(item.date).toLocaleDateString('en-IN', { 
-                  day: '2-digit', month: 'short', year: 'numeric' 
-                })} • {item.time}
+                {new Date(item.date).toLocaleDateString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                })}{' '}
+                • {item.time}
               </Text>
               <Text style={styles.bookingAmount}>₹{item.totalAmount}</Text>
             </View>
-            
+
             <Text style={styles.bookingServices} numberOfLines={1}>
-              {item.services.map(s => s.name).join(', ')}
+              {item.services.map((s) => s.name).join(', ')}
             </Text>
-            
+
             <View style={styles.bookingFooter}>
               <View style={styles.bookingLocation}>
                 <Ionicons name="location-outline" size={16} color="#4B5563" />
@@ -575,7 +575,7 @@ const AdminCustomerDetailsScreen = () => {
                   {item.address}
                 </Text>
               </View>
-              
+
               <View style={styles.bookingPayment}>
                 <View style={[styles.paymentDot, getPaymentDotStyle(item.paymentStatus)]} />
                 <Text style={styles.paymentText}>
@@ -583,13 +583,11 @@ const AdminCustomerDetailsScreen = () => {
                 </Text>
               </View>
             </View>
-            
+
             {item.professionalName && (
               <View style={styles.professionalInfo}>
                 <Ionicons name="person-outline" size={16} color="#4B5563" />
-                <Text style={styles.professionalText}>
-                  Professional: {item.professionalName}
-                </Text>
+                <Text style={styles.professionalText}>Professional: {item.professionalName}</Text>
                 {item.rating && (
                   <View style={styles.ratingContainer}>
                     <Ionicons name="star" size={14} color="#F59E0B" />
@@ -629,13 +627,16 @@ const AdminCustomerDetailsScreen = () => {
           <View style={styles.addressHeader}>
             <View style={styles.addressTypeContainer}>
               <View style={styles.addressIcon}>
-                <Ionicons 
+                <Ionicons
                   name={
-                    item.type === 'home' ? 'home-outline' : 
-                    item.type === 'work' ? 'briefcase-outline' : 'location-outline'
-                  } 
-                  size={16} 
-                  color="#2563EB" 
+                    item.type === 'home'
+                      ? 'home-outline'
+                      : item.type === 'work'
+                        ? 'briefcase-outline'
+                        : 'location-outline'
+                  }
+                  size={16}
+                  color="#2563EB"
                 />
               </View>
               <View style={styles.addressInfo}>
@@ -643,14 +644,14 @@ const AdminCustomerDetailsScreen = () => {
                 <Text style={styles.addressType}>{item.type}</Text>
               </View>
             </View>
-            
+
             {item.isDefault && (
               <View style={styles.defaultBadge}>
                 <Text style={styles.defaultBadgeText}>Default</Text>
               </View>
             )}
           </View>
-          
+
           <View style={styles.addressDetails}>
             <Text style={styles.addressText}>{item.address}</Text>
             <Text style={styles.addressLocation}>
@@ -686,21 +687,24 @@ const AdminCustomerDetailsScreen = () => {
         <View style={styles.vehicleItem}>
           <View style={styles.vehicleRow}>
             <View style={styles.vehicleIconContainer}>
-              <MaterialCommunityIcons 
+              <MaterialCommunityIcons
                 name={
-                  item.type === 'car' ? 'car' : 
-                  item.type === 'motorcycle' ? 'motorcycle' : 'bicycle'
-                } 
-                size={24} 
-                color="#4B5563" 
+                  item.type === 'car'
+                    ? 'car'
+                    : item.type === 'motorcycle'
+                      ? 'motorcycle'
+                      : 'bicycle'
+                }
+                size={24}
+                color="#4B5563"
               />
             </View>
-            
+
             <View style={styles.vehicleDetails}>
               <Text style={styles.vehicleName}>
                 {item.brand} {item.model}
               </Text>
-              
+
               <View style={styles.vehicleMeta}>
                 <Text style={styles.vehicleMetaText}>{item.type}</Text>
                 <Text style={styles.vehicleMetaSeparator}>•</Text>
@@ -708,7 +712,7 @@ const AdminCustomerDetailsScreen = () => {
                 <Text style={styles.vehicleMetaSeparator}>•</Text>
                 <Text style={styles.vehicleMetaText}>{item.color}</Text>
               </View>
-              
+
               {item.licensePlate && (
                 <View style={styles.licensePlate}>
                   <Text style={styles.licensePlateText}>{item.licensePlate}</Text>
@@ -752,15 +756,14 @@ const AdminCustomerDetailsScreen = () => {
             placeholderTextColor="#9CA3AF"
           />
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.addNoteButton, { opacity: newNote.trim() ? 1 : 0.7 }]}
           onPress={handleAddNote}
-          disabled={!newNote.trim()}
-        >
+          disabled={!newNote.trim()}>
           <Text style={styles.addNoteButtonText}>Add Note</Text>
         </TouchableOpacity>
       </View>
-      
+
       {/* Notes List */}
       <FlatList
         data={customer.notes}
@@ -772,21 +775,21 @@ const AdminCustomerDetailsScreen = () => {
                 <Ionicons name="person-circle-outline" size={20} color="#4B5563" />
                 <Text style={styles.noteAuthorText}>{item.createdBy}</Text>
               </View>
-              
+
               <TouchableOpacity onPress={() => handleDeleteNote(item.id)}>
                 <Ionicons name="trash-outline" size={18} color="#EF4444" />
               </TouchableOpacity>
             </View>
-            
+
             <Text style={styles.noteText}>{item.text}</Text>
-            
+
             <Text style={styles.noteTimestamp}>
-              {new Date(item.createdAt).toLocaleString('en-IN', { 
-                day: '2-digit', 
-                month: 'short', 
+              {new Date(item.createdAt).toLocaleString('en-IN', {
+                day: '2-digit',
+                month: 'short',
                 year: 'numeric',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
               })}
             </Text>
           </View>
@@ -803,77 +806,66 @@ const AdminCustomerDetailsScreen = () => {
   );
 
   return (
-<SafeAreaView style={styles.container} edges={['top']}>
-        <KeyboardAvoidingView 
-          style={{ flex: 1 }} 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
-          {/* Header */}
-          <View style={styles.headerContainer}>
-            <View style={styles.headerContent}>
-              <TouchableOpacity 
-                style={styles.backButton}
-                onPress={() => navigation.goBack()}
-              >
-                <Ionicons name="arrow-back" size={24} color="black" />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Customer Details</Text>
-              <View style={styles.headerSpacer} />
-            </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+        {/* Header */}
+        <View style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={24} color="black" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Customer Details</Text>
+            <View style={styles.headerSpacer} />
           </View>
-          
-          {/* Tabs */}
-          <View style={styles.tabsContainer}>
-            {[
-              { id: 'overview', label: 'Overview', icon: 'information-circle-outline' },
-              { id: 'bookings', label: 'Bookings', icon: 'calendar-outline' },
-              { id: 'addresses', label: 'Addresses', icon: 'location-outline' },
-              { id: 'vehicles', label: 'Vehicles', icon: 'car-outline' },
-              { id: 'notes', label: 'Notes', icon: 'document-text-outline' }
-            ].map((tab) => (
-              <TouchableOpacity 
-                key={tab.id}
+        </View>
+
+        {/* Tabs */}
+        <View style={styles.tabsContainer}>
+          {[
+            { id: 'overview', label: 'Overview', icon: 'information-circle-outline' },
+            { id: 'bookings', label: 'Bookings', icon: 'calendar-outline' },
+            { id: 'addresses', label: 'Addresses', icon: 'location-outline' },
+            { id: 'vehicles', label: 'Vehicles', icon: 'car-outline' },
+            { id: 'notes', label: 'Notes', icon: 'document-text-outline' },
+          ].map((tab) => (
+            <TouchableOpacity
+              key={tab.id}
+              style={[styles.tabButton, activeTab === tab.id && styles.tabButtonActive]}
+              onPress={() => setActiveTab(tab.id as any)}>
+              <Ionicons
+                name={tab.icon as any}
+                size={20}
+                color={activeTab === tab.id ? '#2563EB' : '#6B7280'}
+              />
+              <Text
                 style={[
-                  styles.tabButton,
-                  activeTab === tab.id && styles.tabButtonActive
+                  styles.tabText,
+                  activeTab === tab.id ? styles.tabTextActive : styles.tabTextInactive,
                 ]}
-                onPress={() => setActiveTab(tab.id as any)}
-              >
-                <Ionicons 
-                  name={tab.icon as any} 
-                  size={20} 
-                  color={activeTab === tab.id ? '#2563EB' : '#6B7280'} 
-                />
-                <Text 
-                  style={[
-                    styles.tabText,
-                    activeTab === tab.id ? styles.tabTextActive : styles.tabTextInactive
-                  ]}
-                  numberOfLines={1}
-                >
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          
-          {/* Tab Content */}
-          <View style={styles.tabContent}>
-            {activeTab === 'overview' && renderOverviewTab()}
-            {activeTab === 'bookings' && renderBookingsTab()}
-            {activeTab === 'addresses' && renderAddressesTab()}
-            {activeTab === 'vehicles' && renderVehiclesTab()}
-            {activeTab === 'notes' && renderNotesTab()}
-          </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+                numberOfLines={1}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Tab Content */}
+        <View style={styles.tabContent}>
+          {activeTab === 'overview' && renderOverviewTab()}
+          {activeTab === 'bookings' && renderBookingsTab()}
+          {activeTab === 'addresses' && renderAddressesTab()}
+          {activeTab === 'vehicles' && renderVehiclesTab()}
+          {activeTab === 'notes' && renderNotesTab()}
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 export default AdminCustomerDetailsScreen;
-
-
 
 const styles = StyleSheet.create({
   // Main Container
@@ -881,7 +873,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
-  
+
   // Loading & Error States
   loadingContainer: {
     flex: 1,
@@ -923,7 +915,7 @@ const styles = StyleSheet.create({
   },
 
   // Header
-    headerContainer: {
+  headerContainer: {
     backgroundColor: 'white', // Changed to white
     paddingVertical: 16,
     paddingHorizontal: 16,
