@@ -11,14 +11,14 @@ import {
   Platform,
   StyleSheet,
   SafeAreaView,
-  ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Import proper types and hooks
-import { ProNavigator, ProRoutes } from '../../../app/routes/ProNavigator';
+import ProNavigator from '../../../app/routes/ProNavigator';
 import { useAuth } from '../../store';
 import { useProfessionalProfile, useProfessionalProfileActions } from '../../hooks/useProfessional';
 
@@ -41,11 +41,20 @@ interface SettingsItemProps {
 const ProSettingsScreen = () => {
   const navigation = useNavigation<ProSettingsScreenNavigationProp>();
   const { user, logout } = useAuth();
-  
+
   // Use professional profile hooks
-  const { data: profile, isLoading: profileLoading, execute: refreshProfile } = useProfessionalProfile();
-  const { updateProfile, setAvailability, updateStatus, isLoading: actionLoading } = useProfessionalProfileActions();
-  
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    execute: refreshProfile,
+  } = useProfessionalProfile();
+  const {
+    updateProfile,
+    setAvailability,
+    updateStatus,
+    isLoading: actionLoading,
+  } = useProfessionalProfileActions();
+
   // State for settings
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [jobAlertsEnabled, setJobAlertsEnabled] = useState(true);
@@ -57,8 +66,18 @@ const ProSettingsScreen = () => {
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
-  
-  const languages = ['English', 'Hindi', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 'Bengali', 'Marathi', 'Gujarati'];
+
+  const languages = [
+    'English',
+    'Hindi',
+    'Tamil',
+    'Telugu',
+    'Kannada',
+    'Malayalam',
+    'Bengali',
+    'Marathi',
+    'Gujarati',
+  ];
 
   const handleAvailabilityToggle = async (value: boolean) => {
     try {
@@ -81,24 +100,20 @@ const ProSettingsScreen = () => {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to logout. Please try again.');
-            }
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await logout();
+          } catch (error) {
+            Alert.alert('Error', 'Failed to logout. Please try again.');
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   const handleSendFeedback = () => {
@@ -106,7 +121,7 @@ const ProSettingsScreen = () => {
       Alert.alert('Error', 'Please enter your feedback');
       return;
     }
-    
+
     // In a real app, you would send this to an API
     Alert.alert('Thank you!', 'Your feedback has been sent successfully.');
     setFeedbackText('');
@@ -120,19 +135,18 @@ const ProSettingsScreen = () => {
     </View>
   );
 
-  const SettingsItem: React.FC<SettingsItemProps> = ({ 
-    icon, 
-    title, 
-    subtitle, 
-    rightElement, 
-    onPress, 
-    showBorder = true 
+  const SettingsItem: React.FC<SettingsItemProps> = ({
+    icon,
+    title,
+    subtitle,
+    rightElement,
+    onPress,
+    showBorder = true,
   }) => (
-    <TouchableOpacity 
-      style={[styles.settingsItem, !showBorder && styles.noBorder]} 
+    <TouchableOpacity
+      style={[styles.settingsItem, !showBorder && styles.noBorder]}
       onPress={onPress}
-      disabled={!onPress}
-    >
+      disabled={!onPress}>
       <View style={styles.settingsItemLeft}>
         <View style={styles.iconContainer}>{icon}</View>
         <View style={styles.textContainer}>
@@ -169,7 +183,9 @@ const ProSettingsScreen = () => {
           <SettingsItem
             icon={<MaterialCommunityIcons name="account-check" size={20} color={colors.green} />}
             title="Available for Jobs"
-            subtitle={profile?.isAvailable ? "You are currently available" : "You are currently unavailable"}
+            subtitle={
+              profile?.isAvailable ? 'You are currently available' : 'You are currently unavailable'
+            }
             rightElement={
               <Switch
                 value={profile?.isAvailable || false}
@@ -186,16 +202,12 @@ const ProSettingsScreen = () => {
             subtitle={`Current status: ${profile?.status || 'Active'}`}
             rightElement={<Ionicons name="chevron-forward" size={20} color={colors.gray400} />}
             onPress={() => {
-              Alert.alert(
-                'Update Status',
-                'Choose your professional status',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Active', onPress: () => handleStatusUpdate('active') },
-                  { text: 'Busy', onPress: () => handleStatusUpdate('busy') },
-                  { text: 'Break', onPress: () => handleStatusUpdate('break') }
-                ]
-              );
+              Alert.alert('Update Status', 'Choose your professional status', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Active', onPress: () => handleStatusUpdate('active') },
+                { text: 'Busy', onPress: () => handleStatusUpdate('busy') },
+                { text: 'Break', onPress: () => handleStatusUpdate('break') },
+              ]);
             }}
             showBorder={false}
           />
@@ -299,7 +311,10 @@ const ProSettingsScreen = () => {
             rightElement={<Ionicons name="chevron-forward" size={20} color={colors.gray400} />}
             onPress={() => {
               // Navigate to privacy settings or show privacy options
-              Alert.alert('Privacy & Security', 'Privacy settings will be available in the next update.');
+              Alert.alert(
+                'Privacy & Security',
+                'Privacy settings will be available in the next update.'
+              );
             }}
           />
           <SettingsItem
@@ -347,7 +362,10 @@ const ProSettingsScreen = () => {
             rightElement={<Ionicons name="chevron-forward" size={20} color={colors.gray400} />}
             onPress={() => {
               // Navigate to terms and privacy policy
-              Alert.alert('Terms & Privacy', 'Terms and Privacy Policy will be available in the next update.');
+              Alert.alert(
+                'Terms & Privacy',
+                'Terms and Privacy Policy will be available in the next update.'
+              );
             }}
             showBorder={false}
           />
@@ -367,8 +385,7 @@ const ProSettingsScreen = () => {
         visible={showLanguageModal}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowLanguageModal(false)}
-      >
+        onRequestClose={() => setShowLanguageModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Select Language</Text>
@@ -380,8 +397,7 @@ const ProSettingsScreen = () => {
                   onPress={() => {
                     setLanguage(lang);
                     setShowLanguageModal(false);
-                  }}
-                >
+                  }}>
                   <Text style={[styles.languageText, language === lang && styles.selectedLanguage]}>
                     {lang}
                   </Text>
@@ -393,8 +409,7 @@ const ProSettingsScreen = () => {
             </ScrollView>
             <TouchableOpacity
               style={styles.modalCloseButton}
-              onPress={() => setShowLanguageModal(false)}
-            >
+              onPress={() => setShowLanguageModal(false)}>
               <Text style={styles.modalCloseText}>Close</Text>
             </TouchableOpacity>
           </View>
@@ -406,8 +421,7 @@ const ProSettingsScreen = () => {
         visible={showFeedbackModal}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowFeedbackModal(false)}
-      >
+        onRequestClose={() => setShowFeedbackModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Send Feedback</Text>
@@ -424,14 +438,10 @@ const ProSettingsScreen = () => {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.modalSecondaryButton}
-                onPress={() => setShowFeedbackModal(false)}
-              >
+                onPress={() => setShowFeedbackModal(false)}>
                 <Text style={styles.modalSecondaryText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalPrimaryButton}
-                onPress={handleSendFeedback}
-              >
+              <TouchableOpacity style={styles.modalPrimaryButton} onPress={handleSendFeedback}>
                 <Text style={styles.modalPrimaryText}>Send</Text>
               </TouchableOpacity>
             </View>

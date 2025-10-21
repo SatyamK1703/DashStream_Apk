@@ -16,7 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 
 // Import proper types and hooks
-import { ProNavigator, ProRoutes } from '../../../app/routes/ProNavigator';
+import ProNavigator from '../../../app/routes/ProNavigator';
 import { useProfessionalProfile } from '../../hooks/useProfessional';
 import { useApi } from '../../hooks/useApi';
 import httpClient from '../../services/httpClient';
@@ -49,26 +49,20 @@ const ProSkillsScreen = () => {
 
   // Use professional profile hooks
   const { data: profile } = useProfessionalProfile();
-  
+
   // Skills API hook
-  const { 
-    data: skillsData, 
-    isLoading: skillsLoading, 
-    execute: refreshSkills 
-  } = useApi(
-    () => httpClient.get('/professionals/skills'),
-    { showErrorAlert: false }
-  );
+  const {
+    data: skillsData,
+    isLoading: skillsLoading,
+    execute: refreshSkills,
+  } = useApi(() => httpClient.get('/professionals/skills'), { showErrorAlert: false });
 
   // Certificates API hook
-  const { 
-    data: certificatesData, 
-    isLoading: certificatesLoading, 
-    execute: refreshCertificates 
-  } = useApi(
-    () => httpClient.get('/professionals/certificates'),
-    { showErrorAlert: false }
-  );
+  const {
+    data: certificatesData,
+    isLoading: certificatesLoading,
+    execute: refreshCertificates,
+  } = useApi(() => httpClient.get('/professionals/certificates'), { showErrorAlert: false });
 
   const skills = skillsData?.skills || [];
   const certificates = certificatesData?.certificates || [];
@@ -86,11 +80,14 @@ const ProSkillsScreen = () => {
   );
 
   const selectedSkills = skills.filter((skill: Skill) => skill.isSelected);
-  const skillsByCategory = filteredSkills.reduce((acc: { [key: string]: Skill[] }, skill: Skill) => {
-    if (!acc[skill.category]) acc[skill.category] = [];
-    acc[skill.category].push(skill);
-    return acc;
-  }, {});
+  const skillsByCategory = filteredSkills.reduce(
+    (acc: { [key: string]: Skill[] }, skill: Skill) => {
+      if (!acc[skill.category]) acc[skill.category] = [];
+      acc[skill.category].push(skill);
+      return acc;
+    },
+    {}
+  );
 
   const toggleSkillSelection = async (skillId: string) => {
     try {
@@ -98,9 +95,9 @@ const ProSkillsScreen = () => {
       if (!skill) return;
 
       await httpClient.patch(`/professionals/skills/${skillId}`, {
-        isSelected: !skill.isSelected
+        isSelected: !skill.isSelected,
       });
-      
+
       refreshSkills(); // Refresh the skills data
     } catch (error) {
       Alert.alert('Error', 'Failed to update skill. Please try again.');
@@ -120,7 +117,7 @@ const ProSkillsScreen = () => {
     setIsSaving(true);
     try {
       await httpClient.patch('/professionals/profile', {
-        experience: yearsOfExperience
+        experience: yearsOfExperience,
       });
       Alert.alert('Success', 'Experience updated successfully.');
     } catch (error) {
@@ -131,51 +128,40 @@ const ProSkillsScreen = () => {
   };
 
   const handleAddCertificate = () => {
-    Alert.alert(
-      'Add Certificate',
-      'Certificate management will be available in the next update.',
-      [{ text: 'OK' }]
-    );
+    Alert.alert('Add Certificate', 'Certificate management will be available in the next update.', [
+      { text: 'OK' },
+    ]);
   };
 
   const renderSkillItem = (skill: Skill) => (
     <View key={skill.id} style={styles.skillItem}>
-      <TouchableOpacity 
-        style={styles.skillHeader}
-        onPress={() => toggleSkillSelection(skill.id)}
-      >
+      <TouchableOpacity style={styles.skillHeader} onPress={() => toggleSkillSelection(skill.id)}>
         <View style={styles.skillInfo}>
           <Text style={[styles.skillName, skill.isSelected && styles.selectedSkillName]}>
             {skill.name}
           </Text>
           {skill.experience && (
-            <Text style={styles.skillExperience}>
-              {skill.experience} years experience
-            </Text>
+            <Text style={styles.skillExperience}>{skill.experience} years experience</Text>
           )}
         </View>
         <View style={styles.skillActions}>
           {skill.level && (
-            <View style={[
-              styles.levelBadge,
-              skill.level === 'Expert' && styles.expertBadge,
-              skill.level === 'Intermediate' && styles.intermediateBadge,
-              skill.level === 'Beginner' && styles.beginnerBadge,
-            ]}>
+            <View
+              style={[
+                styles.levelBadge,
+                skill.level === 'Expert' && styles.expertBadge,
+                skill.level === 'Intermediate' && styles.intermediateBadge,
+                skill.level === 'Beginner' && styles.beginnerBadge,
+              ]}>
               <Text style={styles.levelText}>{skill.level}</Text>
             </View>
           )}
-          <View style={[
-            styles.checkbox,
-            skill.isSelected && styles.checkedBox
-          ]}>
-            {skill.isSelected && (
-              <Ionicons name="checkmark" size={16} color={colors.white} />
-            )}
+          <View style={[styles.checkbox, skill.isSelected && styles.checkedBox]}>
+            {skill.isSelected && <Ionicons name="checkmark" size={16} color={colors.white} />}
           </View>
         </View>
       </TouchableOpacity>
-      
+
       {skill.isSelected && (
         <View style={styles.skillDetails}>
           <Text style={styles.levelLabel}>Skill Level:</Text>
@@ -183,16 +169,13 @@ const ProSkillsScreen = () => {
             {['Beginner', 'Intermediate', 'Expert'].map((level) => (
               <TouchableOpacity
                 key={level}
-                style={[
-                  styles.levelButton,
-                  skill.level === level && styles.activeLevelButton
-                ]}
-                onPress={() => updateSkillLevel(skill.id, level)}
-              >
-                <Text style={[
-                  styles.levelButtonText,
-                  skill.level === level && styles.activeLevelButtonText
-                ]}>
+                style={[styles.levelButton, skill.level === level && styles.activeLevelButton]}
+                onPress={() => updateSkillLevel(skill.id, level)}>
+                <Text
+                  style={[
+                    styles.levelButtonText,
+                    skill.level === level && styles.activeLevelButtonText,
+                  ]}>
                   {level}
                 </Text>
               </TouchableOpacity>
@@ -206,10 +189,10 @@ const ProSkillsScreen = () => {
   const renderCertificateItem = (certificate: Certificate) => (
     <View key={certificate.id} style={styles.certificateItem}>
       <View style={styles.certificateHeader}>
-        <MaterialIcons 
-          name="verified" 
-          size={20} 
-          color={certificate.isVerified ? colors.success : colors.gray400} 
+        <MaterialIcons
+          name="verified"
+          size={20}
+          color={certificate.isVerified ? colors.success : colors.gray400}
         />
         <View style={styles.certificateInfo}>
           <Text style={styles.certificateName}>{certificate.name}</Text>
@@ -217,10 +200,11 @@ const ProSkillsScreen = () => {
           <Text style={styles.certificateDate}>{certificate.date}</Text>
         </View>
         <View style={styles.certificateStatus}>
-          <Text style={[
-            styles.statusText,
-            certificate.isVerified ? styles.verifiedText : styles.pendingText
-          ]}>
+          <Text
+            style={[
+              styles.statusText,
+              certificate.isVerified ? styles.verifiedText : styles.pendingText,
+            ]}>
             {certificate.isVerified ? 'Verified' : 'Pending'}
           </Text>
         </View>
@@ -244,11 +228,10 @@ const ProSkillsScreen = () => {
             />
             <Text style={styles.experienceLabel}>years</Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.saveButton}
             onPress={handleSaveExperience}
-            disabled={isSaving}
-          >
+            disabled={isSaving}>
             {isSaving ? (
               <ActivityIndicator size="small" color={colors.white} />
             ) : (
@@ -260,9 +243,7 @@ const ProSkillsScreen = () => {
 
       {/* Selected Skills Summary */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          Selected Skills ({selectedSkills.length})
-        </Text>
+        <Text style={styles.sectionTitle}>Selected Skills ({selectedSkills.length})</Text>
         {selectedSkills.length > 0 ? (
           <View style={styles.selectedSkillsContainer}>
             {selectedSkills.map((skill: Skill) => (
@@ -294,9 +275,7 @@ const ProSkillsScreen = () => {
       {Object.entries(skillsByCategory).map(([category, categorySkills]) => (
         <View key={category} style={styles.section}>
           <Text style={styles.categoryTitle}>{category}</Text>
-          <View style={styles.skillsGrid}>
-            {(categorySkills as Skill[]).map(renderSkillItem)}
-          </View>
+          <View style={styles.skillsGrid}>{(categorySkills as Skill[]).map(renderSkillItem)}</View>
         </View>
       ))}
     </ScrollView>
@@ -307,15 +286,12 @@ const ProSkillsScreen = () => {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Certificates</Text>
-          <TouchableOpacity 
-            style={styles.addButton}
-            onPress={handleAddCertificate}
-          >
+          <TouchableOpacity style={styles.addButton} onPress={handleAddCertificate}>
             <Ionicons name="add" size={20} color={colors.white} />
             <Text style={styles.addButtonText}>Add</Text>
           </TouchableOpacity>
         </View>
-        
+
         {certificates.length > 0 ? (
           <View style={styles.certificatesContainer}>
             {certificates.map(renderCertificateItem)}
@@ -356,16 +332,14 @@ const ProSkillsScreen = () => {
       <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'skills' && styles.activeTab]}
-          onPress={() => setActiveTab('skills')}
-        >
+          onPress={() => setActiveTab('skills')}>
           <Text style={[styles.tabText, activeTab === 'skills' && styles.activeTabText]}>
             Skills
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'certificates' && styles.activeTab]}
-          onPress={() => setActiveTab('certificates')}
-        >
+          onPress={() => setActiveTab('certificates')}>
           <Text style={[styles.tabText, activeTab === 'certificates' && styles.activeTabText]}>
             Certificates
           </Text>

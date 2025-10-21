@@ -18,7 +18,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 // Import proper types and hooks
-import { ProNavigator, ProRoutes } from '../../../app/routes/ProNavigator';
+import ProNavigator from '../../../app/routes/ProNavigator';
 import { useAuth } from '../../store';
 import { useProfessionalProfile, useProfessionalProfileActions } from '../../hooks/useProfessional';
 
@@ -29,16 +29,27 @@ const ProEditProfileScreen = () => {
   const { user } = useAuth();
 
   // Use professional profile hooks
-  const { data: profile, isLoading: profileLoading, execute: refreshProfile } = useProfessionalProfile();
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    execute: refreshProfile,
+  } = useProfessionalProfile();
   const { updateProfile, isLoading: updateLoading } = useProfessionalProfileActions();
 
   const [name, setName] = useState(profile?.name || user?.name || '');
   const [email, setEmail] = useState(profile?.email || user?.email || '');
   const [phone, setPhone] = useState(profile?.phone || user?.phone || '');
-  const [profileImage, setProfileImage] = useState(profile?.profileImage || 'https://randomuser.me/api/portraits/men/32.jpg');
+  const [profileImage, setProfileImage] = useState(
+    profile?.profileImage || 'https://randomuser.me/api/portraits/men/32.jpg'
+  );
   const [bio, setBio] = useState(profile?.bio || '');
   const [experience, setExperience] = useState(profile?.experience || '');
-  const [errors, setErrors] = useState<{ name?: string; email?: string; phone?: string; bio?: string }>({});
+  const [errors, setErrors] = useState<{
+    name?: string;
+    email?: string;
+    phone?: string;
+    bio?: string;
+  }>({});
 
   // Update form fields when profile data is loaded
   React.useEffect(() => {
@@ -57,17 +68,25 @@ const ProEditProfileScreen = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     let isValid = true;
 
-    if (!name.trim()) { newErrors.name = 'Name is required'; isValid = false; }
-    if (!email.trim()) { newErrors.email = 'Email is required'; isValid = false; }
-    else if (!emailRegex.test(email)) { newErrors.email = 'Please enter a valid email'; isValid = false; }
-    
+    if (!name.trim()) {
+      newErrors.name = 'Name is required';
+      isValid = false;
+    }
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+      isValid = false;
+    } else if (!emailRegex.test(email)) {
+      newErrors.email = 'Please enter a valid email';
+      isValid = false;
+    }
+
     setErrors(newErrors);
     return isValid;
   };
 
   const handleSaveProfile = async () => {
     if (!validateInputs()) return;
-    
+
     try {
       await updateProfile({
         name,
@@ -78,7 +97,7 @@ const ProEditProfileScreen = () => {
         experience,
       });
       Alert.alert('Success', 'Profile updated successfully.', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+        { text: 'OK', onPress: () => navigation.goBack() },
       ]);
       refreshProfile(); // Refresh profile data
     } catch (error) {
@@ -87,14 +106,19 @@ const ProEditProfileScreen = () => {
   };
 
   const pickImage = async (source: 'camera' | 'gallery') => {
-    const permission = source === 'camera' ? ImagePicker.requestCameraPermissionsAsync : ImagePicker.requestMediaLibraryPermissionsAsync;
+    const permission =
+      source === 'camera'
+        ? ImagePicker.requestCameraPermissionsAsync
+        : ImagePicker.requestMediaLibraryPermissionsAsync;
     const { status } = await permission();
     if (status !== 'granted') {
       Alert.alert('Permission Denied', `We need ${source} permissions to continue.`);
       return;
     }
 
-    const result = await (source === 'camera' ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync)({
+    const result = await (
+      source === 'camera' ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync
+    )({
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
@@ -114,7 +138,9 @@ const ProEditProfileScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.screen}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.screen}>
       <View style={styles.flex1}>
         {/* Header */}
         <View style={styles.header}>
@@ -142,29 +168,54 @@ const ProEditProfileScreen = () => {
           <View style={styles.card}>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Full Name</Text>
-              <TextInput style={[styles.input, errors.name && styles.inputError]} value={name} onChangeText={setName} placeholder="Enter your full name" />
+              <TextInput
+                style={[styles.input, errors.name && styles.inputError]}
+                value={name}
+                onChangeText={setName}
+                placeholder="Enter your full name"
+              />
               {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email Address</Text>
-              <TextInput style={[styles.input, errors.email && styles.inputError]} value={email} onChangeText={setEmail} placeholder="Enter your email address" keyboardType="email-address" autoCapitalize="none" />
+              <TextInput
+                style={[styles.input, errors.email && styles.inputError]}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Enter your email address"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
               {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Phone Number</Text>
-              <TextInput style={[styles.input, styles.disabledInput]} value={phone} editable={false} />
-              <Text style={styles.helperText}>Phone number cannot be changed. Contact support for assistance.</Text>
+              <TextInput
+                style={[styles.input, styles.disabledInput]}
+                value={phone}
+                editable={false}
+              />
+              <Text style={styles.helperText}>
+                Phone number cannot be changed. Contact support for assistance.
+              </Text>
             </View>
           </View>
 
           {/* Additional Info Card */}
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Professional Information</Text>
-            <Text style={styles.infoText}>To update skills or service area, please visit the respective sections in your profile.</Text>
-            <TouchableOpacity style={styles.outlineButton} onPress={() => navigation.navigate('ProSkills')}>
+            <Text style={styles.infoText}>
+              To update skills or service area, please visit the respective sections in your
+              profile.
+            </Text>
+            <TouchableOpacity
+              style={styles.outlineButton}
+              onPress={() => navigation.navigate('ProSkills')}>
               <Text style={styles.outlineButtonText}>Update Skills & Expertise</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.outlineButton, { marginTop: 12 }]} onPress={() => navigation.navigate('ProServiceArea')}>
+            <TouchableOpacity
+              style={[styles.outlineButton, { marginTop: 12 }]}
+              onPress={() => navigation.navigate('ProServiceArea')}>
               <Text style={styles.outlineButtonText}>Update Service Area</Text>
             </TouchableOpacity>
           </View>
@@ -172,8 +223,15 @@ const ProEditProfileScreen = () => {
 
         {/* Save Button Footer */}
         <View style={styles.footer}>
-          <TouchableOpacity style={[styles.primaryButton, updateLoading && styles.buttonDisabled]} onPress={handleSaveProfile} disabled={updateLoading}>
-            {updateLoading ? <ActivityIndicator color={colors.white} size="small" /> : <Text style={styles.primaryButtonText}>Save Changes</Text>}
+          <TouchableOpacity
+            style={[styles.primaryButton, updateLoading && styles.buttonDisabled]}
+            onPress={handleSaveProfile}
+            disabled={updateLoading}>
+            {updateLoading ? (
+              <ActivityIndicator color={colors.white} size="small" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Save Changes</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -197,28 +255,88 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   flex1: { flex: 1, backgroundColor: colors.gray50 },
   contentContainer: { padding: 16 },
-  header: { backgroundColor: colors.primary, paddingTop: Platform.OS === 'android' ? 24 : 48, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center' },
-  headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)' },
+  header: {
+    backgroundColor: colors.primary,
+    paddingTop: Platform.OS === 'android' ? 24 : 48,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
   headerTitle: { color: colors.white, fontSize: 20, fontWeight: 'bold', marginLeft: 16 },
   profileImageSection: { alignItems: 'center', marginBottom: 24 },
   profileImage: { width: 96, height: 96, borderRadius: 48 },
-  editIconContainer: { position: 'absolute', bottom: 0, right: 0, backgroundColor: colors.primary, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.white },
+  editIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: colors.primary,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
   changePhotoButton: { marginTop: 8 },
   changePhotoText: { color: colors.primary, fontWeight: '500' },
-  card: { backgroundColor: colors.white, borderRadius: 12, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
   inputGroup: { marginBottom: 16 },
   label: { color: colors.gray700, marginBottom: 4, fontWeight: '500' },
-  input: { borderWidth: 1, borderColor: colors.gray300, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, color: colors.gray800 },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.gray300,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: colors.gray800,
+  },
   inputError: { borderColor: colors.red500 },
   disabledInput: { backgroundColor: colors.gray50 },
   errorText: { color: colors.red500, fontSize: 12, marginTop: 4 },
   helperText: { color: colors.gray500, fontSize: 12, marginTop: 4 },
   sectionTitle: { color: colors.gray800, fontWeight: 'bold', fontSize: 18, marginBottom: 8 },
   infoText: { color: colors.gray500, marginBottom: 16, lineHeight: 20 },
-  outlineButton: { paddingVertical: 12, borderWidth: 1, borderColor: colors.primary, borderRadius: 8, alignItems: 'center' },
+  outlineButton: {
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
   outlineButtonText: { color: colors.primary, fontWeight: '500' },
-  footer: { padding: 16, borderTopWidth: 1, borderTopColor: colors.gray200, backgroundColor: colors.white },
-  primaryButton: { paddingVertical: 12, borderRadius: 8, alignItems: 'center', backgroundColor: colors.primary },
+  footer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray200,
+    backgroundColor: colors.white,
+  },
+  primaryButton: {
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+  },
   buttonDisabled: { backgroundColor: 'rgba(37, 99, 235, 0.7)' },
   primaryButtonText: { color: colors.white, fontWeight: '500' },
 });
