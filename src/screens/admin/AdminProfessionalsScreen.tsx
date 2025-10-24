@@ -30,7 +30,10 @@ const useDebounce = (value: string, delay: number) => {
 };
 
 // --- Types ---
-type AdminProfessionalsScreenNavigationProp = NativeStackNavigationProp<AdminStackParamList, 'AdminProfessionals'>;
+type AdminProfessionalsScreenNavigationProp = NativeStackNavigationProp<
+  AdminStackParamList,
+  'AdminProfessionals'
+>;
 
 interface Professional {
   id: string;
@@ -51,95 +54,107 @@ interface Professional {
 }
 
 // --- Professional Card ---
-const ProfessionalCard = React.memo(({ 
-  item, 
-  navigation,
-  getStatusStyles 
-}: {
-  item: Professional;
-  navigation: AdminProfessionalsScreenNavigationProp;
-  getStatusStyles: (status: Professional['status']) => { badge: any; text: any };
-}) => {
-  const lastActiveDate = new Date(item.lastActive || Date.now());
-  const formattedLastActive = `${lastActiveDate.toLocaleDateString()} ${lastActiveDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-  const statusStyles = getStatusStyles(item.status || 'inactive');
+const ProfessionalCard = React.memo(
+  ({
+    item,
+    navigation,
+    getStatusStyles,
+  }: {
+    item: Professional;
+    navigation: AdminProfessionalsScreenNavigationProp;
+    getStatusStyles: (status: Professional['status']) => { badge: any; text: any };
+  }) => {
+    const lastActiveDate = new Date(item.lastActive || Date.now());
+    const formattedLastActive = `${lastActiveDate.toLocaleDateString()} ${lastActiveDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    const statusStyles = getStatusStyles(item.status || 'inactive');
 
-  return (
-    <TouchableOpacity
-      style={styles.cardContainer}
-      onPress={() => {
-        // Check for both id and _id fields
-        const professionalId = item.id || item._id;
-        if (professionalId) {
-          console.log('Navigating to professional details:', professionalId);
-          console.log('Professional object:', item);
-          
-          // Pass the entire professional object as a parameter
-          // This way, even if the API call fails, we have basic info to display
-          navigation.navigate('AdminProfessionalDetails', { 
-            professionalId,
-            professionalBasicInfo: {
-              id: professionalId,
-              name: item.name || 'Unknown',
-              email: item.email || '',
-              phone: item.phone || '',
-              status: item.status || 'inactive',
-              profileImage: item.profileImage || '',
-              isVerified: item.isVerified || false,
-              createdAt: item.createdAt || new Date().toISOString()
-            }
-          });
-        } else {
-          console.error('Professional ID is missing');
-          console.error('Professional object:', item);
-        }
-      }}
-    >
-      <View style={styles.cardContent}>
-        <View style={styles.cardHeader}>
-          <View style={styles.cardHeaderLeft}>
-            {item.profileImage ? (
-              <Image source={{ uri: item.profileImage }} style={styles.cardAvatar} />
-            ) : (
-              <View style={[styles.cardAvatar, styles.cardAvatarPlaceholder]}>
-                <Text style={styles.cardAvatarText}>{(item.name || 'U').charAt(0)}</Text>
+    return (
+      <TouchableOpacity
+        style={styles.cardContainer}
+        onPress={() => {
+          // Check for both id and _id fields
+          const professionalId = item.id || item._id;
+          if (professionalId) {
+            console.log('Navigating to professional details:', professionalId);
+            console.log('Professional object:', item);
+
+            // Pass the entire professional object as a parameter
+            // This way, even if the API call fails, we have basic info to display
+            navigation.navigate('AdminProfessionalDetails', {
+              professionalId,
+              professionalBasicInfo: {
+                id: professionalId,
+                name: item.name || 'Unknown',
+                email: item.email || '',
+                phone: item.phone || '',
+                status: item.status || 'inactive',
+                profileImage: item.profileImage || '',
+                isVerified: item.isVerified || false,
+                createdAt: item.createdAt || new Date().toISOString(),
+              },
+            });
+          } else {
+            console.error('Professional ID is missing');
+            console.error('Professional object:', item);
+          }
+        }}>
+        <View style={styles.cardContent}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderLeft}>
+              {item.profileImage ? (
+                <Image source={{ uri: item.profileImage }} style={styles.cardAvatar} />
+              ) : (
+                <View style={[styles.cardAvatar, styles.cardAvatarPlaceholder]}>
+                  <Text style={styles.cardAvatarText}>{(item.name || 'U').charAt(0)}</Text>
+                </View>
+              )}
+              <View style={styles.cardInfo}>
+                <View style={styles.cardNameContainer}>
+                  <Text style={styles.cardName} numberOfLines={1}>
+                    {item.name || 'Unknown Professional'}
+                  </Text>
+                  {item.isVerified && (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={16}
+                      color="#2563EB"
+                      style={styles.cardVerifiedIcon}
+                    />
+                  )}
+                </View>
+                <Text style={styles.cardId}>{item.id || 'N/A'}</Text>
               </View>
-            )}
-            <View style={styles.cardInfo}>
-              <View style={styles.cardNameContainer}>
-                <Text style={styles.cardName} numberOfLines={1}>{item.name || 'Unknown Professional'}</Text>
-                {item.isVerified && <Ionicons name="checkmark-circle" size={16} color="#2563EB" style={styles.cardVerifiedIcon} />}
-              </View>
-              <Text style={styles.cardId}>{item.id || 'N/A'}</Text>
+            </View>
+            <View style={[styles.cardStatusBadge, statusStyles.badge]}>
+              <Text style={[styles.cardStatusText, statusStyles.text]}>{item.status}</Text>
             </View>
           </View>
-          <View style={[styles.cardStatusBadge, statusStyles.badge]}>
-            <Text style={[styles.cardStatusText, statusStyles.text]}>{item.status}</Text>
+          <View style={styles.cardStatsContainer}>
+            <View style={styles.cardStatItem}>
+              <Ionicons name="star" size={16} color="#F59E0B" />
+              <Text style={styles.cardStatText}>{(item.rating || 0).toFixed(1)}</Text>
+            </View>
+            <View style={styles.cardStatItem}>
+              <MaterialIcons name="work" size={16} color="#6B7280" />
+              <Text style={styles.cardStatText}>{item.totalJobs || 0} jobs</Text>
+            </View>
+          </View>
+          <View style={styles.cardFooter}>
+            <Text style={styles.cardLastActive}>Last active: {formattedLastActive}</Text>
           </View>
         </View>
-        <View style={styles.cardStatsContainer}>
-          <View style={styles.cardStatItem}>
-            <Ionicons name="star" size={16} color="#F59E0B" />
-            <Text style={styles.cardStatText}>{(item.rating || 0).toFixed(1)}</Text>
-          </View>
-          <View style={styles.cardStatItem}>
-            <MaterialIcons name="work" size={16} color="#6B7280" />
-            <Text style={styles.cardStatText}>{item.totalJobs || 0} jobs</Text>
-          </View>
-        </View>
-        <View style={styles.cardFooter}>
-          <Text style={styles.cardLastActive}>Last active: {formattedLastActive}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-});
+      </TouchableOpacity>
+    );
+  }
+);
 
 // --- Main Screen ---
 const AdminProfessionalsScreen = () => {
   const navigation = useNavigation<AdminProfessionalsScreenNavigationProp>();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'pending' | 'rejected'>('all');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'active' | 'inactive' | 'pending' | 'rejected'
+  >('all');
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
@@ -148,33 +163,46 @@ const AdminProfessionalsScreen = () => {
     data: professionals = [],
     loading,
     error,
-    refresh: fetchProfessionals,
+    refresh,
     loadMore,
-    pagination
+    pagination,
   } = useAdminProfessionals({
     search: debouncedSearchQuery || undefined,
     status: statusFilter === 'all' ? undefined : statusFilter,
     limit: 20, // Increased from default 10
   });
 
-  useEffect(() => {
-    fetchProfessionals();
-  }, [debouncedSearchQuery, statusFilter, fetchProfessionals]); // Re-fetch when filters change
+  const fetchProfessionals = useCallback(() => {
+    refresh();
+  }, [refresh]);
 
+  useEffect(() => {
+    refresh();
+  }, [debouncedSearchQuery, statusFilter]); // Re-fetch when filters change
+
+  // const onRefresh = useCallback(() => {
+  //   fetchProfessionals();
+  // }, [fetchProfessionals]);
+  // Refresh handler for pull-to-refresh
   const onRefresh = useCallback(() => {
-    fetchProfessionals();
-  }, [fetchProfessionals]);
+    refresh();
+  }, [refresh]);
 
   // Since filtering is handled by the API hook, we can use professionals directly
   const filteredProfessionals = professionals;
 
   const getStatusStyles = (status: Professional['status']) => {
     switch (status) {
-      case 'active': return { badge: styles.statusBadgeActive, text: styles.statusTextActive };
-      case 'inactive': return { badge: styles.statusBadgeInactive, text: styles.statusTextInactive };
-      case 'pending': return { badge: styles.statusBadgePending, text: styles.statusTextPending };
-      case 'rejected': return { badge: styles.statusBadgeRejected, text: styles.statusTextRejected };
-      default: return { badge: styles.statusBadgeInactive, text: styles.statusTextInactive };
+      case 'active':
+        return { badge: styles.statusBadgeActive, text: styles.statusTextActive };
+      case 'inactive':
+        return { badge: styles.statusBadgeInactive, text: styles.statusTextInactive };
+      case 'pending':
+        return { badge: styles.statusBadgePending, text: styles.statusTextPending };
+      case 'rejected':
+        return { badge: styles.statusBadgeRejected, text: styles.statusTextRejected };
+      default:
+        return { badge: styles.statusBadgeInactive, text: styles.statusTextInactive };
     }
   };
 
@@ -208,10 +236,7 @@ const AdminProfessionalsScreen = () => {
         <View style={styles.loadingContainer}>
           <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
           <Text style={styles.loadingText}>Failed to load professionals</Text>
-          <TouchableOpacity 
-            style={styles.retryButton}
-            onPress={fetchProfessionals}
-          >
+          <TouchableOpacity style={styles.retryButton} onPress={fetchProfessionals}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -220,71 +245,86 @@ const AdminProfessionalsScreen = () => {
 
     return (
       <View style={styles.contentContainer}>
-      <View style={styles.controlsContainer}>
-        <View style={styles.searchBarContainer}>
-          <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by name, ID, phone..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#6B7280"
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        <View style={styles.filterBar}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {['all', 'active', 'inactive', 'pending', 'rejected'].map(status => (
-              <TouchableOpacity
-                key={status}
-                style={[styles.filterButton, statusFilter === status ? styles.filterButtonActive : styles.filterButtonInactive]}
-                onPress={() => setStatusFilter(status as any)}
-              >
-                <Text style={[styles.filterText, statusFilter === status ? styles.filterTextActive : styles.filterTextInactive]}>
-                  {status}
-                </Text>
+        <View style={styles.controlsContainer}>
+          <View style={styles.searchBarContainer}>
+            <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by name, ID, phone..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#6B7280"
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color="#9CA3AF" />
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      </View>
-
-      <FlatList
-        data={filteredProfessionals}
-        renderItem={({ item }) => (
-          <ProfessionalCard item={item} navigation={navigation} getStatusStyles={getStatusStyles} />
-        )}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContentContainer}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} colors={['#2563EB']} />}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={renderFooter}
-        ListEmptyComponent={() => !loading ? (
-          <View style={styles.emptyListContainer}>
-            <MaterialIcons name="person-search" size={60} color="#9CA3AF" />
-            <Text style={styles.emptyListText}>No Professionals Found</Text>
-            <Text style={styles.emptyListSubText}>Try adjusting your search or filters.</Text>
+            ) : null}
           </View>
-        ) : null}
-      />
-      <TouchableOpacity 
-  style={styles.fab} 
-  onPress={() => navigation.navigate('AdminCreateProfessional')}
->
-  <Ionicons name="add" size={28} color="white" />
-</TouchableOpacity>
-    </View>
-  );
-};
 
-// --- Styles ---
+          <View style={styles.filterBar}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {['all', 'active', 'inactive', 'pending', 'rejected'].map((status) => (
+                <TouchableOpacity
+                  key={status}
+                  style={[
+                    styles.filterButton,
+                    statusFilter === status
+                      ? styles.filterButtonActive
+                      : styles.filterButtonInactive,
+                  ]}
+                  onPress={() => setStatusFilter(status as any)}>
+                  <Text
+                    style={[
+                      styles.filterText,
+                      statusFilter === status ? styles.filterTextActive : styles.filterTextInactive,
+                    ]}>
+                    {status}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+
+        <FlatList
+          data={filteredProfessionals}
+          renderItem={({ item }) => (
+            <ProfessionalCard
+              item={item}
+              navigation={navigation}
+              getStatusStyles={getStatusStyles}
+            />
+          )}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContentContainer}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={false} onRefresh={onRefresh} colors={['#2563EB']} />
+          }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
+          ListEmptyComponent={() =>
+            !loading ? (
+              <View style={styles.emptyListContainer}>
+                <MaterialIcons name="person-search" size={60} color="#9CA3AF" />
+                <Text style={styles.emptyListText}>No Professionals Found</Text>
+                <Text style={styles.emptyListSubText}>Try adjusting your search or filters.</Text>
+              </View>
+            ) : null
+          }
+        />
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate('AdminCreateProfessional')}>
+          <Ionicons name="add" size={28} color="white" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // --- Styles ---
   const renderMainContent = () => (
     <View style={styles.contentContainer}>
       <View style={styles.controlsContainer}>
@@ -306,13 +346,19 @@ const AdminProfessionalsScreen = () => {
 
         <View style={styles.filterBar}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {['all', 'active', 'inactive', 'pending', 'rejected'].map(status => (
+            {['all', 'active', 'inactive', 'pending', 'rejected'].map((status) => (
               <TouchableOpacity
                 key={status}
-                style={[styles.filterButton, statusFilter === status ? styles.filterButtonActive : styles.filterButtonInactive]}
-                onPress={() => setStatusFilter(status as any)}
-              >
-                <Text style={[styles.filterText, statusFilter === status ? styles.filterTextActive : styles.filterTextInactive]}>
+                style={[
+                  styles.filterButton,
+                  statusFilter === status ? styles.filterButtonActive : styles.filterButtonInactive,
+                ]}
+                onPress={() => setStatusFilter(status as any)}>
+                <Text
+                  style={[
+                    styles.filterText,
+                    statusFilter === status ? styles.filterTextActive : styles.filterTextInactive,
+                  ]}>
                   {status}
                 </Text>
               </TouchableOpacity>
@@ -326,20 +372,24 @@ const AdminProfessionalsScreen = () => {
         renderItem={({ item }) => (
           <ProfessionalCard item={item} navigation={navigation} getStatusStyles={getStatusStyles} />
         )}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContentContainer}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} colors={['#2563EB']} />}
+        refreshControl={
+          <RefreshControl refreshing={false} onRefresh={onRefresh} colors={['#2563EB']} />
+        }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={renderFooter}
-        ListEmptyComponent={() => !loading ? (
-          <View style={styles.emptyListContainer}>
-            <MaterialIcons name="person-search" size={60} color="#9CA3AF" />
-            <Text style={styles.emptyListText}>No Professionals Found</Text>
-            <Text style={styles.emptyListSubText}>Try adjusting your search or filters.</Text>
-          </View>
-        ) : null}
+        ListEmptyComponent={() =>
+          !loading ? (
+            <View style={styles.emptyListContainer}>
+              <MaterialIcons name="person-search" size={60} color="#9CA3AF" />
+              <Text style={styles.emptyListText}>No Professionals Found</Text>
+              <Text style={styles.emptyListSubText}>Try adjusting your search or filters.</Text>
+            </View>
+          ) : null
+        }
       />
     </View>
   );
@@ -353,7 +403,7 @@ const AdminProfessionalsScreen = () => {
         <Text style={styles.headerTitle}>Professionals</Text>
         <View style={{ width: 24 }} />
       </View>
-      
+
       {loading && !filteredProfessionals.length ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2563EB" />
@@ -363,10 +413,7 @@ const AdminProfessionalsScreen = () => {
         <View style={styles.loadingContainer}>
           <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
           <Text style={styles.loadingText}>Failed to load professionals</Text>
-          <TouchableOpacity 
-            style={styles.retryButton}
-            onPress={fetchProfessionals}
-          >
+          <TouchableOpacity style={styles.retryButton} onPress={fetchProfessionals}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -374,10 +421,9 @@ const AdminProfessionalsScreen = () => {
         renderMainContent()
       )}
 
-      <TouchableOpacity 
-        style={styles.fab} 
-        onPress={() => navigation.navigate('AdminCreateProfessional')}
-      >
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate('AdminCreateProfessional')}>
         <Ionicons name="add" size={28} color="white" />
       </TouchableOpacity>
     </SafeAreaView>
@@ -400,13 +446,39 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   container: { flex: 1, backgroundColor: '#F9FAFB' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9FAFB' },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
   loadingText: { marginTop: 10, fontSize: 16, color: '#4B5563' },
-  headerContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#1F2937' },
   headerButton: { padding: 4 },
-  controlsContainer: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  searchBarContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 10, paddingHorizontal: 12, height: 44 },
+  controlsContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 44,
+  },
   searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, fontSize: 16, color: '#1F2937' },
   filterBar: { marginTop: 12 },
@@ -420,19 +492,37 @@ const styles = StyleSheet.create({
   emptyListContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
   emptyListText: { fontSize: 18, fontWeight: '600', color: '#4B5563', marginTop: 16 },
   emptyListSubText: { fontSize: 14, color: '#6B7280', marginTop: 4 },
-  cardContainer: { backgroundColor: 'white', borderRadius: 12, marginBottom: 16, elevation: 1, shadowColor: '#4B5563', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
+  cardContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 16,
+    elevation: 1,
+    shadowColor: '#4B5563',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
   cardContent: { padding: 16 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 },
   cardAvatar: { width: 48, height: 48, borderRadius: 24 },
-  cardAvatarPlaceholder: { backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' },
+  cardAvatarPlaceholder: {
+    backgroundColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cardAvatarText: { color: '#4B5563', fontWeight: 'bold', fontSize: 20 },
   cardInfo: { marginLeft: 12, flex: 1 },
   cardNameContainer: { flexDirection: 'row', alignItems: 'center' },
   cardName: { fontSize: 16, fontWeight: 'bold', color: '#1F2937', flexShrink: 1 },
   cardVerifiedIcon: { marginLeft: 6 },
   cardId: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  cardStatusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
+  cardStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
   statusBadgeActive: { backgroundColor: '#D1FAE5' },
   statusBadgeInactive: { backgroundColor: '#F3F4F6' },
   statusBadgePending: { backgroundColor: '#FEF3C7' },
@@ -471,4 +561,3 @@ const styles = StyleSheet.create({
 });
 
 export default AdminProfessionalsScreen;
-

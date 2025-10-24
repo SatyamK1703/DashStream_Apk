@@ -165,7 +165,7 @@ const AdminServicesScreen = () => {
 
   useEffect(() => {
     filterAndSortServices();
-  }, [filterAndSortServices]);
+  }, [services, searchQuery, selectedCategory, sortBy, sortOrder]);
 
   const handleSortByChange = () => {
     const options = ['title', 'price', 'category', 'date'];
@@ -349,7 +349,7 @@ const AdminServicesScreen = () => {
         isEditing={isEditing}
         formData={formData}
         onClose={() => setShowAddEditModal(false)}
-        onSuccess={fetchServices}
+        onSuccess={useCallback(() => fetchServices(), [])}
       />
     </SafeAreaView>
   );

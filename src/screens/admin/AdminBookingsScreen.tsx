@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   FlatList,
@@ -32,11 +32,22 @@ type AdminBookingsScreenNavigationProp = NativeStackNavigationProp<AdminStackPar
 
 const AdminBookingsScreen = () => {
   const navigation = useNavigation<AdminBookingsScreenNavigationProp>();
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<BookingStatus>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const [showFilters, setShowFilters] = useState(false);
+
+  const filters = React.useMemo(
+    () => ({
+      search: searchQuery,
+      status: statusFilter === 'all' ? undefined : statusFilter,
+      sortBy: sortBy === 'newest' ? 'created_at' : 'created_at',
+      sortOrder: sortBy === 'newest' ? 'desc' : 'asc',
+      limit: 20,
+    }),
+    [searchQuery, statusFilter, sortBy]
+  );
 
   // API hooks
   const {
@@ -46,16 +57,14 @@ const AdminBookingsScreen = () => {
     refresh,
     loadMore,
     pagination,
-  } = useAdminBookings({
-    search: searchQuery,
-    status: statusFilter === 'all' ? undefined : statusFilter,
-    sortBy: sortBy === 'newest' ? 'created_at' : 'created_at',
-    sortOrder: sortBy === 'newest' ? 'desc' : 'asc',
-    limit: 20,
-  });
+  } = useAdminBookings(filters);
 
   // Alias for consistent naming
-  const fetchBookings = refresh;
+  // const fetchBookings = refresh;
+  const fetchBookings = useCallback(() => {
+    refresh();
+  }, [refresh]);
+
   const hasMore = pagination.hasMore;
   const isLoadingMore = loading && pagination.page > 1;
 
@@ -70,12 +79,17 @@ const AdminBookingsScreen = () => {
   ];
 
   useEffect(() => {
-    fetchBookings();
-  }, [searchQuery, statusFilter, sortBy, fetchBookings]);
+    refresh();
+  }, [searchQuery, statusFilter, sortBy]);
 
+  // const onRefresh = useCallback(() => {
+  //   fetchBookings();
+  // }, [fetchBookings]);
+
+  // Refresh handler for pull-to-refresh
   const onRefresh = useCallback(() => {
-    fetchBookings();
-  }, [fetchBookings]);
+    refresh();
+  }, [refresh]);
 
   const handleUpdateBookingStatus = async (bookingId: string, status: BookingStatus) => {
     try {
@@ -120,7 +134,8 @@ const AdminBookingsScreen = () => {
           <Ionicons name="arrow-back" size={24} color="#1F2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Bookings</Text>
-        <View style={styles.headerButton} />{/* Placeholder for balance */}
+        <View style={styles.headerButton} />
+        {/* Placeholder for balance */}
       </View>
 
       <SearchAndFilter
@@ -138,18 +153,14 @@ const AdminBookingsScreen = () => {
         />
       </View>
 
-      <FilterDropdown
-        visible={showFilters}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
-      />
+      <FilterDropdown visible={showFilters} sortBy={sortBy} onSortChange={setSortBy} />
 
       <FlatList
         data={bookings}
         renderItem={({ item }) => (
-          <BookingCard 
-            booking={item} 
-            onPress={() => handleBookingPress(item.id)} 
+          <BookingCard
+            booking={item}
+            onPress={() => handleBookingPress(item.id)}
             onUpdateStatus={(status) => handleUpdateBookingStatus(item.id, status)}
           />
         )}
@@ -157,11 +168,7 @@ const AdminBookingsScreen = () => {
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={loading}
-            onRefresh={onRefresh}
-            colors={['#2563EB']}
-          />
+          <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#2563EB']} />
         }
         ListEmptyComponent={<EmptyState />}
         onEndReached={() => {
@@ -170,7 +177,7 @@ const AdminBookingsScreen = () => {
           }
         }}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={() => 
+        ListFooterComponent={() =>
           isLoadingMore ? (
             <View style={styles.loadingFooter}>
               <ActivityIndicator size="small" color="#2563EB" />
@@ -259,7 +266,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 80, // For FAB
-  }
+  },
 });
 
 export default AdminBookingsScreen;

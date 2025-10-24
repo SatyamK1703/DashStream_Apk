@@ -453,7 +453,9 @@ class HttpClient {
       }
       throw new Error('httpClient.get: missing url');
     }
-
+    if (__DEV__) {
+      console.log(`httpClient: Making GET request to ${url}`);
+    }
     // If client is rate-limited, wait before sending
     await this.guardRateLimit();
     const response = await this.client.get<ApiResponse<T>>(url, config);
@@ -706,4 +708,6 @@ class HttpClient {
 
 // Create singleton instance
 const httpClient = new HttpClient();
+export const api = httpClient;
+
 export default httpClient;

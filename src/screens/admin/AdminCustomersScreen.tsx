@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -33,8 +33,12 @@ const AdminCustomersScreen = () => {
   const navigation = useNavigation<AdminCustomersNavigationProp>();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'blocked'>('all');
-  const [membershipFilter, setMembershipFilter] = useState<'all' | 'none' | 'silver' | 'gold' | 'platinum'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'blocked'>(
+    'all'
+  );
+  const [membershipFilter, setMembershipFilter] = useState<
+    'all' | 'none' | 'silver' | 'gold' | 'platinum'
+  >('all');
   const [showFilters, setShowFilters] = useState(false);
 
   // Use admin customers hook instead of direct service calls
@@ -44,7 +48,7 @@ const AdminCustomersScreen = () => {
     error,
     loadMore,
     refresh,
-    pagination
+    pagination,
   } = useAdminCustomers({
     search: searchQuery || undefined,
     status: statusFilter === 'all' ? undefined : statusFilter,
@@ -53,11 +57,14 @@ const AdminCustomersScreen = () => {
   // Refresh data when search or status filter changes
   useEffect(() => {
     refresh();
-  }, [searchQuery, statusFilter, refresh]);
+  }, [searchQuery, statusFilter]);
 
-  const handleRefresh = () => {
+  // const handleRefresh = () => {
+  //   refresh();
+  // };
+  const onRefresh = useCallback(() => {
     refresh();
-  };
+  }, [refresh]);
 
   const handleLoadMore = () => {
     if (!loading && pagination.hasMore) {
@@ -69,15 +76,17 @@ const AdminCustomersScreen = () => {
   const filteredCustomers = useMemo(() => {
     let filtered = [...customers];
 
-    if (statusFilter !== 'all') filtered = filtered.filter(c => c.status === statusFilter);
-    if (membershipFilter !== 'all') filtered = filtered.filter(c => c.membershipStatus === membershipFilter);
+    if (statusFilter !== 'all') filtered = filtered.filter((c) => c.status === statusFilter);
+    if (membershipFilter !== 'all')
+      filtered = filtered.filter((c) => c.membershipStatus === membershipFilter);
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(c =>
-        c.name.toLowerCase().includes(q) ||
-        c.email?.toLowerCase().includes(q) ||
-        c.phone?.toLowerCase().includes(q) ||
-        c.id.toLowerCase().includes(q)
+      filtered = filtered.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.email?.toLowerCase().includes(q) ||
+          c.phone?.toLowerCase().includes(q) ||
+          c.id.toLowerCase().includes(q)
       );
     }
 
@@ -86,18 +95,21 @@ const AdminCustomersScreen = () => {
 
   const getStatusDotStyle = (status: string) => {
     switch (status) {
-      case 'active': return styles.statusDotActive;
-      case 'inactive': return styles.statusDotInactive;
-      case 'blocked': return styles.statusDotBlocked;
-      default: return styles.statusDotInactive;
+      case 'active':
+        return styles.statusDotActive;
+      case 'inactive':
+        return styles.statusDotInactive;
+      case 'blocked':
+        return styles.statusDotBlocked;
+      default:
+        return styles.statusDotInactive;
     }
   };
 
   const renderCustomerItem = ({ item }: { item: Customer }) => (
     <TouchableOpacity
       style={styles.customerCard}
-      onPress={() => navigation.navigate('AdminCustomerDetails', { customerId: item.id })}
-    >
+      onPress={() => navigation.navigate('AdminCustomerDetails', { customerId: item.id })}>
       <View style={styles.customerHeader}>
         {item.profileImage ? (
           <Image source={{ uri: item.profileImage }} style={styles.profileImage} />
@@ -165,38 +177,46 @@ const AdminCustomersScreen = () => {
         <View style={styles.filtersPanel}>
           <Text>Status</Text>
           <View style={styles.filterChipsContainer}>
-            {['all', 'active', 'inactive', 'blocked'].map(status => (
+            {['all', 'active', 'inactive', 'blocked'].map((status) => (
               <TouchableOpacity
                 key={status}
                 onPress={() => setStatusFilter(status as any)}
                 style={[
                   styles.filterChip,
                   statusFilter === status ? styles.filterChipActive : styles.filterChipInactive,
-                ]}
-              >
-                <Text style={[
-                  styles.filterChipText,
-                  statusFilter === status ? styles.filterChipTextActive : styles.filterChipTextInactive
-                ]}>{status}</Text>
+                ]}>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    statusFilter === status
+                      ? styles.filterChipTextActive
+                      : styles.filterChipTextInactive,
+                  ]}>
+                  {status}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
 
           <Text>Membership</Text>
           <View style={styles.filterChipsContainer}>
-            {['all', 'none', 'silver', 'gold', 'platinum'].map(m => (
+            {['all', 'none', 'silver', 'gold', 'platinum'].map((m) => (
               <TouchableOpacity
                 key={m}
                 onPress={() => setMembershipFilter(m as any)}
                 style={[
                   styles.filterChip,
                   membershipFilter === m ? styles.filterChipActive : styles.filterChipInactive,
-                ]}
-              >
-                <Text style={[
-                  styles.filterChipText,
-                  membershipFilter === m ? styles.filterChipTextActive : styles.filterChipTextInactive
-                ]}>{m}</Text>
+                ]}>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    membershipFilter === m
+                      ? styles.filterChipTextActive
+                      : styles.filterChipTextInactive,
+                  ]}>
+                  {m}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -205,9 +225,11 @@ const AdminCustomersScreen = () => {
 
       <FlatList
         data={filteredCustomers}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         renderItem={renderCustomerItem}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={handleRefresh} colors={['#2563EB']} />}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#2563EB']} />
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="people-outline" size={48} color="#D1D5DB" />
@@ -223,17 +245,54 @@ export default AdminCustomersScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' },
-  headerContainer: { backgroundColor: 'white', paddingTop: 16, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  headerContainer: {
+    backgroundColor: 'white',
+    paddingTop: 16,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
   backButton: { position: 'absolute', left: 16 },
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#111827', textAlign: 'center' },
-  searchContainer: { flexDirection: 'row', padding: 16, alignItems: 'center', backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
+  searchContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
   searchInput: { flex: 1, marginRight: 8, color: '#111827' },
-  filterBarContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
+  filterBarContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
   filterButtonText: { color: '#2563EB', fontWeight: '500' },
   filtersPanel: { backgroundColor: 'white', padding: 16 },
   filterChipsContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8, marginBottom: 16 },
-  filterChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginRight: 8, marginBottom: 8 },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
+  },
   filterChipActive: { backgroundColor: '#2563EB' },
   filterChipInactive: { backgroundColor: '#f3f4f6' },
   filterChipText: { fontSize: 12 },
@@ -243,7 +302,12 @@ const styles = StyleSheet.create({
   customerHeader: { flexDirection: 'row', marginBottom: 12 },
   profileImage: { width: 50, height: 50, borderRadius: 25, marginRight: 12 },
   customerInfo: { flex: 1 },
-  customerNameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  customerNameRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   customerName: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
   statusContainer: { flexDirection: 'row', alignItems: 'center' },
   statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 4 },
@@ -255,4 +319,3 @@ const styles = StyleSheet.create({
   customerPhone: { fontSize: 14, color: '#6b7280' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
 });
-

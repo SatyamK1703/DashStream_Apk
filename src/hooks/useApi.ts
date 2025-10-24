@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from 'react';
-import { ApiResponse } from '../services/httpClient';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { ApiResponse, api } from '../services/httpClient';
 import { handleApiError, retryOperation } from '../utils/errorHandler';
 import { useAuth } from '../store';
 
@@ -23,7 +23,10 @@ interface UseApiOptions {
   retryDelay?: number;
   onSuccess?: (data: any) => void;
   onError?: (error: any) => void;
+  cacheDuration?: number; // New: duration in milliseconds to cache the response
 }
+
+const apiCache = new Map<string, { data: any; timestamp: number }>();
 
 export const useApi = <T = any>(
   apiCall: (...args: any[]) => Promise<ApiResponse<T>>,
@@ -35,6 +38,7 @@ export const useApi = <T = any>(
     retryDelay = 1000,
     onSuccess,
     onError,
+    cacheDuration = 0, // Default to no caching
   } = options;
 
   const { logout } = useAuth();
@@ -49,17 +53,39 @@ export const useApi = <T = any>(
 
   const execute = useCallback(
     async (...args: any[]) => {
+      const apiCallName = apiCall.name || 'anonymousApiCall';
+      const cacheKey = `${apiCallName}-${JSON.stringify(args)}`;
+
+      // Check cache first
+      if (cacheDuration > 0) {
+        const cached = apiCache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < cacheDuration) {
+          if (__DEV__) {
+            console.log(`Cache hit for ${cacheKey}`);
+          }
+          setState({
+            data: cached.data,
+            loading: false,
+            error: null,
+          });
+          if (onSuccess) {
+            onSuccess(cached.data);
+          }
+          return cached.data;
+        }
+      }
+
       if (isExecutingRef.current) return cachedDataRef.current; // prevent concurrent duplicate calls
       isExecutingRef.current = true;
-      setState(prev => ({ ...prev, loading: true, error: null }));
+      setState((prev) => ({ ...prev, loading: true, error: null }));
 
       try {
         const operation = () => apiCall(...args);
-        const response = retries > 0 
-          ? await retryOperation(operation, retries, retryDelay)
-          : await operation();
+        const response =
+          retries > 0 ? await retryOperation(operation, retries, retryDelay) : await operation();
 
-        const isSuccess = (response as any)?.success === true || (response as any)?.status === 'success';
+        const isSuccess =
+          (response as any)?.success === true || (response as any)?.status === 'success';
         if (isSuccess) {
           const payload = (response as any)?.data ?? (response as any);
           cachedDataRef.current = payload;
@@ -68,6 +94,14 @@ export const useApi = <T = any>(
             loading: false,
             error: null,
           });
+
+          // Store in cache
+          if (cacheDuration > 0) {
+            apiCache.set(cacheKey, { data: payload, timestamp: Date.now() });
+            if (__DEV__) {
+              console.log(`Cache set for ${cacheKey}`);
+            }
+          }
 
           if (onSuccess) {
             onSuccess(payload);
@@ -78,11 +112,7 @@ export const useApi = <T = any>(
           throw response;
         }
       } catch (error: any) {
-        const appError = handleApiError(
-          error,
-          apiCall.name,
-          showErrorAlert
-        );
+        const appError = handleApiError(error, apiCall.name, showErrorAlert);
 
         if (__DEV__) {
           console.log('useApi - Error caught:', {
@@ -90,7 +120,7 @@ export const useApi = <T = any>(
             appError,
             appErrorMessage: appError.message,
             statusCode: appError.statusCode,
-            apiCallName: apiCall.name
+            apiCallName: apiCall.name,
           });
         }
 
@@ -115,7 +145,7 @@ export const useApi = <T = any>(
         isExecutingRef.current = false;
       }
     },
-    [apiCall, retries, retryDelay, showErrorAlert, onSuccess, onError, logout]
+    [apiCall, retries, retryDelay, showErrorAlert, onSuccess, onError, logout, cacheDuration]
   );
 
   const reset = useCallback(() => {
@@ -135,7 +165,6 @@ export const useApi = <T = any>(
 
 // Specialized hook for paginated data
 
-
 export const usePaginatedApi = <T = any>(
   apiCall: (params: any) => Promise<any>,
   options: UseApiOptions = {},
@@ -154,68 +183,68 @@ export const usePaginatedApi = <T = any>(
 
   const defaultNormalizer = (resp: any) => {
     if (!resp) return { items: [], total: 0 };
-    
+
     // First check if response itself is an array
     if (Array.isArray(resp)) {
       return { items: resp, total: resp.length };
     }
-    
+
     // Try to get payload from resp.data or use resp directly
     const payload = resp.data ?? resp;
-    
+
     // Handle array payload
     if (Array.isArray(payload)) {
       return { items: payload, total: payload.length };
     }
-    
+
     // Handle paginated response with various property names
     // Check both root level and nested data level
-    let items = 
-      payload.items ?? 
-      payload.services ?? 
-      payload.results ?? 
-      payload.bookings ?? 
-      payload.professionals ?? 
-      payload.users ?? 
-      payload.notifications ?? 
-      payload.offers ?? 
-      resp.bookings ??  // Check root level too
-      resp.professionals ?? 
-      resp.users ?? 
-      resp.services ?? 
-      resp.items ?? 
+    let items =
+      payload.items ??
+      payload.services ??
+      payload.results ??
+      payload.bookings ??
+      payload.professionals ??
+      payload.users ??
+      payload.notifications ??
+      payload.offers ??
+      resp.bookings ?? // Check root level too
+      resp.professionals ??
+      resp.users ??
+      resp.services ??
+      resp.items ??
       [];
-      
+
     // Fix for backend API response format - if bookings is directly in the response
     if (resp.bookings && Array.isArray(resp.bookings)) {
       items = resp.bookings;
     }
-    
+
     // Fix for backend API response format - if bookings is in the response data
     if (resp.data && resp.data.bookings && Array.isArray(resp.data.bookings)) {
       items = resp.data.bookings;
     }
-    
+
     // Fix for professionals
     if (resp.data && resp.data.professionals && Array.isArray(resp.data.professionals)) {
       items = resp.data.professionals;
     }
-    
+
     // Fix for users/customers
     if (resp.data && resp.data.users && Array.isArray(resp.data.users)) {
       items = resp.data.users;
     }
-    
+
     // Get total from pagination object or calculate from items
-    const total = 
-      payload.pagination?.total ?? 
-      resp.data?.pagination?.total ?? 
-      payload.total ?? 
-      payload.totalCount ?? 
-      resp.totalCount ?? 
-      resp.data?.totalCount ?? 
+    const total =
+      payload.pagination?.total ??
+      resp.data?.pagination?.total ??
+      payload.total ??
+      payload.totalCount ??
+      resp.totalCount ??
+      resp.data?.totalCount ??
       items.length;
-    
+
     if (__DEV__) {
       console.log('defaultNormalizer - Debug:', {
         hasRespData: !!resp.data,
@@ -230,10 +259,10 @@ export const usePaginatedApi = <T = any>(
         itemsIsArray: Array.isArray(items),
         total,
         payloadKeys: Object.keys(payload || {}),
-        respKeys: Object.keys(resp || {})
+        respKeys: Object.keys(resp || {}),
       });
     }
-    
+
     return { items, total };
   };
 
@@ -241,85 +270,63 @@ export const usePaginatedApi = <T = any>(
 
   const loadMore = useCallback(
     async (params: any = {}) => {
-      if (isLoadingPageRef.current || !pagination.hasMore) {
-        if (__DEV__) {
-          console.log('usePaginatedApi - loadMore skipped:', {
-            isLoading: isLoadingPageRef.current,
-            hasMore: pagination.hasMore
-          });
-        }
-        return;
-      }
-      isLoadingPageRef.current = true;
-      setIsLoading(true);
-
-      try {
-        const rawResponse = await apiCall({
-          ...params,
-          page: pagination.page,
-          limit: pagination.limit,
-        });
-
-        // if (__DEV__) {
-        //   console.log('usePaginatedApi - Raw Response:', JSON.stringify(rawResponse, null, 2));
-        // }
-
-        const normalized = normalizeResponse(rawResponse);
-        const newItems = normalized.items;
-        const total = normalized.total;
-
-        if (__DEV__) {
-          console.log('usePaginatedApi - Normalized:', {
-            itemsCount: newItems?.length,
-            total,
-            page: pagination.page,
-            firstItem: newItems?.[0],
-            isArray: Array.isArray(newItems),
-            responseFormat: rawResponse && rawResponse.bookings ? 'Direct bookings property' : 
-                           rawResponse && rawResponse.data && rawResponse.data.bookings ? 'Nested data.bookings property' : 
-                           'Other format'
-          });
-        }
-
-        // Ensure we're working with arrays
-        const safeNewItems = Array.isArray(newItems) ? newItems : [];
-        
-        setAllData(prev => {
-          // For first page, replace data
-          if (pagination.page === 1) {
-            return safeNewItems;
+      // Always read latest pagination state through functional update
+      setPagination((prevPagination) => {
+        if (isLoadingPageRef.current || !prevPagination.hasMore) {
+          if (__DEV__) {
+            console.log('usePaginatedApi - loadMore skipped:', {
+              isLoading: isLoadingPageRef.current,
+              hasMore: prevPagination.hasMore,
+            });
           }
-          // For subsequent pages, append data and remove duplicates
-          const combined = [...prev, ...safeNewItems];
-          const uniqueItems = Array.from(new Map(combined.map(item => [item.id, item])).values());
-          return uniqueItems;
-        });
-        
-        setPagination(prev => ({
-          ...prev,
-          page: prev.page + 1,
-          total,
-          hasMore: prev.page * prev.limit < total,
-        }));
+          return prevPagination;
+        }
 
-        isLoadingPageRef.current = false;
-        setIsLoading(false);
-        return { items: newItems, total };
-      } catch (error) {
-        console.error('usePaginatedApi - loadMore error:', error);
-        isLoadingPageRef.current = false;
-        setIsLoading(false);
-        throw error;
-      }
+        isLoadingPageRef.current = true;
+        setIsLoading(true);
+
+        apiCall({
+          ...params,
+          page: prevPagination.page,
+          limit: prevPagination.limit,
+        })
+          .then((rawResponse) => {
+            const { items: newItems, total } = normalizeResponse(rawResponse);
+            setAllData((prev) => {
+              const combined = prevPagination.page === 1 ? newItems : [...prev, ...newItems];
+              const uniqueItems = Array.from(
+                new Map(combined.map((item) => [item.id, item])).values()
+              );
+              return uniqueItems;
+            });
+
+            setPagination((p) => ({
+              ...p,
+              page: p.page + 1,
+              total,
+              hasMore: p.page * p.limit < total,
+            }));
+
+            isLoadingPageRef.current = false;
+            setIsLoading(false);
+          })
+          .catch((err) => {
+            console.error('usePaginatedApi - loadMore error:', err);
+            isLoadingPageRef.current = false;
+            setIsLoading(false);
+          });
+
+        return prevPagination;
+      });
     },
-    [apiCall, normalizeResponse, pagination.page, pagination.limit, pagination.hasMore]
+    [apiCall, normalizeResponse]
   );
 
   const refresh = useCallback(
     async (params: any = {}) => {
-      setPagination(prev => ({ ...prev, page: 1, hasMore: true }));
+      setPagination((p) => ({ ...p, page: 1, hasMore: true }));
       setAllData([]);
-      while (isLoadingPageRef.current) await new Promise(r => setTimeout(r, 50));
+      while (isLoadingPageRef.current) await new Promise((r) => setTimeout(r, 50));
       return loadMore(params);
     },
     [loadMore]

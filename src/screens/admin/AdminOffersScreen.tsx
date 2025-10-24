@@ -276,7 +276,7 @@ const ManageOffersScreen = () => {
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#2563EB']} />
+            <RefreshControl refreshing={loading} onRefresh={fetchOffers} colors={['#2563EB']} />
           }
         />
       )}

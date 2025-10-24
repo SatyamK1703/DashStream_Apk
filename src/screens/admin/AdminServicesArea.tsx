@@ -4,12 +4,10 @@ import {
   Text,
   FlatList,
   ActivityIndicator,
-  StyleSheet,
   TouchableOpacity,
   RefreshControl,
   Modal,
   TextInput,
-  Button,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,18 +17,21 @@ import { useServiceArea } from '../../hooks/useServiceArea';
 
 interface ServiceArea {
   _id: string;
+  name: string;
   pincode: string;
   isActive: boolean;
   createdAt: string;
 }
 
 const AdminServicesArea = () => {
+  console.log('AdminServicesArea: Component rendering');
   const navigation = useNavigation();
   const { getAreas, createArea, removeArea, fetchState, addState, deleteState } = useServiceArea();
 
   const [serviceAreas, setServiceAreas] = useState<ServiceArea[]>([]);
   const [isModalVisible, setModalVisible] = useState(false);
   const [newPincode, setNewPincode] = useState('');
+  const [newName, setNewName] = useState('');
 
   const isLoading = fetchState.loading || addState.loading || deleteState.loading;
   const error = fetchState.error || addState.error || deleteState.error;
@@ -38,6 +39,7 @@ const AdminServicesArea = () => {
   const fetchServiceAreas = useCallback(async () => {
     try {
       const response = await getAreas();
+      console.log('Service Areas Response:', JSON.stringify(response, null, 2));
       if (response && response.data && response.data.serviceAreas) {
         setServiceAreas(response.data.serviceAreas);
       }
@@ -56,20 +58,25 @@ const AdminServicesArea = () => {
   }, [fetchServiceAreas]);
 
   const handleAddPincode = async () => {
+    if (!newName.trim()) {
+      Alert.alert('Invalid Name', 'Please enter a valid name for the service area.');
+      return;
+    }
     if (!newPincode || newPincode.length !== 6 || !/^[0-9]+$/.test(newPincode)) {
       Alert.alert('Invalid Pincode', 'Please enter a valid 6-digit pincode.');
       return;
     }
     try {
-      const response = await createArea(newPincode);
+      const response = await createArea(newPincode, newName);
       if (response && response.data && response.data.serviceArea) {
         setServiceAreas((prev) => [...prev, response.data.serviceArea]);
       }
       setNewPincode('');
+      setNewName('');
       setModalVisible(false);
     } catch (err) {
-      console.error('Failed to add pincode:', err);
-      Alert.alert('Error', addState.error || 'Failed to add pincode.');
+      console.error('Failed to add service area:', err);
+      Alert.alert('Error', addState.error || 'Failed to add service area.');
     }
   };
 
@@ -99,32 +106,32 @@ const AdminServicesArea = () => {
 
   if (isLoading && serviceAreas.length === 0) {
     return (
-      <View style={styles.centeredContainer}>
+      <View className="flex-1 justify-center items-center bg-gray-50">
         <ActivityIndicator size="large" color="#2563EB" />
-        <Text style={styles.loadingText}>Loading service areas...</Text>
+        <Text className="mt-2 text-base text-gray-600">Loading service areas...</Text>
       </View>
     );
   }
 
   if (error && serviceAreas.length === 0) {
     return (
-      <View style={styles.centeredContainer}>
-        <Text style={styles.errorText}>Error: {error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={onRefresh}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+      <View className="flex-1 justify-center items-center bg-gray-50 p-4">
+        <Text className="text-base text-red-600 mb-3">Error: {error}</Text>
+        <TouchableOpacity className="bg-blue-600 px-5 py-2 rounded-lg" onPress={onRefresh}>
+          <Text className="text-white text-base font-semibold">Retry</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <View className="flex-row items-center justify-between p-4 border-b border-gray-200 bg-white">
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+          <Ionicons name="arrow-back" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Set Services Area</Text>
-        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addButton}>
+        <Text className="text-xl font-bold text-gray-800">Set Services Area</Text>
+        <TouchableOpacity onPress={() => setModalVisible(true)} className="p-1">
           <Ionicons name="add-circle-outline" size={28} color="#2563EB" />
         </TouchableOpacity>
       </View>
@@ -133,20 +140,20 @@ const AdminServicesArea = () => {
         data={serviceAreas}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
-          <View style={styles.pincodeItem}>
-            <Text style={styles.pincodeText}>{item.pincode}</Text>
+          <View className="flex-row justify-between items-center bg-white rounded-lg p-4 mb-3 shadow-md">
+            <Text className="text-base text-gray-700 font-semibold">{item.name} ({item.pincode})</Text>
             <TouchableOpacity onPress={() => handleDeletePincode(item._id)}>
               <Ionicons name="trash-outline" size={24} color="#EF4444" />
             </TouchableOpacity>
           </View>
         )}
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={{ padding: 16 }}
         refreshControl={
           <RefreshControl refreshing={isLoading} onRefresh={onRefresh} colors={['#2563EB']} />
         }
         ListEmptyComponent={!isLoading && (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No service areas set yet.</Text>
+          <View className="items-center py-5">
+            <Text className="text-base text-gray-500 italic">No service areas set yet.</Text>
           </View>
         )}
       />
@@ -156,20 +163,38 @@ const AdminServicesArea = () => {
         transparent={true}
         visible={isModalVisible}
         onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add New Pincode</Text>
+        <View className="flex-1 justify-center items-center bg-black bg-opacity-60">
+          <View className="bg-white p-6 rounded-lg w-4/5 shadow-lg">
+            <Text className="text-xl font-bold mb-5 text-center text-gray-800">Add New Service Area</Text>
             <TextInput
-              style={styles.pincodeInput}
+              className="border border-gray-300 rounded-lg p-3 mb-4 text-base text-gray-800 text-center"
+              placeholder="Enter Service Area Name"
+              value={newName}
+              onChangeText={setNewName}
+            />
+            <TextInput
+              className="border border-gray-300 rounded-lg p-3 mb-5 text-base text-gray-800 text-center"
               placeholder="Enter 6-digit Pincode"
               keyboardType="numeric"
               maxLength={6}
               value={newPincode}
               onChangeText={setNewPincode}
             />
-            <View style={styles.modalButtons}>
-              <Button title="Cancel" onPress={() => setModalVisible(false)} color="#EF4444" />
-              <Button title="Add Pincode" onPress={handleAddPincode} color="#2563EB" />
+            <View className="flex-row justify-around">
+              <TouchableOpacity
+                className="bg-red-500 px-5 py-2 rounded-lg"
+                onPress={() => {
+                  setModalVisible(false);
+                  setNewName('');
+                  setNewPincode('');
+                }}>
+                <Text className="text-white text-base font-semibold">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="bg-blue-600 px-5 py-2 rounded-lg"
+                onPress={handleAddPincode}>
+                <Text className="text-white text-base font-semibold">Add Area</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -178,122 +203,6 @@ const AdminServicesArea = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFF',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
-  },
-  addButton: {
-    padding: 5,
-  },
-  listContainer: {
-    padding: 16,
-  },
-  pincodeItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  pincodeText: {
-    fontSize: 16,
-    color: '#374151',
-  },
-  centeredContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#6B7280',
-    fontStyle: 'italic',
-  },
-  errorText: {
-    fontSize: 16,
-    color: 'red',
-    marginBottom: 10,
-  },
-  retryButton: {
-    backgroundColor: '#2563EB',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 5,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 16,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    padding: 25,
-    borderRadius: 10,
-    width: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-    color: '#1F2937',
-  },
-  pincodeInput: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-    fontSize: 16,
-    color: '#1F2937',
-    textAlign: 'center',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-});
+
 
 export default AdminServicesArea;
