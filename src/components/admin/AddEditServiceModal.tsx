@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -56,30 +56,31 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
   onSubmit,
   onSuccess,
 }) => {
-  const defaultFormData: ServiceFormData = {
-    title: '',
-    description: '',
-    longDescription: '',
-    price: '',
-    discountPrice: '',
-    category: 'car wash',
-    image: '',
-    banner: '',
-    duration: '',
-    vehicleType: 'Both',
-    isActive: true,
-    isPopular: false,
-    features: [],
-    tags: [],
-  };
+  const defaultFormData: ServiceFormData = useMemo(
+    () => ({
+      title: '',
+      description: '',
+      longDescription: '',
+      price: '',
+      discountPrice: '',
+      category: 'car wash',
+      image: '',
+      banner: '',
+      duration: '',
+      vehicleType: 'Both',
+      isActive: true,
+      isPopular: false,
+      features: [],
+      tags: [],
+    }),
+    []
+  );
 
   const [formData, setFormData] = useState<ServiceFormData>({
     ...defaultFormData,
     ...initialFormData,
   });
-  const [formErrors, setFormErrors] = useState<
-    Partial<Record<keyof ServiceFormData, string>>
-  >({});
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof ServiceFormData, string>>>({});
   const [newFeature, setNewFeature] = useState('');
   const [newTag, setNewTag] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -87,7 +88,7 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
   useEffect(() => {
     setFormData({ ...defaultFormData, ...initialFormData });
     setFormErrors({});
-  }, [visible, initialFormData, defaultFormData]);
+  }, [visible, initialFormData]);
 
   const updateFormData = (key: keyof ServiceFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -174,8 +175,7 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
   const validateForm = () => {
     const newErrors: Partial<Record<keyof ServiceFormData, string>> = {};
     if (!formData.title.trim()) newErrors.title = 'Title is required';
-    if (!formData.description.trim())
-      newErrors.description = 'Description is required';
+    if (!formData.description.trim()) newErrors.description = 'Description is required';
     if (!formData.price.trim()) {
       newErrors.price = 'Price is required';
     } else if (isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
@@ -187,19 +187,14 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
     ) {
       newErrors.discountPrice = 'Please enter a valid discounted price';
     }
-    if (
-      formData.discountPrice.trim() &&
-      Number(formData.discountPrice) >= Number(formData.price)
-    ) {
+    if (formData.discountPrice.trim() && Number(formData.discountPrice) >= Number(formData.price)) {
       newErrors.discountPrice = 'Discount must be less than price';
     }
     if (!formData.duration.trim()) newErrors.duration = 'Duration is required';
     if (!formData.image) newErrors.image = 'Service image is required';
     if (!formData.banner) newErrors.banner = 'Banner image is required';
-    if (!formData.category.trim())
-      newErrors.category = 'Category is required';
-    if (formData.features.length === 0)
-      newErrors.features = 'Add at least one feature';
+    if (!formData.category.trim()) newErrors.category = 'Category is required';
+    if (formData.features.length === 0) newErrors.features = 'Add at least one feature';
 
     setFormErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -215,9 +210,7 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
         description: formData.description.trim(),
         longDescription: formData.longDescription.trim(),
         price: Number(formData.price),
-        discountPrice: formData.discountPrice
-          ? Number(formData.discountPrice)
-          : undefined,
+        discountPrice: formData.discountPrice ? Number(formData.discountPrice) : undefined,
         category: formData.category,
         image: formData.image || 'https://via.placeholder.com/300x200',
         banner: formData.banner || 'https://via.placeholder.com/600x300',
@@ -231,16 +224,10 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
 
       let response;
       if (isEditing && formData.id) {
-        response = await httpClient.patch(
-          API_ENDPOINTS.SERVICES.UPDATE(formData.id),
-          serviceData
-        );
+        response = await httpClient.patch(API_ENDPOINTS.SERVICES.UPDATE(formData.id), serviceData);
         Alert.alert('Success', 'Service updated successfully!');
       } else {
-        response = await httpClient.post(
-          API_ENDPOINTS.SERVICES.CREATE,
-          serviceData
-        );
+        response = await httpClient.post(API_ENDPOINTS.SERVICES.CREATE, serviceData);
         Alert.alert('Success', 'Service created successfully!');
       }
 
@@ -268,9 +255,7 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
           <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.title}>
-                {isEditing ? 'Edit Service' : 'Add Service'}
-              </Text>
+              <Text style={styles.title}>{isEditing ? 'Edit Service' : 'Add Service'}</Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={24} color="#4B5563" />
               </TouchableOpacity>
@@ -281,18 +266,22 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
               contentContainerStyle={styles.scrollContent}
               enableOnAndroid
               extraScrollHeight={20}
-              keyboardShouldPersistTaps="handled"
-            >
+              keyboardShouldPersistTaps="handled">
               {/* Image Picker */}
-               {['image', 'banner'].map((field) => (
+              {['image', 'banner'].map((field) => (
                 <View style={styles.inputGroup} key={field}>
                   <Text style={styles.label}>
                     {field === 'image' ? 'Service Image' : 'Banner Image'}{' '}
                     <Text style={styles.requiredAsterisk}>*</Text>
                   </Text>
-                  <TouchableOpacity onPress={() => pickImage(field as 'image' | 'banner')} style={styles.imagePicker}>
+                  <TouchableOpacity
+                    onPress={() => pickImage(field as 'image' | 'banner')}
+                    style={styles.imagePicker}>
                     {formData[field as 'image' | 'banner'] ? (
-                      <Image source={{ uri: formData[field as 'image' | 'banner']! }} style={styles.imagePreview} />
+                      <Image
+                        source={{ uri: formData[field as 'image' | 'banner']! }}
+                        style={styles.imagePreview}
+                      />
                     ) : (
                       <View style={styles.imagePickerPlaceholder}>
                         <Ionicons name="image-outline" size={40} color="#9CA3AF" />
@@ -301,7 +290,9 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
                     )}
                   </TouchableOpacity>
                   {formErrors[field as keyof ServiceFormData] && (
-                    <Text style={styles.errorText}>{formErrors[field as keyof ServiceFormData]}</Text>
+                    <Text style={styles.errorText}>
+                      {formErrors[field as keyof ServiceFormData]}
+                    </Text>
                   )}
                 </View>
               ))}
@@ -322,13 +313,19 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Description *</Text>
                 <TextInput
-                  style={[styles.textInput, styles.multilineTextInput, formErrors.description && styles.textInputError]}
+                  style={[
+                    styles.textInput,
+                    styles.multilineTextInput,
+                    formErrors.description && styles.textInputError,
+                  ]}
                   multiline
                   placeholder="Enter short description"
                   value={formData.description}
                   onChangeText={(value) => updateFormData('description', value)}
                 />
-                {formErrors.description && <Text style={styles.errorText}>{formErrors.description}</Text>}
+                {formErrors.description && (
+                  <Text style={styles.errorText}>{formErrors.description}</Text>
+                )}
               </View>
 
               <View style={styles.inputGroup}>
@@ -352,7 +349,7 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
                     { id: 'detailing', name: 'Detailing' },
                     { id: 'maintenance', name: 'Maintenance' },
                     { id: 'customization', name: 'Customization' },
-                    { id: 'other', name: 'Other' }
+                    { id: 'other', name: 'Other' },
                   ].map((category) => (
                     <TouchableOpacity
                       key={category.id}
@@ -362,15 +359,13 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
                           ? styles.categoryChipSelected
                           : styles.categoryChipUnselected,
                       ]}
-                      onPress={() => updateFormData('category', category.id)}
-                    >
+                      onPress={() => updateFormData('category', category.id)}>
                       <Text
                         style={
                           formData.category === category.id
                             ? styles.categoryTextSelected
                             : styles.categoryTextUnselected
-                        }
-                      >
+                        }>
                         {category.name}
                       </Text>
                     </TouchableOpacity>
@@ -401,7 +396,9 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
                     value={formData.discountPrice}
                     onChangeText={(value) => updateFormData('discountPrice', value)}
                   />
-                  {formErrors.discountPrice && <Text style={styles.errorText}>{formErrors.discountPrice}</Text>}
+                  {formErrors.discountPrice && (
+                    <Text style={styles.errorText}>{formErrors.discountPrice}</Text>
+                  )}
                 </View>
               </View>
 
@@ -414,7 +411,9 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
                   value={formData.duration}
                   onChangeText={(value) => updateFormData('duration', value)}
                 />
-                <Text style={styles.helperText}>Format: &quot;45 mins&quot; or &quot;1 hour&quot;</Text>
+                <Text style={styles.helperText}>
+                  Format: &quot;45 mins&quot; or &quot;1 hour&quot;
+                </Text>
                 {formErrors.duration && <Text style={styles.errorText}>{formErrors.duration}</Text>}
               </View>
 
@@ -431,15 +430,13 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
                           ? styles.categoryChipSelected
                           : styles.categoryChipUnselected,
                       ]}
-                      onPress={() => updateFormData('vehicleType', type)}
-                    >
+                      onPress={() => updateFormData('vehicleType', type)}>
                       <Text
                         style={
                           formData.vehicleType === type
                             ? styles.categoryTextSelected
                             : styles.categoryTextUnselected
-                        }
-                      >
+                        }>
                         {type}
                       </Text>
                     </TouchableOpacity>
@@ -478,8 +475,7 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
                   <TouchableOpacity
                     style={[styles.addButton, !newFeature.trim() && { opacity: 0.5 }]}
                     onPress={addFeature}
-                    disabled={!newFeature.trim()}
-                  >
+                    disabled={!newFeature.trim()}>
                     <Text style={styles.addButtonText}>Add</Text>
                   </TouchableOpacity>
                 </View>
@@ -507,8 +503,7 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
                   <TouchableOpacity
                     style={[styles.addButton, !newTag.trim() && { opacity: 0.5 }]}
                     onPress={addTag}
-                    disabled={!newTag.trim()}
-                  >
+                    disabled={!newTag.trim()}>
                     <Text style={styles.addButtonText}>Add</Text>
                   </TouchableOpacity>
                 </View>
@@ -524,16 +519,11 @@ const AddEditServiceModal: React.FC<AddEditServiceModalProps> = ({
                 </View>
               </View>
 
-
               {/* Submit */}
               <TouchableOpacity
-                style={[
-                  styles.submitButton,
-                  isSubmitting && styles.submitButtonDisabled,
-                ]}
+                style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
                 onPress={handleSubmit}
-                disabled={isSubmitting}
-              >
+                disabled={isSubmitting}>
                 {isSubmitting ? (
                   <View style={styles.submitButtonContent}>
                     <ActivityIndicator size="small" color="#FFFFFF" />
@@ -598,52 +588,79 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
   },
-    keyboardAvoiding: { flex: 1 },
+  keyboardAvoiding: { flex: 1 },
   modalOverlay: {
-  flex: 1,
-  justifyContent: 'flex-end',
-  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-},
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
 
-modalSafeArea: {
-  flex: 1,
-  justifyContent: 'flex-end',
-},
+  modalSafeArea: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
 
-modalContainer: {
-  height: '70%', // Only bottom 70% of the screen
-  backgroundColor: 'white',
-  borderTopLeftRadius: 24,
-  borderTopRightRadius: 24,
-  overflow: 'hidden',
-},
-modalOverlayTouchable: {
-  flex: 1,
-  justifyContent: 'flex-end',
-  backgroundColor: 'rgba(0,0,0,0.5)',
-},
-modalContentContainer: {
-  height: '70%',
-  backgroundColor: '#fff',
-  borderTopLeftRadius: 24,
-  borderTopRightRadius: 24,
-  overflow: 'hidden',
-},
+  modalContainer: {
+    height: '70%', // Only bottom 70% of the screen
+    backgroundColor: 'white',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+  },
+  modalOverlayTouchable: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContentContainer: {
+    height: '70%',
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+  },
 
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1F2937' },
   inputGroup: { marginBottom: 16 },
   label: { fontWeight: '500', color: '#374151', marginBottom: 8 },
   requiredAsterisk: { color: '#EF4444' },
-  imagePicker: { height: 180, backgroundColor: '#F3F4F6', borderRadius: 8, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  imagePicker: {
+    height: 180,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
   imagePreview: { width: '100%', height: '100%' },
   imagePickerPlaceholder: { alignItems: 'center' },
   imagePickerText: { color: '#6B7280', marginTop: 6 },
-  textInput: { borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, color: '#1F2937' },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: '#1F2937',
+  },
   textInputError: { borderColor: '#EF4444' },
   multilineTextInput: { minHeight: 80, textAlignVertical: 'top' },
   categoryContainer: { flexDirection: 'row', flexWrap: 'wrap' },
-  categoryChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, marginRight: 8, marginBottom: 8 },
+  categoryChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginRight: 8,
+    marginBottom: 8,
+  },
   categoryChipSelected: { backgroundColor: 'rgba(37, 99, 235, 0.1)', borderColor: '#2563EB' },
   categoryChipUnselected: { backgroundColor: '#F9FAFB', borderColor: '#D1D5DB' },
   categoryTextSelected: { color: '#2563EB' },
@@ -652,15 +669,39 @@ modalContentContainer: {
   priceInputWrapper: { flex: 1 },
   priceInputWrapperLeft: { marginRight: 8 },
   priceInputWrapperRight: { marginLeft: 8 },
-  toggleContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   featureTagInputContainer: { flexDirection: 'row', alignItems: 'center' },
   featureTagInput: { flex: 1, marginRight: 8 },
-  addButton: { backgroundColor: '#2563EB', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6 },
+  addButton: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
   addButtonText: { color: 'white', fontWeight: '500' },
-  itemListItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
+  itemListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
   itemText: { color: '#1F2937' },
   tagListContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 },
-  tagListItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginRight: 8, marginBottom: 8 },
+  tagListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 8,
+    marginBottom: 8,
+  },
   tagText: { marginRight: 4, color: '#4B5563' },
   errorText: { color: '#EF4444', fontSize: 12, marginTop: 4 },
   helperText: { color: '#6B7280', fontSize: 12, marginTop: 4 },

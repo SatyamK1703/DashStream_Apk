@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, FlatList, ActivityIndicator, RefreshControl, Alert, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -69,7 +69,10 @@ const AdminServicesScreen = () => {
 
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [sortOption, setSortOption] = useState<string>('date_desc');
+  const [services, setServices] = useState<Service[]>([]);
   const [sortBy, setSortBy] = useState<'title' | 'price' | 'category' | 'date'>('title');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showAddEditModal, setShowAddEditModal] = useState(false);
@@ -90,14 +93,25 @@ const AdminServicesScreen = () => {
   });
   const [isEditing, setIsEditing] = useState(false);
 
-  const {
-    data: services = [],
-    loading,
-    error,
-    refresh: fetchServices,
-    loadMore,
-  } = useAdminServices();
-  useEffect(() => {}, [services, loading, error]);
+  const filters = useMemo(
+    () => ({
+      status: selectedStatus,
+      category: selectedCategory,
+      sort: sortOption,
+    }),
+    [selectedStatus, selectedCategory, sortOption]
+  );
+
+  const { data, refresh: fetchServices, loading, error } = useAdminServices({ filters });
+
+  // const {
+  //   data: services = [],
+  //   loading,
+  //   error,
+  //   refresh: fetchServices,
+  //   loadMore,
+  // } = useAdminServices();
+  // useEffect(() => {}, [services, loading, error]);
 
   const { execute: createService, loading: createLoading } = useCreateService();
   const { execute: updateService, loading: updateLoading } = useUpdateService();
@@ -260,6 +274,10 @@ const AdminServicesScreen = () => {
     );
   };
 
+  const handleModalSuccess = useCallback(() => {
+    fetchServices();
+  }, [fetchServices]);
+
   // Form submission is now handled inside AddEditServiceModal
 
   const categoriesSource: any[] = Array.isArray(categoriesData)
@@ -321,7 +339,7 @@ const AdminServicesScreen = () => {
         <>
           <FlatList
             data={filteredServices || []}
-            keyExtractor={(item) => item._id}
+            keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <ServiceCard
                 service={item}
@@ -349,7 +367,7 @@ const AdminServicesScreen = () => {
         isEditing={isEditing}
         formData={formData}
         onClose={() => setShowAddEditModal(false)}
-        onSuccess={useCallback(() => fetchServices(), [])}
+        onSuccess={handleModalSuccess}
       />
     </SafeAreaView>
   );
