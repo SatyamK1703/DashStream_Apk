@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -106,33 +107,33 @@ const AdminServicesArea = () => {
 
   if (isLoading && serviceAreas.length === 0) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-50">
-        <ActivityIndicator size="large" color="#2563EB" />
-        <Text className="mt-2 text-base text-gray-600">Loading service areas...</Text>
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#007BFF" />
+        <Text style={styles.loadingText}>Loading service areas...</Text>
       </View>
     );
   }
 
   if (error && serviceAreas.length === 0) {
     return (
-      <View className="flex-1 justify-center items-center bg-gray-50 p-4">
-        <Text className="text-base text-red-600 mb-3">Error: {error}</Text>
-        <TouchableOpacity className="bg-blue-600 px-5 py-2 rounded-lg" onPress={onRefresh}>
-          <Text className="text-white text-base font-semibold">Retry</Text>
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>Error: {error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={onRefresh}>
+          <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <View className="flex-row items-center justify-between p-4 border-b border-gray-200 bg-white">
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.addButton}>
           <Ionicons name="arrow-back" size={24} color="#1F2937" />
         </TouchableOpacity>
-        <Text className="text-xl font-bold text-gray-800">Set Services Area</Text>
-        <TouchableOpacity onPress={() => setModalVisible(true)} className="p-1">
-          <Ionicons name="add-circle-outline" size={28} color="#2563EB" />
+        <Text style={styles.headerTitle}>Service Areas</Text>
+        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addButton}>
+          <Ionicons name="add-circle-outline" size={28} color="#007BFF" />
         </TouchableOpacity>
       </View>
 
@@ -140,20 +141,20 @@ const AdminServicesArea = () => {
         data={serviceAreas}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
-          <View className="flex-row justify-between items-center bg-white rounded-lg p-4 mb-3 shadow-md">
-            <Text className="text-base text-gray-700 font-semibold">{item.name} ({item.pincode})</Text>
+          <View style={styles.listItem}>
+            <Text style={styles.listItemText}>{item.name} ({item.pincode})</Text>
             <TouchableOpacity onPress={() => handleDeletePincode(item._id)}>
-              <Ionicons name="trash-outline" size={24} color="#EF4444" />
+              <Ionicons name="trash-outline" size={22} color="#D9534F" />
             </TouchableOpacity>
           </View>
         )}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={styles.listContainer}
         refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={onRefresh} colors={['#2563EB']} />
+          <RefreshControl refreshing={isLoading} onRefresh={onRefresh} colors={['#007BFF']} />
         }
         ListEmptyComponent={!isLoading && (
-          <View className="items-center py-5">
-            <Text className="text-base text-gray-500 italic">No service areas set yet.</Text>
+          <View style={styles.listEmptyContainer}>
+            <Text style={styles.listEmptyText}>No service areas have been added yet.</Text>
           </View>
         )}
       />
@@ -163,37 +164,37 @@ const AdminServicesArea = () => {
         transparent={true}
         visible={isModalVisible}
         onRequestClose={() => setModalVisible(false)}>
-        <View className="flex-1 justify-center items-center bg-black bg-opacity-60">
-          <View className="bg-white p-6 rounded-lg w-4/5 shadow-lg">
-            <Text className="text-xl font-bold mb-5 text-center text-gray-800">Add New Service Area</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Add New Service Area</Text>
             <TextInput
-              className="border border-gray-300 rounded-lg p-3 mb-4 text-base text-gray-800 text-center"
-              placeholder="Enter Service Area Name"
+              style={styles.input}
+              placeholder="Service Area Name (e.g., Downtown)"
               value={newName}
               onChangeText={setNewName}
             />
             <TextInput
-              className="border border-gray-300 rounded-lg p-3 mb-5 text-base text-gray-800 text-center"
-              placeholder="Enter 6-digit Pincode"
+              style={styles.input}
+              placeholder="6-Digit Pincode"
               keyboardType="numeric"
               maxLength={6}
               value={newPincode}
               onChangeText={setNewPincode}
             />
-            <View className="flex-row justify-around">
+            <View style={styles.modalActions}>
               <TouchableOpacity
-                className="bg-red-500 px-5 py-2 rounded-lg"
+                style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
                   setModalVisible(false);
                   setNewName('');
                   setNewPincode('');
                 }}>
-                <Text className="text-white text-base font-semibold">Cancel</Text>
+                <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                className="bg-blue-600 px-5 py-2 rounded-lg"
+                style={[styles.modalButton, styles.confirmButton]}
                 onPress={handleAddPincode}>
-                <Text className="text-white text-base font-semibold">Add Area</Text>
+                <Text style={styles.modalButtonText}>Add Area</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -203,6 +204,99 @@ const AdminServicesArea = () => {
   );
 };
 
-
+const styles = StyleSheet.create({
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8F9FA', padding: 20 },
+    loadingText: { marginTop: 12, fontSize: 16, color: '#6C757D' },
+    errorText: { fontSize: 16, color: '#D9534F', marginBottom: 16, textAlign: 'center' },
+    retryButton: { backgroundColor: '#007BFF', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 },
+    retryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+    container: { flex: 1, backgroundColor: '#F8F9FA' },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+        backgroundColor: '#FFFFFF',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E9ECEF',
+    },
+    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#212529' },
+    addButton: { padding: 4 },
+    listContainer: { padding: 16 },
+    listItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    listItemText: { fontSize: 16, color: '#495057', fontWeight: '600' },
+    listEmptyContainer: { alignItems: 'center', paddingTop: 40 },
+    listEmptyText: { fontSize: 16, color: '#6C757D', fontStyle: 'italic' },
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    },
+    modalContent: {
+        backgroundColor: '#FFFFFF',
+        padding: 24,
+        borderRadius: 16,
+        width: '85%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 10,
+    },
+    modalTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        marginBottom: 20,
+        textAlign: 'center',
+        color: '#212529',
+    },
+    input: {
+        borderWidth: 1,
+        borderColor: '#CED4DA',
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 16,
+        fontSize: 16,
+        color: '#212529',
+    },
+    modalActions: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        marginTop: 8,
+    },
+    modalButton: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    cancelButton: {
+        backgroundColor: '#6C757D',
+        marginRight: 8,
+    },
+    confirmButton: {
+        backgroundColor: '#007BFF',
+        marginLeft: 8,
+    },
+    modalButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+});
 
 export default AdminServicesArea;

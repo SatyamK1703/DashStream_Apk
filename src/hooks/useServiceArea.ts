@@ -3,10 +3,14 @@ import { useApi } from './useApi';
 import api from '../services/httpClient';
 
 export const useServiceArea = () => {
-  const { execute: fetchServiceAreas, ...fetchState } = useApi(api.get, { showErrorAlert: false, cacheDuration: 300000 });
-  const { execute: addServiceArea, ...addState } = useApi(api.post, { showErrorAlert: true });
-  const { execute: deleteServiceArea, ...deleteState } = useApi(api.delete, { showErrorAlert: true });
-  const { execute: checkPincode, ...checkState } = useApi(api.get, { showErrorAlert: false });
+  const getApi = useCallback((...args: [string, any]) => api.get(...args), []);
+  const postApi = useCallback((...args: [string, any]) => api.post(...args), []);
+  const deleteApi = useCallback((...args: [string, any]) => api.delete(...args), []);
+
+  const { execute: fetchServiceAreas, ...fetchState } = useApi(getApi, { showErrorAlert: false, cacheDuration: 300000 });
+  const { execute: addServiceArea, ...addState } = useApi(postApi, { showErrorAlert: true });
+  const { execute: deleteServiceArea, ...deleteState } = useApi(deleteApi, { showErrorAlert: true });
+  const { execute: checkPincode, ...checkState } = useApi(getApi, { showErrorAlert: false });
 
   const getAreas = useCallback(() => {
     console.log('useServiceArea: Calling getAreas for /service-areas');
