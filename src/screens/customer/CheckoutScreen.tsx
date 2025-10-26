@@ -9,6 +9,7 @@ import { useCart, useAddresses, useCheckout } from '../../store';
 import { useCreateBooking } from '../../hooks/useBookings';
 import { useCreateCODPayment } from '../../hooks/usePayments';
 import { useServiceArea } from '../../hooks/useServiceArea';
+import { useNotifyAreaRequest } from '../../hooks/useNotifications';
 import api from '../../services/httpClient'; // <-- Ensure you have a generic API client for direct calls
 import { Address } from '../../types/api';
 // @ts-ignore: expo-web-browser may not have types in some setups
@@ -121,6 +122,7 @@ const CheckoutScreen = () => {
   const createBookingApi = useCreateBooking();
   const createCODPaymentApi = useCreateCODPayment();
   const { checkPincodeAvailability } = useServiceArea();
+  const { execute: notifyAdmin } = useNotifyAreaRequest();
 
   // Simplified payment methods - only UPI and COD
   const paymentMethods = [
@@ -243,8 +245,10 @@ const CheckoutScreen = () => {
       }
 
       const availabilityRes = await checkPincodeAvailability(pincode);
-      if (!availabilityRes?.data?.isAvailable) {
-        Alert.alert('Service Not Available', 'Service not available for your area.');
+      // The hook returns the data object directly, not the full response
+      if (!availabilityRes?.isAvailable) {
+        Alert.alert('Service Not Available', 'Service not available for your area. We have notified our team of your interest.');
+        await notifyAdmin(pincode);
         return;
       }
 
