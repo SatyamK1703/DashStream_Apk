@@ -119,6 +119,7 @@ export const API_ENDPOINTS = {
     PREFERENCES: '/notifications/preferences',
     REGISTER_FCM: '/notifications/register-fcm',
     UNREAD_COUNT: '/notifications/unread-count',
+    AREA_REQUEST: '/notifications/area-request',
   },
 
   // Location

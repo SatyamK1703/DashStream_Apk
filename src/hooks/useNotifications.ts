@@ -215,3 +215,13 @@ export const useRegisterFCMToken = () => {
     }
   );
 };
+
+// Hook for notifying admin about a new area request
+export const useNotifyAreaRequest = () => {
+  return useApi(
+    (pincode: string) => notificationService.notifyAreaRequest(pincode),
+    {
+      showErrorAlert: false, // We don't need to bother the user if this fails
+    }
+  );
+};

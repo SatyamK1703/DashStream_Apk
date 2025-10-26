@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCart } from '../../store';
+import { useAuth } from '../../store';
+import { useServiceArea } from '../../hooks/useServiceArea';
+import { useNotifyAreaRequest } from '../../hooks/useNotifications';
 
 type ServiceDetailsNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -48,6 +50,9 @@ const ServiceDetailsScreen = () => {
   const svc = serviceData as any;
 
   const { addItem } = useCart();
+  const { user } = useAuth();
+  const { getAreas } = useServiceArea();
+  const { execute: notifyAdmin } = useNotifyAreaRequest();
 
   if (!svc) {
     return (
@@ -74,20 +79,49 @@ const ServiceDetailsScreen = () => {
     navigation.navigate('Cart');
   };
 
-  const handleBookNow = () => {
-
+  const handleBookNow = async () => {
     if (!svc) return;
 
-    addItem({
-      id: svc.id || svc._id,
-      title: svc.title,
-      price: svc.price || 0,
-      quantity,
-      image: typeof svc.image === 'string' ? { uri: svc.image } : svc.image,
-      meta: { vehicleType: svc.vehicleType }
-    });
+    try {
+      // 1. Get available pincodes
+      const areasResponse = await getAreas();
+      const availablePincodes = areasResponse.serviceAreas.map((area: any) => area.pincode);
 
-    navigation.navigate('Checkout');
+      // 2. Get customer pincode (assuming structure)
+      const customerPincode = user?.address?.pincode;
+
+      if (!customerPincode) {
+        Alert.alert(
+          "Pincode Required",
+          "Please set your pincode in your profile to check for service availability."
+        );
+        return;
+      }
+
+      // 3. Check for availability
+      if (availablePincodes.includes(customerPincode)) {
+        // Available: proceed to checkout
+        addItem({
+          id: svc.id || svc._id,
+          title: svc.title,
+          price: svc.price || 0,
+          quantity,
+          image: typeof svc.image === 'string' ? { uri: svc.image } : svc.image,
+          meta: { vehicleType: svc.vehicleType }
+        });
+        navigation.navigate('Checkout');
+      } else {
+        // Not available: show alert and notify admin
+        Alert.alert(
+          "Service Not Available",
+          "Sorry, service is not currently available in your area. We have notified our team of your interest."
+        );
+        await notifyAdmin(customerPincode);
+      }
+    } catch (error) {
+      console.error("Failed to check service availability:", error);
+      Alert.alert("Error", "Could not verify service availability. Please try again.");
+    }
   };
 
   return (

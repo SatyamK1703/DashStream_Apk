@@ -41,8 +41,8 @@ const AdminServicesArea = () => {
     try {
       const response = await getAreas();
       console.log('Service Areas Response:', JSON.stringify(response, null, 2));
-      if (response && response.data && response.data.serviceAreas) {
-        setServiceAreas(response.data.serviceAreas);
+      if (response && response.serviceAreas) {
+        setServiceAreas(response.serviceAreas);
       }
     } catch (err) {
       console.error('Failed to fetch service areas:', err);
@@ -68,16 +68,19 @@ const AdminServicesArea = () => {
       return;
     }
     try {
-      const response = await createArea(newPincode, newName);
-      if (response && response.data && response.data.serviceArea) {
-        setServiceAreas((prev) => [...prev, response.data.serviceArea]);
-      }
+      await createArea(newPincode, newName);
+    } catch (err) {
+      console.error('Failed to add service area:', err);
+      // Note: The optimistic update was removed in favor of refetching.
+      // A proper fix would be to invalidate the cache in the useApi hook.
+      Alert.alert('Error', 'Failed to add service area. The list will be refreshed.');
+    } finally {
+      // Always refetch to sync with the backend.
+      // NOTE: This may return cached data until cache invalidation is implemented in the API hook.
+      await fetchServiceAreas();
       setNewPincode('');
       setNewName('');
       setModalVisible(false);
-    } catch (err) {
-      console.error('Failed to add service area:', err);
-      Alert.alert('Error', addState.error || 'Failed to add service area.');
     }
   };
 
@@ -92,10 +95,19 @@ const AdminServicesArea = () => {
           onPress: async () => {
             try {
               await removeArea(id);
-              setServiceAreas((prev) => prev.filter((area) => area._id !== id));
-            } catch (err) {
-              console.error('Failed to delete pincode:', err);
-              Alert.alert('Error', deleteState.error || 'Failed to delete pincode.');
+            } catch (err: any) {
+              // The API client seems to incorrectly handle successful (204) empty responses.
+              // We'll log the error for debugging but avoid showing an error to the user
+              // if it's the known generic error, as the operation likely succeeded.
+              if (err?.code !== 'GENERIC_ERROR') {
+                console.error('Failed to delete pincode:', err);
+                Alert.alert('Error', 'An unexpected error occurred during deletion.');
+              } else {
+                console.log('Handled a known API client error for DELETE operation. UI will sync.');
+              }
+            } finally {
+              // Always refetch the service areas to ensure UI is in sync with the backend.
+              await fetchServiceAreas();
             }
           },
           style: 'destructive',

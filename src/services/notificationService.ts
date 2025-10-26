@@ -29,6 +29,10 @@ class NotificationService {
   async updatePreferences(preferences: object) {
     return await httpClient.put(API_ENDPOINTS.NOTIFICATIONS.PREFERENCES, preferences);
   }
+
+  async notifyAreaRequest(pincode: string) {
+    return await httpClient.post(API_ENDPOINTS.NOTIFICATIONS.AREA_REQUEST, { pincode });
+  }
 }
 
 export const notificationService = new NotificationService();
