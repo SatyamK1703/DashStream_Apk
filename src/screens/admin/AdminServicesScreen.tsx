@@ -123,6 +123,12 @@ const AdminServicesScreen = () => {
     fetchCategories();
   }, [fetchCategories]);
 
+  useEffect(() => {
+    if (data) {
+      setServices(data);
+    }
+  }, [data]);
+
   const filterAndSortServices = useCallback(() => {
     if (!services || !Array.isArray(services)) {
       setFilteredServices([]);
