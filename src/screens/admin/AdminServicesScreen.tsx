@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, FlatList, ActivityIndicator, RefreshControl, Alert, Text } from 'react-native';
+import { View, FlatList, ActivityIndicator, RefreshControl, Alert, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 
@@ -11,7 +11,7 @@ import ServiceCard from '~/components/admin/ServiceCard';
 import EmptyState from '~/components/admin/EmptyState';
 import AddEditServiceModal from '~/components/admin/AddEditServiceModal';
 
-import { styles } from '../../components/admin/AdminService.styles';
+
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
 
@@ -44,6 +44,7 @@ interface Service {
   updatedAt: string;
   features: string[];
   tags: string[];
+  vehicleType?: string;
 }
 
 interface ServiceFormData {
@@ -61,6 +62,7 @@ interface ServiceFormData {
   isPopular: boolean;
   features: string[];
   tags: string[];
+  vehicleType: string;
 }
 
 const AdminServicesScreen = () => {
@@ -90,6 +92,7 @@ const AdminServicesScreen = () => {
     isPopular: false,
     features: [],
     tags: [],
+    vehicleType: 'Both',
   });
   const [isEditing, setIsEditing] = useState(false);
 
@@ -231,6 +234,7 @@ const AdminServicesScreen = () => {
       isPopular: false,
       features: [],
       tags: [],
+      vehicleType: 'Both',
     });
     setShowAddEditModal(true);
   };
@@ -252,6 +256,7 @@ const AdminServicesScreen = () => {
       isPopular: service.isPopular,
       features: [...service.features],
       tags: [...service.tags],
+      vehicleType: service.vehicleType || 'Both',
     });
     setShowAddEditModal(true);
   };
@@ -314,12 +319,12 @@ const AdminServicesScreen = () => {
     <SafeAreaView style={styles.container}>
       <Header title="Manage Services" onBack={() => navigation.goBack()} onAdd={handleAddService} />
 
-      <View style={styles.searchContainer}>
+      <View style={styles.controlsContainer}>
         <SearchBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onClear={() => setSearchQuery('')}
-          placeholder="search sercives..."
+          placeholder="Search services..."
         />
 
         <CategoryFilter
@@ -334,38 +339,34 @@ const AdminServicesScreen = () => {
           sortOrder={sortOrder}
           onSortByChange={handleSortByChange}
           onSortOrderToggle={toggleSortOrder}
-          placetext="No Services Founds"
+          placetext="No Services Found"
         />
       </View>
       {!filteredServices || filteredServices.length === 0 ? (
-        <>
-          <EmptyState onAddService={handleAddService} />
-        </>
+        <EmptyState onAddService={handleAddService} />
       ) : (
-        <>
-          <FlatList
-            data={filteredServices || []}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <ServiceCard
-                service={item}
-                onToggleStatus={toggleServiceStatus}
-                onEdit={handleEditService}
-                onDelete={handleDeleteService}
-              />
-            )}
-            contentContainerStyle={styles.listContainer}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#2563EB']} />
-            }
-            ListEmptyComponent={() => (
-              <View style={{ padding: 20, alignItems: 'center' }}>
-                <Text style={{ color: '#666', fontSize: 16 }}>No services to display</Text>
-              </View>
-            )}
-          />
-        </>
+        <FlatList
+          data={filteredServices || []}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <ServiceCard
+              service={item}
+              onToggleStatus={toggleServiceStatus}
+              onEdit={handleEditService}
+              onDelete={handleDeleteService}
+            />
+          )}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={onRefresh} colors={['#007BFF']} />
+          }
+          ListEmptyComponent={() => (
+            <View style={styles.listEmptyContainer}>
+              <Text style={styles.listEmptyText}>No services to display</Text>
+            </View>
+          )}
+        />
       )}
 
       <AddEditServiceModal
@@ -378,5 +379,43 @@ const AdminServicesScreen = () => {
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#6C757D',
+  },
+  controlsContainer: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
+  },
+  listContainer: {
+    padding: 16,
+    paddingTop: 0,
+  },
+  listEmptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  listEmptyText: {
+    fontSize: 16,
+    color: '#6C757D',
+    textAlign: 'center',
+  },
+});
 
 export default AdminServicesScreen;
