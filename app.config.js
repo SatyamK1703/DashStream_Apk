@@ -11,6 +11,7 @@ export default {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
+    plugins: ['expo-video'],
     splash: {
       image: './assets/splash.png',
       resizeMode: 'contain',
