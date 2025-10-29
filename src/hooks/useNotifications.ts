@@ -181,7 +181,8 @@ export const useNotificationPreferences = () => {
     };
 
     fetchPreferences();
-  }, [fetchApi]); // ✅ Run only on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only on mount
 
   return {
     preferences,
