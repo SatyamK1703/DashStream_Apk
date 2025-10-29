@@ -1,5 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -38,52 +46,91 @@ const BookingConfirmationScreen = () => {
         bookingFormat: booking ? Object.keys(booking).join(',') : 'none',
         hasService: booking?.service ? 'yes' : 'no',
         hasServices: booking?.services ? 'yes' : 'no',
-        servicesType: booking?.services ? (Array.isArray(booking.services) ? 'array' : typeof booking.services) : 'none',
-        servicesLength: booking?.services && Array.isArray(booking.services) ? booking.services.length : 0,
-        serviceKeys: booking?.service ? Object.keys(booking.service).join(',') : 'none',
-        firstServiceKeys: booking?.services && Array.isArray(booking.services) && booking.services.length > 0
-          ? Object.keys(booking.services[0]).join(',')
+        servicesType: booking?.services
+          ? Array.isArray(booking.services)
+            ? 'array'
+            : typeof booking.services
           : 'none',
+        servicesLength:
+          booking?.services && Array.isArray(booking.services) ? booking.services.length : 0,
+        serviceKeys: booking?.service ? Object.keys(booking.service).join(',') : 'none',
+        firstServiceKeys:
+          booking?.services && Array.isArray(booking.services) && booking.services.length > 0
+            ? Object.keys(booking.services[0]).join(',')
+            : 'none',
         bookingId,
         loading,
-        error: error ? error.toString() : null
+        error: error ? error.toString() : null,
       });
     }
   }, [bookingResponse, booking, bookingId, loading, error]);
 
+  const paymentId = booking?.paymentId;
+  const paymentMethod = booking?.paymentMethod;
+
+  // Debugging refs to track dependency changes
+  const renderCount = React.useRef(0);
+  renderCount.current += 1;
+  console.log(`Render count: ${renderCount.current}`);
+
+  const prevPaymentId = React.useRef(paymentId);
+  const prevPaymentMethod = React.useRef(paymentMethod);
+
   // Poll payment status if booking has a payment that's not yet captured
   useEffect(() => {
+    if (__DEV__) {
+      console.log(`Polling effect is running. Render: ${renderCount.current}`);
+      if (prevPaymentId.current !== paymentId) {
+        console.log(
+          `--- Dependency changed: paymentId from '${prevPaymentId.current}' to '${paymentId}'`
+        );
+        prevPaymentId.current = paymentId;
+      }
+      if (prevPaymentMethod.current !== paymentMethod) {
+        console.log(
+          `--- Dependency changed: paymentMethod from '${prevPaymentMethod.current}' to '${paymentMethod}'`
+        );
+        prevPaymentMethod.current = paymentMethod;
+      }
+    }
+
     if (!booking) return;
 
-    const paymentId = booking.paymentId;
-
     if (!paymentId) {
-      setPaymentStatus('pending');
+      setPaymentStatus(paymentMethod === 'cod' ? 'cod_pending' : 'pending');
       return;
     }
 
-    // Check payment status
+    let isMounted = true;
+    let timeoutId: NodeJS.Timeout;
+
     const checkPaymentStatus = async () => {
+      if (!isMounted) return;
       try {
         setCheckingPayment(true);
         const statusRes = await api.get(`/payments/${paymentId}`);
         const status = statusRes?.data?.payment?.status;
-        setPaymentStatus(status || 'unknown');
-
-        // If payment is still pending, poll again after 3 seconds
-        if (status === 'created' || status === 'pending' || status === 'authorized') {
-          setTimeout(checkPaymentStatus, 3000);
+        if (isMounted) {
+          setPaymentStatus(status || 'unknown');
+          if (status === 'created' || status === 'pending' || status === 'authorized') {
+            timeoutId = setTimeout(checkPaymentStatus, 3000);
+          }
         }
       } catch (error) {
         console.error('Error checking payment status:', error);
-        setPaymentStatus('unknown');
+        if (isMounted) setPaymentStatus('unknown');
       } finally {
-        setCheckingPayment(false);
+        if (isMounted) setCheckingPayment(false);
       }
     };
 
     checkPaymentStatus();
-  }, [booking]);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, [paymentId]);
 
   const formatDate = (date: Date | string | undefined) => {
     if (!date) return 'Date not available';
@@ -91,7 +138,12 @@ const BookingConfirmationScreen = () => {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
 
     if (dateObj instanceof Date && !isNaN(dateObj.getTime())) {
-      return dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      return dateObj.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
     }
 
     return 'Invalid date';
@@ -156,13 +208,19 @@ const BookingConfirmationScreen = () => {
   if (error || !booking) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <View
+          style={[
+            styles.container,
+            { justifyContent: 'center', alignItems: 'center', padding: 24 },
+          ]}>
           <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
           <Text style={[styles.successTitle, { color: '#ef4444', marginTop: 16 }]}>
             {error ? 'Failed to load booking' : 'Booking not found'}
           </Text>
           <Text style={[styles.successText, { marginTop: 8 }]}>
-            {error ? 'Please check your connection and try again.' : 'The booking ID may be invalid.'}
+            {error
+              ? 'Please check your connection and try again.'
+              : 'The booking ID may be invalid.'}
           </Text>
           <Text style={[styles.successText, { fontSize: 14, marginTop: 8, marginBottom: 16 }]}>
             Booking ID: {bookingId || 'Not available'}
@@ -172,16 +230,12 @@ const BookingConfirmationScreen = () => {
           {bookingId && (
             <TouchableOpacity
               style={[styles.primaryBtn, { marginBottom: 12 }]}
-              onPress={() => execute()}
-            >
+              onPress={() => execute()}>
               <Text style={styles.primaryBtnText}>Retry</Text>
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity
-            style={[styles.secondaryBtn]}
-            onPress={() => navigation.goBack()}
-          >
+          <TouchableOpacity style={[styles.secondaryBtn]} onPress={() => navigation.goBack()}>
             <Text style={styles.secondaryBtnText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -197,7 +251,7 @@ const BookingConfirmationScreen = () => {
   const subtotal = services.reduce((acc, service) => {
     const price = service?.basePrice || service?.price || service?.serviceId?.price || 0;
     const quantity = service?.quantity || 1;
-    return acc + (price * quantity);
+    return acc + price * quantity;
   }, 0);
 
   return (
@@ -217,32 +271,44 @@ const BookingConfirmationScreen = () => {
 
             {/* Payment Status Indicator */}
             {paymentStatus && (
-              <View style={[
-                styles.paymentStatusBadge,
-                paymentStatus === 'captured' && styles.paymentStatusSuccess,
-                paymentStatus === 'failed' && styles.paymentStatusFailed,
-                (paymentStatus === 'created' || paymentStatus === 'pending' || paymentStatus === 'authorized') && styles.paymentStatusPending,
-                paymentStatus === 'cod_pending' && styles.paymentStatusCOD
-              ]}>
-                {checkingPayment && <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />}
+              <View
+                style={[
+                  styles.paymentStatusBadge,
+                  paymentStatus === 'captured' && styles.paymentStatusSuccess,
+                  paymentStatus === 'failed' && styles.paymentStatusFailed,
+                  (paymentStatus === 'created' ||
+                    paymentStatus === 'pending' ||
+                    paymentStatus === 'authorized') &&
+                    styles.paymentStatusPending,
+                  paymentStatus === 'cod_pending' && styles.paymentStatusCOD,
+                ]}>
+                {checkingPayment && (
+                  <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+                )}
                 <Ionicons
                   name={
-                    paymentStatus === 'captured' ? 'checkmark-circle' :
-                      paymentStatus === 'failed' ? 'close-circle' :
-                        paymentStatus === 'cod_pending' ? 'cash' :
-                          'time'
+                    paymentStatus === 'captured'
+                      ? 'checkmark-circle'
+                      : paymentStatus === 'failed'
+                        ? 'close-circle'
+                        : paymentStatus === 'cod_pending'
+                          ? 'cash'
+                          : 'time'
                   }
                   size={16}
                   color="#fff"
                   style={{ marginRight: 4 }}
                 />
                 <Text style={styles.paymentStatusText}>
-                  {paymentStatus === 'captured' ? 'Payment Successful' :
-                    paymentStatus === 'failed' ? 'Payment Failed' :
-                      paymentStatus === 'cod_pending' ? "Cash on Delivery" :
-
-                        paymentStatus === 'authorized' ? 'Payment Authorized' :
-                          'Payment Processing...'}
+                  {paymentStatus === 'captured'
+                    ? 'Payment Successful'
+                    : paymentStatus === 'failed'
+                      ? 'Payment Failed'
+                      : paymentStatus === 'cod_pending'
+                        ? 'Cash on Delivery'
+                        : paymentStatus === 'authorized'
+                          ? 'Payment Authorized'
+                          : 'Payment Processing...'}
                 </Text>
               </View>
             )}
@@ -289,10 +355,10 @@ const BookingConfirmationScreen = () => {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.label}>Service Address</Text>
                   <Text style={styles.value}>
-                    {address ?
-                      (address.address ?
-                        `${address.address}${address.city ? `, ${address.city}` : ''}${address.pincode ? ` ${address.pincode}` : ''}`
-                        : 'Address details not available')
+                    {address
+                      ? address.address
+                        ? `${address.address}${address.city ? `, ${address.city}` : ''}${address.pincode ? ` ${address.pincode}` : ''}`
+                        : 'Address details not available'
                       : 'Address not available'}
                   </Text>
                 </View>
@@ -328,7 +394,7 @@ const BookingConfirmationScreen = () => {
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>What's Next?</Text>
 
-              {["Professional Assignment", "On the Way", "Service Completion"].map((title, idx) => (
+              {['Professional Assignment', 'On the Way', 'Service Completion'].map((title, idx) => (
                 <View style={styles.nextStepRow} key={idx}>
                   <View style={styles.stepBadge}>
                     <Text style={styles.stepBadgeText}>{idx + 1}</Text>
@@ -337,10 +403,10 @@ const BookingConfirmationScreen = () => {
                     <Text style={styles.stepTitle}>{title}</Text>
                     <Text style={styles.stepSubtitle}>
                       {idx === 0
-                        ? "A skilled professional will be assigned to your booking shortly."
+                        ? 'A skilled professional will be assigned to your booking shortly.'
                         : idx === 1
-                          ? "You&apos;ll be notified when the professional is on the way to your location."
-                          : "After service completion, you can rate and review your experience."}
+                          ? 'You&apos;ll be notified when the professional is on the way to your location.'
+                          : 'After service completion, you can rate and review your experience.'}
                     </Text>
                   </View>
                 </View>
@@ -386,7 +452,9 @@ const ServiceBooked = ({ service }) => {
         <Text style={styles.serviceTitle}>
           {service?.name || service?.title || service?.serviceId?.title || 'Service'}
         </Text>
-        <Text style={styles.serviceSubtitle}>{quantity} x ₹{price.toFixed(2)}</Text>
+        <Text style={styles.serviceSubtitle}>
+          {quantity} x ₹{price.toFixed(2)}
+        </Text>
       </View>
       <Text style={styles.value}>₹{(price * quantity).toFixed(2)}</Text>
     </View>
@@ -396,14 +464,14 @@ const ServiceBooked = ({ service }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: 'white'
+    backgroundColor: 'white',
   },
   container: {
     flex: 1,
-    backgroundColor: 'white'
+    backgroundColor: 'white',
   },
   scrollContainer: {
-    flexGrow: 1
+    flexGrow: 1,
   },
   successContainer: {
     alignItems: 'center',
@@ -432,41 +500,41 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#1f2937',
-    marginBottom: 8
+    marginBottom: 8,
   },
   successText: {
     color: '#4b5563',
     textAlign: 'center',
-    paddingHorizontal: 24
+    paddingHorizontal: 24,
   },
   section: {
-    padding: 24
+    padding: 24,
   },
   card: {
     backgroundColor: '#f9fafb',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 24
+    marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 16
+    marginBottom: 16,
   },
   detailRow: {
     flexDirection: 'row',
-    marginBottom: 12
+    marginBottom: 12,
   },
   iconContainer: {
     width: 40,
-    alignItems: 'center'
+    alignItems: 'center',
   },
   label: {
     color: '#6b7280',
-    fontSize: 12
+    fontSize: 12,
   },
   value: {
-    fontWeight: '600'
+    fontWeight: '600',
   },
   serviceRow: {
     flexDirection: 'row',
@@ -479,7 +547,7 @@ const styles = StyleSheet.create({
   serviceImage: {
     width: 64,
     height: 64,
-    borderRadius: 8
+    borderRadius: 8,
   },
   serviceImagePlaceholder: {
     width: 64,
@@ -487,29 +555,29 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#f3f4f6',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   serviceInfo: {
     flex: 1,
-    marginLeft: 12
+    marginLeft: 12,
   },
   serviceTitle: {
-    fontWeight: '600'
+    fontWeight: '600',
   },
   serviceSubtitle: {
-    color: '#6b7280'
+    color: '#6b7280',
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8
+    marginBottom: 8,
   },
   discountLabel: {
-    color: '#16a34a'
+    color: '#16a34a',
   },
   discountValue: {
     fontWeight: '600',
-    color: '#16a34a'
+    color: '#16a34a',
   },
   totalRow: {
     flexDirection: 'row',
@@ -520,11 +588,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   totalText: {
-    fontWeight: 'bold'
+    fontWeight: 'bold',
   },
   nextStepRow: {
     flexDirection: 'row',
-    marginBottom: 12
+    marginBottom: 12,
   },
   stepBadge: {
     width: 32,
@@ -537,18 +605,18 @@ const styles = StyleSheet.create({
   },
   stepBadgeText: {
     fontWeight: 'bold',
-    color: '#2563eb'
+    color: '#2563eb',
   },
   stepTitle: {
-    fontWeight: '600'
+    fontWeight: '600',
   },
   stepSubtitle: {
-    color: '#6b7280'
+    color: '#6b7280',
   },
   actionContainer: {
     padding: 16,
     borderTopWidth: 1,
-    borderColor: '#e5e7eb'
+    borderColor: '#e5e7eb',
   },
   primaryBtn: {
     backgroundColor: '#2563eb',
@@ -559,7 +627,7 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: {
     color: 'white',
-    fontWeight: '600'
+    fontWeight: '600',
   },
   secondaryBtn: {
     borderWidth: 1,
