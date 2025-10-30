@@ -1,10 +1,10 @@
 import httpClient, { ApiResponse } from './httpClient';
 import { API_ENDPOINTS } from '../config/config';
-import { 
-  User, 
-  Booking, 
-  Service, 
-  Professional 
+import {
+  User,
+  Booking,
+  Service,
+  Professional
 } from '../types/api';
 
 // Admin-specific types
@@ -34,6 +34,18 @@ export interface AdminFilters {
 }
 
 class AdminService {
+  private handleError(error: any, context: string): never {
+    // Log error in development only
+    if (__DEV__) {
+      console.error(`AdminService error in ${context}:`, error);
+      if (error.response) {
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+      }
+    }
+    throw error;
+  }
+
   /**
    * Get admin dashboard statistics
    */
@@ -41,17 +53,8 @@ class AdminService {
     try {
       return await httpClient.get(API_ENDPOINTS.ADMIN.DASHBOARD);
     } catch (error) {
-      // Log error in development only
-      if (__DEV__) console.error('Get dashboard stats error:', error);
-      throw error;
+      return this.handleError(error, 'getDashboardStats');
     }
-  }
-
-  /**
-   * Get admin dashboard data (alias for getDashboardStats)
-   */
-  async getDashboard(): Promise<ApiResponse<AdminDashboardStats>> {
-    return this.getDashboardStats();
   }
 
   /**
@@ -61,8 +64,7 @@ class AdminService {
     try {
       return await httpClient.get(API_ENDPOINTS.ADMIN.USERS, { params: filters });
     } catch (error) {
-      console.error('Get users error:', error);
-      throw error;
+      return this.handleError(error, 'getUsers');
     }
   }
 
@@ -73,8 +75,7 @@ class AdminService {
     try {
       return await httpClient.get(API_ENDPOINTS.ADMIN.USER_BY_ID(userId));
     } catch (error) {
-      console.error('Get user by ID error:', error);
-      throw error;
+      return this.handleError(error, 'getUserById');
     }
   }
 
@@ -91,11 +92,10 @@ class AdminService {
     try {
       return await httpClient.post(API_ENDPOINTS.ADMIN.CREATE_USER, userData);
     } catch (error) {
-      console.error('Create user error:', error);
-      throw error;
+      return this.handleError(error, 'createUser');
     }
   }
-  
+
   /**
    * Create new professional
    */
@@ -114,24 +114,13 @@ class AdminService {
     sendCredentials?: boolean;
   }): Promise<ApiResponse<Professional>> {
     try {
-      // Log the request for debugging
       if (__DEV__) {
         console.log('Creating professional with data:', JSON.stringify(professionalData, null, 2));
       }
-      
-      // Make the API call
       return await httpClient.post(API_ENDPOINTS.ADMIN.PROFESSIONALS, professionalData);
     } catch (error: any) {
-      console.error('Create professional error:', error.response?.data || error.message);
-// ...
-    } catch (error: any) {
-      console.error('Get professional by ID error:', error);
-      
-      // Log more details about the error
-      if (error.response) {
-        console.error('Error response data:', error.response.data);
-        console.error('Error response status:', error.response.status);
-      }
+      return this.handleError(error, 'createProfessional');
+    }
   }
 
   /**
@@ -141,8 +130,7 @@ class AdminService {
     try {
       return await httpClient.patch(API_ENDPOINTS.ADMIN.UPDATE_USER(userId), userData);
     } catch (error) {
-      console.error('Update user error:', error);
-      throw error;
+      return this.handleError(error, 'updateUser');
     }
   }
 
@@ -153,8 +141,7 @@ class AdminService {
     try {
       return await httpClient.delete(API_ENDPOINTS.ADMIN.DELETE_USER(userId));
     } catch (error) {
-      console.error('Delete user error:', error);
-      throw error;
+      return this.handleError(error, 'deleteUser');
     }
   }
 
@@ -165,9 +152,76 @@ class AdminService {
     try {
       return await httpClient.get(API_ENDPOINTS.ADMIN.BOOKINGS, { params: filters });
     } catch (error) {
-      console.error('Get bookings error:', error);
-      throw error;
+      return this.handleError(error, 'getBookings');
     }
+  }
+
+  private normalizeBooking(rawBooking: any): Booking {
+    if (!rawBooking || typeof rawBooking !== 'object') return rawBooking;
+
+    const booking = { ...rawBooking };
+
+    // Ensure top-level _id and id exist
+    if (!booking._id && booking.id) booking._id = String(booking.id);
+    if (!booking.id && booking._id) booking.id = String(booking._id);
+
+    // Provide a bookingId fallback for UI header if missing
+    if (!booking.bookingId) booking.bookingId = booking.id || booking._id;
+
+    // Map location -> address for older/newer API shapes
+    if (!booking.address && booking.location) {
+      booking.address = booking.location;
+    } else if (!booking.address) {
+      booking.address = { addressLine1: '', city: '', state: '', postalCode: '' };
+    }
+
+    // Ensure nested customer/professional have _id as client expects
+    if (booking.customer && typeof booking.customer === 'object') {
+      if (!booking.customer._id && booking.customer.id) booking.customer._id = booking.customer.id;
+    } else if (typeof booking.customer === 'string') {
+      booking.customer = { _id: booking.customer, name: 'Unknown', phone: '' };
+    }
+
+    // Professional shape: ensure .user exists for UI
+    if (booking.professional && typeof booking.professional === 'object') {
+      const p = booking.professional;
+      if (!p.user) {
+        p.user = {
+          _id: p._id || p.id || null,
+          name: p.name || 'Unknown',
+          phone: p.phone || '',
+          email: p.email || '',
+        };
+      } else if (p.user && p.user.id && !p.user._id) {
+        p.user._id = p.user.id;
+      }
+      if (typeof p.rating === 'undefined') p.rating = 0;
+      if (typeof p.reviewCount === 'undefined') p.reviewCount = 0;
+    }
+
+    // Service shape: ensure basePrice and duration exist
+    if (booking.service && typeof booking.service === 'object') {
+      const s = booking.service;
+      if (!s._id && s.id) s._id = s.id;
+      if (typeof s.basePrice === 'undefined') s.basePrice = s.price ?? s.cost ?? 0;
+      if (typeof s.duration === 'undefined') s.duration = 0;
+    } else if (Array.isArray(booking.services) && booking.services[0]) {
+      const s0 = booking.services[0];
+      booking.service = {
+        _id: s0.serviceId?._id || s0.serviceId || s0.id,
+        name: s0.serviceId?.title || s0.title || s0.name || 'Service',
+        description: s0.serviceId?.description || s0.description || '',
+        basePrice: s0.price || s0.serviceId?.price || 0,
+        duration: s0.duration || s0.serviceId?.duration || 0,
+      };
+    }
+
+    // Ensure totals and payment fields
+    if (typeof booking.totalAmount === 'undefined') booking.totalAmount = booking.amount ?? 0;
+    if (!booking.paymentStatus) booking.paymentStatus = 'pending';
+    if (!booking.paymentMethod) booking.paymentMethod = null;
+
+    return booking as Booking;
   }
 
   /**
@@ -177,165 +231,32 @@ class AdminService {
     try {
       const response = await httpClient.get(API_ENDPOINTS.ADMIN.BOOKING_BY_ID(bookingId));
 
-      // Normalize response shapes from backend
-      // Possible shapes observed:
-      // 1) { status: 'success', data: booking }
-      // 2) { status: 'success', booking: booking }
-      // 3) { status: 'success', data: { booking: booking } }
-      // 4) { status: 'success', data: { data: booking } }
       if (!response) return response;
 
       let bookingPayload: any = null;
+      const responseData = response.data;
 
-      if (response.data && typeof response.data === 'object') {
-        // Direct booking
-        if (!Array.isArray(response.data) && ('_id' in response.data || 'id' in response.data)) {
-          bookingPayload = response.data;
+      if (responseData && typeof responseData === 'object') {
+        if (responseData.booking) {
+          bookingPayload = responseData.booking;
+        } else if (responseData.data && (responseData.data.booking || responseData.data._id || responseData.data.id)) {
+          bookingPayload = responseData.data.booking ?? responseData.data;
+        } else if (responseData._id || responseData.id) {
+          bookingPayload = responseData;
         }
-
-        // Nested booking under data.booking
-        if (!bookingPayload && response.data.booking) {
-          bookingPayload = response.data.booking;
-        }
-
-        // Double nested data.data
-        if (!bookingPayload && response.data.data) {
-          const maybe = response.data.data;
-          if (maybe && (maybe._id || maybe.id || maybe.booking)) {
-            bookingPayload = maybe.booking ?? maybe;
-          }
-        }
+      } else if ((response as any).booking) {
+        bookingPayload = (response as any).booking;
       }
-
-      // Root-level booking property
-  if (!bookingPayload && (response as any).booking) bookingPayload = (response as any).booking;
 
       const successFlag = (response as any).success === true || response.status === 'success';
 
-      if (bookingPayload) {
-  // Normalize booking shape to match client expectations
-  const normalize = (b: any) => {
-          if (!b || typeof b !== 'object') return b;
-
-          const out = { ...b };
-
-          // Ensure top-level _id exists (client code often uses _id)
-          if (!out._id && out.id) out._id = out.id;
-
-          // Provide a bookingId fallback for UI header if missing
-          if (!out.bookingId) out.bookingId = out.bookingId || out.id || out._id;
-
-          // Map location -> address for older/newer API shapes
-          if (!out.address && out.location) {
-            out.address = out.location;
-          }
-
-          // Ensure nested customer/professional have _id as client expects
-          if (out.customer && typeof out.customer === 'object') {
-            if (!out.customer._id && out.customer.id) out.customer._id = out.customer.id;
-          }
-
-          if (out.professional && typeof out.professional === 'object') {
-            if (!out.professional._id && out.professional.id) out.professional._id = out.professional.id;
-          }
-
-          // Ensure service has _id when returned as { id }
-          if (out.service && typeof out.service === 'object') {
-            if (!out.service._id && out.service.id) out.service._id = out.service.id;
-          }
-
-          return out;
-        };
-
-        let normalizedBooking = normalize(bookingPayload);
-
-  // Further adapt shape to client Booking type expectations
-
-  try {
-          // Ensure id aliases
-          if (!normalizedBooking.id && normalizedBooking._id) normalizedBooking.id = String(normalizedBooking._id);
-
-          // Customer shape
-          if (normalizedBooking.customer && typeof normalizedBooking.customer === 'object') {
-            const c = normalizedBooking.customer;
-            if (!c._id && c.id) c._id = c.id;
-            // keep as-is otherwise
-          } else if (typeof normalizedBooking.customer === 'string') {
-            normalizedBooking.customer = { _id: normalizedBooking.customer, name: 'Unknown', phone: '' };
-          }
-
-          // Professional shape: ensure .user exists for UI
-          if (normalizedBooking.professional && typeof normalizedBooking.professional === 'object') {
-            const p = normalizedBooking.professional;
-            // If backend returned a simple professional object (id,name,..), create .user wrapper
-            if (!p.user) {
-              p.user = {
-                _id: p._id || p.id || null,
-                name: p.name || (p.user && p.user.name) || 'Unknown',
-                phone: p.phone || (p.user && p.user.phone) || '',
-                email: p.email || (p.user && p.user.email) || '',
-              };
-            } else {
-              // ensure inner user has _id
-              if (p.user && p.user.id && !p.user._id) p.user._id = p.user.id;
-            }
-
-            // Ensure rating/reviewCount exist
-            if (typeof p.rating === 'undefined') p.rating = 0;
-            if (typeof p.reviewCount === 'undefined') p.reviewCount = 0;
-          }
-
-          // Service shape: ensure basePrice and duration exist
-          if (normalizedBooking.service && typeof normalizedBooking.service === 'object') {
-            const s = normalizedBooking.service;
-            if (!s._id && s.id) s._id = s.id;
-            if (typeof s.basePrice === 'undefined') s.basePrice = s.price ?? s.cost ?? 0;
-            if (typeof s.duration === 'undefined') s.duration = s.duration ?? 0;
-          } else if (normalizedBooking.services && Array.isArray(normalizedBooking.services) && normalizedBooking.services[0]) {
-            // sometimes backend returns services array; pick first
-            const s0 = normalizedBooking.services[0];
-            normalizedBooking.service = normalizedBooking.service || {
-              _id: s0.serviceId?._id || s0.serviceId || s0.id,
-              name: s0.serviceId?.title || s0.title || s0.name || 'Service',
-              description: s0.serviceId?.description || s0.description || '',
-              basePrice: s0.price || s0.serviceId?.price || 0,
-              duration: s0.duration || s0.serviceId?.duration || 0,
-            };
-          }
-
-          // Address fallback
-          if (!normalizedBooking.address) {
-            if (normalizedBooking.location && typeof normalizedBooking.location === 'object') {
-              normalizedBooking.address = normalizedBooking.location;
-            } else {
-              normalizedBooking.address = normalizedBooking.address || { addressLine1: '', city: '', state: '', postalCode: '' };
-            }
-          }
-
-          // Ensure totals and payment fields
-          if (typeof normalizedBooking.totalAmount === 'undefined') normalizedBooking.totalAmount = normalizedBooking.totalAmount ?? normalizedBooking.amount ?? 0;
-          if (!normalizedBooking.paymentStatus) normalizedBooking.paymentStatus = normalizedBooking.paymentStatus ?? 'pending';
-          if (!normalizedBooking.paymentMethod) normalizedBooking.paymentMethod = normalizedBooking.paymentMethod ?? null;
-        } catch (e) {
-          if (__DEV__) console.warn('adminService.getBookingById - normalization post-processing failed', e);
-  }
-
-  return {
-          ...response,
-          // Ensure callers relying on `response.success` work even if backend uses `status: 'success'`
-          success: successFlag,
-          data: normalizedBooking,
-        } as ApiResponse<Booking>;
-      }
-
-      // If we didn't find a booking payload, still return a normalized success flag so callers can check reliably
       return {
         ...response,
         success: successFlag,
-      } as ApiResponse<Booking>;
+        data: this.normalizeBooking(bookingPayload),
+      };
     } catch (error) {
-      console.error('Get booking by ID error:', error);
-      throw error;
+      return this.handleError(error, 'getBookingById');
     }
   }
 
@@ -346,21 +267,19 @@ class AdminService {
     try {
       return await httpClient.patch(API_ENDPOINTS.ADMIN.UPDATE_BOOKING_STATUS(bookingId), { status });
     } catch (error) {
-      console.error('Update booking status error:', error);
-      throw error;
+      return this.handleError(error, 'updateBookingStatus');
     }
   }
 
   /**
    * Get available professionals for a booking
    */
-  async getAvailableProfessionals(bookingId: string): Promise<ApiResponse<any>> {
+  async getAvailableProfessionals(bookingId: string): Promise<ApiResponse<Professional[]>> {
     try {
-      console.log('Getting available professionals for booking:', bookingId);
+      if (__DEV__) console.log('Getting available professionals for booking:', bookingId);
       return await httpClient.get(API_ENDPOINTS.ADMIN.AVAILABLE_PROFESSIONALS(bookingId));
     } catch (error) {
-      console.error('Get available professionals error:', error);
-      throw error;
+      return this.handleError(error, 'getAvailableProfessionals');
     }
   }
 
@@ -369,13 +288,10 @@ class AdminService {
    */
   async assignProfessional(bookingId: string, professionalId: string): Promise<ApiResponse<Booking>> {
     try {
-      console.log('Assigning professional to booking:', bookingId, professionalId);
-      return await httpClient.patch(API_ENDPOINTS.ADMIN.ASSIGN_PROFESSIONAL(bookingId), { 
-        professionalId 
-      });
+      if (__DEV__) console.log('Assigning professional to booking:', bookingId, professionalId);
+      return await httpClient.patch(API_ENDPOINTS.ADMIN.ASSIGN_PROFESSIONAL(bookingId), { professionalId });
     } catch (error) {
-      console.error('Assign professional error:', error);
-      throw error;
+      return this.handleError(error, 'assignProfessional');
     }
   }
 
@@ -386,8 +302,7 @@ class AdminService {
     try {
       return await httpClient.patch(API_ENDPOINTS.ADMIN.CANCEL_BOOKING(bookingId), { reason });
     } catch (error) {
-      console.error('Cancel booking error:', error);
-      throw error;
+      return this.handleError(error, 'cancelBooking');
     }
   }
 
@@ -401,65 +316,27 @@ class AdminService {
       }
       
       const response = await httpClient.get(API_ENDPOINTS.ADMIN.SERVICES, { params: filters });
+      let services: Service[] = [];
+      
+      if (response.data) {
+        if (Array.isArray(response.data)) {
+          services = response.data;
+        } else if (response.data.services && Array.isArray(response.data.services)) {
+          services = response.data.services;
+        } else if (typeof response.data === 'object') {
+          services = [response.data];
+        }
+      }
 
-      
-      // Handle both array and object responses
-      if (Array.isArray(response.data)) {
-        const formattedResponse = {
-          ...response,
-          data: {
-            services: response.data,
-            pagination: response.meta?.pagination
-          }
-        };
-        
-        if (__DEV__) {
-          console.log('adminService.getServices - Formatted response (array):', formattedResponse);
-        }
-        
-        return formattedResponse;
-      }
-      
-      // If response.data has services property, use it directly
-      if (response.data && typeof response.data === 'object' && 'services' in response.data) {
-        if (__DEV__) {
-          console.log('adminService.getServices - Response already has services property:', response);
-        }
-        return response;
-      }
-      
-      // If response.data is an object but doesn't have services property, wrap it
-      if (response.data && typeof response.data === 'object') {
-        const wrappedResponse = {
-          ...response,
-          data: {
-            services: [response.data], // Single service as array
-            pagination: response.meta?.pagination
-          }
-        };
-        
-        if (__DEV__) {
-          console.log('adminService.getServices - Wrapped single service:', wrappedResponse);
-        }
-        
-        return wrappedResponse;
-      }
-      
-      // Fallback - return empty services array
-      const fallbackResponse = {
+      return {
         ...response,
         data: {
-          services: [],
-          pagination: response.meta?.pagination
-        }
+          services,
+          pagination: response.meta?.pagination,
+        },
       };
-      
-     
-      
-      return fallbackResponse;
     } catch (error) {
-      console.error('Get admin services error:', error);
-      throw error;
+      return this.handleError(error, 'getServices');
     }
   }
 
@@ -470,8 +347,7 @@ class AdminService {
     try {
       return await httpClient.post(API_ENDPOINTS.ADMIN.CREATE_SERVICE, serviceData);
     } catch (error) {
-      console.error('Create service error:', error);
-      throw error;
+      return this.handleError(error, 'createService');
     }
   }
 
@@ -482,8 +358,7 @@ class AdminService {
     try {
       return await httpClient.patch(API_ENDPOINTS.ADMIN.UPDATE_SERVICE(serviceId), serviceData);
     } catch (error) {
-      console.error('Update service error:', error);
-      throw error;
+      return this.handleError(error, 'updateService');
     }
   }
 
@@ -494,8 +369,7 @@ class AdminService {
     try {
       return await httpClient.delete(API_ENDPOINTS.ADMIN.DELETE_SERVICE(serviceId));
     } catch (error) {
-      console.error('Delete service error:', error);
-      throw error;
+      return this.handleError(error, 'deleteService');
     }
   }
 
@@ -506,8 +380,7 @@ class AdminService {
     try {
       return await httpClient.get(API_ENDPOINTS.ADMIN.PROFESSIONALS, { params: filters });
     } catch (error) {
-      console.error('Get professionals error:', error);
-      throw error;
+      return this.handleError(error, 'getProfessionals');
     }
   }
 
@@ -516,36 +389,21 @@ class AdminService {
    */
   async getProfessionalById(professionalId: string): Promise<ApiResponse<Professional>> {
     try {
-      console.log('adminService.getProfessionalById called with ID:', professionalId);
-      
-      // Make the API call
+      if (__DEV__) console.log('adminService.getProfessionalById called with ID:', professionalId);
       const response = await httpClient.get(API_ENDPOINTS.ADMIN.PROFESSIONAL_BY_ID(professionalId));
-      
-      console.log('API response status:', response.status);
-      console.log('API response success:', response.success);
-      
-      // Handle nested data structure
-      // The API might return { data: { data: { ... } } } structure
+
+      // Handle nested data structure e.g. { data: { data: { ... } } }
       if (response.data && response.data.data && typeof response.data.data === 'object') {
-        // If we have a nested data structure, normalize it
         return {
           ...response,
           data: response.data.data,
           success: response.success || response.data.status === 'success'
         };
       }
-      
+
       return response;
     } catch (error) {
-      console.error('Get professional by ID error:', error);
-      
-      // Log more details about the error
-      if (error.response) {
-        console.error('Error response data:', error.response.data);
-        console.error('Error response status:', error.response.status);
-      }
-      
-      throw error;
+      return this.handleError(error, 'getProfessionalById');
     }
   }
 
@@ -553,20 +411,19 @@ class AdminService {
    * Update professional verification status
    */
   async updateProfessionalVerification(
-    professionalId: string, 
+    professionalId: string,
     verificationData: { isVerified: boolean; verificationNotes?: string }
   ): Promise<ApiResponse<Professional>> {
     try {
       return await httpClient.patch(
-        API_ENDPOINTS.ADMIN.VERIFY_PROFESSIONAL(professionalId), 
+        API_ENDPOINTS.ADMIN.VERIFY_PROFESSIONAL(professionalId),
         verificationData
       );
     } catch (error) {
-      console.error('Update professional verification error:', error);
-      throw error;
+      return this.handleError(error, 'updateProfessionalVerification');
     }
   }
-  
+
   /**
    * Update professional details
    */
@@ -583,8 +440,7 @@ class AdminService {
         professionalData
       );
     } catch (error) {
-      console.error('Update professional error:', error);
-      throw error;
+      return this.handleError(error, 'updateProfessional');
     }
   }
 
@@ -595,8 +451,7 @@ class AdminService {
     try {
       return await httpClient.get(API_ENDPOINTS.ADMIN.STATS);
     } catch (error) {
-      console.error('Get admin stats error:', error);
-      throw error;
+      return this.handleError(error, 'getStats');
     }
   }
 
@@ -605,12 +460,11 @@ class AdminService {
    */
   async getCustomers(filters?: AdminFilters): Promise<ApiResponse<User[]>> {
     try {
-      return await httpClient.get(API_ENDPOINTS.ADMIN.USERS, { 
-        params: { ...filters, role: 'customer' } 
+      return await httpClient.get(API_ENDPOINTS.ADMIN.USERS, {
+        params: { ...filters, role: 'customer' }
       });
     } catch (error) {
-      console.error('Get customers error:', error);
-      throw error;
+      return this.handleError(error, 'getCustomers');
     }
   }
 
@@ -621,8 +475,7 @@ class AdminService {
     try {
       return await httpClient.get(API_ENDPOINTS.NOTIFICATIONS.ALL, { params: filters });
     } catch (error) {
-      console.error('Get notifications error:', error);
-      throw error;
+      return this.handleError(error, 'getNotifications');
     }
   }
 
@@ -633,8 +486,7 @@ class AdminService {
     try {
       return await httpClient.patch(API_ENDPOINTS.NOTIFICATIONS.MARK_READ(notificationId));
     } catch (error) {
-      console.error('Mark notification as read error:', error);
-      throw error;
+      return this.handleError(error, 'markNotificationAsRead');
     }
   }
 
@@ -645,8 +497,7 @@ class AdminService {
     try {
       return await httpClient.patch(API_ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
     } catch (error) {
-      console.error('Mark all notifications as read error:', error);
-      throw error;
+      return this.handleError(error, 'markAllNotificationsAsRead');
     }
   }
 }
