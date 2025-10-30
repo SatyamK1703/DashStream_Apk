@@ -121,10 +121,17 @@ class AdminService {
       
       // Make the API call
       return await httpClient.post(API_ENDPOINTS.ADMIN.PROFESSIONALS, professionalData);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create professional error:', error.response?.data || error.message);
-      throw error;
-    }
+// ...
+    } catch (error: any) {
+      console.error('Get professional by ID error:', error);
+      
+      // Log more details about the error
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+      }
   }
 
   /**

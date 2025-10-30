@@ -39,7 +39,7 @@ class LocationService {
     limit?: number;
   }): Promise<ApiResponse<Place[]>> {
     try {
-      return await httpClient.get(API_ENDPOINTS.LOCATIONS.SEARCH, { params: data });
+      return await httpClient.get(API_ENDPOINTS.LOCATION.SEARCH, { params: data });
     } catch (error) {
       console.error('Search places error:', error);
       throw error;
@@ -56,7 +56,7 @@ class LocationService {
     limit?: number;
   }): Promise<ApiResponse<Place[]>> {
     try {
-      return await httpClient.get(API_ENDPOINTS.LOCATIONS.NEARBY, { params: data });
+      return await httpClient.get(API_ENDPOINTS.LOCATION.NEARBY, { params: data });
     } catch (error) {
       console.error('Get nearby places error:', error);
       throw error;
@@ -68,7 +68,7 @@ class LocationService {
    */
   async geocodeAddress(address: string): Promise<ApiResponse<GeocodeResult[]>> {
     try {
-      return await httpClient.get(API_ENDPOINTS.LOCATIONS.GEOCODE, { 
+      return await httpClient.get(API_ENDPOINTS.LOCATION.GEOCODE, { 
         params: { address } 
       });
     } catch (error) {
@@ -82,7 +82,7 @@ class LocationService {
    */
   async reverseGeocode(location: LocationCoordinates): Promise<ApiResponse<GeocodeResult>> {
     try {
-      return await httpClient.get(API_ENDPOINTS.LOCATIONS.REVERSE_GEOCODE, { params: location });
+      return await httpClient.get(API_ENDPOINTS.LOCATION.REVERSE_GEOCODE, { params: location });
     } catch (error) {
       console.error('Reverse geocode error:', error);
       throw error;
@@ -218,6 +218,36 @@ class LocationService {
       console.error('Get favorite locations error:', error);
       throw error;
     }
+  }
+
+  async updateLocation(location: LocationCoordinates): Promise<ApiResponse<any>> {
+    console.warn('updateLocation is not implemented yet');
+    return Promise.resolve({ success: true, status: 'success', message: '', data: {} });
+  }
+
+  async updateStatus(status: string): Promise<ApiResponse<any>> {
+    console.warn('updateStatus is not implemented yet');
+    return Promise.resolve({ success: true, status: 'success', message: '', data: {} });
+  }
+
+  async getLocationHistory(limit: number): Promise<ApiResponse<any>> {
+    console.warn('getLocationHistory is not implemented yet');
+    return Promise.resolve({ success: true, status: 'success', message: '', data: [] });
+  }
+
+  async createGeofence(geofence: any): Promise<ApiResponse<any>> {
+    console.warn('createGeofence is not implemented yet');
+    return Promise.resolve({ success: true, status: 'success', message: '', data: {} });
+  }
+
+  async deleteGeofence(geofenceId: string): Promise<ApiResponse<any>> {
+    console.warn('deleteGeofence is not implemented yet');
+    return Promise.resolve({ success: true, status: 'success', message: '', data: {} });
+  }
+
+  async updateSettings(settings: any): Promise<ApiResponse<any>> {
+    console.warn('updateSettings is not implemented yet');
+    return Promise.resolve({ success: true, status: 'success', message: '', data: {} });
   }
 }
 

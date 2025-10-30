@@ -13,10 +13,17 @@ interface UsePaginatedApiResult<T> {
   loading: boolean;
   error: any;
   pagination: PaginatedState;
-  loadMore: (params?: any) => Promise<{ items: T[]; total: number } | undefined>;
-  refresh: (params?: any) => Promise<{ items: T[]; total: number } | undefined>;
+  loadMore: (params?: any) => Promise<void>;
+  refresh: (params?: any) => Promise<void>;
   reset: () => void;
 }
+interface PaginatedState {
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
+
 interface UseApiOptions {
   showErrorAlert?: boolean;
   retries?: number;
@@ -269,9 +276,9 @@ export const usePaginatedApi = <T = any>(
   const normalizeResponse = normalize ?? defaultNormalizer;
 
   const loadMore = useCallback(
-    async (params: any = {}) => {
+    async (params: any = {}): Promise<void> => {
       // Always read latest pagination state through functional update
-      setPagination((prevPagination) => {
+      setPagination((prevPagination: PaginatedState) => {
         if (isLoadingPageRef.current || !prevPagination.hasMore) {
           if (__DEV__) {
             console.log('usePaginatedApi - loadMore skipped:', {
@@ -292,15 +299,15 @@ export const usePaginatedApi = <T = any>(
         })
           .then((rawResponse) => {
             const { items: newItems, total } = normalizeResponse(rawResponse);
-            setAllData((prev) => {
+            setAllData((prev: T[]) => {
               const combined = prevPagination.page === 1 ? newItems : [...prev, ...newItems];
               const uniqueItems = Array.from(
-                new Map(combined.map((item) => [item.id, item])).values()
+                new Map(combined.map((item: any) => [item.id, item])).values()
               );
-              return uniqueItems;
+              return uniqueItems as T[];
             });
 
-            setPagination((p) => ({
+            setPagination((p: PaginatedState) => ({
               ...p,
               page: p.page + 1,
               total,
@@ -323,8 +330,8 @@ export const usePaginatedApi = <T = any>(
   );
 
   const refresh = useCallback(
-    async (params: any = {}) => {
-      setPagination((p) => ({ ...p, page: 1, hasMore: true }));
+    async (params: any = {}): Promise<void> => {
+      setPagination((p: PaginatedState) => ({ ...p, page: 1, hasMore: true }));
       setAllData([]);
       while (isLoadingPageRef.current) await new Promise((r) => setTimeout(r, 50));
       return loadMore(params);

@@ -1,4 +1,4 @@
-// src/store/locationStore.ts
+import { Alert, Linking } from 'react-native';
 import { create } from 'zustand';
 import { subscribeWithSelector, devtools } from 'zustand/middleware';
 import * as Location from 'expo-location';
@@ -162,8 +162,20 @@ export const useLocationStore = create<LocationState>()(
             }
           }
         } catch (error: any) {
-          console.error('Error updating current location:', error);
-          set({ error: error.message || 'Failed to update location' });
+          if (error.code === 'ERR_LOCATION_UNAVAILABLE') {
+            set({ error: 'Location is unavailable. Please enable location services.' });
+            Alert.alert(
+              'Location Unavailable',
+              'Please enable location services to use this feature.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Open Settings', onPress: () => Linking.openSettings() },
+              ]
+            );
+          } else {
+            console.error('Error updating current location:', error);
+            set({ error: error.message || 'Failed to update location' });
+          }
         }
       },
 

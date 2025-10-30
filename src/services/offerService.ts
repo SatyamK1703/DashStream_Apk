@@ -24,7 +24,7 @@ class OfferService {
     } catch (error) {
       console.error('Get active offers error:', error);
 
-      return { success: true, data: [] };
+      return { success: false, status: 'error', message: 'Could not retrieve active offers.', data: [] };
     }
   }
 

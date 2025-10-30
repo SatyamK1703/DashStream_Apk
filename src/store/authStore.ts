@@ -179,7 +179,7 @@ export const useAuthStore = create<AuthState>()(
               if (imgResp && imgResp.success && imgResp.data) {
                 const updated = convertApiUserToAppUser(imgResp.data);
                 const cleanedUpdated = removeUndefined(updated);
-                set(state => ({ user: state.user ? { ...state.user, ...cleanedUpdated } : cleanedUpdated }));
+                set(state => ({ user: state.user ? { ...state.user, ...cleanedUpdated } : cleanedUpdated }) as Partial<AuthState>);
                 return;
               } else {
                 throw new Error(imgResp?.message || 'Failed to upload profile image');
@@ -196,7 +196,7 @@ export const useAuthStore = create<AuthState>()(
               if (response && (response.success === true || response.status === 'success') && response.data) {
                 const updatedUser = convertApiUserToAppUser(response.data);
                 const cleanedUpdatedUser = removeUndefined(updatedUser);
-                set(state => ({ user: state.user ? { ...state.user, ...cleanedUpdatedUser } : cleanedUpdatedUser }));
+                set(state => ({ user: state.user ? { ...state.user, ...cleanedUpdatedUser } : cleanedUpdatedUser }) as Partial<AuthState>);
               } else {
                 throw new Error(response?.message || 'Failed to update profile');
               }
@@ -261,7 +261,7 @@ export const useAuthStore = create<AuthState>()(
           await get().initAuth();
         },
 
-        initAuth: async () => {
+        initAuth: async (): Promise<void> => {
           let mounted = true;
           const minLoaderMs = 400;
           const bootStart = Date.now();

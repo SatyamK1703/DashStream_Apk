@@ -134,7 +134,7 @@ export const showErrorAlert = (
   const apiError = parseApiError(error);
   const message = options?.customMessage || apiError.message;
 
-  const buttons = [
+  const buttons: { text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }[] = [
     { text: 'OK', style: 'default' as const },
   ];
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useApi } from './useApi';
 import { locationService } from '../services';
 import * as Location from 'expo-location';
+import { Alert, Linking } from 'react-native';
 
 export const useLocation = () => {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -16,14 +17,34 @@ export const useLocation = () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setError('Permission to access location was denied');
+        Alert.alert(
+          'Permission Denied',
+          'Please enable location services to use this feature.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
         setLoading(false);
         return;
       }
 
       let location = await Location.getCurrentPositionAsync({});
       setLocation(location);
-    } catch (err) {
-      setError('Failed to get location');
+    } catch (err: any) {
+      if (err.code === 'ERR_LOCATION_UNAVAILABLE') {
+        setError('Location is unavailable. Please enable location services.');
+        Alert.alert(
+          'Location Unavailable',
+          'Please enable location services to use this feature.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+      } else {
+        setError('Failed to get location');
+      }
     } finally {
       setLoading(false);
     }
@@ -103,7 +124,7 @@ export const useNearbyPlaces = () => {
     (data: {
       location: LocationCoordinates;
       radius?: number;
-      type?: string;
+      type?: 'restaurant' | 'gas_station' | 'hospital' | 'school' | 'bank';
       limit?: number;
     }) => locationService.getNearbyPlaces(data),
     {

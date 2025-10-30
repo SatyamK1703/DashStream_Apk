@@ -10,6 +10,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   FlatList,
+  Linking,
 } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import * as Location from "expo-location";
@@ -43,7 +44,7 @@ const LocationPickerScreen = () => {
               },
               {
                 text: "Open Settings",
-                onPress: () => Location.getForegroundPermissionsAsync(),
+                onPress: () => Linking.openSettings(),
               },
             ]
           );
@@ -60,13 +61,24 @@ const LocationPickerScreen = () => {
           longitudeDelta: 0.02,
         });
         setLoading(false);
-      } catch (error) {
-        console.log("Error:", error);
-        Alert.alert(
-          "Location Error",
-          "Could not fetch your current location. Please try again.",
-          [{ text: "OK", onPress: () => navigation.goBack() }]
-        );
+      } catch (error: any) {
+        if (error.code === 'ERR_LOCATION_UNAVAILABLE') {
+          Alert.alert(
+            'Location Unavailable',
+            'Please enable location services to use this feature.',
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => navigation.goBack() },
+              { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            ]
+          );
+        } else {
+          console.log("Error:", error);
+          Alert.alert(
+            "Location Error",
+            "Could not fetch your current location. Please try again.",
+            [{ text: "OK", onPress: () => navigation.goBack() }]
+          );
+        }
       }
     };
 
@@ -117,11 +129,7 @@ const LocationPickerScreen = () => {
       const locationName = address.street || address.city || address.region || "Selected Location";
 
       // ✅ Pass location back to previous screen
-      navigation.navigate({
-        name: 'CustomerTabs',
-        params: { selectedLocation: locationName },
-        merge: true,
-      });
+      (navigation as any).navigate('CustomerTabs', { screen: 'Home', params: { selectedLocation: locationName } });
     } catch (error) {
       console.log(error);
       Alert.alert("Error", "Could not get address details. Please try again.");
@@ -140,9 +148,20 @@ const LocationPickerScreen = () => {
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       });
-    } catch (error) {
-      console.log(error);
-      Alert.alert("Error", "Could not get current location.");
+    } catch (error: any) {
+      if (error.code === 'ERR_LOCATION_UNAVAILABLE') {
+        Alert.alert(
+          'Location Unavailable',
+          'Please enable location services to use this feature.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+      } else {
+        console.log(error);
+        Alert.alert("Error", "Could not get current location.");
+      }
     } finally {
       setLoading(false);
     }
@@ -249,6 +268,7 @@ const LocationPickerScreen = () => {
           <TouchableOpacity
             style={styles.currentLocationButton}
             onPress={handleUseCurrentLocation}
+            testID="use-current-location-button"
           >
             <Ionicons name="locate" size={24} color="#2563eb" />
           </TouchableOpacity>
