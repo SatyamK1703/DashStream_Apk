@@ -56,7 +56,7 @@ const AdminSettingsScreen = () => {
           style={styles.settingCard}
           onPress={() => navigation.navigate('AdminOffer')}>
           <View style={styles.settingItemLeft}>
-            <FontAwesome5 name="map-marker-alt" size={22} color="#38A169" />
+            <FontAwesome5 name="tags" size={22} color="#38A169" />
             <View>
               <Text style={styles.settingItemTitle}>Offers </Text>
               <Text style={styles.settingItemSubtitle}>Manage your offers</Text>
@@ -69,7 +69,7 @@ const AdminSettingsScreen = () => {
           style={styles.settingCard}
           onPress={() => navigation.navigate('AdminQuestion')}>
           <View style={styles.settingItemLeft}>
-            <FontAwesome5 name="map-marker-alt" size={22} color="#38A169" />
+            <FontAwesome5 name="question" size={22} color="#38A169" />
             <View>
               <Text style={styles.settingItemTitle}>Question</Text>
               <Text style={styles.settingItemSubtitle}>Customer Question </Text>
@@ -87,6 +87,19 @@ const AdminSettingsScreen = () => {
             <View>
               <Text style={styles.settingItemTitle}>Set Services Area</Text>
               <Text style={styles.settingItemSubtitle}>Manage your working locations</Text>
+            </View>
+          </View>
+          <MaterialIcons name="chevron-right" size={28} color="#CBD5E0" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.settingCard}
+          onPress={() => navigation.navigate('AdminQuickFix')}>
+          <View style={styles.settingItemLeft}>
+            <FontAwesome5 name="tools" size={22} color="#38A169" />
+            <View>
+              <Text style={styles.settingItemTitle}>Quick Fix Service</Text>
+              <Text style={styles.settingItemSubtitle}>Common issues/problems</Text>
             </View>
           </View>
           <MaterialIcons name="chevron-right" size={28} color="#CBD5E0" />

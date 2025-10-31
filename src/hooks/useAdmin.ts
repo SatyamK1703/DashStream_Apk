@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { quickFixService } from '../services/quickFixService';
 import { useApi, usePaginatedApi } from './useApi';
 import { adminService } from '../services/adminService';
 import { serviceService } from '../services/serviceService';
@@ -295,4 +296,28 @@ export const useAdminCustomers = (filters?: {
   return usePaginatedApi((params) => adminService.getCustomers({ ...filters, ...params }), {
     showErrorAlert: false,
   });
+};
+
+export const useQuickFixes = () => {
+  return useApi(() => quickFixService.getQuickFixes(), {
+    showErrorAlert: false,
+  });
+};
+
+export const useAdmin = () => {
+  return {
+    useAdminServices,
+    useCreateService,
+    useUpdateService,
+    useDeleteService,
+    useToggleServiceStatus,
+    useAdminStats,
+    useAdminDashboard,
+    useAdminBookings,
+    useAdminProfessionals,
+    useAdminBookingActions,
+    useAdminProfessionalActions,
+    useAdminCustomers,
+    useQuickFixes,
+  };
 };
