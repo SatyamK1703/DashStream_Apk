@@ -24,6 +24,7 @@ import ManageOffersScreen from '~/screens/admin/AdminOffersScreen';
 import OfferStatsScreen from '~/screens/admin/AdminOfferStatsScreen';
 import AdminQuestionScreen from '~/screens/admin/AdminQuestionScreen';
 import AdminServicesArea from '../../src/screens/admin/AdminServicesArea';
+import AdminQuickFix from '~/screens/admin/AdminQuickFix';
 
 // Define the admin stack param list
 export type AdminStackParamList = {
@@ -48,6 +49,7 @@ export type AdminStackParamList = {
   AdminOfferStats: { offerId: string; offerTitle: string };
   AdminQuestion: undefined;
   AdminServicesArea: undefined;
+  AdminQuickFix: undefined;
 };
 
 // Define the admin tab param list
@@ -139,6 +141,7 @@ const AdminNavigator = () => {
       <Stack.Screen name="AdminOfferStats" component={OfferStatsScreen} />
       <Stack.Screen name="AdminQuestion" component={AdminQuestionScreen} />
       <Stack.Screen name="AdminServicesArea" component={AdminServicesArea} />
+      <Stack.Screen name="AdminQuickFix" component={AdminQuickFix} />
     </Stack.Navigator>
   );
 };

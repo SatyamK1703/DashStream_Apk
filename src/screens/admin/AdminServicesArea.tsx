@@ -154,7 +154,9 @@ const AdminServicesArea = () => {
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => (
           <View style={styles.listItem}>
-            <Text style={styles.listItemText}>{item.name} ({item.pincode})</Text>
+            <Text style={styles.listItemText}>
+              {item.name} ({item.pincode})
+            </Text>
             <TouchableOpacity onPress={() => handleDeletePincode(item._id)}>
               <Ionicons name="trash-outline" size={22} color="#D9534F" />
             </TouchableOpacity>
@@ -164,11 +166,13 @@ const AdminServicesArea = () => {
         refreshControl={
           <RefreshControl refreshing={isLoading} onRefresh={onRefresh} colors={['#007BFF']} />
         }
-        ListEmptyComponent={!isLoading && (
-          <View style={styles.listEmptyContainer}>
-            <Text style={styles.listEmptyText}>No service areas have been added yet.</Text>
-          </View>
-        )}
+        ListEmptyComponent={
+          !isLoading && (
+            <View style={styles.listEmptyContainer}>
+              <Text style={styles.listEmptyText}>No service areas have been added yet.</Text>
+            </View>
+          )
+        }
       />
 
       <Modal
@@ -217,98 +221,109 @@ const AdminServicesArea = () => {
 };
 
 const styles = StyleSheet.create({
-    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8F9FA', padding: 20 },
-    loadingText: { marginTop: 12, fontSize: 16, color: '#6C757D' },
-    errorText: { fontSize: 16, color: '#D9534F', marginBottom: 16, textAlign: 'center' },
-    retryButton: { backgroundColor: '#007BFF', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 },
-    retryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
-    container: { flex: 1, backgroundColor: '#F8F9FA' },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 16,
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E9ECEF',
-    },
-    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#212529' },
-    addButton: { padding: 4 },
-    listContainer: { padding: 16 },
-    listItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    listItemText: { fontSize: 16, color: '#495057', fontWeight: '600' },
-    listEmptyContainer: { alignItems: 'center', paddingTop: 40 },
-    listEmptyText: { fontSize: 16, color: '#6C757D', fontStyle: 'italic' },
-    modalOverlay: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    },
-    modalContent: {
-        backgroundColor: '#FFFFFF',
-        padding: 24,
-        borderRadius: 16,
-        width: '85%',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 10,
-    },
-    modalTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        marginBottom: 20,
-        textAlign: 'center',
-        color: '#212529',
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#CED4DA',
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 16,
-        fontSize: 16,
-        color: '#212529',
-    },
-    modalActions: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        marginTop: 8,
-    },
-    modalButton: {
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    cancelButton: {
-        backgroundColor: '#6C757D',
-        marginRight: 8,
-    },
-    confirmButton: {
-        backgroundColor: '#007BFF',
-        marginLeft: 8,
-    },
-    modalButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
-    },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    padding: 20,
+  },
+  loadingText: { marginTop: 12, fontSize: 16, color: '#6C757D' },
+  errorText: { fontSize: 16, color: '#D9534F', marginBottom: 16, textAlign: 'center' },
+  retryButton: {
+    backgroundColor: '#007BFF',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  retryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
+  },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#212529' },
+  addButton: { padding: 4 },
+  listContainer: { padding: 16 },
+  listItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  listItemText: { fontSize: 16, color: '#495057', fontWeight: '600' },
+  listEmptyContainer: { alignItems: 'center', paddingTop: 40 },
+  listEmptyText: { fontSize: 16, color: '#6C757D', fontStyle: 'italic' },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    padding: 24,
+    borderRadius: 16,
+    width: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#212529',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#CED4DA',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    fontSize: 16,
+    color: '#212529',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 8,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#6C757D',
+    marginRight: 8,
+  },
+  confirmButton: {
+    backgroundColor: '#007BFF',
+    marginLeft: 8,
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
 
 export default AdminServicesArea;

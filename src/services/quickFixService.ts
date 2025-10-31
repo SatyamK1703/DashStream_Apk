@@ -4,10 +4,10 @@ export const quickFixService = {
   getQuickFixes: () => {
     return apiClient.get('/quick-fixes');
   },
-  createQuickFix: (data: { label: string; image: string }) => {
+  createQuickFix: (data: { label: string; image: string; isActive?: boolean }) => {
     return apiClient.post('/quick-fixes', data);
   },
-  updateQuickFix: (id: string, data: { label?: string; image?: string }) => {
+  updateQuickFix: (id: string, data: { label?: string; image?: string; isActive?: boolean }) => {
     return apiClient.put(`/quick-fixes/${id}`, data);
   },
   deleteQuickFix: (id: string) => {
