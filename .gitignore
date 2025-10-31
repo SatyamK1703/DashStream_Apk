@@ -26,7 +26,11 @@ web-build/
 *.swx
 *.swp
 *.swp.swp
-
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 ios
 android
