@@ -10,7 +10,22 @@ npm-debug.*
 *.orig.*
 web-build/
 .codacy
-
+.*
+.zencoder/
+.vscode/
+.idea/
+*.log
+*.DS_Store
+*.swp
+*~
+*.tmp
+*.bak
+*.un~
+*.swo
+*.swn
+*.swx
+*.swp
+*.swp.swp
 
 
 ios
