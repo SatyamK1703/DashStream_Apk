@@ -21,6 +21,8 @@ export interface AdminDashboardStats {
     revenue: { daily: any; weekly: any; monthly: any };
     bookings: { daily: any; weekly: any; monthly: any };
   };
+  recentBookings: Booking[];
+  topProfessionals: Professional[];
 }
 
 export interface AdminFilters {

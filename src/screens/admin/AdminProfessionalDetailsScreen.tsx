@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  TextInput,StyleSheet
+  TextInput,
+  StyleSheet,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -100,134 +101,91 @@ const AdminProfessionalDetailsScreen = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [adminNote, setAdminNote] = useState('');
-  
+
   // No mock data - removed
 
   const fetchProfessionalDetails = useCallback(async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching professional details for ID:', professionalId);
+      console.log('ID type:', typeof professionalId);
+
+      // Check if the ID is in the correct format
+      // MongoDB IDs are typically 24 character hex strings
+      const isValidMongoId = /^[0-9a-fA-F]{24}$/.test(professionalId);
+      console.log('Is valid MongoDB ID format:', isValidMongoId);
+
+      // First, try our debug endpoint to check if the professional exists
       try {
-        setLoading(true);
-        console.log('Fetching professional details for ID:', professionalId);
-        console.log('ID type:', typeof professionalId);
-        
-        // Check if the ID is in the correct format
-        // MongoDB IDs are typically 24 character hex strings
-        const isValidMongoId = /^[0-9a-fA-F]{24}$/.test(professionalId);
-        console.log('Is valid MongoDB ID format:', isValidMongoId);
-        
-        // First, try our debug endpoint to check if the professional exists
-        try {
-          const debugUrl = `${API_BASE_URL}/admin/debug/professional/${professionalId}`;
-          console.log('Calling debug endpoint:', debugUrl);
-          const debugResponse = await axios.get(debugUrl, {
-            headers: {
-              Authorization: `Bearer ${await getToken()}`
-            }
-          });
-          console.log('Debug response:', debugResponse.data);
-        } catch (debugError) {
-          console.error('Debug endpoint error:', debugError.response?.data || debugError);
-        }
-        
-        // Log the exact URL that will be called
-        const url = `/admin/professionals/${professionalId}`;
-        console.log('API URL that will be called:', url);
-        
-        // Try to fetch the professional
-        const response = await adminService.getProfessionalById(professionalId);
-        
-        // Extract the professional data from the nested response structure
-        // The API returns { data: { data: { ... } } } structure
-        const professionalApiData = response.data?.data || response.data;
-        
-        if (professionalApiData) {
-          console.log('Professional details fetched successfully:', professionalApiData);
-          console.log('Response data ID:', professionalApiData._id || professionalApiData.id);
-          
-          // Transform the API response to match our Professional interface
-          const professionalData = {
-            id: professionalApiData._id || professionalApiData.id,
-            name: professionalApiData.name || 'Unknown',
-            phone: professionalApiData.phone || '',
-            email: professionalApiData.email || '',
-            rating: professionalApiData.rating || professionalApiData.totalRatings || 0,
-            totalJobs: professionalApiData.totalJobs || 0,
-            completedJobs: professionalApiData.completedJobs || 0,
-            cancelledJobs: professionalApiData.cancelledJobs || 0,
-            totalEarnings: professionalApiData.totalEarnings || '₹0',
-            status: professionalApiData.status || 'inactive',
-            skills: professionalApiData.professionalInfo?.skills || [],
-            joinedDate: professionalApiData.createdAt || new Date().toISOString(),
-            lastActive: professionalApiData.lastActive || new Date().toISOString(),
-            profileImage: professionalApiData.profileImage?.url,
-            isVerified: professionalApiData.isPhoneVerified || false,
-            address: professionalApiData.addresses?.[0]?.address || '',
-            city: professionalApiData.addresses?.[0]?.city || '',
-            state: professionalApiData.addresses?.[0]?.state || '',
-            pincode: professionalApiData.addresses?.[0]?.pincode || '',
-            serviceArea: professionalApiData.professionalInfo?.serviceAreas || [],
-            performanceMetrics: {
-              acceptanceRate: professionalApiData.performanceMetrics?.acceptanceRate || 0,
-              cancellationRate: professionalApiData.performanceMetrics?.cancellationRate || 0,
-              avgResponseTime: professionalApiData.performanceMetrics?.avgResponseTime || '0 mins',
-              avgServiceTime: professionalApiData.performanceMetrics?.avgServiceTime || '0 hours',
-              customerSatisfaction: professionalApiData.performanceMetrics?.customerSatisfaction || 0
-            },
-            reviews: professionalApiData.reviews || [],
-            recentBookings: professionalApiData.recentBookings || []
-          };
-          
-          setProfessional(professionalData);
-        } else {
-          console.error('Failed to fetch professional details:', response);
-          
-          // Check if we have fallback data from navigation params
-          const { professionalBasicInfo } = route.params;
-          if (professionalBasicInfo) {
-            console.log('Using fallback data from navigation params:', professionalBasicInfo);
-            
-            // Create a minimal professional object from the basic info
-            const fallbackData = {
-              id: professionalBasicInfo.id,
-              name: professionalBasicInfo.name || 'Unknown',
-              phone: professionalBasicInfo.phone || '',
-              email: professionalBasicInfo.email || '',
-              rating: 0,
-              totalJobs: 0,
-              completedJobs: 0,
-              cancelledJobs: 0,
-              totalEarnings: '₹0',
-              status: professionalBasicInfo.status || 'inactive',
-              skills: [],
-              joinedDate: professionalBasicInfo.createdAt || new Date().toISOString(),
-              lastActive: new Date().toISOString(),
-              profileImage: professionalBasicInfo.profileImage,
-              isVerified: professionalBasicInfo.isVerified || false,
-              address: '',
-              city: '',
-              state: '',
-              pincode: '',
-              serviceArea: [],
-              performanceMetrics: {
-                acceptanceRate: 0,
-                cancellationRate: 0,
-                avgResponseTime: '0 mins',
-                avgServiceTime: '0 hours',
-                customerSatisfaction: 0
-              },
-              reviews: [],
-              recentBookings: []
-            };
-            
-            setProfessional(fallbackData);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching professional details:', error);
-        
+        const debugUrl = `${API_BASE_URL}/admin/debug/professional/${professionalId}`;
+        console.log('Calling debug endpoint:', debugUrl);
+        const debugResponse = await axios.get(debugUrl, {
+          headers: {
+            Authorization: `Bearer ${await getToken()}`,
+          },
+        });
+        console.log('Debug response:', debugResponse.data);
+      } catch (debugError) {
+        console.error('Debug endpoint error:', debugError.response?.data || debugError);
+      }
+
+      // Log the exact URL that will be called
+      const url = `/admin/professionals/${professionalId}`;
+      console.log('API URL that will be called:', url);
+
+      // Try to fetch the professional
+      const response = await adminService.getProfessionalById(professionalId);
+
+      // Extract the professional data from the nested response structure
+      // The API returns { data: { data: { ... } } } structure
+      const professionalApiData = response.data?.data || response.data;
+
+      if (professionalApiData) {
+        console.log('Professional details fetched successfully:', professionalApiData);
+        console.log('Response data ID:', professionalApiData._id || professionalApiData.id);
+
+        // Transform the API response to match our Professional interface
+        const professionalData = {
+          id: professionalApiData._id || professionalApiData.id,
+          name: professionalApiData.name || 'Unknown',
+          phone: professionalApiData.phone || '',
+          email: professionalApiData.email || '',
+          rating: professionalApiData.rating || professionalApiData.totalRatings || 0,
+          totalJobs: professionalApiData.totalJobs || 0,
+          completedJobs: professionalApiData.completedJobs || 0,
+          cancelledJobs: professionalApiData.cancelledJobs || 0,
+          totalEarnings: professionalApiData.totalEarnings || '₹0',
+          status: professionalApiData.status || 'inactive',
+          skills: professionalApiData.professionalInfo?.skills || [],
+          joinedDate: professionalApiData.createdAt || new Date().toISOString(),
+          lastActive: professionalApiData.lastActive || new Date().toISOString(),
+          profileImage: professionalApiData.profileImage?.url,
+          isVerified: professionalApiData.isPhoneVerified || false,
+          address: professionalApiData.addresses?.[0]?.address || '',
+          city: professionalApiData.addresses?.[0]?.city || '',
+          state: professionalApiData.addresses?.[0]?.state || '',
+          pincode: professionalApiData.addresses?.[0]?.pincode || '',
+          serviceArea: professionalApiData.professionalInfo?.serviceAreas || [],
+          performanceMetrics: {
+            acceptanceRate: professionalApiData.performanceMetrics?.acceptanceRate || 0,
+            cancellationRate: professionalApiData.performanceMetrics?.cancellationRate || 0,
+            avgResponseTime: professionalApiData.performanceMetrics?.avgResponseTime || '0 mins',
+            avgServiceTime: professionalApiData.performanceMetrics?.avgServiceTime || '0 hours',
+            customerSatisfaction: professionalApiData.performanceMetrics?.customerSatisfaction || 0,
+          },
+          reviews: professionalApiData.reviews || [],
+          recentBookings: professionalApiData.recentBookings || [],
+        };
+
+        setProfessional(professionalData);
+      } else {
+        console.error('Failed to fetch professional details:', response);
+
         // Check if we have fallback data from navigation params
+        const { professionalBasicInfo } = route.params;
         if (professionalBasicInfo) {
-          console.log('Using fallback data from navigation params after error:', professionalBasicInfo);
-          
+          console.log('Using fallback data from navigation params:', professionalBasicInfo);
+
           // Create a minimal professional object from the basic info
           const fallbackData = {
             id: professionalBasicInfo.id,
@@ -255,18 +213,64 @@ const AdminProfessionalDetailsScreen = () => {
               cancellationRate: 0,
               avgResponseTime: '0 mins',
               avgServiceTime: '0 hours',
-              customerSatisfaction: 0
+              customerSatisfaction: 0,
             },
             reviews: [],
-            recentBookings: []
+            recentBookings: [],
           };
-          
+
           setProfessional(fallbackData);
         }
-      } finally {
-        setLoading(false);
       }
-    }, [professionalId, professionalBasicInfo, route.params]);
+    } catch (error) {
+      console.error('Error fetching professional details:', error);
+
+      // Check if we have fallback data from navigation params
+      if (professionalBasicInfo) {
+        console.log(
+          'Using fallback data from navigation params after error:',
+          professionalBasicInfo
+        );
+
+        // Create a minimal professional object from the basic info
+        const fallbackData = {
+          id: professionalBasicInfo.id,
+          name: professionalBasicInfo.name || 'Unknown',
+          phone: professionalBasicInfo.phone || '',
+          email: professionalBasicInfo.email || '',
+          rating: 0,
+          totalJobs: 0,
+          completedJobs: 0,
+          cancelledJobs: 0,
+          totalEarnings: '₹0',
+          status: professionalBasicInfo.status || 'inactive',
+          skills: [],
+          joinedDate: professionalBasicInfo.createdAt || new Date().toISOString(),
+          lastActive: new Date().toISOString(),
+          profileImage: professionalBasicInfo.profileImage,
+          isVerified: professionalBasicInfo.isVerified || false,
+          address: '',
+          city: '',
+          state: '',
+          pincode: '',
+          serviceArea: [],
+          performanceMetrics: {
+            acceptanceRate: 0,
+            cancellationRate: 0,
+            avgResponseTime: '0 mins',
+            avgServiceTime: '0 hours',
+            customerSatisfaction: 0,
+          },
+          reviews: [],
+          recentBookings: [],
+        };
+
+        setProfessional(fallbackData);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [professionalId, professionalBasicInfo, route.params]);
 
   // Fetch professional details
   useEffect(() => {
@@ -275,38 +279,37 @@ const AdminProfessionalDetailsScreen = () => {
 
   const handleStatusChange = () => {
     if (!professional) return;
-    
+
     Alert.alert(
       'Change Status',
       `Are you sure you want to ${professional.status === 'active' ? 'deactivate' : 'activate'} ${professional.name}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Confirm', 
+        {
+          text: 'Confirm',
           onPress: async () => {
             try {
               // Show loading indicator
               setLoading(true);
-              
+
               // Determine new status
               const newStatus = professional.status === 'active' ? 'inactive' : 'active';
-              
+
               // Call API to update professional status
-              const response = await adminService.updateProfessional(
-                professional.id, 
-                { status: newStatus }
-              );
-              
+              const response = await adminService.updateProfessional(professional.id, {
+                status: newStatus,
+              });
+
               if (response.success) {
                 // Update local state
-                setProfessional(prev => {
+                setProfessional((prev) => {
                   if (!prev) return prev;
                   return {
                     ...prev,
-                    status: newStatus
+                    status: newStatus,
                   };
                 });
-                
+
                 // Show success message
                 Alert.alert(
                   'Success',
@@ -328,13 +331,11 @@ const AdminProfessionalDetailsScreen = () => {
             } finally {
               setLoading(false);
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
-
-
 
   const handleSaveNote = () => {
     // Save admin note logic would go here
@@ -342,22 +343,31 @@ const AdminProfessionalDetailsScreen = () => {
     setShowNoteModal(false);
   };
 
-   const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return styles.statusActive;
-      case 'inactive': return styles.statusInactive;
-      case 'pending': return styles.statusPending;
-      case 'rejected': return styles.statusRejected;
-      default: return styles.statusInactive;
+      case 'active':
+        return styles.statusActive;
+      case 'inactive':
+        return styles.statusInactive;
+      case 'pending':
+        return styles.statusPending;
+      case 'rejected':
+        return styles.statusRejected;
+      default:
+        return styles.statusInactive;
     }
   };
 
-   const getBookingStatusColor = (status: string) => {
+  const getBookingStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return styles.bookingStatusCompleted;
-      case 'cancelled': return styles.bookingStatusCancelled;
-      case 'ongoing': return styles.bookingStatusOngoing;
-      default: return styles.bookingStatusDefault;
+      case 'completed':
+        return styles.bookingStatusCompleted;
+      case 'cancelled':
+        return styles.bookingStatusCancelled;
+      case 'ongoing':
+        return styles.bookingStatusOngoing;
+      default:
+        return styles.bookingStatusDefault;
     }
   };
 
@@ -372,14 +382,13 @@ const AdminProfessionalDetailsScreen = () => {
 
   if (!professional) {
     return (
-       <View style={styles.errorContainer}>
+      <View style={styles.errorContainer}>
         <MaterialIcons name="error-outline" size={48} color="#EF4444" />
         <Text style={styles.errorTitle}>Professional Not Found</Text>
-        <Text style={styles.errorMessage}>The professional you&apos;re looking for doesn&apos;t exist or has been removed.</Text>
-        <TouchableOpacity 
-          style={styles.goBackButton}
-          onPress={() => navigation.goBack()}
-        >
+        <Text style={styles.errorMessage}>
+          The professional you&apos;re looking for doesn&apos;t exist or has been removed.
+        </Text>
+        <TouchableOpacity style={styles.goBackButton} onPress={() => navigation.goBack()}>
           <Text style={styles.goBackButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -391,10 +400,7 @@ const AdminProfessionalDetailsScreen = () => {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Professional Details</Text>
@@ -408,33 +414,37 @@ const AdminProfessionalDetailsScreen = () => {
             <View style={styles.profileHeader}>
               <View style={styles.profileImageContainer}>
                 {professional.profileImage ? (
-                  <Image 
-                    source={{ uri: professional.profileImage }} 
-                    style={styles.profileImage}
-                  />
+                  <Image source={{ uri: professional.profileImage }} style={styles.profileImage} />
                 ) : (
                   <View style={styles.profileImagePlaceholder}>
                     <Text style={styles.profileImageInitial}>{professional.name.charAt(0)}</Text>
                   </View>
                 )}
               </View>
-              
+
               <View style={styles.profileInfo}>
                 <View style={styles.nameContainer}>
                   <Text style={styles.profileName}>{professional.name}</Text>
                   {professional.isVerified && (
-                    <Ionicons name="checkmark-circle" size={18} color="#2563EB" style={styles.verifiedIcon} />
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={18}
+                      color="#2563EB"
+                      style={styles.verifiedIcon}
+                    />
                   )}
                 </View>
-                
+
                 <Text style={styles.professionalId}>{professional.id}</Text>
-                
+
                 <View style={styles.ratingContainer}>
                   <Ionicons name="star" size={16} color="#F59E0B" />
                   <Text style={styles.ratingText}>{professional.rating.toFixed(1)}</Text>
-                  <Text style={styles.reviewCount}>({professional.reviews?.length || 0} reviews)</Text>
+                  <Text style={styles.reviewCount}>
+                    ({professional.reviews?.length || 0} reviews)
+                  </Text>
                 </View>
-                
+
                 <View style={[styles.statusBadge, getStatusColor(professional.status)]}>
                   <Text style={styles.statusText}>{professional.status}</Text>
                 </View>
@@ -446,45 +456,50 @@ const AdminProfessionalDetailsScreen = () => {
                 <Ionicons name="call" size={18} color="#6B7280" style={styles.contactIcon} />
                 <Text style={styles.contactText}>{professional.phone}</Text>
               </View>
-              
+
               <View style={styles.contactRow}>
                 <Ionicons name="mail" size={18} color="#6B7280" style={styles.contactIcon} />
                 <Text style={styles.contactText}>{professional.email}</Text>
               </View>
-              
+
               <View style={styles.contactRow}>
                 <Ionicons name="location" size={18} color="#6B7280" style={styles.contactIcon} />
                 <Text style={styles.addressText}>
-                  {professional.address}, {professional.city}, {professional.state} - {professional.pincode}
+                  {professional.address}, {professional.city}, {professional.state} -{' '}
+                  {professional.pincode}
                 </Text>
               </View>
-              
+
               <View style={styles.contactRow}>
                 <Ionicons name="calendar" size={18} color="#6B7280" style={styles.contactIcon} />
-                <Text style={styles.contactText}>Joined on {new Date(professional.joinedDate).toLocaleDateString()}</Text>
+                <Text style={styles.contactText}>
+                  Joined on {new Date(professional.joinedDate).toLocaleDateString()}
+                </Text>
               </View>
             </View>
 
             <View style={styles.actionButtons}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.editButton}
-                onPress={() => navigation.navigate('AdminProfessionalEdit', { professionalId: professional.id })}
-              >
+                onPress={() =>
+                  navigation.navigate('AdminProfessionalEdit', { professionalId: professional.id })
+                }>
                 <MaterialIcons name="edit" size={18} color="white" />
                 <Text style={styles.buttonText}>Edit</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={[
                   styles.statusButton,
-                  professional.status === 'active' ? styles.deactivateButton : styles.activateButton
+                  professional.status === 'active'
+                    ? styles.deactivateButton
+                    : styles.activateButton,
                 ]}
-                onPress={handleStatusChange}
-              >
-                <MaterialIcons 
-                  name={professional.status === 'active' ? 'block' : 'check-circle'} 
-                  size={18} 
-                  color="white" 
+                onPress={handleStatusChange}>
+                <MaterialIcons
+                  name={professional.status === 'active' ? 'block' : 'check-circle'}
+                  size={18}
+                  color="white"
                 />
                 <Text style={styles.buttonText}>
                   {professional.status === 'active' ? 'Deactivate' : 'Activate'}
@@ -494,46 +509,30 @@ const AdminProfessionalDetailsScreen = () => {
           </View>
         </View>
 
-
         {/* Tab Navigation */}
-       <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[
-              styles.tabButton,
-              activeTab === 'overview' && styles.activeTabButton
-            ]}
-            onPress={() => setActiveTab('overview')}
-          >
-            <Text style={[
-              styles.tabText,
-              activeTab === 'overview' && styles.activeTabText
-            ]}>Overview</Text>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'overview' && styles.activeTabButton]}
+            onPress={() => setActiveTab('overview')}>
+            <Text style={[styles.tabText, activeTab === 'overview' && styles.activeTabText]}>
+              Overview
+            </Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[
-              styles.tabButton,
-              activeTab === 'bookings' && styles.activeTabButton
-            ]}
-            onPress={() => setActiveTab('bookings')}
-          >
-            <Text style={[
-              styles.tabText,
-              activeTab === 'bookings' && styles.activeTabText
-            ]}>Bookings</Text>
+
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'bookings' && styles.activeTabButton]}
+            onPress={() => setActiveTab('bookings')}>
+            <Text style={[styles.tabText, activeTab === 'bookings' && styles.activeTabText]}>
+              Bookings
+            </Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[
-              styles.tabButton,
-              activeTab === 'reviews' && styles.activeTabButton
-            ]}
-            onPress={() => setActiveTab('reviews')}
-          >
-            <Text style={[
-              styles.tabText,
-              activeTab === 'reviews' && styles.activeTabText
-            ]}>Reviews</Text>
+
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'reviews' && styles.activeTabButton]}
+            onPress={() => setActiveTab('reviews')}>
+            <Text style={[styles.tabText, activeTab === 'reviews' && styles.activeTabText]}>
+              Reviews
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -564,47 +563,60 @@ const AdminProfessionalDetailsScreen = () => {
               </View>
             </View>
 
-
             {/* Performance Metrics */}
-   <View style={styles.sectionCard}>
+            <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>Performance Metrics</Text>
-              
+
               <View style={styles.metricsRow}>
                 <View style={styles.metricItem}>
-                  <Text style={styles.metricValue}>{professional.performanceMetrics.acceptanceRate}%</Text>
+                  <Text style={styles.metricValue}>
+                    {professional.performanceMetrics.acceptanceRate}%
+                  </Text>
                   <Text style={styles.metricLabel}>Acceptance Rate</Text>
                 </View>
-                
+
                 <View style={styles.metricItem}>
-                  <Text style={styles.metricValue}>{professional.performanceMetrics.cancellationRate}%</Text>
+                  <Text style={styles.metricValue}>
+                    {professional.performanceMetrics.cancellationRate}%
+                  </Text>
                   <Text style={styles.metricLabel}>Cancellation Rate</Text>
                 </View>
-                
+
                 <View style={styles.metricItem}>
-                  <Text style={styles.metricValue}>{professional.performanceMetrics.customerSatisfaction}</Text>
+                  <Text style={styles.metricValue}>
+                    {professional.performanceMetrics.customerSatisfaction}
+                  </Text>
                   <Text style={styles.metricLabel}>Satisfaction</Text>
                 </View>
               </View>
-              
+
               <View style={styles.detailedMetrics}>
                 <View style={styles.metricDetail}>
                   <MaterialIcons name="timer" size={16} color="#6B7280" />
-                  <Text style={styles.metricDetailText}>Avg. Response: {professional.performanceMetrics.avgResponseTime}</Text>
+                  <Text style={styles.metricDetailText}>
+                    Avg. Response: {professional.performanceMetrics.avgResponseTime}
+                  </Text>
                 </View>
-                
+
                 <View style={styles.metricDetail}>
                   <MaterialIcons name="schedule" size={16} color="#6B7280" />
-                  <Text style={styles.metricDetailText}>Avg. Service: {professional.performanceMetrics.avgServiceTime}</Text>
+                  <Text style={styles.metricDetailText}>
+                    Avg. Service: {professional.performanceMetrics.avgServiceTime}
+                  </Text>
                 </View>
-                
+
                 <View style={styles.metricDetail}>
                   <MaterialIcons name="check-circle" size={16} color="#6B7280" />
-                  <Text style={styles.metricDetailText}>Completed: {professional.completedJobs}</Text>
+                  <Text style={styles.metricDetailText}>
+                    Completed: {professional.completedJobs}
+                  </Text>
                 </View>
-                
+
                 <View style={styles.metricDetail}>
                   <MaterialIcons name="cancel" size={16} color="#6B7280" />
-                  <Text style={styles.metricDetailText}>Cancelled: {professional.cancelledJobs}</Text>
+                  <Text style={styles.metricDetailText}>
+                    Cancelled: {professional.cancelledJobs}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -613,14 +625,13 @@ const AdminProfessionalDetailsScreen = () => {
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Admin Notes</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.addNoteButton}
-                  onPress={() => setShowNoteModal(true)}
-                >
+                  onPress={() => setShowNoteModal(true)}>
                   <Ionicons name="add" size={18} color="#4B5563" />
                 </TouchableOpacity>
               </View>
-              
+
               {adminNote ? (
                 <View style={styles.noteContent}>
                   <Text style={styles.noteText}>{adminNote}</Text>
@@ -632,190 +643,189 @@ const AdminProfessionalDetailsScreen = () => {
           </View>
         )}
 
-
-
         {activeTab === 'bookings' && (
-  <View style={styles.tabContent}>
-    <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>Recent Bookings</Text>
-      
-      {(professional.recentBookings && professional.recentBookings.length > 0) ? (
-        professional.recentBookings.map((booking, index) => (
-          <TouchableOpacity 
-            key={booking.id}
-            style={[
-              styles.bookingItem,
-              index !== (professional.recentBookings?.length || 1) - 1 && styles.bookingItemBorder
-            ]}
-            onPress={() => navigation.navigate('AdminBookingDetails', { bookingId: booking.id })}
-          >
-            <View style={styles.bookingHeader}>
-              <Text style={styles.bookingId}>{booking.id}</Text>
-              <Text style={[
-                styles.bookingStatus,
-                booking.status === 'completed' ? styles.bookingCompleted :
-                booking.status === 'cancelled' ? styles.bookingCancelled :
-                styles.bookingOngoing
-              ]}>
-                {booking.status}
-              </Text>
-            </View>
-            
-            <View style={styles.bookingDetails}>
-              <Text style={styles.bookingDate}>
-                {new Date(booking.date).toLocaleDateString()}
-              </Text>
-              <Text style={styles.bookingAmount}>{booking.amount}</Text>
-            </View>
-            
-            <Text style={styles.bookingServices}>{booking.services.join(', ')}</Text>
-          </TouchableOpacity>
-        ))
-      ) : (
-        <Text style={styles.emptyMessage}>No bookings found</Text>
-      )}
-      
-      <TouchableOpacity 
-        style={styles.viewAllButton}
-        onPress={() => navigation.navigate('AdminBookings', { professionalId: professional.id })}
-      >
-        <Text style={styles.viewAllText}>View All Bookings</Text>
-      </TouchableOpacity>
-    </View>
+          <View style={styles.tabContent}>
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Recent Bookings</Text>
 
-    <View style={styles.sectionCard}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Booking Statistics</Text>
-        <Text style={styles.sectionSubtitle}>Last 30 days</Text>
-      </View>
-      
-      <View style={styles.statsContainer}>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{professional.totalJobs}</Text>
-          <Text style={styles.statLabel}>Total Jobs</Text>
-        </View>
-        
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, styles.statCompleted]}>
-            {professional.completedJobs}
-          </Text>
-          <Text style={styles.statLabel}>Completed</Text>
-        </View>
-        
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, styles.statCancelled]}>
-            {professional.cancelledJobs}
-          </Text>
-          <Text style={styles.statLabel}>Cancelled</Text>
-        </View>
-      </View>
-      
-      <View style={styles.progressBarContainer}>
-        <View style={styles.progressBarBackground}>
-          <View 
-            style={[
-              styles.progressBarFill,
-              { width: `${(professional.completedJobs / professional.totalJobs) * 100}%` }
-            ]}
-          />
-        </View>
-      </View>
-      
-      <Text style={styles.completionRate}>
-        {((professional.completedJobs / professional.totalJobs) * 100).toFixed(1)}% completion rate
-      </Text>
-    </View>
-  </View>
-)}
+              {professional.recentBookings && professional.recentBookings.length > 0 ? (
+                professional.recentBookings.map((booking, index) => (
+                  <TouchableOpacity
+                    key={booking.id}
+                    style={[
+                      styles.bookingItem,
+                      index !== (professional.recentBookings?.length || 1) - 1 &&
+                        styles.bookingItemBorder,
+                    ]}
+                    onPress={() =>
+                      navigation.navigate('AdminBookingDetails', { bookingId: booking.id })
+                    }>
+                    <View style={styles.bookingHeader}>
+                      <Text style={styles.bookingId}>{booking.id}</Text>
+                      <Text
+                        style={[
+                          styles.bookingStatus,
+                          booking.status === 'completed'
+                            ? styles.bookingCompleted
+                            : booking.status === 'cancelled'
+                              ? styles.bookingCancelled
+                              : styles.bookingOngoing,
+                        ]}>
+                        {booking.status}
+                      </Text>
+                    </View>
+
+                    <View style={styles.bookingDetails}>
+                      <Text style={styles.bookingDate}>
+                        {new Date(booking.date).toLocaleDateString()}
+                      </Text>
+                      <Text style={styles.bookingAmount}>{booking.amount}</Text>
+                    </View>
+
+                    <Text style={styles.bookingServices}>{booking.services.join(', ')}</Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={styles.emptyMessage}>No bookings found</Text>
+              )}
+
+              <TouchableOpacity
+                style={styles.viewAllButton}
+                onPress={() =>
+                  navigation.navigate('AdminBookings', { professionalId: professional.id })
+                }>
+                <Text style={styles.viewAllText}>View All Bookings</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Booking Statistics</Text>
+                <Text style={styles.sectionSubtitle}>Last 30 days</Text>
+              </View>
+
+              <View style={styles.statsContainer}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{professional.totalJobs}</Text>
+                  <Text style={styles.statLabel}>Total Jobs</Text>
+                </View>
+
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, styles.statCompleted]}>
+                    {professional.completedJobs}
+                  </Text>
+                  <Text style={styles.statLabel}>Completed</Text>
+                </View>
+
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, styles.statCancelled]}>
+                    {professional.cancelledJobs}
+                  </Text>
+                  <Text style={styles.statLabel}>Cancelled</Text>
+                </View>
+              </View>
+
+              <View style={styles.progressBarContainer}>
+                <View style={styles.progressBarBackground}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      { width: `${(professional.completedJobs / professional.totalJobs) * 100}%` },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.completionRate}>
+                {((professional.completedJobs / professional.totalJobs) * 100).toFixed(1)}%
+                completion rate
+              </Text>
+            </View>
+          </View>
+        )}
 
         {activeTab === 'reviews' && (
-  <View style={styles.tabContent}>
-    <View style={styles.sectionCard}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Customer Reviews</Text>
-        <View style={styles.ratingContainer}>
-          <Ionicons name="star" size={16} color="#F59E0B" />
-          <Text style={styles.ratingText}>{professional.rating.toFixed(1)}</Text>
-          <Text style={styles.reviewCountText}>({professional.reviews?.length || 0})</Text>
-        </View>
-      </View>
-      
-      {(professional.reviews && professional.reviews.length > 0) ? (
-        professional.reviews.map((review, index) => (
-          <View 
-            key={review.id}
-            style={[
-              styles.reviewItem,
-              index !== (professional.reviews?.length || 1) - 1 && styles.reviewItemBorder
-            ]}
-          >
-            <View style={styles.reviewHeader}>
-              <Text style={styles.reviewCustomer}>{review.customerName}</Text>
-              <View style={styles.reviewRating}>
-                <Text style={styles.reviewRatingText}>{review.rating}</Text>
-                <Ionicons name="star" size={14} color="#F59E0B" />
+          <View style={styles.tabContent}>
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Customer Reviews</Text>
+                <View style={styles.ratingContainer}>
+                  <Ionicons name="star" size={16} color="#F59E0B" />
+                  <Text style={styles.ratingText}>{professional.rating.toFixed(1)}</Text>
+                  <Text style={styles.reviewCountText}>({professional.reviews?.length || 0})</Text>
+                </View>
               </View>
-            </View>
-            
-            <Text style={styles.reviewComment}>{review.comment}</Text>
-            
-            <Text style={styles.reviewDate}>
-              {new Date(review.date).toLocaleDateString()}
-            </Text>
-          </View>
-        ))
-      ) : (
-        <Text style={styles.emptyMessage}>No reviews yet</Text>
-      )}
-    </View>
 
-    <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>Rating Breakdown</Text>
-      
-      {[5, 4, 3, 2, 1].map(rating => {
-        const count = professional.reviews?.filter(r => r.rating === rating).length || 0;
-        const percentage = (professional.reviews && professional.reviews.length > 0) 
-          ? (count / professional.reviews.length) * 100 
-          : 0;
-        
-        return (
-          <View key={rating} style={styles.ratingBreakdownRow}>
-            <View style={styles.ratingLabel}>
-              <Text style={styles.ratingNumber}>{rating}</Text>
-              <Ionicons name="star" size={14} color="#F59E0B" style={styles.starIcon} />
+              {professional.reviews && professional.reviews.length > 0 ? (
+                professional.reviews.map((review, index) => (
+                  <View
+                    key={review.id}
+                    style={[
+                      styles.reviewItem,
+                      index !== (professional.reviews?.length || 1) - 1 && styles.reviewItemBorder,
+                    ]}>
+                    <View style={styles.reviewHeader}>
+                      <Text style={styles.reviewCustomer}>{review.customerName}</Text>
+                      <View style={styles.reviewRating}>
+                        <Text style={styles.reviewRatingText}>{review.rating}</Text>
+                        <Ionicons name="star" size={14} color="#F59E0B" />
+                      </View>
+                    </View>
+
+                    <Text style={styles.reviewComment}>{review.comment}</Text>
+
+                    <Text style={styles.reviewDate}>
+                      {new Date(review.date).toLocaleDateString()}
+                    </Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.emptyMessage}>No reviews yet</Text>
+              )}
             </View>
-            
-            <View style={styles.ratingBarContainer}>
-              <View style={styles.ratingBarBackground}>
-                <View 
-                  style={[
-                    styles.ratingBarFill,
-                    { width: `${percentage}%` }
-                  ]}
-                />
-              </View>
+
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Rating Breakdown</Text>
+
+              {[5, 4, 3, 2, 1].map((rating) => {
+                const count = professional.reviews?.filter((r) => r.rating === rating).length || 0;
+                const percentage =
+                  professional.reviews && professional.reviews.length > 0
+                    ? (count / professional.reviews.length) * 100
+                    : 0;
+
+                return (
+                  <View key={rating} style={styles.ratingBreakdownRow}>
+                    <View style={styles.ratingLabel}>
+                      <Text style={styles.ratingNumber}>{rating}</Text>
+                      <Ionicons name="star" size={14} color="#F59E0B" style={styles.starIcon} />
+                    </View>
+
+                    <View style={styles.ratingBarContainer}>
+                      <View style={styles.ratingBarBackground}>
+                        <View style={[styles.ratingBarFill, { width: `${percentage}%` }]} />
+                      </View>
+                    </View>
+
+                    <Text style={styles.ratingCount}>{count}</Text>
+                  </View>
+                );
+              })}
             </View>
-            
-            <Text style={styles.ratingCount}>{count}</Text>
           </View>
-        );
-      })}
-    </View>
-  </View>
-)}
+        )}
       </ScrollView>
 
       {/* Admin Note Modal */}
-     <Modal
+      <Modal
         visible={showNoteModal}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setShowNoteModal(false)}
-      >
+        onRequestClose={() => setShowNoteModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Add Admin Note</Text>
-            
+
             <TextInput
               style={styles.noteInput}
               placeholder="Enter note about this professional..."
@@ -823,19 +833,13 @@ const AdminProfessionalDetailsScreen = () => {
               value={adminNote}
               onChangeText={setAdminNote}
             />
-            
+
             <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={styles.cancelButton}
-                onPress={() => setShowNoteModal(false)}
-              >
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowNoteModal(false)}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.saveButton}
-                onPress={handleSaveNote}
-              >
+
+              <TouchableOpacity style={styles.saveButton} onPress={handleSaveNote}>
                 <Text style={styles.saveButtonText}>Save</Text>
               </TouchableOpacity>
             </View>

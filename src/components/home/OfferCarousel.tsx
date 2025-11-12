@@ -112,7 +112,7 @@ const OffersCarousel = ({ offers = [], currentIndex, setCurrentIndex, loading, e
             <Animated.View
               style={[styles.cardWrapper, { transform: [{ scale }] }]}
             >
-              <TouchableOpacity activeOpacity={0.9}>
+              <TouchableOpacity activeOpacity={0.9} onPress={item.onPress}>
                 {imageSource ? (
                   <Image source={imageSource} style={styles.cardImage} resizeMode="cover" />
                 ) : (

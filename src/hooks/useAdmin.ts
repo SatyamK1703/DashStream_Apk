@@ -136,17 +136,17 @@ export const useAdminStats = () => {
 
 // Hook for admin dashboard - main dashboard data
 export const useAdminDashboard = () => {
-  const baseApi = useApi(() => adminService.getDashboard(), {
+  const baseApi = useApi(() => adminService.getDashboardStats(), {
     showErrorAlert: false,
   });
 
   // Transform the response to match the expected format
   const transformedData = baseApi.data
     ? {
-        totalRevenue: baseApi.data.stats?.revenue || 0,
-        totalBookings: baseApi.data.stats?.bookings || 0,
-        activeCustomers: baseApi.data.stats?.users || 0,
-        activeProfessionals: baseApi.data.stats?.professionals || 0,
+        totalRevenue: baseApi.data.totalRevenue || 0,
+        totalBookings: baseApi.data.totalBookings || 0,
+        activeCustomers: baseApi.data.activeCustomers || 0,
+        activeProfessionals: baseApi.data.activeProfessionals || 0,
         revenueChange: 0, // Backend doesn't provide this yet
         bookingsChange: 0, // Backend doesn't provide this yet
         customersChange: 0, // Backend doesn't provide this yet

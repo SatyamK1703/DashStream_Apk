@@ -1,5 +1,13 @@
-import React, { useState, useEffect, use } from 'react';
-import { View, ScrollView, StatusBar, StyleSheet, RefreshControl } from 'react-native';
+import { useState, useEffect } from 'react';
+import {
+  View,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  RefreshControl,
+  TouchableOpacity,
+  Image,
+} from 'react-native';
 import { useAuth } from '../../store';
 import Header from '../../components/home/Header';
 import OffersCarousel from '../../components/home/OfferCarousel';
@@ -13,6 +21,7 @@ import QuickFixes from '~/components/home/QuickFixes';
 import Footer from '~/components/home/FooterMain';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { scaleWidth, scaleHeight } from '../../utils/scaling';
+import OfferPopup from '../../components/home/offerPopup';
 
 // Import API hooks
 import { usePopularServices, useActiveOffers } from '../../hooks';
@@ -20,6 +29,7 @@ import { usePopularServices, useActiveOffers } from '../../hooks';
 const HomeScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
   const [currentOfferIndex, setCurrentOfferIndex] = useState(0);
+  const [isOfferPopupVisible, setOfferPopupVisible] = useState(false);
   const { user } = useAuth();
 
   // API hooks
@@ -111,19 +121,28 @@ const HomeScreen = () => {
   };
 
   // Format offers for carousel (normalize image into a string URL)
-  const carouselOffers = (activeOffersData || []).map((offer: any) => ({
-    id: offer._id || offer.id,
-    title: offer.title,
-    description: offer.description,
-    image: extractOfferImage(offer),
-    discountPercentage: offer.discountValue ?? offer.discount ?? offer.value,
-    validUntil: offer.validUntil ?? offer.valid_until ?? offer.validTo,
-    onPress: () =>
-      navigation.navigate('ServiceDetails', {
-        serviceId: offer.applicableServices?.[0] || offer.id,
-        service: offer,
-      } as any),
-  }));
+  const carouselOffers = [
+    {
+      id: 'banner-popup-offer',
+      title: 'Special Contact Offer',
+      description: 'Contact us for service mechanic and rental driver.',
+      image: require('../../assets/images/banner-popup.png'),
+      onPress: () => setOfferPopupVisible(true),
+    },
+    ...(activeOffersData || []).map((offer: any) => ({
+      id: offer._id || offer.id,
+      title: offer.title,
+      description: offer.description,
+      image: extractOfferImage(offer),
+      discountPercentage: offer.discountValue ?? offer.discount ?? offer.value,
+      validUntil: offer.validUntil ?? offer.valid_until ?? offer.validTo,
+      onPress: () =>
+        navigation.navigate('ServiceDetails', {
+          serviceId: offer.applicableServices?.[0] || offer.id,
+          service: offer,
+        } as any),
+    })),
+  ];
 
   const servicesToShow = Array.isArray(popularServicesData)
     ? popularServicesData
@@ -172,9 +191,10 @@ const HomeScreen = () => {
 
         <PromoBanner onPress={() => navigation.navigate('Membership')} />
         <CustomerTestimonials />
-        <QuickFixes />
+        {/* <QuickFixes /> */}
         <Footer />
       </ScrollView>
+      <OfferPopup visible={isOfferPopupVisible} onClose={() => setOfferPopupVisible(false)} />
     </SafeAreaView>
   );
 };

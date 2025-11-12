@@ -1,5 +1,4 @@
-// hooks/useAdminOffers.ts
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import httpClient from '../services/httpClient';
 import { API_ENDPOINTS } from '../config/config';
 
@@ -8,7 +7,7 @@ export const useAdminOffers = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<any>(null);
 
-  const fetchOffers = async () => {
+  const fetchOffers = useCallback(async () => {
     try {
       setLoading(true);
       const resp = await httpClient.get(API_ENDPOINTS.OFFERS.ALL);
@@ -20,11 +19,11 @@ export const useAdminOffers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchOffers();
-  }, []);
+  }, [fetchOffers]);
 
   return { data, loading, error, refresh: fetchOffers };
 };
@@ -95,7 +94,8 @@ export const useOfferStats = (offerId: string) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<any>(null);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
+    if (!offerId) return;
     try {
       setLoading(true);
       const resp = await httpClient.get(API_ENDPOINTS.OFFERS.STATS(offerId));
@@ -107,13 +107,11 @@ export const useOfferStats = (offerId: string) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [offerId]);
 
   useEffect(() => {
-    if (offerId) {
-      fetchStats();
-    }
-  }, [offerId, fetchStats]);
+    fetchStats();
+  }, [fetchStats]);
 
   return { data, loading, error, refresh: fetchStats };
 };

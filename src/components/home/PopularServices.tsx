@@ -36,14 +36,13 @@ const PopularServices = ({ services }: any) => {
       {/* Header with title and See All */}
       <View style={styles.header}>
         <Text style={styles.title}>Doorstep Autocare Services</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.seeAllButton}
           onPress={handleSeeAll}
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel="See all services"
-          hitSlop={8}
-        >
+          hitSlop={8}>
           <Text style={styles.seeAllText}>See All</Text>
           <MaterialIcons name="arrow-forward" size={scaleFont(18)} color="#2563eb" />
         </TouchableOpacity>
@@ -51,7 +50,9 @@ const PopularServices = ({ services }: any) => {
 
       {/* Services Grid (2 columns) */}
       <View>
-        {safeServices.slice(0, 6).reduce((rows: any[], item: any, index: number) => {
+        {safeServices
+          .slice(0, 6)
+          .reduce((rows: any[], item: any, index: number) => {
             if (index % 2 === 0) rows.push([]);
             rows[rows.length - 1].push(item);
             return rows;
@@ -61,7 +62,8 @@ const PopularServices = ({ services }: any) => {
               {row.map((item: any, colIndex: number) => {
                 // Normalize image source: accept string urls or local sources
                 let imageSrc: any = item.image || item.imageUrl || item.thumbnail;
-                if (typeof imageSrc === 'string' && imageSrc.length > 0) imageSrc = { uri: imageSrc };
+                if (typeof imageSrc === 'string' && imageSrc.length > 0)
+                  imageSrc = { uri: imageSrc };
                 if (!imageSrc) imageSrc = require('../../../assets/1.png');
 
                 return (
@@ -72,8 +74,7 @@ const PopularServices = ({ services }: any) => {
                     activeOpacity={0.8}
                     accessibilityRole="button"
                     accessibilityLabel={`Open ${item.title || item.name}`}
-                    hitSlop={8}
-                  >
+                    hitSlop={8}>
                     <View style={styles.iconContainer}>
                       <Image source={imageSrc} style={styles.icon} resizeMode="cover" />
                     </View>
@@ -153,17 +154,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   iconContainer: {
-    width: scaleWidth(64),
-    height: scaleWidth(64),
-    borderRadius: scaleWidth(32),
+    width: scaleWidth(90),
+    height: scaleWidth(90),
+    borderRadius: scaleWidth(64),
     backgroundColor: '#eff6ff',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: scaleHeight(8),
   },
   icon: {
-    width: scaleWidth(48),
-    height: scaleWidth(48),
+    width: scaleWidth(90),
+    height: scaleWidth(90),
   },
   label: {
     fontSize: scaleFont(13),
