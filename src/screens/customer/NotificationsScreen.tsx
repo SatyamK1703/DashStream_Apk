@@ -1,24 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  StyleSheet,
-  Alert,
   LayoutAnimation,
   UIManager,
-  Platform
+  Platform,
+  Alert,
+  StyleSheet,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { useNotificationStore } from '../../store/useNotificationStore';
 import { Notification } from '../../types/notification';
+
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 type NotificationsScreenNavigationProp = NativeStackNavigationProp<
   CustomerStackParamList,
@@ -27,50 +32,31 @@ type NotificationsScreenNavigationProp = NativeStackNavigationProp<
 
 const NotificationsScreen = () => {
   const navigation = useNavigation<NotificationsScreenNavigationProp>();
-  const {
-    notifications,
-    loading,
-    error,
-    fetchNotifications,
-    markAsRead,
-    markAllAsRead
-  } = useNotificationStore();
+  const { notifications, loading, error, fetchNotifications, markAsRead, markAllAsRead } =
+    useNotificationStore();
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // Enable LayoutAnimation for Android
-  useEffect(() => {
-    if (Platform.OS === 'android') {
-          }
-  }, []);
-
-  // Load notifications on mount
   useEffect(() => {
     fetchNotifications();
   }, []);
 
-  const handleNotificationPress = async (notification: Notification) => {    // Mark as read if unread
+  const handleNotificationPress = async (notification: Notification) => {
     if (!notification.read) {
       try {
         await markAsRead(notification._id);
-      } catch (error) {
-        console.error('Failed to mark notification as read:', error);
+      } catch (err) {
+        console.error('Failed to mark as read:', err);
       }
     }
 
-    // Navigate based on notification type
     switch (notification.type) {
       case 'booking':
-        if (notification.actionParams?.bookingId) {
-          navigation.navigate('TrackBooking', { 
-            bookingId: notification.actionParams.bookingId 
-          });
-        }
+        notification.actionParams?.bookingId &&
+          navigation.navigate('TrackBooking', { bookingId: notification.actionParams.bookingId });
         break;
       case 'payment':
-        if (notification.actionParams?.paymentId) {
-          navigation.navigate('PaymentMethods');
-        }
+        navigation.navigate('PaymentMethods');
         break;
       case 'offer':
         navigation.navigate('CustomerTabs', { screen: 'Home' });
@@ -81,7 +67,6 @@ const NotificationsScreen = () => {
         }
         break;
       default:
-        // For general notifications, just mark as read
         break;
     }
   };
@@ -89,101 +74,79 @@ const NotificationsScreen = () => {
   const handleMarkAllRead = async () => {
     try {
       await markAllAsRead();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to mark all notifications as read');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to mark all notifications as read.');
     }
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'booking':
-        return <Ionicons name="calendar-outline" size={24} color="#2563eb" />;
-      case 'payment':
-        return <Ionicons name="wallet-outline" size={24} color="#10b981" />;
-      case 'promo':
-        return <Ionicons name="pricetag-outline" size={24} color="#f59e0b" />;
-      case 'offer':
-        return <Ionicons name="gift-outline" size={24} color="#f59e0b" />;
-      case 'system':
-        return <Ionicons name="settings-outline" size={24} color="#6b7280" />;
-      case 'chat':
-        return <Ionicons name="chatbubble-ellipses-outline" size={24} color="#3b82f6" />;
-      default:
-        return <Ionicons name="notifications-outline" size={24} color="#6b7280" />;
-    }
+  const toggleExpand = (id: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedId(expandedId === id ? null : id);
   };
 
-  const formatTimestamp = (timestamp: string) => {
-    const now = new Date();
-    const date = new Date(timestamp);
-    const diff = now.getTime() - date.getTime();
+  const getIcon = (type: string) => {
+    const colorMap: Record<string, string> = {
+      booking: '#2563eb',
+      payment: '#10b981',
+      promo: '#f59e0b',
+      offer: '#f59e0b',
+      system: '#6b7280',
+      chat: '#3b82f6',
+    };
 
-    const seconds = Math.floor(diff / 1000);
-    const minutes = Math.floor(seconds / 60);
+    const iconMap: Record<string, string> = {
+      booking: 'calendar-outline',
+      payment: 'wallet-outline',
+      promo: 'pricetag-outline',
+      offer: 'gift-outline',
+      system: 'settings-outline',
+      chat: 'chatbubble-ellipses-outline',
+    };
+
+    return (
+      <Ionicons
+        name={iconMap[type] || 'notifications-outline'}
+        size={24}
+        color={colorMap[type] || '#6b7280'}
+      />
+    );
+  };
+
+  const formatTime = (timestamp: string) => {
+    const diff = Date.now() - new Date(timestamp).getTime();
+    const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (days > 0) {
-      return `${days}d ago`;
-    }
-    if (hours > 0) {
-      return `${hours}h ago`;
-    }
-    if (minutes > 0) {
-      return `${minutes}m ago`;
-    }
+    if (days > 0) return `${days}d ago`;
+    if (hours > 0) return `${hours}h ago`;
+    if (minutes > 0) return `${minutes}m ago`;
     return 'just now';
   };
 
-  const refresh = () => {
-    fetchNotifications();
-  };
-
-  const renderNotificationItem = ({ item }: { item: Notification }) => {
-    const isExpanded = expandedId === item._id;
-
-    const toggleExpansion = () => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setExpandedId(isExpanded ? null : item._id);
-    };
-
-    // Determine if the notification has a navigation action
-    const hasNavigationAction =
-      (item.type === 'booking' && item.actionParams?.bookingId) ||
-      (item.type === 'payment' && item.actionParams?.paymentId) ||
-      (item.type === 'offer') || // Offer navigates to CustomerTabs/Home
-      (item.type === 'system' && item.actionType === 'open_support_ticket');
+  const renderNotification = ({ item }: { item: Notification }) => {
+    const expanded = expandedId === item._id;
 
     return (
       <TouchableOpacity
-        style={[styles.notificationItem, !item.read ? styles.unread : styles.read]}
-        onPress={hasNavigationAction ? () => handleNotificationPress(item) : undefined} // Navigate if action exists
-        activeOpacity={hasNavigationAction ? 0.7 : 1}
-      >
+        style={[styles.card, !item.read && styles.unreadCard]}
+        onPress={() => handleNotificationPress(item)}
+        activeOpacity={0.9}>
         <View style={styles.row}>
-          <View style={styles.iconContainer}>{getNotificationIcon(item.type)}</View>
-          <View style={styles.flex}>
+          <View style={styles.iconWrapper}>{getIcon(item.type)}</View>
+          <View style={styles.content}>
             <View style={styles.headerRow}>
-              <Text style={[styles.title, !item.read ? styles.boldTitle : styles.normalTitle]}>
-                {item.title}
-              </Text>
-              <Text style={styles.timestamp}>{formatTimestamp(item.createdAt)}</Text>
+              <Text style={[styles.title, !item.read && styles.unreadTitle]}>{item.title}</Text>
+              <Text style={styles.time}>{formatTime(item.createdAt)}</Text>
             </View>
             <Text
-              style={[styles.message, !item.read ? styles.unreadMessage : styles.readMessage]}
-              numberOfLines={isExpanded ? undefined : 2}
-            >
+              numberOfLines={expanded ? undefined : 2}
+              style={[styles.message, !item.read && styles.unreadMessage]}>
               {item.message}
             </Text>
-            {/* Expansion / Collapse Button */}
-            {item.message.length > 100 && ( // Only show if message is long enough to be truncated
-              <TouchableOpacity
-                style={styles.expandCollapseButton}
-                onPress={toggleExpansion}
-              >
-                <Text style={styles.expandCollapseButtonText}>
-                  {isExpanded ? 'Hide Details' : 'View Details'}
-                </Text>
+            {item.message.length > 100 && (
+              <TouchableOpacity style={styles.expandButton} onPress={() => toggleExpand(item._id)}>
+                <Text style={styles.expandText}>{expanded ? 'Hide Details' : 'View Details'}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -192,38 +155,46 @@ const NotificationsScreen = () => {
     );
   };
 
-  const renderEmptyComponent = () => (
-    <View style={styles.emptyContainer}>
+  const EmptyState = () => (
+    <View style={styles.centerState}>
       <Ionicons name="notifications-off-outline" size={60} color="#d1d5db" />
-      <Text style={styles.emptyText}>No notifications yet</Text>
-      <Text style={styles.emptySubText}>You&#39;ll see notifications here when you receive them</Text>
+      <Text style={styles.emptyTitle}>No Notifications</Text>
+      <Text style={styles.emptySub}>You’ll see updates and alerts here when available.</Text>
     </View>
   );
 
-  const renderErrorState = () => (
-    <View style={styles.errorContainer}>
+  const ErrorState = () => (
+    <View style={styles.centerState}>
       <Ionicons name="alert-circle-outline" size={60} color="#ef4444" />
-      <Text style={styles.errorTitle}>Failed to load notifications</Text>
-      <Text style={styles.errorMessage}>Please check your connection and try again</Text>
-      <TouchableOpacity style={styles.retryButton} onPress={refresh}>
-        <Text style={styles.retryButtonText}>Retry</Text>
+      <Text style={styles.errorTitle}>Couldn’t load notifications</Text>
+      <Text style={styles.errorSub}>Check your connection and try again.</Text>
+      <TouchableOpacity style={styles.retryBtn} onPress={fetchNotifications}>
+        <Text style={styles.retryText}>Retry</Text>
       </TouchableOpacity>
+    </View>
+  );
+
+  const Header = () => (
+    <View style={styles.header}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <Ionicons name="arrow-back" size={24} color="#111" />
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>Notifications</Text>
+      {notifications.length > 0 ? (
+        <TouchableOpacity onPress={handleMarkAllRead}>
+          <Text style={styles.markAll}>Mark all read</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={{ width: 80 }} />
+      )}
     </View>
   );
 
   if (loading && notifications.length === 0 && !error) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>Notifications</Text>
-          </View>
-          <View style={{ width: 60 }} />
-        </View>
-        <View style={styles.loaderContainer}>
+        <Header />
+        <View style={styles.centerState}>
           <ActivityIndicator size="large" color="#2563eb" />
           <Text style={styles.loadingText}>Loading notifications...</Text>
         </View>
@@ -232,35 +203,17 @@ const NotificationsScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>
-            Notifications
-          </Text>
-        </View>
-        {notifications.length > 0 && (
-          <View style={styles.headerActions}>
-            <TouchableOpacity onPress={handleMarkAllRead} style={styles.headerAction}>
-              <Text style={styles.markAll}>Mark all read</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-
+    <SafeAreaView style={styles.safeArea}>
+      <Header />
       {error && notifications.length === 0 ? (
-        renderErrorState()
+        <ErrorState />
       ) : (
         <FlatList
           data={notifications}
-          renderItem={renderNotificationItem}
-          keyExtractor={item => item._id}
+          renderItem={renderNotification}
+          keyExtractor={(item) => item._id}
           contentContainerStyle={{ flexGrow: 1 }}
-          ListEmptyComponent={renderEmptyComponent}
+          ListEmptyComponent={<EmptyState />}
           refreshControl={
             <RefreshControl
               refreshing={loading}
@@ -278,192 +231,55 @@ const NotificationsScreen = () => {
 export default NotificationsScreen;
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff'
-  },
+  safeArea: { flex: 1, backgroundColor: '#f9fafb' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  backButton: {
-    padding: 4
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center'
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1f2937'
-  },
-  markAll: {
-    color: '#2563eb',
-    fontWeight: '600'
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  flex: {
-    flex: 1
-  },
-  notificationItem: {
     padding: 16,
+    backgroundColor: '#fff',
+    borderBottomColor: '#e5e7eb',
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
   },
-  unread: {
-    backgroundColor: '#eff6ff'
+  backBtn: { padding: 6 },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#111' },
+  markAll: { color: '#2563eb', fontWeight: '600' },
+  card: {
+    backgroundColor: '#fff',
+    marginHorizontal: 12,
+    marginVertical: 6,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  read: {
-    backgroundColor: '#fff'
-  },
-  iconContainer: {
-    marginRight: 12,
-    marginTop: 4
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start'
-  },
-  title: {
-    fontSize: 16
-  },
-  boldTitle: {
-    fontWeight: '700',
-    color: '#111827'
-  },
-  normalTitle: {
-    fontWeight: '500',
-    color: '#1f2937'
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginLeft: 8
-  },
-  message: {
-    marginTop: 4
-  },
-  unreadMessage: {
-    color: '#374151'
-  },
-  readMessage: {
-    color: '#4b5563'
-  },
-  detailsButton: {
-    marginTop: 12,
-    alignSelf: 'flex-start',
-    backgroundColor: '#e5e7eb',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-  },
-  detailsButtonText: {
-    color: '#1f2937',
-    fontWeight: '500',
-  },
-  expandCollapseButton: {
-    marginTop: 8,
-    alignSelf: 'flex-start',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
-    backgroundColor: '#e0e7ff', // Light blue background
-  },
-  expandCollapseButtonText: {
-    color: '#2563eb', // Primary blue text
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 80
-  },
-  emptyText: {
-    color: '#9ca3af',
-    fontSize: 18,
-    marginTop: 16
-  },
-  emptySubText: {
-    color: '#6b7280',
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center'
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 80
-  },
-  errorTitle: {
-    color: '#ef4444',
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 16
-  },
-  errorMessage: {
-    color: '#6b7280',
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center',
-    marginBottom: 24
-  },
-  retryButton: {
+  unreadCard: { backgroundColor: '#eef2ff' },
+  row: { flexDirection: 'row', alignItems: 'flex-start' },
+  iconWrapper: { marginRight: 12, marginTop: 4 },
+  content: { flex: 1 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  title: { fontSize: 16, color: '#1f2937', fontWeight: '500' },
+  unreadTitle: { fontWeight: '700', color: '#111827' },
+  time: { fontSize: 12, color: '#6b7280' },
+  message: { marginTop: 6, fontSize: 14, color: '#4b5563', lineHeight: 20 },
+  unreadMessage: { color: '#1f2937' },
+  expandButton: { marginTop: 6 },
+  expandText: { color: '#2563eb', fontSize: 13, fontWeight: '600' },
+  centerState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
+  emptyTitle: { fontSize: 18, fontWeight: '600', color: '#9ca3af', marginTop: 16 },
+  emptySub: { fontSize: 14, color: '#6b7280', marginTop: 6, textAlign: 'center' },
+  errorTitle: { fontSize: 18, fontWeight: '600', color: '#ef4444', marginTop: 16 },
+  errorSub: { color: '#6b7280', fontSize: 14, marginTop: 6, textAlign: 'center' },
+  retryBtn: {
+    marginTop: 16,
     backgroundColor: '#ef4444',
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8
+    paddingVertical: 10,
+    borderRadius: 8,
   },
-  retryButtonText: {
-    color: '#fff',
-    fontWeight: '600'
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  headerAction: {
-    marginLeft: 12
-  },
-  notificationActions: {
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  deleteButton: {
-    marginLeft: 8,
-    padding: 4
-  },
-  loadingMore: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16
-  },
-  loadingMoreText: {
-    marginLeft: 8,
-    color: '#6b7280'
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff'
-  },
-  loadingText: {
-    marginTop: 16,
-    color: '#4b5563'
-  }
+  retryText: { color: '#fff', fontWeight: '600' },
+  loadingText: { marginTop: 10, color: '#4b5563', fontSize: 15 },
 });

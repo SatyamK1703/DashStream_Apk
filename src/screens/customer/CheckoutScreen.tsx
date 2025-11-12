@@ -1,95 +1,122 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, StyleSheet, Linking } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  StyleSheet,
+  Linking,
+  Platform,
+  KeyboardAvoidingView,
+} from 'react-native';
 import { useNavigation, useRoute, useFocusEffect, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import { useCart, useAddresses, useCheckout } from '../../store';
 import { useCreateBooking } from '../../hooks/useBookings';
 import { useCreateCODPayment } from '../../hooks/usePayments';
 import { useServiceArea } from '../../hooks/useServiceArea';
 import { useNotifyAreaRequest } from '../../hooks/useNotifications';
-import api from '../../services/httpClient'; // <-- Ensure you have a generic API client for direct calls
-import { Address } from '../../types/api';
-// @ts-ignore: expo-web-browser may not have types in some setups
+import api from '../../services/httpClient';
 import * as WebBrowser from 'expo-web-browser';
+import { scaleHeight, scaleWidth } from '../../utils/scaling';
+import { Address } from '../../types/api';
 
-type CheckoutScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
+/* -------------------------
+   Types
+   ------------------------- */
+type CheckoutNavProp = NativeStackNavigationProp<CustomerStackParamList>;
+type CheckoutRouteProp = RouteProp<CustomerStackParamList, 'Checkout'>;
 
-interface TimeSlot {
+interface PaymentMethod {
   id: string;
-  time: string;
-  available: boolean;
+  type: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  isDefault?: boolean;
+  fees?: { percentage?: number; fixed?: number };
+  codSettings?: { minAmount: number; maxAmount: number; collectBeforeService?: boolean };
 }
 
-const AddressPicker = ({
-  addresses,
-  selectedAddress,
-  onSelect,
-  loading,
-  error,
-  onAddNew,
-}: {
+/* -------------------------
+   Small presentational components
+   ------------------------- */
+
+const IconButton: React.FC<{ onPress: () => void; children?: React.ReactNode; style?: any }> = ({
+  onPress,
+  children,
+  style,
+}) => (
+  <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={[{ padding: 8 }, style]}>
+    {children}
+  </TouchableOpacity>
+);
+
+/* AddressPicker component - small, self-contained */
+const AddressPicker: React.FC<{
   addresses: Address[];
   selectedAddress: Address | null;
-  onSelect: (address: Address) => void;
+  onSelect: (a: Address) => void;
   loading: boolean;
   error: any;
   onAddNew: () => void;
-}) => {
+}> = ({ addresses, selectedAddress, onSelect, loading, error, onAddNew }) => {
   useEffect(() => {
-    if (addresses.length > 0 && !selectedAddress) {
+    if (!selectedAddress && addresses?.length) {
       onSelect(addresses[0]);
     }
   }, [addresses, selectedAddress, onSelect]);
 
-  if (loading) {
-    return <Text style={styles.grayText}>Loading addresses...</Text>;
-  }
-  if (error) {
+  if (loading) return <Text style={styles.grayText}>Loading addresses...</Text>;
+  if (error)
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Failed to load addresses</Text>
-        {/* Add retry logic if needed */}
+        <TouchableOpacity onPress={onAddNew} style={styles.addPaymentButton}>
+          <Text style={styles.addPaymentText}>Retry / Add Address</Text>
+        </TouchableOpacity>
       </View>
     );
-  }
-  if (addresses.length === 0) {
+
+  if (!addresses || addresses.length === 0) {
     return (
       <View style={styles.emptyPaymentContainer}>
-        <Text style={styles.grayText}>No saved addresses found</Text>
+        <Text style={styles.grayText}>No saved addresses</Text>
         <TouchableOpacity onPress={onAddNew} style={styles.addPaymentButton}>
           <Text style={styles.addPaymentText}>Add Address</Text>
         </TouchableOpacity>
       </View>
     );
   }
+
   return (
     <>
-      {addresses.map((address) => {
-        const isSelected = selectedAddress?._id === address._id;
-        const displayLines = [address.address, address.landmark, address.city]
-          .filter(Boolean)
-          .join(', ');
+      {addresses.map((addr) => {
+        const isSelected = selectedAddress?._id === addr._id;
+        const display = [addr.address, addr.landmark, addr.city].filter(Boolean).join(', ');
         return (
           <TouchableOpacity
-            key={address._id}
+            key={addr._id}
             style={[styles.addressBox, isSelected && styles.addressSelected]}
-            onPress={() => onSelect(address)}
-          >
+            onPress={() => onSelect(addr)}>
             <View style={styles.addressTopRow}>
               <Text style={styles.addressTitle} numberOfLines={1}>
-                {address.name || address.type || 'Saved Address'}
+                {addr.name || addr.type || 'Saved Address'}
               </Text>
-              {address.isDefault && (
+              {addr.isDefault && (
                 <View style={styles.defaultBadge}>
                   <Text style={styles.defaultBadgeText}>Default</Text>
                 </View>
               )}
             </View>
             <Text style={styles.addressText} numberOfLines={2}>
-              {displayLines || 'No address details provided'}
+              {display || 'No details provided'}
             </Text>
           </TouchableOpacity>
         );
@@ -98,14 +125,154 @@ const AddressPicker = ({
   );
 };
 
-const CheckoutScreen = () => {
-  const route = useRoute<RouteProp<CustomerStackParamList, 'Checkout'>>();
-  const navigation = useNavigation<CheckoutScreenNavigationProp>();
-  const { subtotal, discount, total } = route.params || {};
+/* DatePicker — horizontal date selection */
+const DatePicker: React.FC<{
+  dates: Date[];
+  value: Date | null;
+  onChange: (d: Date) => void;
+}> = ({ dates, value, onChange }) => {
+  const formatDate = (d: Date) =>
+    d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
 
-  // Use centralized stores
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      {dates.map((d, idx) => {
+        const isSelected = value && d.toDateString() === value.toDateString();
+        return (
+          <TouchableOpacity
+            key={idx}
+            style={[styles.dateOption, isSelected && styles.dateOptionSelected]}
+            onPress={() => onChange(d)}>
+            <Text style={[styles.dateText, isSelected && styles.dateTextSelected]}>
+              {formatDate(d)}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+};
+
+/* TimeSlot grid */
+const TimeSlotGrid: React.FC<{
+  slots: { id: string; time: string; available: boolean }[];
+  value: string | null;
+  onSelect: (id: string) => void;
+}> = ({ slots, value, onSelect }) => {
+  return (
+    <View style={styles.timeSlotContainer}>
+      {slots.map((s) => {
+        const disabled = !s.available;
+        const isSelected = value === s.id;
+        return (
+          <TouchableOpacity
+            key={s.id}
+            style={[
+              styles.timeSlot,
+              disabled && styles.timeSlotDisabled,
+              isSelected && s.available && styles.timeSlotSelected,
+            ]}
+            onPress={() => s.available && onSelect(s.id)}
+            disabled={disabled}>
+            <Text
+              style={[
+                styles.timeSlotText,
+                disabled && styles.textGray,
+                isSelected && styles.textWhite,
+              ]}>
+              {s.time}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+};
+
+/* PaymentMethodList */
+const PaymentMethodList: React.FC<{
+  methods: PaymentMethod[];
+  selectedId: string | null;
+  onSelect: (m: PaymentMethod) => void;
+  cartTotal: number;
+}> = ({ methods, selectedId, onSelect, cartTotal }) => {
+  return (
+    <>
+      {methods.map((m) => {
+        const isSelected = selectedId === m.id;
+        const isCOD = m.type === 'cod';
+        const codSettings = m.codSettings;
+        const isCODAvailable =
+          !isCOD || !codSettings
+            ? true
+            : cartTotal >= codSettings.minAmount && cartTotal <= codSettings.maxAmount;
+
+        return (
+          <TouchableOpacity
+            key={m.id}
+            style={[
+              styles.paymentMethod,
+              isSelected && styles.addressSelected,
+              !isCODAvailable && styles.paymentMethodDisabled,
+            ]}
+            onPress={() => isCODAvailable && onSelect(m)}
+            disabled={!isCODAvailable}
+            activeOpacity={0.8}>
+            <View style={styles.paymentIconBox}>
+              <Ionicons
+                name={(m.icon as any) || 'card-outline'}
+                size={20}
+                color={isCODAvailable ? '#2563eb' : '#9ca3af'}
+              />
+            </View>
+            <View style={styles.paymentMethodInfo}>
+              <Text style={[styles.addressTitle, !isCODAvailable && styles.disabledText]}>
+                {m.name}
+              </Text>
+              <Text style={[styles.addressSubtitle, !isCODAvailable && styles.disabledText]}>
+                {m.description}
+              </Text>
+
+              {isCOD && codSettings && (
+                <Text style={[styles.codInfo, !isCODAvailable && styles.codUnavailable]}>
+                  {isCODAvailable
+                    ? `Available for ₹${codSettings.minAmount}–₹${codSettings.maxAmount}`
+                    : `Not available (₹${codSettings.minAmount}–₹${codSettings.maxAmount})`}
+                </Text>
+              )}
+
+              {m.fees && m.fees.percentage ? (
+                <Text style={styles.feeInfo}>+{m.fees.percentage}% processing fee</Text>
+              ) : null}
+            </View>
+
+            {m.isDefault && <Text style={styles.defaultBadge}>Recommended</Text>}
+            {!isCODAvailable && isCOD && <Text style={styles.unavailableBadge}>Not Available</Text>}
+          </TouchableOpacity>
+        );
+      })}
+    </>
+  );
+};
+
+/* -------------------------
+   Main Checkout Screen - refactored
+   ------------------------- */
+
+const CheckoutScreen: React.FC = () => {
+  const navigation = useNavigation<CheckoutNavProp>();
+  const route = useRoute<CheckoutRouteProp>();
+  const { subtotal = 0, discount = 0, total = 0 } = route.params || {};
+
+  // Stores & hooks
   const { items: cartItems, clear } = useCart();
-  const { addresses, defaultAddress, isLoading: addressesLoading, error: addressesError, fetchAddresses } = useAddresses();
+  const {
+    addresses,
+    defaultAddress,
+    isLoading: addressesLoading,
+    error: addressesError,
+    fetchAddresses,
+  } = useAddresses();
   const {
     selectedAddress,
     selectedDate,
@@ -119,499 +286,406 @@ const CheckoutScreen = () => {
     setLoading,
   } = useCheckout();
 
-  // Booking and payment hooks
   const createBookingApi = useCreateBooking();
   const createCODPaymentApi = useCreateCODPayment();
   const { checkPincodeAvailability } = useServiceArea();
   const { execute: notifyAdmin } = useNotifyAreaRequest();
 
-  // Simplified payment methods - only UPI and COD
-  const paymentMethods = [
-    {
-      id: 'upi',
-      type: 'razorpay', // UPI will use Razorpay for processing
-      name: 'UPI Payment',
-      description: 'Pay using UPI apps like GPay, PhonePe, Paytm',
-      icon: 'phone-portrait-outline',
-      isDefault: true,
-      fees: {
-        percentage: 0,
-        fixed: 0
-      }
-    },
-    {
-      id: 'cod',
-      type: 'cod',
-      name: 'Cash on Delivery',
-      description: 'Pay cash after service completion',
-      icon: 'cash-outline',
-      isDefault: false,
-      codSettings: {
-        minAmount: 50,
-        maxAmount: 5000,
-        collectBeforeService: false
-      }
-    }
-  ];
-
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(paymentMethods[0]); // Default to UPI
-
-  // Initialize addresses
-  useEffect(() => {
-    fetchAddresses();
-  }, [fetchAddresses]);
-
-  useEffect(() => {
-    if (addresses.length > 0 && !selectedAddress) {
-      const addressToSelect = defaultAddress || addresses[0];
-      setSelectedAddress(addressToSelect);
-    }
-  }, [addresses, defaultAddress, selectedAddress, setSelectedAddress]);
-
-  // Handle address selection from AddressList screen
-  useFocusEffect(
-    React.useCallback(() => {
-      const selectedAddressId = route.params?.selectedAddressId;
-
-      if (selectedAddressId && addresses.length > 0) {
-        const addressToSet = addresses.find(addr => addr._id === selectedAddressId);
-        if (addressToSet) {
-          setSelectedAddress(addressToSet);
-          // Clear the parameter
-          navigation.setParams({ selectedAddressId: undefined } as any);
-        }
-      }
-    }, [route.params?.selectedAddressId, addresses, navigation, setSelectedAddress])
+  /* Payment methods declared here so it's easy to change */
+  const paymentMethods: PaymentMethod[] = useMemo(
+    () => [
+      {
+        id: 'upi',
+        type: 'razorpay',
+        name: 'UPI / Online',
+        description: 'Pay via UPI apps (GPay, PhonePe, Paytm) or cards.',
+        icon: 'logo-google',
+        isDefault: true,
+        fees: { percentage: 0, fixed: 0 },
+      },
+      {
+        id: 'cod',
+        type: 'cod',
+        name: 'Cash on Delivery',
+        description: 'Pay cash after service completion.',
+        icon: 'cash-outline',
+        isDefault: false,
+        codSettings: { minAmount: 50, maxAmount: 5000, collectBeforeService: false },
+      },
+    ],
+    []
   );
 
-  // Generate dates for the next 7 days
-  const dates = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() + i);
-    return date;
-  });
+  const [selectedPayment, setSelectedPayment] = useState<PaymentMethod | null>(paymentMethods[0]);
+  const [localLoading, setLocalLoading] = useState(false);
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
-  };
+  /* date generation */
+  const dates = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      // keep the time component zeroed for consistent comparisons
+      d.setHours(0, 0, 0, 0);
+      return d;
+    });
+  }, []);
 
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
-    setSelectedTimeSlot(null); // Reset time slot when date changes
-  };
-  // generate simple hourly time slots
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  /* time slots */
+  const [timeSlots, setTimeSlots] = useState<{ id: string; time: string; available: boolean }[]>(
+    []
+  );
   useEffect(() => {
-    const slots: TimeSlot[] = [];
+    const slots: { id: string; time: string; available: boolean }[] = [];
     for (let h = 9; h <= 17; h++) {
-      const label = `${h}:00 ${h < 12 ? 'AM' : h === 12 ? 'PM' : 'PM'}`;
+      const label = `${h <= 12 ? h : h - 12}:00 ${h < 12 ? 'AM' : 'PM'}`;
       slots.push({ id: `${h}`, time: label, available: true });
     }
     setTimeSlots(slots);
   }, []);
 
-  const handlePlaceOrder = async () => {
-    if (!selectedTimeSlot) {
-      Alert.alert('Select Time', 'Please select a time slot for your service.');
-      return;
-    }
+  /* Initialize addresses */
+  useEffect(() => {
+    fetchAddresses();
+  }, [fetchAddresses]);
 
-    if (!selectedAddress) {
-      Alert.alert('Select Address', 'Please select a service address to continue.');
-      return;
+  useEffect(() => {
+    if (!selectedAddress && addresses?.length) {
+      setSelectedAddress(defaultAddress || addresses[0]);
     }
+  }, [addresses, defaultAddress, selectedAddress, setSelectedAddress]);
 
-    if (!selectedPaymentMethod) {
-      Alert.alert('Select Payment Method', 'Please select a payment method to continue.');
-      return;
-    }
+  /* react-navigation param sync when returning from AddressList */
+  useFocusEffect(
+    useCallback(() => {
+      const selectedAddressId = (route.params as any)?.selectedAddressId;
+      if (selectedAddressId && addresses?.length) {
+        const found = addresses.find((a) => a._id === selectedAddressId);
+        if (found) {
+          setSelectedAddress(found);
+          // clear param so it doesn't keep reapplying
+          navigation.setParams({ selectedAddressId: undefined } as any);
+        }
+      }
+    }, [route.params, addresses, navigation, setSelectedAddress])
+  );
 
-    if (!cartItems || cartItems.length === 0) {
-      Alert.alert('Empty Cart', 'Your cart is empty. Add services before placing an order.');
-      return;
-    }
+  /* helpers */
+  const cartTotal = useMemo(() => {
+    return cartItems?.reduce((acc, it) => acc + (it.price || 0) * (it.quantity || 1), 0) || 0;
+  }, [cartItems]);
+
+  const handleAddNewAddress = useCallback(() => {
+    navigation.navigate('AddressList' as any, { currentAddressId: selectedAddress?._id || null });
+  }, [navigation, selectedAddress]);
+
+  /* Place order flow - cleaned & decomposed */
+  const handlePlaceOrder = useCallback(async () => {
+    // Frontend validations
+    if (!selectedTimeSlot)
+      return Alert.alert('Select Time', 'Please select a time slot for your service.');
+    if (!selectedAddress) return Alert.alert('Select Address', 'Please select or add an address.');
+    if (!selectedPayment) return Alert.alert('Select Payment', 'Please choose a payment method.');
+    if (!cartItems || cartItems.length === 0)
+      return Alert.alert('Empty Cart', 'Add services before placing order.');
 
     setLoading(true);
-    try {
-      if (!selectedAddress) {
-        Alert.alert('Error', 'Please select a valid address.');
-        return;
-      }
+    setLocalLoading(true);
 
-      // Pincode availability check
+    try {
+      // pincode availability
       const pincode = selectedAddress.pincode;
       if (!pincode) {
-        Alert.alert('Error', 'Selected address does not have a pincode.');
+        Alert.alert('Address Missing Pincode', 'Selected address does not have a pincode.');
         return;
       }
 
-      const availabilityRes = await checkPincodeAvailability(pincode);
-      // The hook returns the data object directly, not the full response
-      if (!availabilityRes?.isAvailable) {
-        Alert.alert('Service Not Available', 'Service not available for your area. We have notified our team of your interest.');
+      const availability = await checkPincodeAvailability(pincode);
+      if (!availability?.isAvailable) {
+        Alert.alert(
+          'Service Unavailable',
+          'Service not available in your area. We notified the team.'
+        );
         await notifyAdmin(pincode);
         return;
       }
 
-      // Calculate final total
-      const totalAmount = total;
+      const totalAmount = total || cartTotal + (subtotal || 0) - (discount || 0);
 
-      // COD validation
-      if (selectedPaymentMethod.type === 'cod') {
-        const codSettings = selectedPaymentMethod.codSettings;
-
-        if (codSettings && totalAmount < codSettings.minAmount) {
-          Alert.alert('COD Not Available', `Minimum amount for COD is ₹${codSettings.minAmount}. Please add more services or choose UPI payment.`);
-          return;
+      // COD checks
+      if (selectedPayment.type === 'cod') {
+        const cs = selectedPayment.codSettings!;
+        if (cs && totalAmount < cs.minAmount) {
+          return Alert.alert('COD Not Available', `Minimum for COD: ₹${cs.minAmount}`);
         }
-
-        if (codSettings && totalAmount > codSettings.maxAmount) {
-          Alert.alert('COD Not Available', `Maximum amount for COD is ₹${codSettings.maxAmount}. Please choose UPI payment for this order.`);
-          return;
+        if (cs && totalAmount > cs.maxAmount) {
+          return Alert.alert('COD Not Available', `Maximum for COD: ₹${cs.maxAmount}`);
         }
       }
 
-      // Create booking on backend
+      // prepare booking payload
       const bookingPayload = {
-        service: cartItems.map(i => i.id),
-        scheduledDate: selectedDate.toISOString(),
+        service: cartItems.map((i) => i.id),
+        scheduledDate: selectedDate ? selectedDate.toISOString() : new Date().toISOString(),
         scheduledTime: selectedTimeSlot,
         location: {
           address: {
-            address: selectedAddress.address || 'Address not specified',
+            address: selectedAddress.address || '',
             name: selectedAddress.name || selectedAddress.type || 'Saved Address',
-            city: selectedAddress.city || 'City not specified',
-            pincode: selectedAddress.pincode || 'Pincode not available',
+            city: selectedAddress.city || '',
+            pincode: selectedAddress.pincode || '',
             landmark: selectedAddress.landmark || '',
-            type: selectedAddress.type || ''
-          }
+            type: selectedAddress.type || '',
+          },
         },
-        price: subtotal, // Base price without fees and taxes
-        totalAmount: totalAmount, // Complete total including all fees and taxes
+        price: subtotal || 0,
+        totalAmount,
         notes: specialInstructions,
         additionalServices: [],
-        paymentMethod: selectedPaymentMethod?.type || 'razorpay'
+        paymentMethod: selectedPayment?.type || 'razorpay',
       };
 
+      // create booking
       const bookingRes = await createBookingApi.execute(bookingPayload);
-      const bookingId = bookingRes?.booking?._id;
-
+      const bookingId = bookingRes?.booking?._id || bookingRes?.data?.booking?._id;
       if (!bookingId) {
-        console.error('Failed to extract booking ID from response:', bookingRes);
-        Alert.alert('Error', 'Failed to create booking. Please try again.');
-        return;
+        console.error('Booking creation response', bookingRes);
+        return Alert.alert('Error', 'Failed to create booking. Try again.');
       }
 
-      // Handle payment based on selected method
-      if (selectedPaymentMethod?.type === 'cod') {
-        // For COD, create a COD payment record and navigate to confirmation
+      // handle COD
+      if (selectedPayment.type === 'cod') {
         try {
-          const amount = totalAmount; // Use the complete total amount
           await createCODPaymentApi.execute({
             bookingId,
-            amount,
+            amount: totalAmount,
             notes: {
               paymentMethod: 'cod',
-              scheduledDate: selectedDate.toISOString(),
-              specialInstructions
-            }
+              scheduledDate: bookingPayload.scheduledDate,
+              specialInstructions,
+            },
           });
 
-          Alert.alert(
-            'Order Placed Successfully!',
-            'Your booking has been confirmed. You can pay cash when the service is completed.',
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  navigation.navigate('BookingConfirmation', {
-                    bookingId
-                  });
-                  clear && clear();
-                }
-              }
-            ]
-          );
+          Alert.alert('Booking Confirmed', 'Pay cash to the professional on service completion.', [
+            {
+              text: 'OK',
+              onPress: () => {
+                clear && clear();
+                navigation.navigate('BookingConfirmation' as any, { bookingId });
+              },
+            },
+          ]);
           return;
-        } catch (codError) {
-          console.error('COD payment creation failed:', codError);
-          Alert.alert('COD Setup Failed', 'Booking created but COD setup failed. You can still pay cash during service.');
-          navigation.navigate('BookingConfirmation', {
-            bookingId
-          });
+        } catch (codErr) {
+          console.error('COD creation failed', codErr);
+          // allow user to continue to confirmation
+          Alert.alert(
+            'COD Setup Failed',
+            'Booking created. COD setup failed, but you can still pay at service.'
+          );
           clear && clear();
+          navigation.navigate('BookingConfirmation' as any, { bookingId });
           return;
         }
       }
 
-      // For online payments, create payment link
-      const amount = totalAmount; // Use the complete total amount
-      // Direct API call to /payments/create-payment-link
+      // online payment: create payment link
       let paymentLinkRes;
-
       try {
         paymentLinkRes = await api.post('/payments/create-payment-link', {
           bookingId,
-          amount
+          amount: totalAmount,
         });
-      } catch (paymentError: any) {
-        // Handle duplicate key error specifically
-        if (paymentError?.errorCode === 'APP-500-407' && paymentError?.message?.includes('duplicate key')) {
-          // Try again after a brief delay
-          console.log('Duplicate payment detected, retrying...');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          try {
-            paymentLinkRes = await api.post('/payments/create-payment-link', {
-              bookingId,
-              amount
-            });
-          } catch (retryError) {
-            console.error('Payment creation retry failed:', retryError);
-            throw paymentError; // Throw original error
-          }
+      } catch (err: any) {
+        // specific duplicate key handling (based on your backend error format)
+        if (err?.errorCode === 'APP-500-407' && err?.message?.includes('duplicate key')) {
+          console.log('Duplicate payment: retrying once');
+          await new Promise((r) => setTimeout(r, 1000));
+          paymentLinkRes = await api.post('/payments/create-payment-link', {
+            bookingId,
+            amount: totalAmount,
+          });
         } else {
-          throw paymentError;
+          throw err;
         }
       }
 
-      // Debug: Log the full response to see the structure
-      console.log('Payment Link Response:', JSON.stringify(paymentLinkRes, null, 2));
-
-      // Extract payment link from response (backend returns { status: "success", data: { payment_link, paymentId, ... } })
-      const paymentLink = paymentLinkRes?.data?.payment_link;
-      const paymentId = paymentLinkRes?.data?.paymentId;
-
-      console.log('Extracted Payment Link:', paymentLink);
-      console.log('Extracted Payment ID:', paymentId);
+      const paymentLink =
+        paymentLinkRes?.data?.payment_link || paymentLinkRes?.data?.data?.payment_link;
+      const paymentId = paymentLinkRes?.data?.paymentId || paymentLinkRes?.data?.data?.paymentId;
 
       if (!paymentLink) {
-        console.error('Payment link missing from response:', paymentLinkRes);
-        Alert.alert('Payment info missing', 'Could not start payment. Booking has been created and will be updated once payment is confirmed.');
-        navigation.navigate('BookingConfirmation', { bookingId });
+        console.warn('No payment link returned', paymentLinkRes);
+        Alert.alert('Payment Pending', 'Booking created. Please check bookings for status.');
         clear && clear();
+        navigation.navigate('BookingConfirmation' as any, { bookingId });
         return;
       }
 
-      // Open payment link in browser (Expo WebBrowser preferred)
+      // open browser with fallback
       let browserResult;
       try {
         browserResult = await WebBrowser.openBrowserAsync(paymentLink);
       } catch {
-        // Fallback to Linking if WebBrowser fails
         try {
           await Linking.openURL(paymentLink);
-          // For Linking, we can't detect when user returns, so show a message
           Alert.alert(
-            'Payment Window Opened',
-            'Please complete your payment in the browser. Once done, return to the app and check your bookings.',
-            [
-              {
-                text: 'View Bookings',
-                onPress: () => {
-                  navigation.navigate('CustomerTabs' as any, { screen: 'Bookings' });
-                  clear && clear();
-                }
-              },
-              {
-                text: 'OK',
-                onPress: () => {
-                  navigation.navigate('BookingConfirmation', { bookingId });
-                  clear && clear();
-                }
-              }
-            ]
+            'Payment Opened',
+            'Complete payment in the browser. After that, check your bookings.'
           );
+          clear && clear();
+          navigation.navigate('CustomerTabs' as any, { screen: 'Bookings' });
           return;
         } catch {
-          Alert.alert('Error', 'Could not open payment page.');
+          Alert.alert('Error', 'Could not open payment link.');
           return;
         }
       }
 
-      // User closed the browser - check payment status
+      // if user closed/dismissed, poll the payment status
       if (browserResult.type === 'cancel' || browserResult.type === 'dismiss') {
-        // Poll payment status for a few seconds
-        let paymentStatus = null;
+        let status: 'success' | 'failed' | 'unknown' | null = null;
         let attempts = 0;
-        const maxAttempts = 5;
+        const maxAttempts = 6;
 
-        while (attempts < maxAttempts && !paymentStatus) {
+        while (attempts < maxAttempts && !status) {
+          await new Promise((r) => setTimeout(r, 2000));
+          attempts++;
           try {
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between checks
             const statusRes = await api.get(`/payments/${paymentId}`);
-            const status = statusRes?.data?.payment?.status;
-
-            if (status === 'captured' || status === 'authorized') {
-              paymentStatus = 'success';
+            const paymentState =
+              statusRes?.data?.payment?.status || statusRes?.data?.data?.payment?.status;
+            if (paymentState === 'captured' || paymentState === 'authorized') {
+              status = 'success';
               break;
-            } else if (status === 'failed') {
-              paymentStatus = 'failed';
+            } else if (paymentState === 'failed') {
+              status = 'failed';
               break;
             }
-          } catch (error) {
-            console.error('Error checking payment status:', error);
+          } catch (err) {
+            console.error('Payment status check error', err);
           }
-          attempts++;
         }
 
-        // Show appropriate message based on payment status
-        if (paymentStatus === 'success') {
-          Alert.alert(
-            'Payment Successful!',
-            'Your booking has been confirmed and payment is complete.',
-            [
-              {
-                text: 'View Booking',
-                onPress: () => {
-                  navigation.navigate('BookingConfirmation', { bookingId });
-                  clear && clear();
-                }
-              }
-            ]
-          );
-        } else if (paymentStatus === 'failed') {
-          Alert.alert(
-            'Payment Failed',
-            'Your payment could not be processed. Please try again or contact support.',
-            [
-              {
-                text: 'Try Again',
-                onPress: () => {
-                  // User can try placing order again
-                }
+        if (status === 'success') {
+          Alert.alert('Payment Successful', 'Your booking is confirmed.', [
+            {
+              text: 'View Booking',
+              onPress: () => {
+                clear && clear();
+                navigation.navigate('BookingConfirmation' as any, { bookingId });
               },
-              {
-                text: 'Cancel',
-                style: 'cancel'
-              }
-            ]
-          );
+            },
+          ]);
+        } else if (status === 'failed') {
+          Alert.alert('Payment Failed', 'Please try again or contact support.');
         } else {
-          // Payment status unknown - might still be processing
           Alert.alert(
             'Payment Processing',
-            'Your payment is being processed. Please check your bookings in a few moments.',
+            'Your payment is being processed. Check bookings shortly.',
             [
               {
                 text: 'View Bookings',
                 onPress: () => {
-                  navigation.navigate('CustomerTabs' as any, { screen: 'Bookings' });
                   clear && clear();
-                }
+                  navigation.navigate('CustomerTabs' as any, { screen: 'Bookings' });
+                },
               },
               {
                 text: 'OK',
                 onPress: () => {
-                  navigation.navigate('BookingConfirmation', { bookingId });
                   clear && clear();
-                }
-              }
+                  navigation.navigate('BookingConfirmation' as any, { bookingId });
+                },
+              },
             ]
           );
         }
       } else {
-        // Browser closed normally (shouldn't happen with payment links)
-        navigation.navigate('BookingConfirmation', { bookingId });
         clear && clear();
+        navigation.navigate('BookingConfirmation' as any, { bookingId });
       }
-    } catch (error: any) {
-      console.error('Place order error:', error);
-
-      // Handle specific error scenarios
-      if (error?.errorCode === 'APP-500-407' && error?.message?.includes('duplicate key')) {
-        Alert.alert(
-          'Duplicate Order',
-          'A payment for this booking is already in progress. Please check your bookings or try again in a few minutes.',
-          [
-            { text: 'View Bookings', onPress: () => navigation.navigate('CustomerTabs' as any, { screen: 'Bookings' }) },
-            { text: 'OK', style: 'cancel' }
-          ]
-        );
-      } else if (error?.userFriendlyMessage) {
-        Alert.alert('Error', error.userFriendlyMessage);
+    } catch (err: any) {
+      console.error('Place order error:', err);
+      if (err?.errorCode === 'APP-500-407' && err?.message?.includes('duplicate key')) {
+        Alert.alert('Duplicate Order', 'A payment is already in progress for this booking.');
+      } else if (err?.userFriendlyMessage) {
+        Alert.alert('Error', err.userFriendlyMessage);
       } else {
-        Alert.alert('Error', error?.message || 'Failed to place order. Please try again.');
+        Alert.alert('Error', err?.message || 'Failed to place order. Try again.');
       }
     } finally {
       setLoading(false);
+      setLocalLoading(false);
     }
-  };
+  }, [
+    cartItems,
+    clear,
+    checkPincodeAvailability,
+    createBookingApi,
+    createCODPaymentApi,
+    discount,
+    notifyAdmin,
+    navigation,
+    selectedAddress,
+    selectedDate,
+    selectedPayment,
+    selectedTimeSlot,
+    setLoading,
+    specialInstructions,
+    subtotal,
+    total,
+    cartTotal,
+  ]);
 
-  const handleAddNewAddress = () => {
-    navigation.navigate('AddressList', {
-      currentAddressId: selectedAddress?._id || null,
-    });
-  };
+  /* UI */
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.container}>
-        {/* Header */}
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
+          <IconButton onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={22} color="#111827" />
+          </IconButton>
           <Text style={styles.headerTitle}>Checkout</Text>
         </View>
 
-        <ScrollView style={styles.flex1}>
-          {/* Date Selection */}
+        <ScrollView style={styles.flex1} contentContainerStyle={{ paddingBottom: 24 }}>
+          {/* Date */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Select Date</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {dates.map((date, index) => {
-                const isSelected = date.toDateString() === selectedDate.toDateString();
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={[styles.dateOption, isSelected && styles.dateOptionSelected]}
-                    onPress={() => handleDateSelect(date)}
-                  >
-                    <Text style={[styles.dateText, isSelected && styles.dateTextSelected]}>
-                      {formatDate(date)}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Select Date</Text>
+            </View>
+            <DatePicker
+              dates={dates}
+              value={selectedDate}
+              onChange={(d) => {
+                setSelectedDate(d);
+                setSelectedTimeSlot(null);
+              }}
+            />
           </View>
 
-          {/* Time Slot Selection */}
+          {/* Time slots */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Select Time Slot</Text>
-            <View style={styles.timeSlotContainer}>
-              {timeSlots.map((slot) => {
-                const isSelected = selectedTimeSlot === slot.id;
-                return (
-                  <TouchableOpacity
-                    key={slot.id}
-                    style={[styles.timeSlot, !slot.available && styles.timeSlotDisabled, isSelected && slot.available && styles.timeSlotSelected]}
-                    onPress={() => slot.available && setSelectedTimeSlot(slot.id)}
-                    disabled={!slot.available}
-                  >
-                    <Text
-                      style={[styles.timeSlotText, !slot.available && styles.textGray, isSelected && slot.available && styles.textWhite]}
-                    >
-                      {slot.time}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <TimeSlotGrid
+              slots={timeSlots}
+              value={selectedTimeSlot}
+              onSelect={setSelectedTimeSlot}
+            />
           </View>
 
-          {/* Address Selection */}
+          {/* Address */}
           <View style={styles.section}>
             <View style={styles.addressHeader}>
               <Text style={styles.sectionTitle}>Address</Text>
-              <TouchableOpacity
-                onPress={handleAddNewAddress}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                activeOpacity={0.7}
-              >
+              <TouchableOpacity onPress={handleAddNewAddress}>
                 <Text style={styles.linkText}>+ Add New</Text>
               </TouchableOpacity>
             </View>
+
             <AddressPicker
               addresses={addresses}
               selectedAddress={selectedAddress}
@@ -622,388 +696,255 @@ const CheckoutScreen = () => {
             />
           </View>
 
-          {/* Special Instructions */}
+          {/* Special instructions */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Special Instructions (Optional)</Text>
+            <Text style={styles.sectionTitle}>Special Instructions (optional)</Text>
             <TextInput
               style={styles.instructionsInput}
-              placeholder="Any special instructions for the service professional?"
+              placeholder="e.g., Gate code, car model, or any accessibility notes"
               multiline
               value={specialInstructions}
               onChangeText={setSpecialInstructions}
             />
           </View>
 
-          {/* Payment Method */}
+          {/* Payment */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Payment Method</Text>
-
-            {paymentMethods.map((method) => {
-              const isSelected = selectedPaymentMethod?.id === method.id;
-              const totalAmount = cartItems?.reduce((s, it) => s + it.price * it.quantity, 0) || 0;
-
-              // Check if COD is available for this order
-              const isCODAvailable = method.type === 'cod' ?
-                (method.codSettings && totalAmount >= method.codSettings.minAmount && totalAmount <= method.codSettings.maxAmount) :
-                true;
-
-              return (
-                <TouchableOpacity
-                  key={method.id}
-                  style={[
-                    styles.paymentMethod,
-                    isSelected && styles.addressSelected,
-                    !isCODAvailable && styles.paymentMethodDisabled
-                  ]}
-                  onPress={() => isCODAvailable && setSelectedPaymentMethod(method)}
-                  disabled={!isCODAvailable}
-                >
-                  <View style={styles.paymentIconBox}>
-                    <Ionicons name={method.icon as any || 'card-outline'} size={20} color={isCODAvailable ? "#2563eb" : "#9ca3af"} />
-                  </View>
-                  <View style={styles.paymentMethodInfo}>
-                    <Text style={[styles.addressTitle, !isCODAvailable && styles.disabledText]}>{method.name}</Text>
-                    <Text style={[styles.addressSubtitle, !isCODAvailable && styles.disabledText]}>{method.description}</Text>
-                    {method.type === 'cod' && method.codSettings && (
-                      <Text style={[
-                        styles.codInfo,
-                        !isCODAvailable && styles.codUnavailable
-                      ]}>
-                        {isCODAvailable
-                          ? `Available for ₹${method.codSettings.minAmount} - ₹${method.codSettings.maxAmount}`
-                          : `Not available (₹${method.codSettings.minAmount} - ₹${method.codSettings.maxAmount})`
-                        }
-                      </Text>
-                    )}
-                    {method.fees && method.fees.percentage > 0 && (
-                      <Text style={styles.feeInfo}>
-                        +{method.fees.percentage}% processing fee
-                      </Text>
-                    )}
-                  </View>
-                  {method.isDefault && <Text style={styles.defaultBadge}>Recommended</Text>}
-                  {!isCODAvailable && method.type === 'cod' && (
-                    <Text style={styles.unavailableBadge}>Not Available</Text>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+            <PaymentMethodList
+              methods={paymentMethods}
+              selectedId={selectedPayment?.id || null}
+              onSelect={(m) => setSelectedPayment(m)}
+              cartTotal={cartTotal}
+            />
           </View>
 
+          {/* Summary */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Order Summary</Text>
             <View style={styles.summaryRow}>
               <Text style={styles.grayText}>Subtotal</Text>
-              <Text style={styles.summaryValue}>₹{subtotal?.toFixed(2)}</Text>
+              <Text style={styles.summaryValue}>₹{(subtotal || cartTotal).toFixed(2)}</Text>
             </View>
             {discount > 0 && (
               <View style={styles.summaryRow}>
                 <Text style={styles.greenText}>Discount</Text>
-                <Text style={styles.greenText}>-₹{discount?.toFixed(2)}</Text>
+                <Text style={styles.greenText}>-₹{(discount || 0).toFixed(2)}</Text>
               </View>
             )}
             <View style={styles.totalRow}>
               <Text style={styles.totalText}>Total</Text>
-              <Text style={styles.totalPrimary}>₹{total?.toFixed(2)}</Text>
+              <Text style={styles.totalPrimary}>
+                ₹{(total || cartTotal - (discount || 0)).toFixed(2)}
+              </Text>
             </View>
           </View>
         </ScrollView>
 
-        {/* Place Order Button */}
+        {/* Footer */}
         <View style={styles.footer}>
           <TouchableOpacity
-            style={styles.placeOrderButton}
+            style={[styles.placeOrderButton, (isLoading || localLoading) && { opacity: 0.8 }]}
             onPress={handlePlaceOrder}
-            disabled={isLoading}
-          >
-            {isLoading ? (
+            disabled={isLoading || localLoading}
+            activeOpacity={0.9}>
+            {isLoading || localLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.placeOrderText}>Place Order</Text>
             )}
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 export default CheckoutScreen;
 
+/* -------------------------
+   Styles
+   ------------------------- */
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff'
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#fff'
-  },
-  flex1: {
-    flex: 1
-  },
+  safeArea: { flex: 1, backgroundColor: '#ffffff' },
+  container: { flex: 1, backgroundColor: '#fff' },
+  flex1: { flex: 1, paddingHorizontal: 16 },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderColor: '#e5e7eb'
+    borderColor: '#eef2f7',
   },
-  backButton: {
-    marginRight: 16
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold'
-  },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginLeft: 8 },
+
   section: {
-    padding: 16,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderColor: '#e5e7eb'
+    borderColor: '#f3f4f6',
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12
-  },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12, color: '#111827' },
+
+  // Dates
   dateOption: {
-    padding: 12,
-    borderRadius: 16,
-    backgroundColor: '#f3f4f6',
-    marginRight: 12
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    marginRight: 12,
   },
   dateOptionSelected: {
-    backgroundColor: '#2563eb'
+    backgroundColor: '#2563eb',
   },
-  dateText: {
-    textAlign: 'center',
-    fontWeight: '600',
-    color: '#1f2937'
-  },
-  dateTextSelected: {
-    color: '#fff'
-  },
-  timeSlotContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap'
-  },
+  dateText: { textAlign: 'center', fontWeight: '600', color: '#111827' },
+  dateTextSelected: { color: '#fff' },
+
+  // Time slots
+  timeSlotContainer: { flexDirection: 'row', flexWrap: 'wrap' },
   timeSlot: {
-    padding: 12,
-    borderRadius: 16,
-    backgroundColor: '#f3f4f6',
-    margin: 4
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    margin: 6,
   },
-  timeSlotSelected: {
-    backgroundColor: '#2563eb'
-  },
-  timeSlotDisabled: {
-    backgroundColor: '#e5e7eb'
-  },
-  timeSlotText: {
-    textAlign: 'center',
-    color: '#1f2937'
-  },
-  textGray: {
-    color: '#9ca3af'
-  },
-  textWhite: {
-    color: '#fff'
-  },
+  timeSlotSelected: { backgroundColor: '#2563eb' },
+  timeSlotDisabled: { backgroundColor: '#f1f5f9' },
+  timeSlotText: { textAlign: 'center', color: '#111827' },
+
+  // Address
   addressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12
+    marginBottom: 8,
   },
-  linkText: {
-    color: '#2563eb'
-  },
+  linkText: { color: '#2563eb', fontWeight: '600' },
   addressBox: {
     padding: 12,
-    marginBottom: 12,
-    borderRadius: 16,
+    marginBottom: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e5e7eb'
+    borderColor: '#eef2f7',
+    backgroundColor: '#fff',
   },
   addressSelected: {
     borderColor: '#2563eb',
-    backgroundColor: '#eff6ff'
+    backgroundColor: '#eff6ff',
   },
-  addressTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  addressTitle: {
-    fontWeight: '600',
-    color: '#1f2937'
-  },
-  addressText: {
-    marginTop: 4,
-    color: '#4b5563'
-  },
+  addressTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  addressTitle: { fontWeight: '700', color: '#111827' },
+  addressText: { marginTop: 6, color: '#475569' },
+
   defaultBadge: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#f1f5f9',
     paddingHorizontal: 8,
-    borderRadius: 8
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  defaultBadgeText: {
-    fontSize: 12,
-    color: '#6b7280'
-  },
-  addressDisabled: {
-    opacity: 0.6
-  },
+  defaultBadgeText: { fontSize: 12, color: '#475569' },
+
   instructionsInput: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 16,
+    borderColor: '#eef2f7',
+    borderRadius: 12,
     padding: 12,
-    height: 100,
-    color: '#1f2937',
-    textAlignVertical: 'top'
+    height: scaleHeight(110),
+    color: '#111827',
+    textAlignVertical: 'top',
+    backgroundColor: '#fff',
   },
+
+  // Payment
   paymentMethod: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 16,
-    marginBottom: 12
+    borderColor: '#eef2f7',
+    borderRadius: 12,
+    marginBottom: 12,
+    backgroundColor: '#fff',
   },
   paymentIconBox: {
-    width: 40,
-    height: 40,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    backgroundColor: '#f8fafc',
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12
+    marginRight: 12,
   },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8
-  },
+  paymentMethodInfo: { flex: 1, marginLeft: 4 },
+  addressSubtitle: { fontSize: 12, color: '#6b7280', marginTop: 4 },
+
+  // Summary
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderColor: '#e5e7eb'
+    borderColor: '#f3f4f6',
   },
-  grayText: {
-    color: '#6b7280'
-  },
-  greenText: {
-    color: '#16a34a',
-    fontWeight: '600'
-  },
-  summaryValue: {
-    fontWeight: '600'
-  },
-  totalText: {
-    fontSize: 18,
-    fontWeight: 'bold'
-  },
-  totalPrimary: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2563eb'
-  },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderColor: '#e5e7eb'
-  },
+  grayText: { color: '#6b7280' },
+  greenText: { color: '#16a34a', fontWeight: '600' },
+  summaryValue: { fontWeight: '700' },
+  totalText: { fontSize: 16, fontWeight: '700' },
+  totalPrimary: { fontSize: 16, fontWeight: '700', color: '#2563eb' },
+
+  // Footer
+  footer: { padding: 16, borderTopWidth: 1, borderColor: '#f3f4f6', backgroundColor: '#fff' },
   placeOrderButton: {
     backgroundColor: '#2563eb',
-    borderRadius: 16,
-    paddingVertical: 16,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  placeOrderText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16
-  },
-  errorContainer: {
-    padding: 12,
-    backgroundColor: '#fef2f2',
     borderRadius: 12,
-    marginBottom: 12
+    paddingVertical: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  errorText: {
+  placeOrderText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+
+  // Loading / error
+  errorContainer: { padding: 12, backgroundColor: '#fef2f2', borderRadius: 12, marginBottom: 12 },
+  errorText: { color: '#dc2626', fontSize: 14, marginBottom: 8 },
+  retryButton: { alignSelf: 'flex-start' },
+
+  // misc
+  paymentMethodDisabled: { backgroundColor: '#f8fafc', opacity: 0.7 },
+  disabledText: { color: '#9ca3af' },
+  feeInfo: { fontSize: 11, color: '#f59e0b', marginTop: 6, fontWeight: '600' },
+  codInfo: { fontSize: 11, color: '#16a34a', marginTop: 6, fontWeight: '600' },
+  codUnavailable: { color: '#dc2626' },
+  unavailableBadge: {
+    backgroundColor: '#fff1f2',
     color: '#dc2626',
-    fontSize: 14,
-    marginBottom: 8
+    fontSize: 10,
+    fontWeight: '700',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#fecaca',
   },
-  retryButton: {
-    alignSelf: 'flex-start'
-  },
-  paymentMethodInfo: {
-    flex: 1,
-    marginLeft: 8
-  },
-  addressSubtitle: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 2
-  },
+
+  grayTextSmall: { color: '#6b7280', fontSize: 12 },
   emptyPaymentContainer: {
     padding: 16,
     alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    borderRadius: 12
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
   },
   addPaymentButton: {
     marginTop: 12,
     paddingVertical: 8,
     paddingHorizontal: 16,
     backgroundColor: '#2563eb',
-    borderRadius: 8
+    borderRadius: 8,
   },
-  addPaymentText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14
-  },
-  codInfo: {
-    fontSize: 10,
-    color: '#16a34a',
-    marginTop: 2,
-    fontWeight: '500'
-  },
-  codUnavailable: {
-    color: '#dc2626',
-  },
-  paymentMethodDisabled: {
-    backgroundColor: '#f3f4f6',
-    opacity: 0.6,
-  },
-  disabledText: {
-    color: '#9ca3af',
-  },
-  feeInfo: {
-    fontSize: 10,
-    color: '#f59e0b',
-    marginTop: 2,
-    fontWeight: '500'
-  },
-  unavailableBadge: {
-    backgroundColor: '#fef2f2',
-    color: '#dc2626',
-    fontSize: 10,
-    fontWeight: 'bold',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#fecaca'
-  }
+  addPaymentText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 });
