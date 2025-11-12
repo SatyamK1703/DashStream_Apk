@@ -18,21 +18,91 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 type CartScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
+// Hardcoded offer for demonstration
+const HARDCODED_OFFER = {
+  _id: '68f24dc677bfd15bbac8603c',
+  title: 'Aap ko bhi bhai',
+  description: 'Aap bhi toh hai bhai aap bhi toh nahi aur',
+  discount: 10,
+  discountType: 'percentage',
+  validFrom: new Date('2025-10-16T10:07:07.934Z'),
+  validUntil: new Date('2025-11-16T10:07:00.000Z'),
+  image:
+    'https://res.cloudinary.com/satyamk1078/image/upload/v1760710061/dashstream/cndqzmkacvjcwurvxrik.jpg',
+  isPromo: true,
+  offerCode: 'NEW10',
+  usageLimit: null,
+  usageCount: 0,
+  userUsageLimit: 1,
+  applicableServices: [],
+  applicableCategories: [],
+  vehicleType: 'Both',
+  isActive: true,
+  terms: 'Kya baat h bhai ji ',
+  createdBy: '68c86962dba200a9dd33b349',
+  usedBy: [],
+  createdAt: new Date('2025-10-16T10:08:06.139Z'),
+  updatedAt: new Date('2025-10-16T10:08:06.139Z'),
+  __v: 0,
+};
+
 const CartScreen = () => {
   const { items: cartItems, removeItem, updateQuantity } = useCart();
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
   const navigation = useNavigation<CartScreenNavigationProp>();
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const deliveryFee = 49;
-  const total = subtotal + deliveryFee - discount;
+  let total = subtotal - discount;
+  if (total < 0) total = 0; // Ensure total doesn't go below zero
 
   const handleQuantityChange = (id: string, change: number) => {
     const item = cartItems.find((i) => i.id === id);
     if (!item) return;
     const newQuantity = Math.max(1, item.quantity + change);
     updateQuantity(id, newQuantity);
+    // Re-apply promo code if quantity changes and a promo was active
+    if (appliedPromoCode) {
+      handleApplyPromoCode(appliedPromoCode);
+    }
+  };
+
+  const handleApplyPromoCode = (codeToApply: string = promoCode) => {
+    if (codeToApply === '') {
+      setDiscount(0);
+      setAppliedPromoCode(null);
+      return;
+    }
+
+    if (codeToApply.toUpperCase() === HARDCODED_OFFER.offerCode.toUpperCase()) {
+      // Check if the offer is active and valid
+      const now = new Date();
+      if (
+        HARDCODED_OFFER.isActive &&
+        now >= HARDCODED_OFFER.validFrom &&
+        now <= HARDCODED_OFFER.validUntil
+      ) {
+        let calculatedDiscount = 0;
+        if (HARDCODED_OFFER.discountType === 'percentage') {
+          calculatedDiscount = subtotal * (HARDCODED_OFFER.discount / 100);
+        } else {
+          // Assuming fixed amount if not percentage
+          calculatedDiscount = HARDCODED_OFFER.discount;
+        }
+        setDiscount(calculatedDiscount);
+        setAppliedPromoCode(codeToApply);
+        Alert.alert('Success', 'Promo code applied successfully!');
+      } else {
+        setDiscount(0);
+        setAppliedPromoCode(null);
+        Alert.alert('Invalid Code', 'This promo code is expired or not active.');
+      }
+    } else {
+      setDiscount(0);
+      setAppliedPromoCode(null);
+      Alert.alert('Invalid Code', 'The promo code you entered is invalid.');
+    }
   };
 
   const handleRemoveItem = (id: string) => {
@@ -41,24 +111,21 @@ const CartScreen = () => {
       {
         text: 'Remove',
         style: 'destructive',
-        onPress: () => removeItem(id),
+        onPress: () => {
+          removeItem(id);
+          // Re-apply promo code if an item is removed and a promo was active
+          if (appliedPromoCode) {
+            handleApplyPromoCode(appliedPromoCode);
+          }
+        },
       },
     ]);
   };
 
-  const handleApplyPromoCode = () => {
-    if (promoCode === '') {
-      setDiscount(0);
-      return;
-    }
-    // Mock promo code logic - in a real app, this would validate against an API
-    if (promoCode.toUpperCase() === 'WELCOME50') {
-      const discountAmount = subtotal * 0.5; // 50% off
-      setDiscount(discountAmount);
-      Alert.alert('Success', 'Promo code applied successfully!');
-    } else {
-      Alert.alert('Invalid Code', 'The promo code you entered is invalid or expired.');
-    }
+  const handleClearPromo = () => {
+    setPromoCode('');
+    setDiscount(0);
+    setAppliedPromoCode(null);
   };
 
   const handleCheckout = () => {
@@ -66,7 +133,11 @@ const CartScreen = () => {
       Alert.alert('Empty Cart', 'Please add services to your cart before proceeding to checkout.');
       return;
     }
-    navigation.navigate('Checkout');
+    navigation.navigate('Checkout', {
+      subtotal,
+      discount,
+      total,
+    });
   };
 
   return (
@@ -149,21 +220,24 @@ const CartScreen = () => {
                     value={promoCode}
                     onChangeText={setPromoCode}
                   />
-                  <TouchableOpacity style={styles.promoButton} onPress={handleApplyPromoCode}>
+                  <TouchableOpacity
+                    style={styles.promoButton}
+                    onPress={() => handleApplyPromoCode()}>
                     <Text style={styles.promoButtonText}>Apply</Text>
                   </TouchableOpacity>
-                  {discount > 0 && (
-                    <TouchableOpacity
-                      style={styles.clearButton}
-                      onPress={() => {
-                        setPromoCode('');
-                        setDiscount(0);
-                      }}>
+                  {appliedPromoCode && (
+                    <TouchableOpacity style={styles.clearButton} onPress={handleClearPromo}>
                       <Text style={styles.clearButtonText}>Clear</Text>
                     </TouchableOpacity>
                   )}
                 </View>
-                <Text style={styles.promoHint}>Try WELCOME50 for 50% off on your first order</Text>
+                {appliedPromoCode ? (
+                  <Text style={styles.promoHint}>Promo code "{appliedPromoCode}" applied!</Text>
+                ) : (
+                  <Text style={styles.promoHint}>
+                    Try {HARDCODED_OFFER.offerCode} for {HARDCODED_OFFER.discount}% off
+                  </Text>
+                )}
               </View>
 
               {/* Order Summary */}
@@ -171,21 +245,17 @@ const CartScreen = () => {
                 <Text style={styles.sectionTitle}>Order Summary</Text>
                 <View style={styles.summaryRow}>
                   <Text style={styles.grayText}>Subtotal</Text>
-                  <Text style={styles.summaryText}>₹{subtotal}</Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.grayText}>Delivery Fee</Text>
-                  <Text style={styles.summaryText}>₹{deliveryFee}</Text>
+                  <Text style={styles.summaryText}>₹{subtotal.toFixed(2)}</Text>
                 </View>
                 {discount > 0 && (
                   <View style={styles.summaryRow}>
                     <Text style={styles.discountText}>Discount</Text>
-                    <Text style={styles.discountText}>-₹{discount}</Text>
+                    <Text style={styles.discountText}>-₹{discount.toFixed(2)}</Text>
                   </View>
                 )}
                 <View style={styles.totalRow}>
                   <Text style={styles.totalText}>Total</Text>
-                  <Text style={styles.totalAmount}>₹{total}</Text>
+                  <Text style={styles.totalAmount}>₹{total.toFixed(2)}</Text>
                 </View>
               </View>
             </ScrollView>
@@ -358,7 +428,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderTopRightRadius: 12,
     borderBottomRightRadius: 12,
-    marginLeft: -12,
+    marginLeft: 8, // Adjusted margin for better spacing
   },
   clearButtonText: {
     color: '#fff',
