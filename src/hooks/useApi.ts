@@ -302,7 +302,7 @@ export const usePaginatedApi = <T = any>(
             setAllData((prev: T[]) => {
               const combined = prevPagination.page === 1 ? newItems : [...prev, ...newItems];
               const uniqueItems = Array.from(
-                new Map(combined.map((item: any) => [item.id, item])).values()
+                new Map(combined.map((item: any) => [item._id, item])).values()
               );
               return uniqueItems as T[];
             });

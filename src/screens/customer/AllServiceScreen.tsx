@@ -8,6 +8,8 @@ import {
   Image,
   TextInput,
   ActivityIndicator,
+  Animated,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
@@ -27,14 +29,15 @@ const AllServicesScreen = () => {
   const [filteredServices, setFilteredServices] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTab, setSelectedTab] = useState('All');
+  const [scrollY] = useState(new Animated.Value(0));
 
-  const { 
-    data: servicesData = [], 
-    loading: isLoading, 
-    error, 
-    refresh: fetchServices 
-  } = useServices({ 
-    category: selectedTab === 'All' ? undefined : selectedTab.toLowerCase().replace(' ', '-') 
+  const {
+    data: servicesData = [],
+    loading: isLoading,
+    error,
+    refresh: fetchServices,
+  } = useServices({
+    category: selectedTab === 'All' ? undefined : selectedTab.toLowerCase().replace(' ', '-'),
   });
 
   const { addItem, items: cartItems } = useCart();
@@ -44,19 +47,15 @@ const AllServicesScreen = () => {
   }, [selectedTab]);
 
   useEffect(() => {
-    if (!servicesData) {
-      setFilteredServices([]);
-      return;
-    }
-    if (searchQuery.trim() === '') {
-      setFilteredServices(servicesData);
-    } else {
-      const filtered = servicesData.filter(service =>
+    if (!servicesData) return setFilteredServices([]);
+    if (!searchQuery.trim()) return setFilteredServices(servicesData);
+
+    const filtered = servicesData.filter(
+      (service) =>
         service.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         service.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredServices(filtered);
-    }
+    );
+    setFilteredServices(filtered);
   }, [searchQuery, servicesData]);
 
   const handleServicePress = (service: any) => {
@@ -71,49 +70,54 @@ const AllServicesScreen = () => {
       price: service.price,
       quantity: 1,
       image: typeof service.image === 'string' ? { uri: service.image } : service.image,
-      meta: { vehicleType: service.vehicleType }
+      meta: { vehicleType: service.vehicleType },
     });
   };
 
   const renderServiceItem = ({ item }: { item: any }) => {
-    const discountPercentage = item.originalPrice && item.price ? 
-      Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100) : 0;
+    const discountPercentage =
+      item.originalPrice && item.price
+        ? Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)
+        : 0;
 
-    const isInCart = cartItems.some(cartItem => cartItem.id === (item.id || item._id));
+    const isInCart = cartItems.some((cartItem) => cartItem.id === (item.id || item._id));
 
     return (
-      <TouchableOpacity style={styles.card} onPress={() => handleServicePress(item)} activeOpacity={0.9}>
-        <Image 
-          source={{ uri: item.image }} 
-          style={styles.cardImage} 
-          onError={() => console.log('Failed to load service image')}
-        />
+      <TouchableOpacity
+        activeOpacity={0.95}
+        style={styles.card}
+        onPress={() => handleServicePress(item)}>
+        <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="cover" />
         <View style={styles.cardContent}>
-          <View style={styles.cardDetails}>
-            <Text style={styles.cardTitle} numberOfLines={2}>{item.name || item.title}</Text>
-            <Text style={styles.cardRating}>⭐ {item.rating || 4.5} ({item.reviewCount || item.reviews || 0})</Text>
-            <View style={styles.priceContainer}>
-              <Text style={styles.newPrice}>₹{item.price}</Text>
-              {item.originalPrice && item.originalPrice > item.price && (
-                <Text style={styles.oldPrice}>₹{item.originalPrice}</Text>
-              )}
-            </View>
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {item.name || item.title}
+          </Text>
+          <Text style={styles.cardRating}>
+            ⭐ {item.rating || 4.5} ({item.reviewCount || item.reviews || 0})
+          </Text>
+          <View style={styles.priceRow}>
+            <Text style={styles.newPrice}>₹{item.price}</Text>
+            {item.originalPrice && item.originalPrice > item.price && (
+              <Text style={styles.oldPrice}>₹{item.originalPrice}</Text>
+            )}
           </View>
-          <View style={styles.cardActions}>
+
+          <View style={styles.actionRow}>
             {discountPercentage > 0 && (
               <View style={styles.discountBadge}>
                 <Text style={styles.discountText}>{discountPercentage}% OFF</Text>
               </View>
             )}
-            <TouchableOpacity 
-              style={[styles.addButton, isInCart && styles.addButtonDisabled]} 
+            <TouchableOpacity
+              style={[styles.addButton, isInCart && styles.addedButton]}
               onPress={(e) => {
                 e.stopPropagation();
                 if (!isInCart) handleAddToCart(item);
               }}
-              disabled={isInCart}
-            >
-              <Text style={[styles.addText, isInCart && styles.addTextDisabled]}>{isInCart ? 'ADDED' : 'ADD'}</Text>
+              disabled={isInCart}>
+              <Text style={[styles.addText, isInCart && styles.addedText]}>
+                {isInCart ? 'ADDED' : 'ADD'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -124,55 +128,64 @@ const AllServicesScreen = () => {
   const ListHeader = () => (
     <View>
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+        <Ionicons name="search" size={20} color="#9ca3af" style={{ marginRight: 8 }} />
         <TextInput
-          style={styles.searchInput}
-          placeholder="Search for services..."
+          placeholder="Search services..."
           placeholderTextColor="#9ca3af"
+          style={styles.searchInput}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
       </View>
-      <CategoryTabs
-        tabs={CATEGORY_TABS}
-        selected={selectedTab}
-        onSelect={(tab) => setSelectedTab(tab)}
-      />
+      <CategoryTabs tabs={CATEGORY_TABS} selected={selectedTab} onSelect={setSelectedTab} />
     </View>
   );
 
-  const EmptyListComponent = () => (
-    <View style={styles.emptyContainer}>
-        <Ionicons name="sad-outline" size={64} color="#d1d5db" />
-        <Text style={styles.emptyText}>No Services Found</Text>
-        <Text style={styles.emptySubtext}>Try adjusting your search or filters.</Text>
+  const EmptyList = () => (
+    <View style={styles.emptyState}>
+      <Ionicons name="construct-outline" size={70} color="#d1d5db" />
+      <Text style={styles.emptyTitle}>No services found</Text>
+      <Text style={styles.emptySubtitle}>Try a different search or category.</Text>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.safeArea}>
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            elevation: scrollY.interpolate({
+              inputRange: [0, 20],
+              outputRange: [0, 4],
+              extrapolate: 'clamp',
+            }),
+          },
+        ]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <MaterialIcons name="arrow-back" size={28} color="#1f2937" />
+          <MaterialIcons name="arrow-back" size={26} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>All Services</Text>
-        <View style={styles.headerRight} />
-      </View>
+        <Text style={styles.headerTitle}>Services</Text>
+        <View style={{ width: 30 }} />
+      </Animated.View>
 
       {isLoading && filteredServices.length === 0 ? (
-        <View style={styles.loadingContainer}>
+        <View style={styles.loader}>
           <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Loading Services...</Text>
+          <Text style={styles.loadingText}>Fetching Services...</Text>
         </View>
       ) : (
-        <FlatList
+        <Animated.FlatList
+          onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+            useNativeDriver: false,
+          })}
           data={filteredServices}
-          keyExtractor={item => item.id || item._id}
+          keyExtractor={(item) => item.id || item._id}
           renderItem={renderServiceItem}
           ListHeaderComponent={ListHeader}
-          ListEmptyComponent={EmptyListComponent}
-          contentContainerStyle={styles.flatListContent}
+          ListEmptyComponent={EmptyList}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 24 }}
         />
       )}
     </SafeAreaView>
@@ -180,84 +193,62 @@ const AllServicesScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f9fafb'
-  },
+  safeArea: { flex: 1, backgroundColor: '#f9fafb' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#e5e7eb',
-    borderBottomWidth: 1,
+    zIndex: 10,
   },
-  backButton: {
-    padding: 4
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  headerRight: {
-    width: 40
-  },
+  backButton: { padding: 4 },
+  headerTitle: { fontSize: 19, fontWeight: '700', color: '#111827' },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 12,
     marginHorizontal: 16,
-    marginVertical: 16,
+    marginTop: 16,
     paddingHorizontal: 16,
+    height: 48,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
-  searchIcon: {
-    marginRight: 8,
-  },
   searchInput: {
     flex: 1,
-    height: 48,
-    fontSize: 16,
     color: '#111827',
-  },
-  flatListContent: {
-    paddingBottom: 20,
+    fontSize: 15,
   },
   card: {
     flexDirection: 'row',
     backgroundColor: '#fff',
-    marginVertical: 8,
-    marginHorizontal: 16,
     borderRadius: 16,
+    marginHorizontal: 16,
+    marginVertical: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
     elevation: 3,
-    height: 140,
+    overflow: 'hidden',
   },
   cardImage: {
     width: 110,
     height: '100%',
     backgroundColor: '#f3f4f6',
-    borderTopLeftRadius: 16,
-    borderBottomLeftRadius: 16,
   },
   cardContent: {
     flex: 1,
     padding: 12,
     justifyContent: 'space-between',
   },
-  cardDetails: {
-    flex: 1,
-  },
   cardTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
     marginBottom: 4,
@@ -265,87 +256,46 @@ const styles = StyleSheet.create({
   cardRating: {
     fontSize: 12,
     color: '#6b7280',
-    marginBottom: 6,
   },
-  priceContainer: {
+  priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 6,
   },
-  newPrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
+  newPrice: { fontSize: 16, fontWeight: '700', color: '#111827' },
   oldPrice: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#9ca3af',
     textDecorationLine: 'line-through',
-    marginLeft: 8,
+    marginLeft: 6,
   },
-  cardActions: {
+  actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 10,
   },
   discountBadge: {
-    backgroundColor: '#fef2f2',
-    borderColor: '#ef4444',
-    borderWidth: 1,
+    backgroundColor: '#fee2e2',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 6,
   },
-  discountText: {
-    color: '#ef4444',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
+  discountText: { color: '#b91c1c', fontSize: 11, fontWeight: '700' },
   addButton: {
-    backgroundColor: '#eef2ff',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    backgroundColor: '#2563eb',
     borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  addButtonDisabled: {
-    backgroundColor: '#10b981',
-  },
-  addText: {
-    color: '#4338ca',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  addTextDisabled: {
-    color: '#fff',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 8,
-    fontSize: 16,
-    color: '#6b7280',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 80,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#4b5563',
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 8,
-    textAlign: 'center',
-    paddingHorizontal: 40,
-  },
+  addText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  addedButton: { backgroundColor: '#10b981' },
+  addedText: { color: '#fff' },
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 8, color: '#6b7280', fontSize: 15 },
+  emptyState: { alignItems: 'center', marginTop: 60 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#374151', marginTop: 10 },
+  emptySubtitle: { color: '#6b7280', fontSize: 14, marginTop: 6 },
 });
 
 export default AllServicesScreen;

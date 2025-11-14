@@ -17,7 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 import CustomerTestimonials from '~/components/home/CustomerTestimonials';
-import QuickFixes from '~/components/home/QuickFixes';
+// import QuickFixes from '~/components/home/QuickFixes';
 import Footer from '~/components/home/FooterMain';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { scaleWidth, scaleHeight } from '../../utils/scaling';
