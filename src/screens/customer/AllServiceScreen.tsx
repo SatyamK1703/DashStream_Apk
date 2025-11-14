@@ -88,37 +88,47 @@ const AllServicesScreen = () => {
         style={styles.card}
         onPress={() => handleServicePress(item)}>
         <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="cover" />
+
         <View style={styles.cardContent}>
-          <Text style={styles.cardTitle} numberOfLines={2}>
-            {item.name || item.title}
-          </Text>
-          <Text style={styles.cardRating}>
-            ⭐ {item.rating || 4.5} ({item.reviewCount || item.reviews || 0})
-          </Text>
-          <View style={styles.priceRow}>
-            <Text style={styles.newPrice}>₹{item.price}</Text>
-            {item.originalPrice && item.originalPrice > item.price && (
-              <Text style={styles.oldPrice}>₹{item.originalPrice}</Text>
-            )}
+          <View>
+            <Text style={styles.cardTitle} numberOfLines={2}>
+              {item.name || item.title}
+            </Text>
+
+            <View style={styles.ratingRow}>
+              <Text style={styles.ratingStar}>⭐</Text>
+              <Text style={styles.ratingValue}>{item.rating || 4.5}</Text>
+              <Text style={styles.ratingCount}>({item.reviewCount || item.reviews || 0})</Text>
+            </View>
           </View>
 
-          <View style={styles.actionRow}>
-            {discountPercentage > 0 && (
-              <View style={styles.discountBadge}>
-                <Text style={styles.discountText}>{discountPercentage}% OFF</Text>
-              </View>
-            )}
-            <TouchableOpacity
-              style={[styles.addButton, isInCart && styles.addedButton]}
-              onPress={(e) => {
-                e.stopPropagation();
-                if (!isInCart) handleAddToCart(item);
-              }}
-              disabled={isInCart}>
-              <Text style={[styles.addText, isInCart && styles.addedText]}>
-                {isInCart ? 'ADDED' : 'ADD'}
-              </Text>
-            </TouchableOpacity>
+          <View>
+            <View style={styles.priceRow}>
+              <Text style={styles.newPrice}>₹{item.price}</Text>
+              {item.originalPrice > item.price && (
+                <Text style={styles.oldPrice}>₹{item.originalPrice}</Text>
+              )}
+            </View>
+
+            <View style={styles.actionRow}>
+              {discountPercentage > 0 && (
+                <View style={styles.discountBadge}>
+                  <Text style={styles.discountText}>{discountPercentage}% OFF</Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[styles.addButton, isInCart && styles.addedButton]}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  if (!isInCart) handleAddToCart(item);
+                }}
+                disabled={isInCart}>
+                <Text style={[styles.addText, isInCart && styles.addedText]}>
+                  {isInCart ? 'ADDED' : 'ADD'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </TouchableOpacity>
@@ -224,73 +234,100 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontSize: 15,
   },
+
   card: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
     marginHorizontal: 16,
-    marginVertical: 10,
+    marginVertical: 12,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
     overflow: 'hidden',
   },
+
   cardImage: {
-    width: 110,
-    height: '100%',
-    backgroundColor: '#f3f4f6',
+    width: 118,
+    height: 120,
+    backgroundColor: '#f1f1f1',
   },
+
   cardContent: {
     flex: 1,
-    padding: 12,
+    padding: 14,
     justifyContent: 'space-between',
   },
+
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 4,
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 6,
   },
-  cardRating: {
+
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingStar: { fontSize: 12, color: '#fbbf24' },
+  ratingValue: { marginLeft: 4, fontSize: 13, fontWeight: '600', color: '#475569' },
+  ratingCount: {
+    marginLeft: 4,
     fontSize: 12,
-    color: '#6b7280',
+    color: '#94a3b8',
   },
+
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 6,
+    marginBottom: 8,
   },
-  newPrice: { fontSize: 16, fontWeight: '700', color: '#111827' },
+
+  newPrice: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+
   oldPrice: {
     fontSize: 13,
+    marginLeft: 8,
     color: '#9ca3af',
     textDecorationLine: 'line-through',
-    marginLeft: 6,
   },
+
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10,
   },
+
   discountBadge: {
     backgroundColor: '#fee2e2',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 6,
   },
-  discountText: { color: '#b91c1c', fontSize: 11, fontWeight: '700' },
+  discountText: { color: '#b91c1c', fontWeight: '700', fontSize: 11 },
+
   addButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#2563eb',
   },
-  addText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  addText: {
+    fontWeight: '700',
+    color: '#fff',
+    fontSize: 14,
+  },
+
   addedButton: { backgroundColor: '#10b981' },
   addedText: { color: '#fff' },
+
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 8, color: '#6b7280', fontSize: 15 },
   emptyState: { alignItems: 'center', marginTop: 60 },
