@@ -1,176 +1,150 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, StyleSheet, RefreshControl } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
+  RefreshControl,
+  Animated,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
-import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { useMyBookings } from '../../hooks/useBookings';
 import { Booking } from '../../types/api';
-import { showErrorAlert } from '../../utils/errorHandler';
-import { bookingService } from '../../services';
 import BookingCard from './BookingCard';
+import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
 
-type BookingsScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
+type NavProp = NativeStackNavigationProp<CustomerStackParamList>;
 
 const BookingsScreen = () => {
-  const navigation = useNavigation<BookingsScreenNavigationProp>();
+  const navigation = useNavigation<NavProp>();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
 
-  // API hooks for fetching bookings
-  const upcomingBookingsApi = useMyBookings({
-    status: 'pending,confirmed,in-progress'
-  });
-  
-  const completedBookingsApi = useMyBookings({
-    status: 'completed,cancelled'
-  });
+  const upcomingApi = useMyBookings({ status: 'pending,confirmed,in-progress,rescheduled' });
+  const completedApi = useMyBookings({ status: 'completed,cancelled' });
 
-  // Get current API based on active tab
-  const currentApi = activeTab === 'upcoming' ? upcomingBookingsApi : completedBookingsApi;
+  const currentApi = activeTab === 'upcoming' ? upcomingApi : completedApi;
 
   useEffect(() => {
-    // Load initial data when component mounts or tab changes
-    console.log('BookingsScreen - Refreshing bookings for tab:', activeTab);
     currentApi.refresh();
   }, [activeTab]);
 
-  // Debug log when data changes
-  useEffect(() => {
-    console.log('BookingsScreen - Data updated:', {
-      activeTab,
-      dataLength: currentApi.data?.length,
-      loading: currentApi.loading,
-      error: currentApi.error,
-      hasMore: currentApi.pagination.hasMore,
-      dataIsArray: Array.isArray(currentApi.data),
-      dataType: typeof currentApi.data,
-      firstBooking: currentApi.data?.[0],
-      firstBookingId: currentApi.data?.[0]?._id,
-      firstBookingStatus: currentApi.data?.[0]?.status,
-      fullData: currentApi.data
-    });
-  }, [currentApi.data, currentApi.loading, currentApi.error, activeTab]);
-
-  const handleTabChange = (tab: 'upcoming' | 'completed') => {
-    setActiveTab(tab);
+  const handleViewBooking = (id: string, status: string) => {
+    const route =
+      status === 'pending' || status === 'confirmed' || status === 'in-progress'
+        ? 'TrackBooking'
+        : 'OrderDetails';
+    navigation.navigate(route, { bookingId: id });
   };
 
-  const handleRefresh = () => {
-    currentApi.refresh();
-  };
-
-  const handleLoadMore = () => {
-    if (currentApi.pagination.hasMore && !currentApi.loading) {
-      currentApi.loadMore();
-    }
-  };
-
-  const handleViewBooking = (bookingId: string, status: string) => {
-    if (status === 'pending' || status === 'confirmed' || status === 'in-progress') {
-      navigation.navigate('TrackBooking', { bookingId });
-    } else {
-      navigation.navigate('OrderDetails', { bookingId });
-    }
-  };
-
-  const renderBookingItem = ({ item }: { item: Booking }) => (
+  const renderBooking = ({ item }: { item: Booking }) => (
     <BookingCard booking={item} onPress={() => handleViewBooking(item._id, item.status)} />
   );
 
-  const renderEmptyList = () => (
-    <View style={styles.emptyContainer}>
-      <Ionicons name="calendar-outline" size={60} color="#d1d5db" />
-      <Text style={styles.emptyTitle}>No bookings found</Text>
-      <Text style={styles.emptyMessage}>
+  const handleRefresh = useCallback(() => currentApi.refresh(), [currentApi]);
+  const handleLoadMore = useCallback(() => {
+    if (currentApi.pagination.hasMore && !currentApi.loading) currentApi.loadMore();
+  }, [currentApi]);
+
+  const renderEmpty = () => (
+    <View style={styles.stateContainer}>
+      <Ionicons name="calendar-outline" size={60} color="#94a3b8" />
+      <Text style={styles.stateTitle}>No {activeTab} bookings</Text>
+      <Text style={styles.stateText}>
         {activeTab === 'upcoming'
-          ? "You don't have any upcoming bookings. Book a service now!"
-          : "You don't have any completed bookings yet."}
+          ? 'You don’t have any upcoming services. Book one now!'
+          : 'You haven’t completed any bookings yet.'}
       </Text>
       {activeTab === 'upcoming' && (
-        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('CustomerTabs', { screen: 'Home' })}>
-          <Text style={styles.buttonText}>Book a Service</Text>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => navigation.navigate('CustomerTabs', { screen: 'Home' })}>
+          <Text style={styles.primaryButtonText}>Book a Service</Text>
         </TouchableOpacity>
       )}
     </View>
   );
 
+  const renderError = () => (
+    <View style={styles.stateContainer}>
+      <Ionicons name="alert-circle-outline" size={60} color="#ef4444" />
+      <Text style={styles.stateTitle}>Failed to load</Text>
+      <Text style={styles.stateText}>Please check your internet and try again.</Text>
+      <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
+        <Text style={styles.retryButtonText}>Retry</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
-    <SafeAreaView style={styles.container}> 
-      {/* ✅ SafeAreaView used here */}
-
-      {/* Header with Back Button + Centered Title */}
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#1f2937" />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
+          <Ionicons name="arrow-back" size={22} color="#1f2937" />
         </TouchableOpacity>
-        <Text style={styles.headerText}>My Bookings</Text>
-        {/* Empty view for balancing center alignment */}
-        <View style={{ width: 24 }} />
+        <Text style={styles.headerTitle}>My Bookings</Text>
+        <View style={styles.iconPlaceholder} />
       </View>
 
+      {/* Tabs */}
       <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'upcoming' && styles.activeTab]}
-          onPress={() => handleTabChange('upcoming')}
-        >
-          <Text style={activeTab === 'upcoming' ? styles.activeTabText : styles.inactiveTabText}>
-            Upcoming & Ongoing
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'completed' && styles.activeTab]}
-          onPress={() => handleTabChange('completed')}
-        >
-          <Text style={activeTab === 'completed' ? styles.activeTabText : styles.inactiveTabText}>
-            Completed & Cancelled
-          </Text>
-        </TouchableOpacity>
+        {['upcoming', 'completed'].map((tab) => {
+          const isActive = tab === activeTab;
+          return (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tab, isActive && styles.activeTab]}
+              onPress={() => setActiveTab(tab as 'upcoming' | 'completed')}>
+              <Text style={[styles.tabText, isActive && styles.activeTabText]}>
+                {tab === 'upcoming' ? 'Upcoming & Ongoing' : 'Completed & Cancelled'}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
-      {currentApi.loading && (!currentApi.data || currentApi.data.length === 0) ? (
-        <View style={styles.loaderContainer}>
+      {/* Data Rendering */}
+      {currentApi.loading && !currentApi.data?.length ? (
+        <View style={styles.loader}>
           <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Loading bookings...</Text>
+          <Text style={styles.loadingText}>Loading your bookings...</Text>
         </View>
-      ) : currentApi.error && (!currentApi.data || currentApi.data.length === 0) ? (
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={60} color="#ef4444" />
-          <Text style={styles.errorTitle}>Failed to load bookings</Text>
-          <Text style={styles.errorMessage}>
-            Please check your connection and try again
-          </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
+      ) : currentApi.error && !currentApi.data?.length ? (
+        renderError()
       ) : (
-        <FlatList
-          data={currentApi.data || []}
-          renderItem={renderBookingItem}
-          keyExtractor={item => item._id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={renderEmptyList}
-          refreshControl={
-            <RefreshControl
-              refreshing={currentApi.loading && currentApi.data && currentApi.data.length > 0}
-              onRefresh={handleRefresh}
-              colors={['#2563eb']}
-              tintColor="#2563eb"
-            />
-          }
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.1}
-          ListFooterComponent={() => 
-            currentApi.loading && currentApi.data && currentApi.data.length > 0 ? (
-              <View style={styles.loadingMore}>
-                <ActivityIndicator size="small" color="#2563eb" />
-                <Text style={styles.loadingMoreText}>Loading more...</Text>
-              </View>
-            ) : null
-          }
-        />
+        <View style={{ flex: 1 }}>
+          <FlatList
+            data={currentApi.data || []}
+            renderItem={renderBooking}
+            keyExtractor={(item) => item._id}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={renderEmpty}
+            refreshControl={
+              <RefreshControl
+                refreshing={currentApi.loading && !!currentApi.data?.length}
+                onRefresh={handleRefresh}
+                colors={['#2563eb']}
+              />
+            }
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.2}
+            ListFooterComponent={() =>
+              currentApi.loading && !!currentApi.data?.length ? (
+                <View style={styles.footerLoader}>
+                  <ActivityIndicator size="small" color="#2563eb" />
+                  <Text style={styles.footerText}>Loading more...</Text>
+                </View>
+              ) : null
+            }
+          />
+        </View>
       )}
     </SafeAreaView>
   );
@@ -178,67 +152,75 @@ const BookingsScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between', // space between ensures title is centered
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
     backgroundColor: '#fff',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    borderBottomWidth: 0.8,
+    borderColor: '#e5e7eb',
+  },
+  iconButton: { width: 30, alignItems: 'center' },
+  iconPlaceholder: { width: 30 },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#1f2937' },
+
+  tabs: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderColor: '#e5e7eb',
   },
-  backButton: {
-    width: 24, // ensures proper spacing
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 2,
+    borderColor: 'transparent',
+  },
+  activeTab: { borderColor: '#2563eb' },
+  tabText: { color: '#6b7280', fontWeight: '500' },
+  activeTabText: { color: '#2563eb', fontWeight: '700' },
+
+  list: { padding: 16, paddingBottom: 40 },
+
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 12, color: '#6b7280' },
+
+  stateContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 32,
   },
-  headerText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    textAlign: 'center',
+  stateTitle: { fontSize: 18, fontWeight: '600', color: '#374151', marginTop: 16 },
+  stateText: { color: '#6b7280', textAlign: 'center', marginTop: 8, marginBottom: 20 },
+
+  primaryButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
   },
-  tabs: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#e5e7eb' },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 16, borderBottomWidth: 2, borderColor: 'transparent' },
-  activeTab: { borderColor: '#2563eb' },
-  activeTabText: { color: '#2563eb', fontWeight: '600' },
-  inactiveTabText: { color: '#6b7280' },
-  card: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, overflow: 'hidden' },
-  cardContent: { padding: 16 },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  rowCenter: { flexDirection: 'row', alignItems: 'center' },
-  rowIconText: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  bookingId: { fontWeight: '600', color: '#1f2937' },
-  timestamp: { color: '#6b7280', fontSize: 12 },
-  statusBadge: { marginLeft: 8, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 9999 },
-  statusText: { fontSize: 12, fontWeight: '500' },
-  statusBlue: { backgroundColor: '#dbeafe', color: '#2563eb' },
-  statusGreen: { backgroundColor: '#d1fae5', color: '#10b981' },
-  statusRed: { backgroundColor: '#fee2e2', color: '#ef4444' },
-  statusGray: { backgroundColor: '#f3f4f6', color: '#6b7280' },
-  text: { color: '#1f2937', flexShrink: 1, marginLeft: 8 },
-  avatar: { width: 24, height: 24, borderRadius: 12, marginRight: 8 },
-  footer: { backgroundColor: '#f9fafb', padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderColor: '#f3f4f6' },
-  footerText: { color: '#6b7280', fontSize: 12 },
-  linkText: { color: '#2563eb', fontWeight: '500', marginRight: 4 },
-  loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 16, color: '#6b7280' },
-  listContent: { padding: 16 },
-  emptyContainer: { justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
-  emptyTitle: { color: '#9ca3af', fontSize: 18, marginTop: 16 },
-  emptyMessage: { color: '#6b7280', textAlign: 'center', paddingHorizontal: 40, marginBottom: 24 },
-  button: { backgroundColor: '#2563eb', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
-  buttonText: { color: '#fff', fontWeight: '600' },
-  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
-  errorTitle: { color: '#ef4444', fontSize: 18, fontWeight: '600', marginTop: 16 },
-  errorMessage: { color: '#6b7280', textAlign: 'center', paddingHorizontal: 40, marginBottom: 24 },
-  retryButton: { backgroundColor: '#ef4444', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  primaryButtonText: { color: '#fff', fontWeight: '600' },
+
+  retryButton: {
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
   retryButtonText: { color: '#fff', fontWeight: '600' },
-  avatarPlaceholder: { backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center' },
-  loadingMore: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16 },
-  loadingMoreText: { marginLeft: 8, color: '#6b7280' },
+
+  footerLoader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+  footerText: { color: '#6b7280', marginLeft: 8 },
 });
 
 export default BookingsScreen;
-
