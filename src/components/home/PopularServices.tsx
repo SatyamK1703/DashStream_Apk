@@ -7,7 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { scaleWidth, scaleHeight, scaleFont } from '../../utils/scaling';
 
 const { width } = Dimensions.get('window');
-const ITEM_WIDTH = (width - scaleWidth(48)) / 3; // Account for horizontal padding
+const ITEM_WIDTH = (width - scaleWidth(48)) / 2;
 
 type NavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
 
@@ -15,68 +15,55 @@ const PopularServices = ({ services }: any) => {
   const navigation = useNavigation<NavigationProp>();
 
   const handlePress = (service: any) => {
-    // Pass a stable id and the whole service object so ServiceDetailsScreen can use either
-    navigation.navigate('ServiceDetails', { serviceId: service._id || service.id, service });
+    navigation.navigate('ServiceDetails', {
+      serviceId: service._id || service.id,
+      service,
+    });
   };
 
   const handleSeeAll = () => {
-    navigation.navigate('AllServices'); // Assuming you have an 'AllServices' screen
+    navigation.navigate('AllServices');
   };
 
-  // ✅ Safety check for services data
-  const safeServices = services && Array.isArray(services) ? services : [];
-
-  // Don't render if no services
-  if (safeServices.length === 0) {
-    return null; // or return a loading/empty state component
-  }
+  const safeServices = Array.isArray(services) ? services : [];
+  if (safeServices.length === 0) return null;
 
   return (
     <View style={styles.container}>
-      {/* Header with title and See All */}
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Doorstep Autocare Services</Text>
-        <TouchableOpacity
-          style={styles.seeAllButton}
-          onPress={handleSeeAll}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="See all services"
-          hitSlop={8}>
+
+        <TouchableOpacity style={styles.seeAllButton} onPress={handleSeeAll} activeOpacity={0.8}>
           <Text style={styles.seeAllText}>See All</Text>
           <MaterialIcons name="arrow-forward" size={scaleFont(18)} color="#2563eb" />
         </TouchableOpacity>
       </View>
 
-      {/* Services Grid (2 columns) */}
+      {/* Service Grid */}
       <View>
         {safeServices
           .slice(0, 6)
-          .reduce((rows: any[], item: any, index: number) => {
+          .reduce((rows: any[], item, index) => {
             if (index % 2 === 0) rows.push([]);
             rows[rows.length - 1].push(item);
             return rows;
           }, [])
           .map((row: any[], rowIndex: number) => (
             <View key={rowIndex} style={styles.rowTwoCol}>
-              {row.map((item: any, colIndex: number) => {
-                // Normalize image source: accept string urls or local sources
-                let imageSrc: any = item.image || item.imageUrl || item.thumbnail;
-                if (typeof imageSrc === 'string' && imageSrc.length > 0)
-                  imageSrc = { uri: imageSrc };
-                if (!imageSrc) imageSrc = require('../../../assets/1.png');
+              {row.map((item, colIndex) => {
+                let img: any = item.image || item.imageUrl || item.thumbnail;
+                if (typeof img === 'string') img = { uri: img };
+                if (!img) img = require('../../../assets/1.png');
 
                 return (
                   <TouchableOpacity
                     key={item._id || item.id || `${rowIndex}-${colIndex}`}
-                    style={styles.itemTwoCol}
+                    style={styles.card}
                     onPress={() => handlePress(item)}
-                    activeOpacity={0.8}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Open ${item.title || item.name}`}
-                    hitSlop={8}>
-                    <View style={styles.iconContainer}>
-                      <Image source={imageSrc} style={styles.icon} resizeMode="cover" />
+                    activeOpacity={0.85}>
+                    <View style={styles.iconWrapper}>
+                      <Image source={img} style={styles.icon} resizeMode="cover" />
                     </View>
                     <Text style={styles.label} numberOfLines={2}>
                       {item.title || item.name}
@@ -95,82 +82,83 @@ export default PopularServices;
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: scaleHeight(24),
-    backgroundColor: '#fff',
-    borderRadius: scaleWidth(12),
+    backgroundColor: '#ffffff',
+    borderRadius: scaleWidth(14),
     padding: scaleWidth(16),
+    marginBottom: scaleHeight(24),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
+
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: scaleHeight(16),
+    marginBottom: scaleHeight(14),
   },
+
   title: {
     fontSize: scaleFont(18),
     fontWeight: '700',
-    color: '#1f2937',
+    color: '#1e293b',
     flex: 1,
   },
+
   seeAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: scaleHeight(4),
   },
+
   seeAllText: {
     color: '#2563eb',
     fontSize: scaleFont(14),
     fontWeight: '600',
     marginRight: scaleWidth(4),
   },
-  row: {
-    justifyContent: 'space-between',
-    marginBottom: scaleHeight(8),
-  },
+
   rowTwoCol: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: scaleHeight(12),
+    marginBottom: scaleHeight(14),
   },
-  item: {
+
+  card: {
     width: ITEM_WIDTH,
     alignItems: 'center',
-    marginBottom: scaleHeight(16),
-    padding: scaleWidth(8),
-    borderRadius: scaleWidth(12),
-    backgroundColor: '#f9fafb',
-  },
-  itemTwoCol: {
-    width: (width - scaleWidth(48)) / 2,
-    alignItems: 'center',
-    marginBottom: scaleHeight(8),
+    backgroundColor: '#f8fafc',
     padding: scaleWidth(12),
-    borderRadius: scaleWidth(12),
-    backgroundColor: '#f9fafb',
+    borderRadius: scaleWidth(14),
+    shadowColor: '#1e293b',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
-  iconContainer: {
-    width: scaleWidth(90),
-    height: scaleWidth(90),
-    borderRadius: scaleWidth(64),
+
+  iconWrapper: {
+    width: scaleWidth(76),
+    height: scaleWidth(76),
+    borderRadius: scaleWidth(38),
     backgroundColor: '#eff6ff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: scaleHeight(8),
+    marginBottom: scaleHeight(10),
   },
+
   icon: {
-    width: scaleWidth(90),
-    height: scaleWidth(90),
+    width: '90%',
+    height: '90%',
+    borderRadius: scaleWidth(12),
   },
+
   label: {
     fontSize: scaleFont(13),
     fontWeight: '600',
     textAlign: 'center',
-    color: '#374151',
-    lineHeight: scaleFont(16),
+    color: '#334155',
+    lineHeight: scaleHeight(18),
   },
 });

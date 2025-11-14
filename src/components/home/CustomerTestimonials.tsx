@@ -1,5 +1,14 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Dimensions, TouchableOpacity, Image, Linking } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Dimensions,
+  TouchableOpacity,
+  Image,
+  Linking,
+} from 'react-native';
 import { scaleWidth, scaleHeight, scaleFont } from '../../utils/scaling';
 
 const testimonials = [
@@ -52,8 +61,7 @@ const CustomerTestimonials = () => {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: scaleWidth(16) }}
-      >
+        contentContainerStyle={{ paddingHorizontal: scaleWidth(16) }}>
         {testimonials.map((item) => (
           <TestimonialItem key={item.id} item={item} />
         ))}
