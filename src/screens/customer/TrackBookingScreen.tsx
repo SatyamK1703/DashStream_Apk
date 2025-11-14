@@ -196,12 +196,14 @@ const TrackBookingScreen = () => {
   }, [trackingInfo, bookingData]);
 
   // Get professional data from booking
-  const professional = bookingData?.professional || {
-    id: 'unassigned',
-    name: 'Professional not assigned yet',
-    rating: 0,
-    image: null,
-    phone: '',
+  const professionalDetails = bookingData?.professional || {};
+  const professional = {
+    id: professionalDetails.id || 'unassigned',
+    name: professionalDetails.name || 'Professional not assigned yet',
+    rating: professionalDetails.rating || 0,
+    profileImage: professionalDetails.profileImage,
+    phone: professionalDetails.phone || '',
+    totalRatings: professionalDetails.totalRatings,
   };
 
   // Get current status and estimated arrival

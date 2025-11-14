@@ -5,9 +5,9 @@ const IS_STAGING = process.env.APP_VARIANT === 'staging';
 
 export default {
   expo: {
-    name: IS_DEV ? 'DashStream (Dev)' : IS_STAGING ? 'DashStream (Staging)' : 'DashStream',
-    slug: 'dashstream-app',
-    version: '1.0.0',
+    name: IS_DEV ? 'DashSteam (Dev)' : IS_STAGING ? 'DashSteam (Staging)' : 'DashSteam',
+    slug: 'dashsteam-app',
+    version: '0.1.6',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
@@ -31,10 +31,10 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: IS_DEV
-        ? 'com.dashstream.app.dev'
+        ? 'com.dashsteam.app.dev'
         : IS_STAGING
-          ? 'com.dashstream.app.staging'
-          : 'com.dashstream.app',
+          ? 'com.dashsteam.app.staging'
+          : 'com.dashsteam.app',
       buildNumber: '1.0.0',
       config: {
         googleMapsApiKey:
@@ -54,11 +54,16 @@ export default {
         backgroundColor: '#FFFFFF',
       },
       package: IS_DEV
-        ? 'com.dashstream.app.dev'
+        ? 'com.dashsteam.app.dev'
         : IS_STAGING
-          ? 'com.dashstream.app.staging'
-          : 'com.dashstream.app',
+          ? 'com.dashsteam.app.staging'
+          : 'com.dashsteam.app',
       versionCode: 1,
+      config: {
+        googleMaps: {
+          apiKey: process.env.GOOGLE_MAPS_API_KEY || "your API key"
+        }
+      }
     },
 
     extra: {
