@@ -5,6 +5,7 @@ import RootNavigator from './routes/RootNavigator';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { useInitializeStores } from '../src/store';
+import AlertProvider from '../src/components/AlertProvider';
 
 const App = () => {
   const { initializeApp } = useInitializeStores();
@@ -19,7 +20,9 @@ const App = () => {
       <View style={{ flex: 1 }}>
         <StatusBar style="auto" />
         <NavigationContainer>
-          <RootNavigator />
+          <AlertProvider>
+            <RootNavigator />
+          </AlertProvider>
         </NavigationContainer>
       </View>
     </SafeAreaProvider>

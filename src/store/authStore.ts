@@ -246,13 +246,20 @@ export const useAuthStore = create<AuthState>()(
 
             // If there's an authentication error, clear the user and tokens
             if (error?.statusCode === 401) {
-              if (__DEV__) console.log('🚪 Authentication error during refresh, clearing user and tokens');
-              try {
-                await authService.logout();
-              } catch (logoutError) {
-                if (__DEV__) console.warn('Error during logout after auth error:', logoutError);
+              const { isAuthenticated } = get(); // Get current state
+              if (isAuthenticated) {
+                if (__DEV__)
+                  console.log('🚪 Authentication error during refresh, clearing user and tokens');
+                try {
+                  await authService.logout();
+                } catch (logoutError) {
+                  if (__DEV__) console.warn('Error during logout after auth error:', logoutError);
+                }
+                set({ user: null, isAuthenticated: false, isGuest: false });
+              } else {
+                // User is already a guest, do nothing to prevent loop.
+                if (__DEV__) console.log('👻 Guest user received 401 on refreshUser. Ignoring.');
               }
-              set({ user: null, isAuthenticated: false, isGuest: false });
             }
           }
         },
