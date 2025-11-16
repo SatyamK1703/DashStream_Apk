@@ -12,8 +12,9 @@ import {
 
 // Hook for professional profile
 export const useProfessionalProfile = () => {
+  const apiCall = useCallback(() => professionalService.getProfile(), []);
   return useApi(
-    () => professionalService.getProfile(),
+    apiCall,
     {
       showErrorAlert: false,
     }
@@ -33,8 +34,13 @@ export const useProfessionalJobs = () => {
 
 // Hook for single job details
 export const useProfessionalJob = (jobId: string | null) => {
+  const apiCall = useCallback(() => {
+    if (!jobId) return Promise.reject(new Error('Job ID is required'));
+    return professionalService.getJobDetails(jobId);
+  }, [jobId]);
+
   const api = useApi(
-    () => professionalService.getJobDetails(jobId!),
+    apiCall,
     {
       showErrorAlert: false,
     }
@@ -44,15 +50,16 @@ export const useProfessionalJob = (jobId: string | null) => {
     if (jobId) {
       api.execute();
     }
-  }, [jobId, api]);
+  }, [jobId, api.execute]);
 
   return api;
 };
 
 // Hook for dashboard stats
 export const useProfessionalDashboard = () => {
+  const apiCall = useCallback(() => professionalService.getDashboardStats(), []);
   return useApi(
-    () => professionalService.getDashboardStats(),
+    apiCall,
     {
       showErrorAlert: false,
     }
@@ -267,12 +274,16 @@ export const useProfessionalDashboardScreen = () => {
   const profileApi = useProfessionalProfile();
   const dashboardApi = useProfessionalDashboard();
 
-  const refreshAll = async () => {
+  const refreshAll = useCallback(async () => {
     await Promise.all([
       profileApi.execute(),
       dashboardApi.execute(),
     ]);
-  };
+  }, [profileApi.execute, dashboardApi.execute]);
+
+  useEffect(() => {
+    refreshAll();
+  }, [refreshAll]);
 
   return {
     profile: profileApi.data,

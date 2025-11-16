@@ -68,7 +68,6 @@
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
-    "@testing-library/react-hooks": "^8.0.1",
     "@testing-library/react-native": "^13.3.3",
     "@types/invariant": "^2.2.37",
     "@types/jest": "^29.5.12",

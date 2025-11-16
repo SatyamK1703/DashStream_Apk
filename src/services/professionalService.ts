@@ -1,5 +1,6 @@
 import httpClient, { ApiResponse } from './httpClient';
 import { API_ENDPOINTS } from '../config/config';
+import { ProfessionalDashboardStats, ProfessionalProfile } from '../types/api';
 
 // Professional-specific types based on backend controller
 export interface ProfessionalJob {
@@ -53,43 +54,6 @@ export interface JobDetails {
   updatedAt: string;
 }
 
-export interface ProfessionalProfile {
-  _id: string;
-  name: string;
-  email: string;
-  phone: string;
-  profileImage?: {
-    url: string;
-  };
-  rating: number;
-  totalRatings: number;
-  isAvailable: boolean;
-  status: string;
-}
-
-export interface DashboardStats {
-  jobCounts: {
-    pending: number;
-    confirmed: number;
-    assigned: number;
-    'in-progress': number;
-    completed: number;
-    cancelled: number;
-    rejected: number;
-    total: number;
-  };
-  earnings: {
-    total: number;
-    currency: string;
-  };
-  todayJobs: {
-    id: string;
-    time: string;
-    status: string;
-    address: string;
-  }[];
-}
-
 export interface UpdateJobStatusData {
   status: 'pending' | 'confirmed' | 'assigned' | 'in-progress' | 'completed' | 'cancelled' | 'rejected';
 }
@@ -141,7 +105,7 @@ class ProfessionalService {
   /**
    * Get dashboard statistics
    */
-  async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
+  async getDashboardStats(): Promise<ApiResponse<ProfessionalDashboardStats>> {
     try {
       return await httpClient.get(API_ENDPOINTS.PROFESSIONALS.DASHBOARD);
     } catch (error) {

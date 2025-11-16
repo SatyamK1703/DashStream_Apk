@@ -68,6 +68,16 @@ const ProDashboardScreen = () => {
   const { toggleAvailability } = useProfessionalProfileActions();
   const { acceptJob, startJob } = useProfessionalJobActions();
 
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'completed': return '#10B981';
+      case 'ongoing': case 'in-progress': return '#2563EB';
+      case 'pending': return '#F59E0B';
+      case 'cancelled': return '#EF4444';
+      default: return '#6B7280';
+    }
+  };
+
   const handleToggleOnline = async () => {
     try {
       await toggleAvailability();
@@ -145,11 +155,7 @@ const ProDashboardScreen = () => {
         <View>
           <Text style={styles.headerStatsLabel}>{SCREEN_TEXTS.ProDashboard.jobsToday}</Text>
           <Text style={styles.headerStatsValue}>
-            {upcomingJobs?.filter((job) => {
-              const today = new Date().toDateString();
-              const jobDate = new Date(job.scheduledDate).toDateString();
-              return today === jobDate;
-            }).length || 0}
+            {upcomingJobs?.length || 0}
           </Text>
         </View>
         <TouchableOpacity
@@ -281,8 +287,29 @@ const ProDashboardScreen = () => {
           </View>
 
           {upcomingJobs && upcomingJobs.length > 0 ? (
-            upcomingJobs.map((job) => (
-              <JobCard key={job.id} job={job} onAcceptJob={handleAcceptJob} />
+            upcomingJobs.map((job: any) => (
+              <TouchableOpacity key={job.id} style={{
+                backgroundColor: 'white',
+                padding: 16,
+                borderRadius: 12,
+                marginVertical: 8,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                elevation: 2,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.22,
+                shadowRadius: 2.22,
+              }} onPress={() => handleJobPress(job.id)}>
+                <View style={{ flex: 1, marginRight: 10 }}>
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1F2937' }}>{job.address}</Text>
+                  <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 4 }}>at {job.time}</Text>
+                </View>
+                <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#F3F4F6' }}>
+                  <Text style={{ color: getStatusColor(job.status), fontWeight: '600', fontSize: 12 }}>{job.status?.toUpperCase()}</Text>
+                </View>
+              </TouchableOpacity>
             ))
           ) : (
             <View style={styles.emptyContainer}>

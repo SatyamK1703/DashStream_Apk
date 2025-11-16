@@ -42,9 +42,9 @@ const ProJobsScreen = () => {
   const filteredJobs = jobs.filter(job => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase().trim();
-    return job.customerName.toLowerCase().includes(query) ||
-           job.id.toLowerCase().includes(query) ||
-           job.address.toLowerCase().includes(query);
+    return (job.customerName?.toLowerCase().includes(query) ||
+           job.id?.toLowerCase().includes(query) ||
+           job.address?.toLowerCase().includes(query));
   });
   
   const onRefresh = refresh;
