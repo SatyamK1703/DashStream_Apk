@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Alert } from 'react-native';
 import { ApiResponse, api } from '../services/httpClient';
 import { handleApiError, retryOperation } from '../utils/errorHandler';
 import { useAuth } from '../store';
@@ -48,7 +49,7 @@ export const useApi = <T = any>(
     cacheDuration = 0, // Default to no caching
   } = options;
 
-  const { logout } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
   const [state, setState] = useState<UseApiState<T>>({
     data: null,
     loading: false,
@@ -140,7 +141,16 @@ export const useApi = <T = any>(
 
         // Auto-logout on authentication errors
         if (appError.statusCode === 401) {
-          await logout();
+          if (isAuthenticated) {
+            await logout();
+          } else {
+            // User is not authenticated (guest), show login prompt
+            Alert.alert(
+              'Login Required',
+              'You need to be logged in to perform this action.',
+              [{ text: 'OK', style: 'default' }]
+            );
+          }
         }
 
         if (onError) {
@@ -152,7 +162,17 @@ export const useApi = <T = any>(
         isExecutingRef.current = false;
       }
     },
-    [apiCall, retries, retryDelay, showErrorAlert, onSuccess, onError, logout, cacheDuration]
+    [
+      apiCall,
+      retries,
+      retryDelay,
+      showErrorAlert,
+      onSuccess,
+      onError,
+      logout,
+      cacheDuration,
+      isAuthenticated,
+    ]
   );
 
   const reset = useCallback(() => {
@@ -191,9 +211,16 @@ export const usePaginatedApi = <T = any>(
   const defaultNormalizer = (resp: any) => {
     if (!resp) return { items: [], total: 0 };
 
+    const normalizeItems = (items: any[]) =>
+      items.map((item) => ({
+        ...item,
+        id: item.id || item._id?.toString(),
+      }));
+
     // First check if response itself is an array
     if (Array.isArray(resp)) {
-      return { items: resp, total: resp.length };
+      const normalized = normalizeItems(resp);
+      return { items: normalized, total: normalized.length };
     }
 
     // Try to get payload from resp.data or use resp directly
@@ -201,7 +228,8 @@ export const usePaginatedApi = <T = any>(
 
     // Handle array payload
     if (Array.isArray(payload)) {
-      return { items: payload, total: payload.length };
+      const normalized = normalizeItems(payload);
+      return { items: normalized, total: normalized.length };
     }
 
     // Handle paginated response with various property names
@@ -252,6 +280,8 @@ export const usePaginatedApi = <T = any>(
       resp.data?.totalCount ??
       items.length;
 
+    const normalizedItems = normalizeItems(items);
+
     if (__DEV__) {
       console.log('defaultNormalizer - Debug:', {
         hasRespData: !!resp.data,
@@ -270,7 +300,7 @@ export const usePaginatedApi = <T = any>(
       });
     }
 
-    return { items, total };
+    return { items: normalizedItems, total };
   };
 
   const normalizeResponse = normalize ?? defaultNormalizer;
@@ -302,7 +332,7 @@ export const usePaginatedApi = <T = any>(
             setAllData((prev: T[]) => {
               const combined = prevPagination.page === 1 ? newItems : [...prev, ...newItems];
               const uniqueItems = Array.from(
-                new Map(combined.map((item: any) => [item._id, item])).values()
+                new Map(combined.map((item: any) => [item.id || item._id, item])).values()
               );
               return uniqueItems as T[];
             });
