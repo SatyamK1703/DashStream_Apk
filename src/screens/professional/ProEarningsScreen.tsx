@@ -71,7 +71,9 @@ const ProEarningsScreen = () => {
       <View style={styles.chartContainer}>
         {data.map((item, index) => (
           <View key={index} style={styles.chartBarWrapper}>
-            <View style={[styles.chartBar, { height: `${(item.amount / maxAmount) * 100}%` }]} />
+            <View style={styles.chartBarContainer}>
+              <View style={[styles.chartBar, { height: `${(item.amount / maxAmount) * 100}%` }]} />
+            </View>
             <Text style={styles.chartLabel}>{item.day}</Text>
             <Text style={styles.chartAmount}>₹{item.amount}</Text>
           </View>
@@ -85,18 +87,25 @@ const ProEarningsScreen = () => {
     return (
       <View style={styles.contentContainer}>
         <View style={styles.card}>
-          <Text style={styles.summaryLabel}>Total Earnings</Text>
-          <Text style={styles.summaryTotal}>
-            ₹{earnings.totalEarnings?.toLocaleString('en-IN') || '0'}
-          </Text>
+          <View style={styles.totalEarningsContainer}>
+            <View style={styles.totalEarningsIcon}>
+              <Ionicons name="cash" size={24} color={colors.primary} />
+            </View>
+            <View>
+              <Text style={styles.summaryLabel}>Total Earnings</Text>
+              <Text style={styles.summaryTotal}>
+                ₹{earnings.totalEarnings?.toLocaleString('en-IN') || '0'}
+              </Text>
+            </View>
+          </View>
           <View style={styles.summaryMetrics}>
             {[
               {
                 label: 'Pending',
                 value: `₹${earnings.pendingPayouts?.toLocaleString('en-IN') || '0'}`,
-                icon: 'money-bill-wave',
-                color: colors.blue,
-                bgColor: colors.blue100,
+                icon: 'time',
+                color: colors.amber,
+                bgColor: colors.amber100,
               },
               {
                 label: 'Jobs',
@@ -107,7 +116,7 @@ const ProEarningsScreen = () => {
               },
               {
                 label: 'Rating',
-                value: earnings.averageRating || 0,
+                value: `${earnings.averageRating?.toFixed(1) || '0.0'}`,
                 icon: 'star',
                 color: colors.amber,
                 bgColor: colors.amber100,
@@ -115,7 +124,7 @@ const ProEarningsScreen = () => {
             ].map((metric) => (
               <View key={metric.label} style={styles.metricItem}>
                 <View style={[styles.metricIconContainer, { backgroundColor: metric.bgColor }]}>
-                  <FontAwesome5 name={metric.icon as any} size={16} color={metric.color} />
+                  <Ionicons name={metric.icon as any} size={20} color={metric.color} />
                 </View>
                 <Text style={styles.metricLabel}>{metric.label}</Text>
                 <Text style={styles.metricValue}>{metric.value}</Text>
@@ -162,17 +171,22 @@ const ProEarningsScreen = () => {
 
   const renderHistoryItem = ({ item }: { item: PaymentHistory }) => {
     const statusStyle = {
-      completed: { bg: colors.green100, text: colors.green600 },
-      pending: { bg: colors.amber100, text: colors.amber600 },
-      processing: { bg: colors.blue100, text: colors.blue600 },
+      completed: { bg: colors.green100, text: colors.green600, icon: 'checkmark-circle' },
+      pending: { bg: colors.amber100, text: colors.amber600, icon: 'time' },
+      processing: { bg: colors.blue100, text: colors.blue600, icon: 'sync' },
     }[item.status];
 
     return (
       <View style={styles.card}>
         <View style={styles.historyHeader}>
-          <View>
-            <Text style={styles.historyAmount}>₹{item.amount.toLocaleString('en-IN')}</Text>
-            <Text style={styles.historyDate}>{formatDate(item.date)}</Text>
+          <View style={styles.historyLeft}>
+            <View style={[styles.historyIcon, { backgroundColor: statusStyle.bg }]}>
+              <Ionicons name={statusStyle.icon as any} size={20} color={statusStyle.text} />
+            </View>
+            <View>
+              <Text style={styles.historyAmount}>₹{item.amount.toLocaleString('en-IN')}</Text>
+              <Text style={styles.historyDate}>{formatDate(item.date)}</Text>
+            </View>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
             <Text style={[styles.statusBadgeText, { color: statusStyle.text }]}>
@@ -183,18 +197,27 @@ const ProEarningsScreen = () => {
         <View style={styles.divider} />
         <View style={styles.historyDetails}>
           <View style={styles.historyDetailItem}>
-            <Text style={styles.historyDetailLabel}>Payment ID</Text>
-            <Text style={styles.historyDetailValue}>{item.id}</Text>
+            <Ionicons name="receipt" size={16} color={colors.gray500} />
+            <View style={styles.historyDetailText}>
+              <Text style={styles.historyDetailLabel}>Payment ID</Text>
+              <Text style={styles.historyDetailValue}>{item.id}</Text>
+            </View>
           </View>
           <View style={styles.historyDetailItem}>
-            <Text style={styles.historyDetailLabel}>Jobs</Text>
-            <Text style={styles.historyDetailValue}>{item.jobIds.length}</Text>
+            <Ionicons name="briefcase" size={16} color={colors.gray500} />
+            <View style={styles.historyDetailText}>
+              <Text style={styles.historyDetailLabel}>Jobs</Text>
+              <Text style={styles.historyDetailValue}>{item.jobIds.length}</Text>
+            </View>
           </View>
         </View>
         {item.transactionId && (
           <View style={styles.historyTransaction}>
-            <Text style={styles.historyDetailLabel}>Transaction ID</Text>
-            <Text style={styles.historyDetailValue}>{item.transactionId}</Text>
+            <Ionicons name="card" size={16} color={colors.gray500} />
+            <View style={styles.historyDetailText}>
+              <Text style={styles.historyDetailLabel}>Transaction ID</Text>
+              <Text style={styles.historyDetailValue}>{item.transactionId}</Text>
+            </View>
           </View>
         )}
       </View>
@@ -240,22 +263,32 @@ const ProEarningsScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'summary' && styles.activeTab]}
-          onPress={() => setActiveTab('summary')}>
-          <Text style={[styles.tabText, activeTab === 'summary' && styles.activeTabText]}>
-            Summary
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'history' && styles.activeTab]}
-          onPress={() => setActiveTab('history')}>
-          <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>
-            History
-          </Text>
-        </TouchableOpacity>
-      </View>
+       <View style={styles.tabContainer}>
+         <TouchableOpacity
+           style={[styles.tab, activeTab === 'summary' && styles.activeTab]}
+           onPress={() => setActiveTab('summary')}>
+           <Ionicons
+             name="stats-chart"
+             size={18}
+             color={activeTab === 'summary' ? colors.primary : colors.gray500}
+           />
+           <Text style={[styles.tabText, activeTab === 'summary' && styles.activeTabText]}>
+             Summary
+           </Text>
+         </TouchableOpacity>
+         <TouchableOpacity
+           style={[styles.tab, activeTab === 'history' && styles.activeTab]}
+           onPress={() => setActiveTab('history')}>
+           <Ionicons
+             name="time"
+             size={18}
+             color={activeTab === 'history' ? colors.primary : colors.gray500}
+           />
+           <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>
+             History
+           </Text>
+         </TouchableOpacity>
+       </View>
 
       <ScrollView
         style={styles.flex1}
@@ -319,16 +352,17 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-  },
-  tab: { flex: 1, paddingVertical: 16, alignItems: 'center' },
-  activeTab: { borderBottomWidth: 2, borderBottomColor: colors.primary },
-  tabText: { fontWeight: '500', color: colors.gray500 },
-  activeTabText: { color: colors.primary },
+   tabContainer: {
+     flexDirection: 'row',
+     backgroundColor: colors.white,
+     borderBottomWidth: 1,
+     borderBottomColor: colors.gray200,
+     paddingHorizontal: 16,
+   },
+   tab: { flex: 1, paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+   activeTab: { borderBottomWidth: 2, borderBottomColor: colors.primary },
+   tabText: { fontWeight: '500', color: colors.gray500, marginLeft: 8 },
+   activeTabText: { color: colors.primary },
   card: {
     backgroundColor: colors.white,
     borderRadius: 12,
@@ -340,8 +374,18 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  summaryLabel: { color: colors.gray500, fontSize: 14 },
-  summaryTotal: { fontSize: 32, fontWeight: 'bold', color: colors.gray800, marginTop: 4 },
+   totalEarningsContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+   totalEarningsIcon: {
+     width: 48,
+     height: 48,
+     borderRadius: 24,
+     backgroundColor: colors.blue50,
+     alignItems: 'center',
+     justifyContent: 'center',
+     marginRight: 16,
+   },
+   summaryLabel: { color: colors.gray500, fontSize: 14 },
+   summaryTotal: { fontSize: 32, fontWeight: 'bold', color: colors.gray800, marginTop: 4 },
   summaryMetrics: { flexDirection: 'row', marginTop: 16, justifyContent: 'space-around' },
   metricItem: { alignItems: 'center' },
   metricIconContainer: {
@@ -373,17 +417,27 @@ const styles = StyleSheet.create({
   },
   filterText: { color: colors.gray500 },
   activeFilterText: { color: colors.primary, fontWeight: '500' },
-  chartContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    height: 160,
-    marginTop: 16,
-  },
-  chartBarWrapper: { alignItems: 'center', flex: 1 },
-  chartBar: { width: '50%', backgroundColor: colors.primary, borderRadius: 4 },
-  chartLabel: { fontSize: 12, color: colors.gray500, marginTop: 4 },
-  chartAmount: { fontSize: 12, fontWeight: '500', color: colors.gray800 },
+   chartContainer: {
+     flexDirection: 'row',
+     justifyContent: 'space-between',
+     alignItems: 'flex-end',
+     height: 180,
+     marginTop: 16,
+     paddingHorizontal: 8,
+   },
+   chartBarWrapper: { alignItems: 'center', flex: 1 },
+   chartBarContainer: {
+     height: 120,
+     width: '60%',
+     alignItems: 'center',
+     justifyContent: 'flex-end',
+     backgroundColor: colors.gray100,
+     borderRadius: 8,
+     paddingBottom: 4,
+   },
+   chartBar: { width: '100%', backgroundColor: colors.primary, borderRadius: 4, minHeight: 8 },
+   chartLabel: { fontSize: 12, color: colors.gray500, marginTop: 8 },
+   chartAmount: { fontSize: 12, fontWeight: '600', color: colors.gray800, marginTop: 4 },
   infoText: { color: colors.gray500, marginVertical: 12, lineHeight: 20 },
   primaryButton: {
     backgroundColor: colors.primary,
@@ -392,22 +446,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryButtonText: { color: colors.white, fontWeight: '500' },
-  historyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  historyAmount: { color: colors.gray800, fontWeight: 'bold', fontSize: 16 },
-  historyDate: { color: colors.gray500, fontSize: 14 },
+   historyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+   historyLeft: { flexDirection: 'row', alignItems: 'center' },
+   historyIcon: {
+     width: 40,
+     height: 40,
+     borderRadius: 20,
+     alignItems: 'center',
+     justifyContent: 'center',
+     marginRight: 12,
+   },
+   historyAmount: { color: colors.gray800, fontWeight: 'bold', fontSize: 18 },
+   historyDate: { color: colors.gray500, fontSize: 14 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   statusBadgeText: { fontSize: 12, fontWeight: '500' },
   divider: { height: 1, backgroundColor: colors.gray100, marginVertical: 12 },
-  historyDetails: { flexDirection: 'row', justifyContent: 'space-between' },
-  historyDetailItem: { flex: 1 },
-  historyDetailLabel: { fontSize: 12, color: colors.gray500 },
-  historyDetailValue: { fontSize: 14, color: colors.gray800 },
-  historyTransaction: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray100,
-  },
+   historyDetails: { flexDirection: 'row', justifyContent: 'space-between' },
+   historyDetailItem: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+   historyDetailText: { marginLeft: 8 },
+   historyDetailLabel: { fontSize: 12, color: colors.gray500 },
+   historyDetailValue: { fontSize: 14, color: colors.gray800, fontWeight: '500' },
+   historyTransaction: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     marginTop: 12,
+     paddingTop: 12,
+     borderTopWidth: 1,
+     borderTopColor: colors.gray100,
+   },
   emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
   emptyStateText: { color: colors.gray500, marginTop: 16 },
 });

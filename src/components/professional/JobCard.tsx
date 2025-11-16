@@ -32,10 +32,10 @@ const JobCard: React.FC<JobCardProps> = ({ job, onAcceptJob }) => {
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'completed': return colors.success;
+      case 'completed': return colors.green800;
       case 'ongoing': case 'in_progress': return colors.primary;
-      case 'pending': return colors.warning;
-      case 'cancelled': return colors.danger;
+      case 'pending': return colors.amber800;
+      case 'cancelled': return colors.red800;
       default: return colors.gray500;
     }
   };
@@ -44,10 +44,9 @@ const JobCard: React.FC<JobCardProps> = ({ job, onAcceptJob }) => {
     <TouchableOpacity style={styles.card} onPress={handleJobPress}>
       <View style={styles.jobHeader}>
         <View style={styles.jobCustomerInfo}>
-          <Image 
-            source={{ uri: job.customer?.profileImage }} 
-            style={styles.customerImage} 
-          />
+          <View style={styles.customerAvatar}>
+            <Ionicons name="person" size={20} color={colors.gray400} />
+          </View>
           <View>
             <Text style={styles.customerName}>
               {job.customer?.name || 'Customer'}
@@ -60,7 +59,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, onAcceptJob }) => {
             </View>
           </View>
         </View>
-        <View style={styles.jobStatus}>
+        <View style={[styles.jobStatus, { backgroundColor: getStatusColor(job.status) + '20' }]}>
           <Text style={[styles.jobStatusText, { color: getStatusColor(job.status) }]}>
             {job.status?.toUpperCase()}
           </Text>
@@ -68,7 +67,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, onAcceptJob }) => {
       </View>
 
       <View style={styles.jobAddress}>
-        <Ionicons name="location-outline" size={16} color={colors.gray500} />
+        <Ionicons name="location" size={16} color={colors.gray500} />
         <Text style={styles.jobAddressText} numberOfLines={2}>
           {job.address || 'Address not available'}
         </Text>
@@ -76,12 +75,15 @@ const JobCard: React.FC<JobCardProps> = ({ job, onAcceptJob }) => {
 
       <View style={styles.jobServices}>
         {job.services?.slice(0, 2).map((service, index) => (
-          <Text key={index} style={styles.jobServiceText}>
-            • {service.name} (₹{service.price})
-          </Text>
+          <View key={index} style={styles.serviceItem}>
+            <Ionicons name="checkmark-circle" size={12} color={colors.primary} />
+            <Text style={styles.jobServiceText}>
+              {service.name} (₹{service.price})
+            </Text>
+          </View>
         ))}
         {job.services?.length > 2 && (
-          <Text style={styles.jobServiceText}>
+          <Text style={styles.moreServicesText}>
             +{job.services.length - 2} more services
           </Text>
         )}
@@ -89,21 +91,23 @@ const JobCard: React.FC<JobCardProps> = ({ job, onAcceptJob }) => {
 
       <View style={styles.jobFooter}>
         <View style={styles.jobTotalAmount}>
-          <Text style={styles.jobTotalText}>Total: ₹{job.totalAmount}</Text>
+          <Ionicons name="cash" size={16} color={colors.primary} />
+          <Text style={styles.jobTotalText}>₹{job.totalAmount}</Text>
         </View>
-        {job.status === 'pending' && onAcceptJob && (
-          <TouchableOpacity 
-            style={styles.acceptJobButton}
-            onPress={() => onAcceptJob(job.id)}
-          >
-            <Text style={styles.acceptJobButtonText}>Accept</Text>
-          </TouchableOpacity>
-        )}
         {job.distance && (
           <View style={styles.jobDistance}>
             <Ionicons name="car" size={14} color={colors.gray500} />
             <Text style={styles.jobDistanceText}>{job.distance}</Text>
           </View>
+        )}
+        {job.status === 'pending' && onAcceptJob && (
+          <TouchableOpacity
+            style={styles.acceptJobButton}
+            onPress={() => onAcceptJob(job.id)}
+          >
+            <Ionicons name="checkmark" size={16} color={colors.white} />
+            <Text style={styles.acceptJobButtonText}>Accept</Text>
+          </TouchableOpacity>
         )}
       </View>
     </TouchableOpacity>
@@ -115,29 +119,32 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
     marginVertical: 8,
-    borderRadius: 12,
-    padding: 16,
-    elevation: 2,
+    borderRadius: 16,
+    padding: 20,
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 6,
   },
   jobHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   jobCustomerInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  customerImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  customerAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   customerName: {
@@ -156,10 +163,9 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   jobStatus: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: colors.gray100,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
   jobStatusText: {
     fontSize: 12,
@@ -168,21 +174,32 @@ const styles = StyleSheet.create({
   jobAddress: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   jobAddressText: {
     fontSize: 14,
-    color: colors.gray600,
+    color: colors.gray500,
     marginLeft: 8,
     flex: 1,
+    lineHeight: 20,
   },
   jobServices: {
-    marginBottom: 12,
+    marginBottom: 16,
+  },
+  serviceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
   },
   jobServiceText: {
     fontSize: 13,
-    color: colors.gray600,
-    marginBottom: 2,
+    color: colors.gray500,
+    marginLeft: 6,
+  },
+  moreServicesText: {
+    fontSize: 12,
+    color: colors.gray500,
+    fontStyle: 'italic',
   },
   jobFooter: {
     flexDirection: 'row',
@@ -190,24 +207,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   jobTotalAmount: {
-    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   jobTotalText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
-    color: colors.gray800,
+    color: colors.primary,
+    marginLeft: 6,
   },
-  acceptJobButton: {
-    backgroundColor: colors.success,
+   acceptJobButton: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     backgroundColor: colors.green800,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
     marginLeft: 12,
   },
   acceptJobButtonText: {
     color: colors.white,
     fontSize: 14,
     fontWeight: '600',
+    marginLeft: 6,
   },
   jobDistance: {
     flexDirection: 'row',

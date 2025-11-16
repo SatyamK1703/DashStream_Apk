@@ -9,8 +9,8 @@ import {
   Linking,
   Platform,
   Image,
+  StyleSheet,
 } from 'react-native';
-import { styles } from './ProJobDetailsScreen.styles';
 import { colors } from '../../styles/colors';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -53,6 +53,15 @@ const ProJobDetailsScreen = () => {
     isLoading: actionLoading,
   } = useProfessionalJobActions();
 
+  const jobData = job as any;
+  const coords = jobData?.address?.coordinates;
+  const destination = coords
+    ? {
+        latitude: coords.lat ?? coords.latitude,
+        longitude: coords.lng ?? coords.longitude,
+      }
+    : null;
+
   const handleCallCustomer = () => {
     if (job?.customer?.phone) {
       const url = `tel:${job.customer.phone}`;
@@ -63,10 +72,10 @@ const ProJobDetailsScreen = () => {
   };
 
   const handleNavigate = () => {
-    if (job?.address?.coordinates) {
+    if (destination) {
       const url = Platform.select({
-        ios: `maps:0,0?q=${job.address.coordinates.latitude},${job.address.coordinates.longitude}`,
-        android: `geo:0,0?q=${job.address.coordinates.latitude},${job.address.coordinates.longitude}(${job.customer?.name})`,
+        ios: `maps:0,0?q=${destination.latitude},${destination.longitude}`,
+        android: `geo:0,0?q=${destination.latitude},${destination.longitude}(${job.customer?.name})`,
       });
       if (url) Linking.openURL(url);
     }
@@ -191,38 +200,44 @@ const ProJobDetailsScreen = () => {
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.mapContainer}>
-          <MapView
-            provider={PROVIDER_GOOGLE}
-            style={styles.map}
-            initialRegion={{
-              ...job.address?.coordinates,
-              latitudeDelta: 0.02,
-              longitudeDelta: 0.02,
-            }}>
-            {job.professionalLocation && (
-              <Marker
-                coordinate={job.professionalLocation}
-                title={SCREEN_TEXTS.ProJobDetails.yourLocation}>
-                <View style={styles.markerContainer}>
-                  <Ionicons name="car" size={16} color={colors.white} />
+          {destination ? (
+            <MapView
+              provider={PROVIDER_GOOGLE}
+              style={styles.map}
+              initialRegion={{
+                ...destination,
+                latitudeDelta: 0.02,
+                longitudeDelta: 0.02,
+              }}>
+              {job.professionalLocation && (
+                <Marker
+                  coordinate={job.professionalLocation}
+                  title={SCREEN_TEXTS.ProJobDetails.yourLocation}>
+                  <View style={styles.markerContainer}>
+                    <Ionicons name="car" size={16} color={colors.white} />
+                  </View>
+                </Marker>
+              )}
+              <Marker coordinate={destination} title={job.customer?.name}>
+                <View style={[styles.markerContainer, { backgroundColor: colors.red500 }]}>
+                  <Ionicons name="location" size={16} color={colors.white} />
                 </View>
               </Marker>
-            )}
-            <Marker coordinate={job.address?.coordinates} title={job.customer?.name}>
-              <View style={[styles.markerContainer, { backgroundColor: colors.red500 }]}>
-                <Ionicons name="location" size={16} color={colors.white} />
-              </View>
-            </Marker>
-            {job.professionalLocation && (
-              <MapViewDirections
-                origin={job.professionalLocation}
-                destination={job.address?.coordinates}
-                apikey={config.GOOGLE_MAPS_API_KEY}
-                strokeWidth={3}
-                strokeColor={colors.primary}
-              />
-            )}
-          </MapView>
+              {job.professionalLocation && (
+                <MapViewDirections
+                  origin={job.professionalLocation}
+                  destination={destination}
+                  apikey={config.GOOGLE_MAPS_API_KEY}
+                  strokeWidth={3}
+                  strokeColor={colors.primary}
+                />
+              )}
+            </MapView>
+          ) : (
+            <View style={styles.map}>
+              <Text>Map not available</Text>
+            </View>
+          )}
           <TouchableOpacity style={styles.navigateButton} onPress={handleNavigate}>
             <Ionicons name="navigate" size={24} color={colors.primary} />
           </TouchableOpacity>
@@ -343,5 +358,44 @@ const ProJobDetailsScreen = () => {
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.gray50 },
+  centeredScreen: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 },
+  errorTitle: { fontSize: 18, fontWeight: 'bold', color: colors.gray800, marginTop: 16 },
+  header: { backgroundColor: colors.primary, paddingTop: Platform.OS === 'android' ? 24 : 48, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center' },
+  headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)' },
+  headerTitle: { color: colors.white, fontSize: 18, fontWeight: 'bold', marginLeft: 16 },
+  statusBadge: { marginLeft: 'auto', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  statusBadgeText: { fontSize: 12, fontWeight: '500' },
+  mapContainer: { height: 200, width: '100%' },
+  map: { flex: 1 },
+  markerContainer: { backgroundColor: colors.primary, padding: 8, borderRadius: 999, borderWidth: 2, borderColor: colors.white },
+  navigateButton: { position: 'absolute', bottom: 16, right: 16, backgroundColor: colors.white, padding: 12, borderRadius: 999, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 5 },
+  contentPadding: { padding: 16 },
+  card: { backgroundColor: colors.white, borderRadius: 12, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
+  customerHeader: { flexDirection: 'row', alignItems: 'center' },
+  customerImage: { width: 64, height: 64, borderRadius: 32 },
+  customerInfo: { flex: 1, marginLeft: 16 },
+  customerName: { fontSize: 18, fontWeight: 'bold', color: colors.gray800 },
+  customerPhone: { fontSize: 14, color: colors.gray500, marginTop: 4 },
+  callButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999 },
+  callButtonText: { color: colors.white, fontWeight: '500', marginLeft: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: colors.gray800, marginBottom: 12 },
+  serviceItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.gray100 },
+  lastServiceItem: { borderBottomWidth: 0 },
+  serviceName: { fontSize: 16, color: colors.gray800, fontWeight: '500' },
+  serviceDescription: { fontSize: 14, color: colors.gray500, marginTop: 4 },
+  servicePrice: { fontSize: 16, fontWeight: 'bold', color: colors.gray800 },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.gray100, paddingTop: 12, marginTop: 4 },
+  totalLabel: { fontSize: 16, fontWeight: 'bold', color: colors.gray800 },
+  totalAmount: { fontSize: 20, fontWeight: 'bold', color: colors.primary },
+  footer: { padding: 16, borderTopWidth: 1, borderTopColor: colors.gray100, backgroundColor: colors.white },
+  primaryButton: { paddingVertical: 14, borderRadius: 8, alignItems: 'center', backgroundColor: colors.primary },
+  primaryButtonText: { color: colors.white, fontWeight: 'bold', fontSize: 16 },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  detailLabel: { fontSize: 14, color: colors.gray500 },
+  detailValue: { fontSize: 14, color: colors.gray800, flexShrink: 1, textAlign: 'right' },
+});
 
 export default ProJobDetailsScreen;

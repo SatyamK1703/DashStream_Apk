@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  Alert,
   Linking,
   Platform,
   Dimensions,
@@ -19,6 +18,7 @@ import MapViewDirections from 'react-native-maps-directions';
 import * as Location from 'expo-location';
 import { useProfessionalJob } from '../../hooks/useProfessional';
 import { JobDetails } from '../../services/professionalService';
+import CustomAlert from '../../utils/CustomAlert';
 
 type ProStackParamList = {
   RouteTracking: { jobId: string };
@@ -44,7 +44,9 @@ const RouteTrackingScreen = () => {
     const requestLocationPermission = async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission is required.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+        CustomAlert.alert('Permission Denied', 'Location permission is required.', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
         return;
       }
 
@@ -52,7 +54,7 @@ const RouteTrackingScreen = () => {
         const location = await Location.getCurrentPositionAsync({});
         setCurrentLocation(location.coords);
       } catch (error) {
-        Alert.alert('Location Error', 'Unable to get your current location.');
+        CustomAlert.alert('Location Error', 'Unable to get your current location.');
       }
     };
 
@@ -142,39 +144,72 @@ const RouteTrackingScreen = () => {
 
       <View style={styles.headerControls}>
         <TouchableOpacity style={styles.controlButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={20} color={"#2563EB"} />
+          <View style={styles.controlButtonInner}>
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+          </View>
         </TouchableOpacity>
         <TouchableOpacity style={styles.controlButton} onPress={fitMapToMarkers}>
-          <Ionicons name="locate" size={20} color={"#2563EB"} />
+          <View style={styles.controlButtonInner}>
+            <Ionicons name="locate" size={20} color={colors.primary} />
+          </View>
         </TouchableOpacity>
       </View>
 
       <TouchableOpacity style={styles.navigateButton} onPress={handleOpenExternalNavigation}>
-        <Ionicons name="navigate" size={24} color={"#2563EB"} />
+        <View style={styles.navigateButtonInner}>
+          <Ionicons name="navigate" size={24} color={colors.white} />
+        </View>
       </TouchableOpacity>
 
       <View style={styles.bottomSheet}>
         <View style={styles.handle} />
         <View style={styles.customerInfo}>
-          <Image source={{ uri: job.customer.image }} style={styles.customerImage} />
+          <View style={styles.customerAvatar}>
+            <Ionicons name="person" size={24} color={colors.gray400} />
+          </View>
           <View style={styles.customerTextContainer}>
             <Text style={styles.customerName}>{job.customer.name}</Text>
             <Text style={styles.customerAddress} numberOfLines={1}>{addressString}</Text>
           </View>
           <TouchableOpacity style={styles.callButton} onPress={handleCallCustomer}>
-            <Ionicons name="call" size={18} color={"#FFFFFF"} />
+            <Ionicons name="call" size={20} color={colors.white} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.etaInfo}>
-          <View style={styles.etaItem}><Text style={styles.etaLabel}>Distance</Text><Text style={styles.etaValue}>{distance}</Text></View>
-          <View style={styles.etaItem}><Text style={styles.etaLabel}>Duration</Text><Text style={styles.etaValue}>{duration}</Text></View>
-          <View style={styles.etaItem}><Text style={styles.etaLabel}>Amount</Text><Text style={styles.etaValue}>₹{job.totalAmount}</Text></View>
+          <View style={styles.etaItem}>
+            <Ionicons name="map" size={16} color={colors.gray500} />
+            <View style={styles.etaTextContainer}>
+              <Text style={styles.etaLabel}>Distance</Text>
+              <Text style={styles.etaValue}>{distance}</Text>
+            </View>
+          </View>
+          <View style={styles.etaItem}>
+            <Ionicons name="time" size={16} color={colors.gray500} />
+            <View style={styles.etaTextContainer}>
+              <Text style={styles.etaLabel}>Duration</Text>
+              <Text style={styles.etaValue}>{duration}</Text>
+            </View>
+          </View>
+          <View style={styles.etaItem}>
+            <Ionicons name="cash" size={16} color={colors.gray500} />
+            <View style={styles.etaTextContainer}>
+              <Text style={styles.etaLabel}>Amount</Text>
+              <Text style={styles.etaValue}>₹{job.totalAmount}</Text>
+            </View>
+          </View>
         </View>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('JobDetails', { jobId })}>
-          <Text style={styles.primaryButtonText}>I've Arrived / View Details</Text>
-        </TouchableOpacity>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={styles.secondaryButton} onPress={handleOpenExternalNavigation}>
+            <Ionicons name="navigate" size={20} color={colors.primary} />
+            <Text style={styles.secondaryButtonText}>Navigate</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('JobDetails', { jobId })}>
+            <Text style={styles.primaryButtonText}>View Details</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.white} />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -190,24 +225,30 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.gray50 },
   centeredScreen: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.gray50 },
   loadingText: { color: colors.gray600, marginTop: 16 },
-  headerControls: { position: 'absolute', top: Platform.OS === 'android' ? 40 : 60, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between' },
-  controlButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.white, borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 5 },
-  navigateButton: { position: 'absolute', bottom: 320, right: 16, backgroundColor: colors.white, padding: 12, borderRadius: 999, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 5 },
+   headerControls: { position: 'absolute', top: Platform.OS === 'android' ? 40 : 60, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between' },
+   controlButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+   controlButtonInner: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.white, borderRadius: 22, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 5 },
+   navigateButton: { position: 'absolute', bottom: 320, right: 16 },
+   navigateButtonInner: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, borderRadius: 28, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
   markerContainer: { backgroundColor: colors.red500, padding: 8, borderRadius: 999, borderWidth: 2, borderColor: colors.white },
-  bottomSheet: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 16, paddingTop: 8, paddingBottom: Platform.OS === 'android' ? 16 : 32, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 10 },
-  handle: { width: 64, height: 4, backgroundColor: colors.gray300, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
-  customerInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  customerImage: { width: 48, height: 48, borderRadius: 24 },
-  customerTextContainer: { flex: 1, marginLeft: 12 },
-  customerName: { fontSize: 16, fontWeight: 'bold', color: colors.gray800 },
-  customerAddress: { color: colors.gray500, fontSize: 14 },
-  callButton: { backgroundColor: colors.primary, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  etaInfo: { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: colors.blue50, padding: 12, borderRadius: 12, marginBottom: 16 },
-  etaItem: { alignItems: 'center' },
-  etaLabel: { color: colors.gray500, fontSize: 12 },
-  etaValue: { color: colors.gray800, fontWeight: 'bold' },
-  primaryButton: { paddingVertical: 14, borderRadius: 8, alignItems: 'center', backgroundColor: colors.primary },
-  primaryButtonText: { color: colors.white, fontWeight: 'bold', fontSize: 16 },
+   bottomSheet: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 8, paddingBottom: Platform.OS === 'android' ? 20 : 32, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 10 },
+   handle: { width: 64, height: 4, backgroundColor: colors.gray300, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+   customerInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+   customerAvatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: colors.gray100, alignItems: 'center', justifyContent: 'center' },
+   customerTextContainer: { flex: 1, marginLeft: 16 },
+   customerName: { fontSize: 18, fontWeight: '600', color: colors.gray800 },
+   customerAddress: { color: colors.gray500, fontSize: 14, marginTop: 2 },
+   callButton: { backgroundColor: colors.primary, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+   etaInfo: { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: colors.gray50, padding: 16, borderRadius: 16, marginBottom: 20 },
+   etaItem: { flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'center' },
+   etaTextContainer: { marginLeft: 8, alignItems: 'center' },
+   etaLabel: { color: colors.gray500, fontSize: 12, textAlign: 'center' },
+   etaValue: { color: colors.gray800, fontWeight: '600', fontSize: 16, textAlign: 'center' },
+   actionButtons: { flexDirection: 'row', gap: 12 },
+   secondaryButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, backgroundColor: colors.gray100, borderWidth: 1, borderColor: colors.gray200 },
+   secondaryButtonText: { color: colors.primary, fontWeight: '600', fontSize: 16, marginLeft: 8 },
+   primaryButton: { flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, backgroundColor: colors.primary },
+   primaryButtonText: { color: colors.white, fontWeight: '600', fontSize: 16, marginRight: 8 },
 });
 
 export default RouteTrackingScreen;
