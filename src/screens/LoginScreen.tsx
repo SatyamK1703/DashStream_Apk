@@ -59,24 +59,21 @@ const LoginScreen = () => {
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled">
-        {/* Logo Section */}
+        {/* Brand Header */}
         <View style={styles.logoContainer}>
-          <Image
-            source={require('../../assets/adaptive-icon.png')} // Replace with your logo
-            style={styles.logo}
-          />
-          <Text style={styles.title}>Welcome to DashStream</Text>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
+          <Image source={require('../../assets/adaptive-icon.png')} style={styles.logo} />
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>Login to access your services faster</Text>
         </View>
 
-        {/* Input Section */}
+        {/* Phone Input */}
         <View style={styles.inputContainer}>
           <View style={styles.inputWrapper}>
-            <MaterialIcons name="phone" size={24} color="#7e8b9f" style={styles.inputIcon} />
+            <MaterialIcons name="phone" size={24} color="#8A94A6" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Enter your phone number"
-              placeholderTextColor="#a0a7b5"
+              placeholder="Phone number"
+              placeholderTextColor="#A0A7B5"
               keyboardType="phone-pad"
               value={phone}
               onChangeText={setPhone}
@@ -90,7 +87,7 @@ const LoginScreen = () => {
             onPress={handleLogin}
             disabled={isLoading}>
             <LinearGradient
-              colors={['#4e73df', '#224abe']}
+              colors={['#2563eb', '#1e40af']}
               style={styles.gradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}>
@@ -123,7 +120,7 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fc',
+    backgroundColor: '#f4f7fc',
   },
   scrollContainer: {
     flexGrow: 1,
@@ -132,24 +129,25 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 36,
   },
   logo: {
-    width: 120,
-    height: 120,
-    marginBottom: 20,
+    width: 110,
+    height: 110,
+    resizeMode: 'contain',
+    borderRadius: 20,
+    marginBottom: 16,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '700',
-    marginBottom: 8,
-    color: '#2d3748',
+    color: '#1f2937',
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
-    color: '#718096',
-    marginBottom: 8,
+    fontSize: 15,
+    color: '#6b7280',
+    marginTop: 6,
     textAlign: 'center',
   },
   inputContainer: {
@@ -159,32 +157,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: 16,
     marginBottom: 24,
-    shadowColor: '#4e73df',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
+    height: 58,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   inputIcon: {
     marginRight: 12,
   },
   input: {
     flex: 1,
-    height: 56,
+    height: '100%',
     fontSize: 16,
-    color: '#2d3748',
+    color: '#374151',
   },
   button: {
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#4e73df',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
   },
   gradient: {
     height: 56,
@@ -198,22 +189,22 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 10,
   },
   skipText: {
-    color: '#4e73df',
+    color: '#2563eb',
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   footerText: {
-    color: '#718096',
+    color: '#6b7280',
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
   },
   link: {
-    color: '#4e73df',
+    color: '#2563eb',
     fontWeight: '600',
   },
 });
