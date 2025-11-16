@@ -239,7 +239,7 @@ const ProDashboardScreen = () => {
     </View>
   );
 
-  if (isLoading) {
+  if (isLoading && !profile && !stats) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={'#2563EB'} />

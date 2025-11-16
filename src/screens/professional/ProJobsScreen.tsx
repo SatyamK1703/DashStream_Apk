@@ -15,9 +15,6 @@ import { ProStackParamList } from '../../../app/routes/ProNavigator';
 
 type ProJobsScreenNavigationProp = NativeStackNavigationProp<ProStackParamList, 'Jobs'>;
 
-import { Booking } from '../../types/api';
-import JobCard from '../../components/professional/JobCard';
-
 type FilterStatus = 'all' | 'pending' | 'confirmed' | 'assigned' | 'in-progress' | 'completed' | 'cancelled' | 'rejected';
 
 const ProJobsScreen = () => {
@@ -48,6 +45,16 @@ const ProJobsScreen = () => {
   });
   
   const onRefresh = refresh;
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'completed': return '#10B981';
+      case 'ongoing': case 'in-progress': return '#2563EB';
+      case 'pending': return '#F59E0B';
+      case 'cancelled': return '#EF4444';
+      default: return '#6B7280';
+    }
+  };
 
   useFocusEffect(
     React.useCallback(() => {
@@ -84,7 +91,7 @@ const ProJobsScreen = () => {
     </View>
   );
   
-  if (isLoading) {
+  if (isLoading && jobs.length === 0) {
     return <View style={styles.centeredScreen}><ActivityIndicator size="large" color={colors.primary} /></View>;
   }
 
@@ -120,7 +127,37 @@ const ProJobsScreen = () => {
       <FlatList
         data={filteredJobs}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => <JobCard job={item} />}
+        renderItem={({ item }: { item: any }) => (
+          <TouchableOpacity 
+            style={{
+              backgroundColor: 'white',
+              borderRadius: 12,
+              padding: 16,
+              marginVertical: 8,
+              marginHorizontal: 16,
+              elevation: 2,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.2,
+              shadowRadius: 1.41,
+            }}
+            onPress={() => navigation.navigate('JobDetails', { jobId: item.id })}
+          >
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12}}>
+              <Text style={{fontSize: 16, fontWeight: 'bold', color: '#1F2937'}}>{item.customerName}</Text>
+              <Text style={{color: getStatusColor(item.status), fontWeight: 'bold'}}>{item.status?.toUpperCase()}</Text>
+            </View>
+            <View style={{marginBottom: 8}}>
+              <Text style={{color: '#6B7280'}}>{new Date(item.date).toLocaleDateString()} at {item.time}</Text>
+            </View>
+            <View style={{marginBottom: 8}}>
+              <Text style={{color: '#6B7280'}}>{item.address}</Text>
+            </View>
+            <View style={{borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 8, alignItems: 'flex-end'}}>
+              <Text style={{fontSize: 16, fontWeight: 'bold', color: '#1F2937'}}>₹{item.totalAmount}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
         contentContainerStyle={styles.listContentContainer}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={renderEmptyList}
@@ -129,7 +166,5 @@ const ProJobsScreen = () => {
     </View>
   );
 };
-
-
 
 export default ProJobsScreen;

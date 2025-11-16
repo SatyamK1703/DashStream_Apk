@@ -220,7 +220,7 @@ const ProEarningsScreen = () => {
     />
   );
 
-  if (isLoading) {
+  if (isLoading && !earnings.totalEarnings) {
     return (
       <View style={styles.loadingScreen}>
         <ActivityIndicator size="large" color={colors.primary} />

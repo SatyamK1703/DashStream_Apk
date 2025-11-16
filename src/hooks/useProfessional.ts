@@ -244,6 +244,10 @@ export const useProfessionalJobsScreen = () => {
   const jobsApi = useProfessionalJobs();
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
+  useEffect(() => {
+    jobsApi.execute();
+  }, [jobsApi.execute]);
+
   const filteredJobs = jobsApi.data?.filter(job => 
     selectedStatus === 'all' || job.status === selectedStatus
   ) || [];
@@ -261,6 +265,10 @@ export const useProfessionalJobsScreen = () => {
 
 export const useProfessionalEarningsScreen = () => {
   const dashboardApi = useProfessionalDashboard();
+
+  useEffect(() => {
+    dashboardApi.execute();
+  }, [dashboardApi.execute]);
   
   return {
     earnings: dashboardApi.data?.earnings || { total: 0, currency: 'INR' },
