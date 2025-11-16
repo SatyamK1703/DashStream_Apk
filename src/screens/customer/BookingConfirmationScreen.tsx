@@ -9,91 +9,32 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useBookingDetails } from '../../hooks';
 import api from '../../services/httpClient';
 
-type BookingConfirmationScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamList>;
-type BookingConfirmationScreenRouteProp = RouteProp<CustomerStackParamList, 'BookingConfirmation'>;
-
 const BookingConfirmationScreen = () => {
-  const navigation = useNavigation<BookingConfirmationScreenNavigationProp>();
-  const route = useRoute<BookingConfirmationScreenRouteProp>();
-
+  const navigation = useNavigation();
+  const route = useRoute();
   const { bookingId } = route.params || {};
-  const { data: bookingResponse, loading, error, execute } = useBookingDetails(bookingId || null);
-  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+
+  const { data, loading, error, execute } = useBookingDetails(bookingId || null);
+  const booking = data?.booking;
+
+  const [paymentStatus, setPaymentStatus] = useState(null);
   const [checkingPayment, setCheckingPayment] = useState(false);
-
-  const booking = bookingResponse?.booking;
-
-  useEffect(() => {
-    if (bookingId && !bookingResponse) {
-      execute();
-    }
-  }, [bookingId, bookingResponse]);
-
-  // Debug logging
-  useEffect(() => {
-    if (__DEV__) {
-      console.log('BookingConfirmationScreen - Data received:', {
-        hasBookingResponse: !!bookingResponse,
-        responseFormat: bookingResponse ? Object.keys(bookingResponse).join(',') : 'none',
-        hasBooking: !!booking,
-        bookingFormat: booking ? Object.keys(booking).join(',') : 'none',
-        hasService: booking?.service ? 'yes' : 'no',
-        hasServices: booking?.services ? 'yes' : 'no',
-        servicesType: booking?.services
-          ? Array.isArray(booking.services)
-            ? 'array'
-            : typeof booking.services
-          : 'none',
-        servicesLength:
-          booking?.services && Array.isArray(booking.services) ? booking.services.length : 0,
-        serviceKeys: booking?.service ? Object.keys(booking.service).join(',') : 'none',
-        firstServiceKeys:
-          booking?.services && Array.isArray(booking.services) && booking.services.length > 0
-            ? Object.keys(booking.services[0]).join(',')
-            : 'none',
-        bookingId,
-        loading,
-        error: error ? error.toString() : null,
-      });
-    }
-  }, [bookingResponse, booking, bookingId, loading, error]);
 
   const paymentId = booking?.paymentId;
   const paymentMethod = booking?.paymentMethod;
 
-  // Debugging refs to track dependency changes
-  const renderCount = React.useRef(0);
-  renderCount.current += 1;
-  console.log(`Render count: ${renderCount.current}`);
-
-  const prevPaymentId = React.useRef(paymentId);
-  const prevPaymentMethod = React.useRef(paymentMethod);
-
-  // Poll payment status if booking has a payment that's not yet captured
+  /* -------------------- Fetch booking if needed -------------------- */
   useEffect(() => {
-    if (__DEV__) {
-      console.log(`Polling effect is running. Render: ${renderCount.current}`);
-      if (prevPaymentId.current !== paymentId) {
-        console.log(
-          `--- Dependency changed: paymentId from '${prevPaymentId.current}' to '${paymentId}'`
-        );
-        prevPaymentId.current = paymentId;
-      }
-      if (prevPaymentMethod.current !== paymentMethod) {
-        console.log(
-          `--- Dependency changed: paymentMethod from '${prevPaymentMethod.current}' to '${paymentMethod}'`
-        );
-        prevPaymentMethod.current = paymentMethod;
-      }
-    }
+    if (bookingId && !data) execute();
+  }, [bookingId, data]);
 
+  /* -------------------- Polling for payment status -------------------- */
+  useEffect(() => {
     if (!booking) return;
 
     if (!paymentId) {
@@ -101,328 +42,134 @@ const BookingConfirmationScreen = () => {
       return;
     }
 
-    let isMounted = true;
-    let timeoutId: NodeJS.Timeout;
+    let mounted = true;
+    let timer;
 
-    const checkPaymentStatus = async () => {
-      if (!isMounted) return;
+    const check = async () => {
+      if (!mounted) return;
       try {
         setCheckingPayment(true);
-        const statusRes = await api.get(`/payments/${paymentId}`);
-        const status = statusRes?.data?.payment?.status;
-        if (isMounted) {
-          setPaymentStatus(status || 'unknown');
-          if (status === 'created' || status === 'pending' || status === 'authorized') {
-            timeoutId = setTimeout(checkPaymentStatus, 3000);
-          }
+        const res = await api.get(`/payments/${paymentId}`);
+        const status = res?.data?.payment?.status || 'unknown';
+
+        if (!mounted) return;
+
+        setPaymentStatus(status);
+        if (['created', 'pending', 'authorized'].includes(status)) {
+          timer = setTimeout(check, 3000);
         }
-      } catch (error) {
-        console.error('Error checking payment status:', error);
-        if (isMounted) setPaymentStatus('unknown');
+      } catch {
+        if (mounted) setPaymentStatus('unknown');
       } finally {
-        if (isMounted) setCheckingPayment(false);
+        if (mounted) setCheckingPayment(false);
       }
     };
 
-    checkPaymentStatus();
-
+    check();
     return () => {
-      isMounted = false;
-      clearTimeout(timeoutId);
+      mounted = false;
+      clearTimeout(timer);
     };
   }, [paymentId]);
 
-  const formatDate = (date: Date | string | undefined) => {
-    if (!date) return 'Date not available';
+  /* -------------------- Loading State -------------------- */
+  if (loading) {
+    return (
+      <Centered>
+        <ActivityIndicator size="large" color="#2563eb" />
+        <Text style={{ marginTop: 12 }}>Loading booking details...</Text>
+      </Centered>
+    );
+  }
 
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
+  /* -------------------- Error State -------------------- */
+  if (error || !booking) {
+    return (
+      <Centered>
+        <Ionicons name="alert-circle-outline" size={60} color="#ef4444" />
+        <Text style={styles.errorTitle}>
+          {error ? 'Failed to load booking' : 'Booking not found'}
+        </Text>
+        <Text style={styles.errorText}>
+          {error ? 'Check your connection and retry.' : 'Invalid booking ID.'}
+        </Text>
 
-    if (dateObj instanceof Date && !isNaN(dateObj.getTime())) {
-      return dateObj.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    }
+        {bookingId && <ButtonPrimary title="Retry" onPress={execute} style={{ marginTop: 20 }} />}
 
-    return 'Invalid date';
-  };
+        <ButtonSecondary title="Go Back" onPress={() => navigation.goBack()} />
+      </Centered>
+    );
+  }
 
+  /* -------------------- Derived Data -------------------- */
+  const services = booking.services || (booking.service ? [booking.service] : []);
+  const address = booking.location?.address;
+
+  const subtotal = services.reduce((sum, svc) => {
+    const price = svc?.basePrice || svc?.price || svc?.serviceId?.price || 0;
+    const qty = svc?.quantity || 1;
+    return sum + price * qty;
+  }, 0);
+
+  /* -------------------- Navigation Handlers -------------------- */
   const handleTrackOrder = () => {
-    if (__DEV__) {
-      console.log('Track Order - Data available:', {
-        hasBooking: !!booking,
-        bookingFormat: booking ? Object.keys(booking).join(',') : 'none',
-        routeBookingId: bookingId,
-        bookingIdFromObject: booking?.bookingId || booking?._id,
-      });
-    }
-
-    if (booking) {
-      // Use the booking ID from the loaded booking object, which could be either bookingId or _id
-      const trackingId = booking.bookingId || booking._id;
-      if (trackingId) {
-        console.log('Navigating to TrackBooking with ID from booking object:', trackingId);
-        navigation.navigate('TrackBooking', { bookingId: trackingId });
-      } else {
-        // Handle case where no valid booking ID is found
-        console.error('No valid booking ID found for tracking in booking object');
-
-        // Try to use the route parameter as fallback
-        if (bookingId) {
-          console.log('Falling back to route parameter bookingId:', bookingId);
-          navigation.navigate('TrackBooking', { bookingId });
-        } else {
-          console.error('No bookingId available from any source');
-          // Alert.alert('Error', 'Unable to track booking: No valid booking ID found');
-        }
-      }
-    } else if (bookingId) {
-      // Fallback to the route parameter if booking object is not available
-      console.log('No booking object available, using route parameter bookingId:', bookingId);
-      navigation.navigate('TrackBooking', { bookingId });
-    } else {
-      console.error('Cannot track booking: No booking ID available');
-      // Alert.alert('Error', 'Unable to track booking: No booking information available');
-    }
+    const id = booking.bookingId || booking._id || bookingId;
+    if (id) navigation.navigate('TrackBooking', { bookingId: id });
   };
 
-  const handleViewAllBookings = () => {
+  const handleViewAll = () => {
     navigation.navigate('CustomerTabs', { screen: 'Bookings' });
   };
 
-  // Show loading state
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-          <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={[styles.value, { marginTop: 16 }]}>Loading booking details...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // Show error state
-  if (error || !booking) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View
-          style={[
-            styles.container,
-            { justifyContent: 'center', alignItems: 'center', padding: 24 },
-          ]}>
-          <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
-          <Text style={[styles.successTitle, { color: '#ef4444', marginTop: 16 }]}>
-            {error ? 'Failed to load booking' : 'Booking not found'}
-          </Text>
-          <Text style={[styles.successText, { marginTop: 8 }]}>
-            {error
-              ? 'Please check your connection and try again.'
-              : 'The booking ID may be invalid.'}
-          </Text>
-          <Text style={[styles.successText, { fontSize: 14, marginTop: 8, marginBottom: 16 }]}>
-            Booking ID: {bookingId || 'Not available'}
-          </Text>
-
-          {/* Add retry button */}
-          {bookingId && (
-            <TouchableOpacity
-              style={[styles.primaryBtn, { marginBottom: 12 }]}
-              onPress={() => execute()}>
-              <Text style={styles.primaryBtnText}>Retry</Text>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity style={[styles.secondaryBtn]} onPress={() => navigation.goBack()}>
-            <Text style={styles.secondaryBtnText}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // Handle different service data structures
-  const services = booking.services || (booking.service ? [booking.service] : []);
-  const address = booking.location && booking.location.address;
-
-  // Calculate subtotal from services array
-  const subtotal = services.reduce((acc, service) => {
-    const price = service?.basePrice || service?.price || service?.serviceId?.price || 0;
-    const quantity = service?.quantity || 1;
-    return acc + price * quantity;
-  }, 0);
-
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <View style={styles.successContainer}>
-            <View style={styles.successOuterCircle}>
-              <View style={styles.successInnerCircle}>
-                <Ionicons name="checkmark" size={40} color="#fff" />
-              </View>
-            </View>
-            <Text style={styles.successTitle}>Booking Confirmed!</Text>
-            <Text style={styles.successText}>
-              Your booking has been confirmed. A professional will be assigned shortly.
-            </Text>
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <SuccessHeader paymentStatus={paymentStatus} checking={checkingPayment} />
 
-            {/* Payment Status Indicator */}
-            {paymentStatus && (
-              <View
-                style={[
-                  styles.paymentStatusBadge,
-                  paymentStatus === 'captured' && styles.paymentStatusSuccess,
-                  paymentStatus === 'failed' && styles.paymentStatusFailed,
-                  (paymentStatus === 'created' ||
-                    paymentStatus === 'pending' ||
-                    paymentStatus === 'authorized') &&
-                    styles.paymentStatusPending,
-                  paymentStatus === 'cod_pending' && styles.paymentStatusCOD,
-                ]}>
-                {checkingPayment && (
-                  <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
-                )}
-                <Ionicons
-                  name={
-                    paymentStatus === 'captured'
-                      ? 'checkmark-circle'
-                      : paymentStatus === 'failed'
-                        ? 'close-circle'
-                        : paymentStatus === 'cod_pending'
-                          ? 'cash'
-                          : 'time'
-                  }
-                  size={16}
-                  color="#fff"
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={styles.paymentStatusText}>
-                  {paymentStatus === 'captured'
-                    ? 'Payment Successful'
-                    : paymentStatus === 'failed'
-                      ? 'Payment Failed'
-                      : paymentStatus === 'cod_pending'
-                        ? 'Cash on Delivery'
-                        : paymentStatus === 'authorized'
-                          ? 'Payment Authorized'
-                          : 'Payment Processing...'}
-                </Text>
-              </View>
-            )}
-          </View>
+        <Card title="Booking Details">
+          <Detail
+            icon="receipt-outline"
+            label="Booking ID"
+            value={booking.bookingId || booking._id}
+          />
+          <Detail icon="calendar-outline" label="Date" value={formatDate(booking.scheduledDate)} />
+          <Detail icon="time-outline" label="Time Slot" value={booking.scheduledTime} />
+          <Detail
+            icon="location-outline"
+            label="Service Address"
+            value={
+              address
+                ? `${address.address}${address.city ? ', ' + address.city : ''} ${
+                    address.pincode || ''
+                  }`
+                : 'Address not available'
+            }
+          />
+        </Card>
 
-          <View style={styles.section}>
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Booking Details</Text>
+        <Card title="Services Booked">
+          {services.map((s, i) => (
+            <ServiceItem key={s._id || i} service={s} />
+          ))}
+        </Card>
 
-              <View style={styles.detailRow}>
-                <View style={styles.iconContainer}>
-                  <Ionicons name="receipt-outline" size={20} color="#2563eb" />
-                </View>
-                <View>
-                  <Text style={styles.label}>Booking ID</Text>
-                  <Text style={styles.value}>{booking.bookingId || booking._id}</Text>
-                </View>
-              </View>
+        <Card title="Payment Summary">
+          <Row label="Subtotal" value={`₹${subtotal.toFixed(2)}`} />
+          <Row label="Taxes & Fees" value={`₹${(booking.totalAmount - subtotal).toFixed(2)}`} />
+          <Row
+            label="Total Amount"
+            value={`₹${booking.totalAmount.toFixed(2)}`}
+            bold
+            valueColor="#2563eb"
+          />
+        </Card>
 
-              <View style={styles.detailRow}>
-                <View style={styles.iconContainer}>
-                  <Ionicons name="calendar-outline" size={20} color="#2563eb" />
-                </View>
-                <View>
-                  <Text style={styles.label}>Date</Text>
-                  <Text style={styles.value}>{formatDate(booking.scheduledDate)}</Text>
-                </View>
-              </View>
+        <NextSteps />
+      </ScrollView>
 
-              <View style={styles.detailRow}>
-                <View style={styles.iconContainer}>
-                  <Ionicons name="time-outline" size={20} color="#2563eb" />
-                </View>
-                <View>
-                  <Text style={styles.label}>Time Slot</Text>
-                  <Text style={styles.value}>{booking.scheduledTime || 'Time not available'}</Text>
-                </View>
-              </View>
-
-              <View style={styles.detailRow}>
-                <View style={styles.iconContainer}>
-                  <Ionicons name="location-outline" size={20} color="#2563eb" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Service Address</Text>
-                  <Text style={styles.value}>
-                    {address
-                      ? address.address
-                        ? `${address.address}${address.city ? `, ${address.city}` : ''}${address.pincode ? ` ${address.pincode}` : ''}`
-                        : 'Address details not available'
-                      : 'Address not available'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Services Booked</Text>
-              {services.map((service, index) => (
-                <ServiceBooked key={service._id || index} service={service} />
-              ))}
-            </View>
-
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Payment Summary</Text>
-              <View style={styles.summaryRow}>
-                <Text style={styles.label}>Subtotal</Text>
-                <Text style={styles.value}>₹{subtotal.toFixed(2)}</Text>
-              </View>
-              {/* Example of other fees */}
-              <View style={styles.summaryRow}>
-                <Text style={styles.label}>Taxes & Fees</Text>
-                <Text style={styles.value}>₹{(booking.totalAmount - subtotal).toFixed(2)}</Text>
-              </View>
-              <View style={styles.totalRow}>
-                <Text style={styles.totalText}>Total Amount</Text>
-                <Text style={[styles.totalText, { color: '#2563eb' }]}>
-                  ₹{booking.totalAmount.toFixed(2)}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>What's Next?</Text>
-
-              {['Professional Assignment', 'On the Way', 'Service Completion'].map((title, idx) => (
-                <View style={styles.nextStepRow} key={idx}>
-                  <View style={styles.stepBadge}>
-                    <Text style={styles.stepBadgeText}>{idx + 1}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.stepTitle}>{title}</Text>
-                    <Text style={styles.stepSubtitle}>
-                      {idx === 0
-                        ? 'A skilled professional will be assigned to your booking shortly.'
-                        : idx === 1
-                          ? 'You&apos;ll be notified when the professional is on the way to your location.'
-                          : 'After service completion, you can rate and review your experience.'}
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-        </ScrollView>
-
-        <View style={styles.actionContainer}>
-          <TouchableOpacity style={styles.primaryBtn} onPress={handleTrackOrder}>
-            <Text style={styles.primaryBtnText}>Track Booking</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryBtn} onPress={handleViewAllBookings}>
-            <Text style={styles.secondaryBtnText}>View All Bookings</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.actions}>
+        <ButtonPrimary title="Track Booking" onPress={handleTrackOrder} />
+        <ButtonSecondary title="View All Bookings" onPress={handleViewAll} />
       </View>
     </SafeAreaView>
   );
@@ -430,239 +177,311 @@ const BookingConfirmationScreen = () => {
 
 export default BookingConfirmationScreen;
 
-const ServiceBooked = ({ service }) => {
-  const serviceImages = service && service.images && service.images.length > 0;
+/* ------------------------------------------------------------------ */
+/* -------------------- SMALL COMPONENTS ----------------------------- */
+/* ------------------------------------------------------------------ */
+
+const Centered = ({ children }) => <SafeAreaView style={styles.centered}>{children}</SafeAreaView>;
+
+const Card = ({ title, children }) => (
+  <View style={styles.card}>
+    <Text style={styles.sectionTitle}>{title}</Text>
+    {children}
+  </View>
+);
+
+const Detail = ({ icon, label, value }) => (
+  <View style={styles.row}>
+    <Ionicons name={icon} size={20} color="#2563eb" style={{ marginRight: 10 }} />
+    <View style={{ flex: 1 }}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.value}>{value || 'Not available'}</Text>
+    </View>
+  </View>
+);
+
+const Row = ({ label, value, bold, valueColor }) => (
+  <View style={styles.summaryRow}>
+    <Text style={[styles.label, bold && styles.bold]}>{label}</Text>
+    <Text style={[styles.value, bold && styles.bold, valueColor && { color: valueColor }]}>
+      {value}
+    </Text>
+  </View>
+);
+
+const ServiceItem = ({ service }) => {
   const price = service?.basePrice || service?.price || service?.serviceId?.price || 0;
-  const quantity = service?.quantity || 1;
+  const qty = service?.quantity || 1;
+  const img = service?.images?.[0]?.url;
 
   return (
     <View style={styles.serviceRow}>
-      {serviceImages ? (
-        <Image
-          source={{ uri: service.images[0].url }}
-          style={styles.serviceImage}
-          resizeMode="cover"
-        />
+      {img ? (
+        <Image source={{ uri: img }} style={styles.serviceImage} />
       ) : (
-        <View style={styles.serviceImagePlaceholder}>
-          <Ionicons name="car-outline" size={32} color="#666" />
+        <View style={styles.imagePlaceholder}>
+          <Ionicons name="construct-outline" size={28} color="#777" />
         </View>
       )}
-      <View style={styles.serviceInfo}>
-        <Text style={styles.serviceTitle}>
-          {service?.name || service?.title || service?.serviceId?.title || 'Service'}
-        </Text>
-        <Text style={styles.serviceSubtitle}>
-          {quantity} x ₹{price.toFixed(2)}
+      <View style={{ flex: 1 }}>
+        <Text style={styles.serviceName}>{service.name}</Text>
+        <Text style={styles.servicePrice}>
+          ₹{price} × {qty}
         </Text>
       </View>
-      <Text style={styles.value}>₹{(price * quantity).toFixed(2)}</Text>
     </View>
   );
 };
 
+const SuccessHeader = ({ paymentStatus, checking }) => (
+  <View style={styles.successContainer}>
+    <View style={styles.successOuter}>
+      <View style={styles.successInner}>
+        <Ionicons name="checkmark" size={40} color="#fff" />
+      </View>
+    </View>
+
+    <Text style={styles.successTitle}>Booking Confirmed!</Text>
+    <Text style={styles.successSub}>
+      Your booking has been confirmed. A professional will be assigned shortly.
+    </Text>
+
+    {paymentStatus && (
+      <View
+        style={[
+          styles.paymentBadge,
+          paymentStatus === 'captured' && styles.paySuccess,
+          paymentStatus === 'failed' && styles.payFailed,
+          ['created', 'pending', 'authorized'].includes(paymentStatus) && styles.payPending,
+          paymentStatus === 'cod_pending' && styles.payCOD,
+        ]}>
+        {checking && <ActivityIndicator size="small" color="#fff" style={{ marginRight: 6 }} />}
+
+        <Ionicons
+          name={
+            paymentStatus === 'captured'
+              ? 'checkmark-circle'
+              : paymentStatus === 'failed'
+                ? 'close-circle'
+                : paymentStatus === 'cod_pending'
+                  ? 'cash'
+                  : 'time'
+          }
+          size={16}
+          color="#fff"
+          style={{ marginRight: 4 }}
+        />
+
+        <Text style={styles.paymentText}>
+          {paymentStatus === 'captured'
+            ? 'Payment Successful'
+            : paymentStatus === 'failed'
+              ? 'Payment Failed'
+              : paymentStatus === 'cod_pending'
+                ? 'Cash on Delivery'
+                : paymentStatus === 'authorized'
+                  ? 'Payment Authorized'
+                  : 'Payment Processing...'}
+        </Text>
+      </View>
+    )}
+  </View>
+);
+
+const NextSteps = () => {
+  const data = [
+    {
+      title: 'Professional Assignment',
+      text: 'A skilled professional will be assigned shortly.',
+    },
+    {
+      title: 'On the Way',
+      text: 'You’ll be notified when they are en route.',
+    },
+    {
+      title: 'Service Completion',
+      text: 'After completion, you can rate your experience.',
+    },
+  ];
+
+  return (
+    <Card title="What's Next?">
+      {data.map((item, i) => (
+        <View key={i} style={styles.nextRow}>
+          <View style={styles.stepCircle}>
+            <Text style={styles.stepNum}>{i + 1}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.stepTitle}>{item.title}</Text>
+            <Text style={styles.stepText}>{item.text}</Text>
+          </View>
+        </View>
+      ))}
+    </Card>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/* ---------------------------- STYLES ------------------------------- */
+/* ------------------------------------------------------------------ */
+
 const styles = StyleSheet.create({
-  safeArea: {
+  safeArea: { flex: 1, backgroundColor: '#f8fafc' },
+  centered: {
     flex: 1,
-    backgroundColor: 'white',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  scrollContainer: {
-    flexGrow: 1,
-  },
-  successContainer: {
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 32,
-    backgroundColor: 'rgba(37,99,235,0.1)',
-  },
-  successOuterCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: 'rgba(37,99,235,0.2)',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
+    padding: 20,
   },
-  successInnerCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#2563eb',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 8,
-  },
-  successText: {
-    color: '#4b5563',
-    textAlign: 'center',
-    paddingHorizontal: 24,
-  },
-  section: {
-    padding: 24,
-  },
+  scroll: { padding: 16, paddingBottom: 120 },
+
+  /* Cards */
   card: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 12,
+    backgroundColor: '#fff',
+    marginBottom: 18,
     padding: 16,
-    marginBottom: 24,
+    borderRadius: 12,
+    elevation: 3,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  iconContainer: {
-    width: 40,
+  sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 10 },
+
+  /* Success Header */
+  successContainer: { alignItems: 'center', marginBottom: 24 },
+  successOuter: {
+    backgroundColor: '#d1e9ff',
+    width: 90,
+    height: 90,
+    justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 60,
   },
-  label: {
-    color: '#6b7280',
-    fontSize: 12,
-  },
-  value: {
-    fontWeight: '600',
-  },
-  serviceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  serviceImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 8,
-  },
-  serviceImagePlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 8,
-    backgroundColor: '#f3f4f6',
+  successInner: {
+    backgroundColor: '#2563eb',
+    width: 60,
+    height: 60,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  serviceInfo: {
-    flex: 1,
-    marginLeft: 12,
+  successTitle: { fontSize: 22, fontWeight: '700', marginTop: 16 },
+  successSub: { color: '#555', textAlign: 'center', marginTop: 6, paddingHorizontal: 20 },
+
+  /* Payment Badge */
+  paymentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: 'center',
   },
-  serviceTitle: {
-    fontWeight: '600',
+  paySuccess: { backgroundColor: '#22c55e' },
+  payFailed: { backgroundColor: '#ef4444' },
+  payPending: { backgroundColor: '#f59e0b' },
+  payCOD: { backgroundColor: '#3b82f6' },
+  paymentText: { color: '#fff', fontSize: 14 },
+
+  /* Details */
+  row: { flexDirection: 'row', marginBottom: 12 },
+  label: { color: '#555', fontSize: 14 },
+  value: { fontSize: 15, marginTop: 2 },
+  bold: { fontWeight: '600' },
+
+  /* Services */
+  serviceRow: { flexDirection: 'row', marginBottom: 14 },
+  serviceImage: { width: 60, height: 60, borderRadius: 8, marginRight: 12 },
+  imagePlaceholder: {
+    width: 60,
+    height: 60,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  serviceSubtitle: {
-    color: '#6b7280',
-  },
+  serviceName: { fontWeight: '600', marginBottom: 4 },
+  servicePrice: { color: '#555' },
+
+  /* Summary */
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  discountLabel: {
-    color: '#16a34a',
-  },
-  discountValue: {
-    fontWeight: '600',
-    color: '#16a34a',
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderColor: '#e5e7eb',
-    paddingTop: 8,
-    marginTop: 8,
-  },
-  totalText: {
-    fontWeight: 'bold',
-  },
-  nextStepRow: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  stepBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(37,99,235,0.2)',
-    alignItems: 'center',
+
+  /* Next Steps */
+  nextRow: { flexDirection: 'row', marginBottom: 18 },
+  stepCircle: {
+    width: 30,
+    height: 30,
+    backgroundColor: '#2563eb',
+    borderRadius: 20,
     justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
   },
-  stepBadgeText: {
-    fontWeight: 'bold',
-    color: '#2563eb',
-  },
-  stepTitle: {
-    fontWeight: '600',
-  },
-  stepSubtitle: {
-    color: '#6b7280',
-  },
-  actionContainer: {
+  stepNum: { color: '#fff', fontWeight: '600' },
+  stepTitle: { fontWeight: '600', fontSize: 15 },
+  stepText: { color: '#555', fontSize: 13, marginTop: 3 },
+
+  /* Actions */
+  actions: {
     padding: 16,
+    backgroundColor: '#fff',
     borderTopWidth: 1,
     borderColor: '#e5e7eb',
   },
+
+  /* Errors */
+  errorTitle: { fontSize: 20, fontWeight: '700', marginTop: 16 },
+  errorText: { color: '#777', textAlign: 'center', marginTop: 6 },
+});
+
+/* -------------------- Buttons -------------------- */
+
+const ButtonPrimary = ({ title, onPress, style }) => (
+  <TouchableOpacity onPress={onPress} style={[styles.primaryBtn, style]}>
+    <Text style={styles.primaryText}>{title}</Text>
+  </TouchableOpacity>
+);
+
+const ButtonSecondary = ({ title, onPress, style }) => (
+  <TouchableOpacity onPress={onPress} style={[styles.secondaryBtn, style]}>
+    <Text style={styles.secondaryText}>{title}</Text>
+  </TouchableOpacity>
+);
+
+Object.assign(styles, {
   primaryBtn: {
     backgroundColor: '#2563eb',
-    borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  primaryBtnText: {
-    color: 'white',
-    fontWeight: '600',
-  },
+  primaryText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+
   secondaryBtn: {
+    paddingVertical: 14,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderColor: '#2563eb',
     alignItems: 'center',
   },
-  secondaryBtnText: {
-    color: '#1f2937',
-    fontWeight: '600',
-  },
-  paymentStatusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginTop: 16,
-  },
-  paymentStatusSuccess: {
-    backgroundColor: '#16a34a',
-  },
-  paymentStatusFailed: {
-    backgroundColor: '#ef4444',
-  },
-  paymentStatusPending: {
-    backgroundColor: '#f59e0b',
-  },
-  paymentStatusCOD: {
-    backgroundColor: '#8b5cf6',
-  },
-  paymentStatusText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
+  secondaryText: { color: '#2563eb', fontWeight: '600', fontSize: 16 },
 });
+
+/* -------------------- Helpers -------------------- */
+
+const formatDate = (date) => {
+  const d = new Date(date);
+  return isNaN(d.getTime())
+    ? 'Invalid date'
+    : d.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      });
+};

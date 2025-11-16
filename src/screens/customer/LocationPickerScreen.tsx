@@ -1,422 +1,364 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   View,
-  StyleSheet,
   Text,
+  ScrollView,
+  Image,
   TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  TextInput,
+  StyleSheet,
   Platform,
-  KeyboardAvoidingView,
-  FlatList,
-  Linking,
-} from "react-native";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
-import * as Location from "expo-location";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
-const LocationPickerScreen = () => {
-  const [region, setRegion] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+import { useCartStore } from '../../store/cartStore';
+import { useAuthStore } from '../../store/authStore';
+import { useServiceArea } from '../../hooks/useServiceArea';
 
-  const navigation = useNavigation();
-  const route = useRoute();
+const ACCENT = '#2563eb';
+
+const ServiceDetailsScreen = () => {
+  const [quantity, setQuantity] = useState(1);
+  const [serviceData, setServiceData] = useState<any | null>(null);
+
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const { serviceId, service } = route.params || {};
+  const id = serviceId || service?._id || service?.id;
 
   useEffect(() => {
-    const getInitialLocation = async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          Alert.alert(
-            "Location Permission Required",
-            "Please enable location services to use this feature.",
-            [
-              {
-                text: "Cancel",
-                style: "cancel",
-                onPress: () => navigation.goBack(),
-              },
-              {
-                text: "Open Settings",
-                onPress: () => Linking.openSettings(),
-              },
-            ]
-          );
-          return;
-        }
+    if (service) return setServiceData(service);
 
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        setRegion({
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-          latitudeDelta: 0.02,
-          longitudeDelta: 0.02,
-        });
-        setLoading(false);
-      } catch (error: any) {
-        if (error.code === 'ERR_LOCATION_UNAVAILABLE') {
-          Alert.alert(
-            'Location Unavailable',
-            'Please enable location services to use this feature.',
-            [
-              { text: 'Cancel', style: 'cancel', onPress: () => navigation.goBack() },
-              { text: 'Open Settings', onPress: () => Linking.openSettings() },
-            ]
-          );
-        } else {
-          console.log("Error:", error);
-          Alert.alert(
-            "Location Error",
-            "Could not fetch your current location. Please try again.",
-            [{ text: "OK", onPress: () => navigation.goBack() }]
-          );
-        }
+    const fetchServiceById = async () => {
+      try {
+        const { data } = await (await import('../../services')).serviceService.getServiceById(id);
+        setServiceData(data);
+      } catch {
+        setServiceData(null);
       }
     };
 
-    getInitialLocation();
-  }, []);
+    fetchServiceById();
+  }, [id, service]);
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
+  const { addItem } = useCartStore();
 
-    setIsSearching(true);
-    try {
-      const geo = await Location.geocodeAsync(searchQuery);
-      setSearchResults(geo);
-    } catch (error) {
-      console.log(error);
-      Alert.alert("Search Error", "Could not search for locations. Please try again.");
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleSelectSearchResult = (result: any) => {
-    setRegion({
-      latitude: result.latitude,
-      longitude: result.longitude,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
-    });
-    setSearchQuery(result.name || result.formattedAddress || searchQuery);
-    setSearchResults([]);
-  };
-
-  const handleConfirm = async () => {
-    if (!region) {
-      Alert.alert("Error", "Please select a location first.");
-      return;
-    }
-
-    try {
-      const [address] = await Location.reverseGeocodeAsync({
-        latitude: region.latitude,
-        longitude: region.longitude,
-      });
-
-      const locationName = address.street || address.city || address.region || "Selected Location";
-
-      // ✅ Pass location back to previous screen
-      (navigation as any).navigate('CustomerTabs', { screen: 'Home', params: { selectedLocation: locationName } });
-    } catch (error) {
-      console.log(error);
-      Alert.alert("Error", "Could not get address details. Please try again.");
-    }
-  };
-
-  const handleUseCurrentLocation = async () => {
-    setLoading(true);
-    try {
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      setRegion({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      });
-    } catch (error: any) {
-      if (error.code === 'ERR_LOCATION_UNAVAILABLE') {
-        Alert.alert(
-          'Location Unavailable',
-          'Please enable location services to use this feature.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() },
-          ]
-        );
-      } else {
-        console.log(error);
-        Alert.alert("Error", "Could not get current location.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const renderSearchResult = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.searchResultItem}
-      onPress={() => handleSelectSearchResult(item)}
-    >
-      <Ionicons name="location-outline" size={20} color="#2563eb" />
-      <View style={styles.searchResultText}>
-        <Text style={styles.searchResultTitle}>
-          {item.name || item.street || "Unknown location"}
-        </Text>
-        <Text style={styles.searchResultSubtitle}>
-          {item.city && item.region ? `${item.city}, ${item.region}` : item.formattedAddress}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-
-  if (loading) {
+  if (!serviceData) {
     return (
       <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>Getting your location...</Text>
+        <Text>Service not found</Text>
       </SafeAreaView>
     );
   }
 
+  const svc = serviceData;
+
+  const addToCart = (redirect: 'Cart' | 'Checkout') => {
+    addItem({
+      id: svc.id || svc._id,
+      title: svc.title,
+      price: svc.price,
+      quantity,
+      image: typeof svc.image === 'string' ? { uri: svc.image } : svc.image,
+      meta: { vehicleType: svc.vehicleType },
+    });
+    navigation.navigate(redirect);
+  };
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.flex}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="chevron-back" size={24} color="#111827" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Select Location</Text>
-          <View style={styles.headerRight} />
-        </View>
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.headerImageWrapper}>
+        <Image
+          source={typeof svc.image === 'string' ? { uri: svc.image } : svc.image}
+          style={styles.headerImage}
+        />
 
-        {/* Search Box */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#6b7280" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search for an address or place"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={handleSearch}
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Ionicons name="close-circle" size={20} color="#9ca3af" />
-            </TouchableOpacity>
-          )}
-        </View>
+        {/* Gradient Overlay */}
+        <View style={styles.gradient} />
 
-        {/* Search Results */}
-        {searchResults.length > 0 && (
-          <View style={styles.searchResultsContainer}>
-            <FlatList
-              data={searchResults}
-              renderItem={renderSearchResult}
-              keyExtractor={(item, index) => index.toString()}
-              style={styles.searchResultsList}
-            />
+        {/* Back and Cart Buttons */}
+        <TouchableOpacity
+          style={[styles.floatingBtn, styles.leftBtn]}
+          onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={22} color={ACCENT} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.floatingBtn, styles.rightBtn]}
+          onPress={() => navigation.navigate('Cart')}>
+          <Ionicons name="cart-outline" size={22} color={ACCENT} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll}>
+        <View style={styles.card}>
+          <View style={styles.rowBetween}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>{svc.title}</Text>
+              <Text style={styles.price}>₹{svc.price}</Text>
+            </View>
+
+            <View style={styles.ratingBadge}>
+              <Ionicons name="star" size={16} color="#f59e0b" />
+              <Text style={styles.ratingText}>{svc.rating}</Text>
+            </View>
           </View>
-        )}
 
-        {/* Map View */}
-        <View style={styles.mapContainer}>
-          <MapView
-            style={styles.map}
-            provider={PROVIDER_GOOGLE}
-            initialRegion={region}
-            region={region}
-            onRegionChangeComplete={(r) => setRegion(r)}
-            showsUserLocation={true}
-            showsMyLocationButton={false}
-            showsCompass={true}
-            showsScale={true}
-          >
-            {region && (
-              <Marker
-                coordinate={region}
-                draggable
-                onDragEnd={(e) => setRegion(e.nativeEvent.coordinate)}
-                pinColor="#2563eb"
-              />
-            )}
-          </MapView>
+          <View style={styles.row}>
+            <Ionicons name="time-outline" size={18} color="#667085" />
+            <Text style={styles.duration}>{svc.duration}</Text>
+          </View>
 
-          {/* Current Location Button */}
-          <TouchableOpacity
-            style={styles.currentLocationButton}
-            onPress={handleUseCurrentLocation}
-            testID="use-current-location-button"
-          >
-            <Ionicons name="locate" size={24} color="#2563eb" />
-          </TouchableOpacity>
+          <Text style={styles.description}>{svc.longDescription || svc.description}</Text>
+
+          <Text style={styles.sectionLabel}>What's Included</Text>
+
+          {svc.features?.map((feature: string, i: number) => (
+            <View key={i} style={styles.featureRow}>
+              <Ionicons name="checkmark-circle" size={18} color={ACCENT} />
+              <Text style={styles.featureText}>{feature}</Text>
+            </View>
+          ))}
+
+          <Text style={styles.sectionLabel}>Quantity</Text>
+
+          <View style={styles.qtyRow}>
+            <TouchableOpacity
+              style={styles.qtyBtn}
+              onPress={() => setQuantity(Math.max(1, quantity - 1))}>
+              <Ionicons name="remove" size={20} color={ACCENT} />
+            </TouchableOpacity>
+
+            <Text style={styles.qtyText}>{quantity}</Text>
+
+            <TouchableOpacity style={styles.qtyBtn} onPress={() => setQuantity(quantity + 1)}>
+              <Ionicons name="add" size={20} color={ACCENT} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.rowBetween}>
+            <Text style={styles.totalLabel}>Total</Text>
+            <Text style={styles.totalPrice}>₹{svc.price * quantity}</Text>
+          </View>
         </View>
+      </ScrollView>
 
-        {/* Confirm Button */}
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-            <Text style={styles.confirmText}>Confirm Location</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+      {/* Floating Bottom CTA */}
+      <View style={styles.bottomBar}>
+        <TouchableOpacity style={styles.cartBtn} onPress={() => addToCart('Cart')}>
+          <Text style={styles.cartBtnText}>Add to Cart</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.primaryBtn} onPress={() => addToCart('Checkout')}>
+          <Text style={styles.primaryBtnText}>Book Now</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
 
-export default LocationPickerScreen;
+export default ServiceDetailsScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  flex: { flex: 1 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loadingText: { marginTop: 16, color: "#6b7280" },
+  safe: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
 
-  // Header
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1f2937",
+
+  headerImageWrapper: {
+    position: 'relative',
+    width: '100%',
+    height: 260,
+    overflow: 'hidden',
   },
-  headerRight: {
+
+  headerImage: {
+    width: '100%',
+    height: '100%',
+  },
+
+  gradient: {
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    height: 80,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+
+  floatingBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
     width: 40,
-  },
-  backButton: {
-    padding: 4,
-  },
-
-  // Search
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    margin: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#f9fafb",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#1f2937",
-    paddingVertical: 4,
-  },
-
-  // Search Results
-  searchResultsContainer: {
-    position: "absolute",
-    top: 120,
-    left: 16,
-    right: 16,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    maxHeight: 200,
-    zIndex: 10,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  searchResultsList: {
-    borderRadius: 12,
-  },
-  searchResultItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
-  },
-  searchResultText: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  searchResultTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#1f2937",
-    marginBottom: 2,
-  },
-  searchResultSubtitle: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-
-  // Map
-  mapContainer: {
-    flex: 1,
-    overflow: "hidden",
-  },
-  map: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  currentLocationButton: {
-    position: "absolute",
-    bottom: 16,
-    right: 16,
-    backgroundColor: "#fff",
+    height: 40,
     borderRadius: 20,
-    padding: 8,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
     elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
 
-  // Footer
-  footer: {
-    padding: 16,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
+  leftBtn: { left: 16 },
+  rightBtn: { right: 16 },
+
+  scroll: { marginTop: -20 },
+
+  card: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginBottom: 120,
   },
-  confirmButton: {
-    backgroundColor: "#2563eb",
+
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+
+  price: {
+    fontSize: 18,
+    color: ACCENT,
+    marginTop: 4,
+  },
+
+  ratingBadge: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(245,158,11,0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+
+  ratingText: {
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+
+  duration: {
+    marginLeft: 6,
+    color: '#667085',
+  },
+
+  description: {
+    color: '#4b5563',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+
+  sectionLabel: {
+    fontSize: 17,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#1f2937',
+  },
+
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+
+  featureText: {
+    marginLeft: 8,
+    color: '#374151',
+    flex: 1,
+  },
+
+  qtyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+
+  qtyBtn: {
+    width: 40,
+    height: 40,
+    backgroundColor: '#eef2ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+
+  qtyText: {
+    fontSize: 18,
+    marginHorizontal: 16,
+    fontWeight: '700',
+  },
+
+  totalLabel: {
+    fontSize: 18,
+    color: '#1f2937',
+    fontWeight: '600',
+  },
+
+  totalPrice: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: ACCENT,
+  },
+
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    width: '100%',
+    flexDirection: 'row',
+    padding: 16,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+
+  cartBtn: {
+    flex: 1,
+    backgroundColor: 'rgba(37,99,235,0.12)',
     paddingVertical: 16,
     borderRadius: 12,
-    alignItems: "center",
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  confirmText: {
-    color: "#fff",
-    fontWeight: "bold",
+
+  cartBtnText: {
+    color: ACCENT,
     fontSize: 16,
+    fontWeight: '600',
+  },
+
+  primaryBtn: {
+    flex: 1,
+    backgroundColor: ACCENT,
+    paddingVertical: 16,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  primaryBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
