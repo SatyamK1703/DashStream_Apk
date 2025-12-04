@@ -5,6 +5,18 @@ import { Membership, UserMembership } from '../types/api';
 class MembershipService {
 
   /**
+   * Get available membership plans
+   */
+  async getMembershipPlans(): Promise<ApiResponse<any[]>> {
+    try {
+      return await httpClient.get(API_ENDPOINTS.MEMBERSHIPS.PLANS);
+    } catch (error) {
+      console.error('Get membership plans error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get current user's membership status
    */
   async getMyMembership(): Promise<ApiResponse<{

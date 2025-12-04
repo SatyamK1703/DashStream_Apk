@@ -33,6 +33,7 @@ const MembershipScreen = () => {
     plans,
     userMembership,
     loading,
+    fetchMembershipPlans,
     fetchUserMembership,
     purchaseMembership,
   } = useMembershipStore();
@@ -41,8 +42,9 @@ const MembershipScreen = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
+    fetchMembershipPlans();
     fetchUserMembership();
-  }, [fetchUserMembership]);
+  }, [fetchMembershipPlans, fetchUserMembership]);
 
   const handleSelectPlan = (plan: MembershipPlan) => {
     setSelectedPlan(plan);

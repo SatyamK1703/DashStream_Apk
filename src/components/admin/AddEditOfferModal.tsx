@@ -44,6 +44,8 @@ const AddEditOfferModal: React.FC<AddEditOfferModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const [showValidFromPicker, setShowValidFromPicker] = useState(false);
+  const [showValidUntilPicker, setShowValidUntilPicker] = useState(false);
   const [offerForm, setOfferForm] = useState({
   title: '',
   description: '',
@@ -329,20 +331,48 @@ useEffect(() => {
             {/* Validity */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Valid From</Text>
-              <DateTimePicker
-                value={offerForm.validFrom}
-                mode="date"
-                onChange={(_, date) => date && updateForm('validFrom', date)}
-              />
+              <TouchableOpacity
+                onPress={() => setShowValidFromPicker(true)}
+                style={styles.textInput}
+              >
+                <Text>{offerForm.validFrom.toLocaleDateString()}</Text>
+              </TouchableOpacity>
+              {showValidFromPicker && (
+                <DateTimePicker
+                  value={offerForm.validFrom}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowValidFromPicker(false);
+                    if (selectedDate) {
+                      updateForm('validFrom', selectedDate);
+                    }
+                  }}
+                />
+              )}
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Valid Until</Text>
-              <DateTimePicker
-                value={offerForm.validUntil}
-                mode="date"
-                onChange={(_, date) => date && updateForm('validUntil', date)}
-              />
+              <TouchableOpacity
+                onPress={() => setShowValidUntilPicker(true)}
+                style={styles.textInput}
+              >
+                <Text>{offerForm.validUntil.toLocaleDateString()}</Text>
+              </TouchableOpacity>
+              {showValidUntilPicker && (
+                <DateTimePicker
+                  value={offerForm.validUntil}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowValidUntilPicker(false);
+                    if (selectedDate) {
+                      updateForm('validUntil', selectedDate);
+                    }
+                  }}
+                />
+              )}
             </View>
 
             {/* Promo Toggle */}

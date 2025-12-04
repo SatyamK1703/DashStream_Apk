@@ -82,6 +82,16 @@ const ProJobDetailsScreen = () => {
   };
 
   const updateJobStatus = async (newStatus: string) => {
+    // Check if trying to complete job but payment is not paid and not COD
+    if (newStatus === 'completed' && job.paymentStatus !== 'paid' && job.paymentMethod !== 'cod') {
+      Alert.alert(
+        'Payment Required',
+        'This job cannot be marked as completed until the payment has been processed.',
+        [{ text: 'OK', style: 'cancel' }]
+      );
+      return;
+    }
+
     const statusMap: { [key: string]: () => Promise<any> } = {
       confirmed: () => acceptJob(jobId),
       'in-progress': () => startJob(jobId),
@@ -275,6 +285,25 @@ const ProJobDetailsScreen = () => {
               <Text style={styles.detailValue}>{job.scheduledTime}</Text>
             </View>
             <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Payment Status</Text>
+              <View style={styles.paymentStatusContainer}>
+                <Text style={[
+                  styles.paymentStatusText,
+                  job.paymentStatus === 'paid' ? styles.paymentStatusPaid :
+                  job.paymentStatus === 'failed' ? styles.paymentStatusFailed :
+                  job.paymentMethod === 'cod' ? styles.paymentStatusCOD :
+                  styles.paymentStatusPending
+                ]}>
+                  {job.paymentMethod === 'cod'
+                    ? 'Cash on Delivery'
+                    : job.paymentStatus
+                      ? job.paymentStatus.charAt(0).toUpperCase() + job.paymentStatus.slice(1)
+                      : 'Pending'
+                  }
+                </Text>
+              </View>
+            </View>
+            <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>{SCREEN_TEXTS.ProJobDetails.address}</Text>
               <Text style={styles.detailValue}>{job.address?.address}</Text>
             </View>
@@ -341,11 +370,17 @@ const ProJobDetailsScreen = () => {
         )}
         {job.status === 'in-progress' && (
           <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: colors.green600 }]}
+            style={[
+              styles.primaryButton,
+              { backgroundColor: (job.paymentStatus === 'paid' || job.paymentMethod === 'cod') ? colors.green600 : colors.gray400 }
+            ]}
             onPress={() => updateJobStatus('completed')}
-            disabled={actionLoading}>
+            disabled={actionLoading || (job.paymentStatus !== 'paid' && job.paymentMethod !== 'cod')}>
             <Text style={styles.primaryButtonText}>
-              {SCREEN_TEXTS.ProJobDetails.markAsCompleted}
+              {(job.paymentStatus === 'paid' || job.paymentMethod === 'cod')
+                ? SCREEN_TEXTS.ProJobDetails.markAsCompleted
+                : 'Waiting for Payment'
+              }
             </Text>
           </TouchableOpacity>
         )}
@@ -469,6 +504,30 @@ const styles = StyleSheet.create({
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   detailLabel: { fontSize: 14, color: colors.gray500 },
   detailValue: { fontSize: 14, color: colors.gray800, flexShrink: 1, textAlign: 'right' },
+  paymentStatusContainer: { flexDirection: 'row', alignItems: 'center' },
+  paymentStatusText: {
+    fontSize: 12,
+    fontWeight: '500',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  paymentStatusPaid: {
+    backgroundColor: colors.green100,
+    color: colors.green800,
+  },
+  paymentStatusFailed: {
+    backgroundColor: colors.red100,
+    color: colors.red800,
+  },
+  paymentStatusPending: {
+    backgroundColor: colors.amber100,
+    color: colors.amber800,
+  },
+  paymentStatusCOD: {
+    backgroundColor: colors.blue100,
+    color: colors.blue800,
+  },
 });
 
 export default ProJobDetailsScreen;

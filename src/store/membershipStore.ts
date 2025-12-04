@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { MEMBERSHIP_PLANS } from '../config/membershipPlans';
 import { LocalMembershipPlan, MembershipPlan, UserMembership } from '../types/api';
 import { membershipService } from '../services';
 
@@ -8,16 +7,31 @@ interface MembershipState {
   userMembership: UserMembership | null;
   loading: boolean;
   error: string | null;
+  fetchMembershipPlans: () => Promise<void>;
   fetchUserMembership: () => Promise<void>;
   purchaseMembership: (planId: string, price: number) => Promise<any>;
   // You can add more state and actions related to membership here
 }
 
-export const useMembershipStore = create<MembershipState>((set) => ({
-  plans: MEMBERSHIP_PLANS as MembershipPlan[],
+export const useMembershipStore = create<MembershipState>((set, get) => ({
+  plans: [],
   userMembership: null,
   loading: false,
   error: null,
+
+  fetchMembershipPlans: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await membershipService.getMembershipPlans();
+      if (response.success) {
+        set({ plans: response.data, loading: false });
+      } else {
+        set({ error: response.message || 'Failed to fetch membership plans', loading: false });
+      }
+    } catch (error: any) {
+      set({ error: error.message || 'Failed to fetch membership plans', loading: false });
+    }
+  },
 
   fetchUserMembership: async () => {
     set({ loading: true, error: null });
