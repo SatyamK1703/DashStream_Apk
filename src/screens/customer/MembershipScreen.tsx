@@ -62,7 +62,7 @@ const MembershipScreen = () => {
 
       const options = {
         description: `${selectedPlan.name} Membership`,
-        image: 'https://your-logo.com/logo.png', // Replace with your logo
+        // image: 'https://your-domain.com/logo.png', // Add your logo URL if available
         currency,
         key: config.RAZORPAY_KEY_ID,
         amount,
