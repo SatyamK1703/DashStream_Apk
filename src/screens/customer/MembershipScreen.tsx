@@ -354,12 +354,12 @@ const MembershipScreen = () => {
             </View>
           </View>
 
-          {/* Available Plans */}
-          <Text style={styles.sectionTitle}>
-            {userMembership && userMembership.active ? 'Upgrade Your Plan' : 'Choose a Plan'}
-          </Text>
+            {/* Available Plans */}
+            <Text style={styles.sectionTitle}>
+              {userMembership && userMembership.active ? 'Upgrade Your Plan' : 'Choose a Plan'}
+            </Text>
 
-          {plans.map(renderPlanCard)}
+            {plans.map(renderPlanCard)}
 
           {/* FAQ Section */}
           <View style={styles.faqContainer}>

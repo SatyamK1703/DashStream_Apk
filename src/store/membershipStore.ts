@@ -23,7 +23,7 @@ export const useMembershipStore = create<MembershipState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await membershipService.getMembershipPlans();
-      if (response.success) {
+      if (response.status === 'success') {
         set({ plans: response.data, loading: false });
       } else {
         set({ error: response.message || 'Failed to fetch membership plans', loading: false });
@@ -37,7 +37,7 @@ export const useMembershipStore = create<MembershipState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await membershipService.getMyMembership();
-      if (response.success) {
+      if (response.status === 'success') {
         set({ userMembership: response.data, loading: false });
       } else {
         set({ error: response.message || 'Failed to fetch user membership', loading: false });
