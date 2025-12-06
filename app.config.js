@@ -11,7 +11,7 @@ export default {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
-    plugins: ['expo-video'],
+    plugins: ['expo-video', 'expo-build-properties', 'expo-secure-store', 'expo-web-browser'],
     splash: {
       image: './assets/splash.png',
       resizeMode: 'contain',
@@ -61,9 +61,9 @@ export default {
       versionCode: 1,
       config: {
         googleMaps: {
-          apiKey: process.env.GOOGLE_MAPS_API_KEY || "your API key"
-        }
-      }
+          apiKey: process.env.GOOGLE_MAPS_API_KEY || 'your API key',
+        },
+      },
     },
 
     extra: {
