@@ -187,6 +187,7 @@ export interface Offer {
   applicableServices: string[]; // Service IDs
   isActive: boolean;
   isFeatured?: boolean;
+  isPromo?: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -262,7 +262,7 @@ const PaymentMethodList: React.FC<{
 const CheckoutScreen: React.FC = () => {
   const navigation = useNavigation<CheckoutNavProp>();
   const route = useRoute<CheckoutRouteProp>();
-  const { subtotal = 0, discount = 0, total = 0 } = route.params || {};
+  const { subtotal = 0, discount = 0, total = 0, appliedPromo } = route.params || {};
 
   // Stores & hooks
   const { items: cartItems, clear } = useCart();
@@ -445,9 +445,15 @@ const CheckoutScreen: React.FC = () => {
         },
         price: subtotal || 0,
         totalAmount,
+        discount: discount || 0,
         notes: specialInstructions,
         additionalServices: [],
         paymentMethod: selectedPayment?.type || 'razorpay',
+        ...(appliedPromo && {
+          promoCode: appliedPromo.code,
+          promoDiscount: discount,
+          promoOfferId: appliedPromo.offerId,
+        }),
       };
 
       // create booking

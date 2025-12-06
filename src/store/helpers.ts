@@ -78,19 +78,31 @@ export const useCart = () => {
   const items = useCartStore(state => state.items);
   const total = useCartStore(state => state.total);
   const itemCount = useCartStore(state => state.itemCount);
+  const subtotal = useCartStore(state => state.subtotal);
+  const discount = useCartStore(state => state.discount);
+  const appliedPromo = useCartStore(state => state.appliedPromo);
   const addItem = useCartStore(state => state.addItem);
   const removeItem = useCartStore(state => state.removeItem);
   const updateQuantity = useCartStore(state => state.updateQuantity);
   const clear = useCartStore(state => state.clear);
-  
+  const calculateTotal = useCartStore(state => state.calculateTotal);
+  const applyPromo = useCartStore(state => state.applyPromo);
+  const removePromo = useCartStore(state => state.removePromo);
+
   return {
     items,
     total,
     itemCount,
+    subtotal,
+    discount,
+    appliedPromo,
     addItem,
     removeItem,
     updateQuantity,
     clear,
+    calculateTotal,
+    applyPromo,
+    removePromo,
   };
 };
 

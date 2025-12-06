@@ -9,20 +9,29 @@ import {
   TextInput,
   StyleSheet,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { useCart } from '../../store';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { offerService } from '../../services/offerService';
 
 const CartScreen = () => {
-  const { items: cartItems, removeItem, updateQuantity } = useCart();
+  const {
+    items: cartItems,
+    removeItem,
+    updateQuantity,
+    subtotal,
+    total,
+    discount,
+    appliedPromo,
+    applyPromo,
+    removePromo
+  } = useCart();
   const [promoCode, setPromoCode] = useState('');
-  const [discount, setDiscount] = useState(0);
+  const [promoLoading, setPromoLoading] = useState(false);
   const navigation = useNavigation();
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const total = Math.max(0, subtotal - discount);
 
   const handleQuantityChange = (id: string, change: number) => {
     const item = cartItems.find((i) => i.id === id);
@@ -37,12 +46,63 @@ const CartScreen = () => {
     ]);
   };
 
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) {
+      Alert.alert('Error', 'Please enter a promo code');
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      Alert.alert('Error', 'Add items to cart before applying promo code');
+      return;
+    }
+
+    setPromoLoading(true);
+    try {
+      const serviceIds = cartItems.map(item => item.id);
+      const result = await offerService.applyOffer({
+        code: promoCode.trim(),
+        amount: subtotal,
+        serviceIds,
+      });
+
+      if (result.success && result.data.valid) {
+        applyPromo({
+          code: promoCode.trim().toUpperCase(),
+          discount: result.data.discount,
+          discountType: result.data.discountType,
+          offerId: result.data.offer._id,
+          title: result.data.offer.title,
+        });
+        Alert.alert('Success', `Promo code applied! You saved ₹${result.data.discount.toFixed(2)}`);
+      } else {
+        Alert.alert('Invalid Code', result.message || 'This promo code is not valid');
+      }
+    } catch (error: any) {
+      console.error('Apply promo error:', error);
+      Alert.alert('Error', error.message || 'Failed to apply promo code. Please try again.');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    removePromo();
+    setPromoCode('');
+    Alert.alert('Success', 'Promo code removed');
+  };
+
   const handleCheckout = () => {
     if (cartItems.length === 0) {
       Alert.alert('Empty Cart', 'Add services before checking out.');
       return;
     }
-    navigation.navigate('Checkout', { subtotal, discount, total });
+    navigation.navigate('Checkout', {
+      subtotal,
+      discount,
+      total,
+      appliedPromo
+    });
   };
 
   return (
@@ -108,17 +168,44 @@ const CartScreen = () => {
             {/* Promo Section */}
             <View style={styles.promoCard}>
               <Text style={styles.sectionTitle}>Have a promo code?</Text>
-              <View style={styles.promoRow}>
-                <TextInput
-                  style={styles.promoInput}
-                  placeholder="Enter code"
-                  value={promoCode}
-                  onChangeText={setPromoCode}
-                />
-                <TouchableOpacity style={styles.applyButton}>
-                  <Text style={styles.applyButtonText}>Apply</Text>
-                </TouchableOpacity>
-              </View>
+              {appliedPromo ? (
+                <View style={styles.appliedPromoContainer}>
+                  <View style={styles.appliedPromoRow}>
+                    <View style={styles.appliedPromoInfo}>
+                      <Text style={styles.appliedPromoCode}>{appliedPromo.code}</Text>
+                      <Text style={styles.appliedPromoTitle}>{appliedPromo.title}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.removePromoButton}
+                      onPress={handleRemovePromo}
+                    >
+                      <Ionicons name="close" size={20} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.promoRow}>
+                  <TextInput
+                    style={styles.promoInput}
+                    placeholder="Enter code"
+                    value={promoCode}
+                    onChangeText={setPromoCode}
+                    autoCapitalize="characters"
+                    editable={!promoLoading}
+                  />
+                  <TouchableOpacity
+                    style={[styles.applyButton, promoLoading && { opacity: 0.7 }]}
+                    onPress={handleApplyPromo}
+                    disabled={promoLoading}
+                  >
+                    {promoLoading ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.applyButtonText}>Apply</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
 
             {/* Summary Section */}
@@ -126,26 +213,28 @@ const CartScreen = () => {
               <Text style={styles.sectionTitle}>Order Summary</Text>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Subtotal</Text>
-                <Text style={styles.summaryValue}>₹{subtotal.toFixed(2)}</Text>
+                <Text style={styles.summaryValue}>₹{(subtotal || 0).toFixed(2)}</Text>
               </View>
-              {discount > 0 && (
+              {appliedPromo && discount > 0 && (
                 <View style={styles.summaryRow}>
-                  <Text style={[styles.summaryLabel, { color: '#16a34a' }]}>Discount</Text>
+                  <Text style={[styles.summaryLabel, { color: '#16a34a' }]}>
+                    Discount ({appliedPromo.code})
+                  </Text>
                   <Text style={[styles.summaryValue, { color: '#16a34a' }]}>
-                    -₹{discount.toFixed(2)}
+                    -₹{(discount || 0).toFixed(2)}
                   </Text>
                 </View>
               )}
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Total</Text>
-                <Text style={styles.totalValue}>₹{total.toFixed(2)}</Text>
+                <Text style={styles.totalValue}>₹{(total || 0).toFixed(2)}</Text>
               </View>
             </View>
           </ScrollView>
 
           <View style={styles.checkoutBar}>
             <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
-              <Text style={styles.checkoutText}>Checkout • ₹{total.toFixed(2)}</Text>
+              <Text style={styles.checkoutText}>Checkout • ₹{(total || 0).toFixed(2)}</Text>
             </TouchableOpacity>
           </View>
         </>
@@ -209,15 +298,55 @@ const styles = StyleSheet.create({
   },
   qtyText: { marginHorizontal: 10, fontWeight: '600' },
   promoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
     padding: 16,
-    marginTop: 8,
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 10 },
   promoRow: { flexDirection: 'row' },
   promoInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginRight: 8,
+    fontSize: 16,
+    backgroundColor: '#f9fafb',
+  },
+  appliedPromoContainer: {
+    backgroundColor: '#f0fdf4',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  appliedPromoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  appliedPromoInfo: {
+    flex: 1,
+  },
+  appliedPromoCode: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#166534',
+  },
+  appliedPromoTitle: {
+    fontSize: 14,
+    color: '#16a34a',
+    marginTop: 2,
+  },
+  removePromoButton: {
     flex: 1,
     borderWidth: 1,
     borderColor: '#d1d5db',

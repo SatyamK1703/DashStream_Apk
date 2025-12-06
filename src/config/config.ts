@@ -210,6 +210,12 @@ export const API_ENDPOINTS = {
     VERIFY_PROFESSIONAL: (professionalId: string) => `/admin/professionals/${professionalId}/verification`,
     PROFESSIONAL_BY_ID: (professionalId: string) => `/admin/professionals/${professionalId}`,
 
+    // Bulk Operations
+    BULK_UPDATE_USER_STATUS: '/admin/bulk/users/status',
+    BULK_ASSIGN_PROFESSIONAL: '/admin/bulk/bookings/assign-professional',
+    BULK_UPDATE_SERVICE_PRICES: '/admin/bulk/services/prices',
+    BULK_VERIFY_PROFESSIONALS: '/admin/bulk/professionals/verify',
+
   },
 };
 

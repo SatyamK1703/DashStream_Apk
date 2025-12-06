@@ -9,20 +9,45 @@ import {
 
 // Admin-specific types
 export interface AdminDashboardStats {
-  totalRevenue: number;
-  totalBookings: number;
-  activeCustomers: number;
-  activeProfessionals: number;
-  revenueChange: number;
-  bookingsChange: number;
-  customersChange: number;
-  professionalsChange: number;
-  chartData: {
-    revenue: { daily: any; weekly: any; monthly: any };
-    bookings: { daily: any; weekly: any; monthly: any };
+  stats: {
+    users: number;
+    professionals: number;
+    bookings: number;
+    services: number;
+    revenue: number;
   };
   recentBookings: Booking[];
   topProfessionals: Professional[];
+  chartData: {
+    bookings: { daily: any; weekly: any; monthly: any };
+    revenue: { daily: any; weekly: any; monthly: any };
+  };
+  analytics: {
+    revenueByCategory: Array<{
+      category: string;
+      revenue: number;
+      bookings: number;
+    }>;
+    professionalKPIs: Array<{
+      id: string;
+      name: string;
+      totalBookings: number;
+      completedBookings: number;
+      completionRate: number;
+      totalRevenue: number;
+      averageRating: number;
+    }>;
+    customerRetention: {
+      totalRecentCustomers: number;
+      retainedCustomers: number;
+      retentionRate: number;
+    };
+    geographicDistribution: Array<{
+      location: string;
+      bookings: number;
+      revenue: number;
+    }>;
+  };
 }
 
 export interface AdminFilters {
@@ -500,6 +525,50 @@ class AdminService {
       return await httpClient.patch(API_ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
     } catch (error) {
       return this.handleError(error, 'markAllNotificationsAsRead');
+    }
+  }
+
+  /**
+   * Bulk update user status
+   */
+  async bulkUpdateUserStatus(userIds: string[], status: 'active' | 'inactive' | 'blocked'): Promise<ApiResponse<{ updated: number; total: number }>> {
+    try {
+      return await httpClient.post(API_ENDPOINTS.ADMIN.BULK_UPDATE_USER_STATUS, { userIds, status });
+    } catch (error) {
+      return this.handleError(error, 'bulkUpdateUserStatus');
+    }
+  }
+
+  /**
+   * Bulk assign professional to bookings
+   */
+  async bulkAssignProfessional(bookingIds: string[], professionalId: string): Promise<ApiResponse<{ updated: number; total: number }>> {
+    try {
+      return await httpClient.post(API_ENDPOINTS.ADMIN.BULK_ASSIGN_PROFESSIONAL, { bookingIds, professionalId });
+    } catch (error) {
+      return this.handleError(error, 'bulkAssignProfessional');
+    }
+  }
+
+  /**
+   * Bulk update service prices
+   */
+  async bulkUpdateServicePrices(serviceUpdates: Array<{ serviceId: string; price?: number; discountPrice?: number }>): Promise<ApiResponse<{ updated: number; total: number; results: any[] }>> {
+    try {
+      return await httpClient.post(API_ENDPOINTS.ADMIN.BULK_UPDATE_SERVICE_PRICES, { serviceUpdates });
+    } catch (error) {
+      return this.handleError(error, 'bulkUpdateServicePrices');
+    }
+  }
+
+  /**
+   * Bulk verify professionals
+   */
+  async bulkVerifyProfessionals(professionalIds: string[], isVerified: boolean, verificationNotes?: string): Promise<ApiResponse<{ updated: number; total: number }>> {
+    try {
+      return await httpClient.post(API_ENDPOINTS.ADMIN.BULK_VERIFY_PROFESSIONALS, { professionalIds, isVerified, verificationNotes });
+    } catch (error) {
+      return this.handleError(error, 'bulkVerifyProfessionals');
     }
   }
 }
