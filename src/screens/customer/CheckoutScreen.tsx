@@ -338,7 +338,7 @@ const CheckoutScreen: React.FC = () => {
     const slots: { id: string; time: string; available: boolean }[] = [];
     for (let h = 9; h <= 17; h++) {
       const label = `${h <= 12 ? h : h - 12}:00 ${h < 12 ? 'AM' : 'PM'}`;
-      slots.push({ id: `${h}`, time: label, available: true });
+      slots.push({ id: label, time: label, available: true });
     }
     setTimeSlots(slots);
   }, []);
@@ -353,6 +353,12 @@ const CheckoutScreen: React.FC = () => {
       setSelectedAddress(defaultAddress || addresses[0]);
     }
   }, [addresses, defaultAddress, selectedAddress, setSelectedAddress]);
+
+  useEffect(() => {
+    if (dates.length > 0 && (!selectedDate || !dates.some(d => d.toDateString() === selectedDate.toDateString()))) {
+      setSelectedDate(dates[0]);
+    }
+  }, [dates, selectedDate, setSelectedDate]);
 
   /* react-navigation param sync when returning from AddressList */
   useFocusEffect(
@@ -424,7 +430,7 @@ const CheckoutScreen: React.FC = () => {
 
       // prepare booking payload
       const bookingPayload = {
-        service: cartItems.map((i) => i.id),
+        service: cartItems.map((i) => ({ serviceId: i.id, quantity: i.quantity || 1 })),
         scheduledDate: selectedDate ? selectedDate.toISOString() : new Date().toISOString(),
         scheduledTime: selectedTimeSlot,
         location: {

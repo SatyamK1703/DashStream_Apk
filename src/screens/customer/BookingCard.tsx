@@ -224,6 +224,10 @@ const formatDate = (dateString: string) => {
 
 const formatTime = (timeString: string) => {
   const time = new Date(timeString);
+  if (isNaN(time.getTime())) {
+    // If not a valid date, assume it's already a formatted time string
+    return timeString;
+  }
   return time.toLocaleTimeString('en-IN', {
     hour: '2-digit',
     minute: '2-digit',
