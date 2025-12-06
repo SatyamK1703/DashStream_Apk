@@ -43,10 +43,11 @@ class MembershipService {
     planId: string;
     amount: number;
   }): Promise<ApiResponse<{
-    orderId: string;
+    paymentLink: string;
+    id: string;
     amount: number;
     currency: string;
-    paymentLink?: string;
+    membershipId: string;
   }>> {
     try {
       return await httpClient.post(API_ENDPOINTS.MEMBERSHIPS.PURCHASE, data);

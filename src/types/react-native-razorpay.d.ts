@@ -28,5 +28,5 @@ declare module 'react-native-razorpay' {
   }
 
   const RazorpayCheckout: RazorpayCheckout;
-  export default RazorpayCheckout;
+  export = RazorpayCheckout;
 }

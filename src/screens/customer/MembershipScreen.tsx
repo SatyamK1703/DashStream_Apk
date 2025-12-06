@@ -17,14 +17,11 @@ import FAQList from '~/components/faq/FAQList';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_ENDPOINTS, config } from '../../config/config';
 import api from '../../services/httpClient';
-import RazorpayCheckout from 'react-native-razorpay';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-
 import { useMembershipStore } from '../../store/membershipStore';
 import { MembershipPlan } from '../../types/api';
 import * as WebBrowser from 'expo-web-browser';
-
 
 const MembershipScreen = () => {
   const navigation = useNavigation<MembershipScreenNavigationProp>();
@@ -40,6 +37,7 @@ const MembershipScreen = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<MembershipPlan | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [localLoading, setLocalLoading] = useState(false);
 
   useEffect(() => {
     fetchMembershipPlans();
@@ -55,63 +53,123 @@ const MembershipScreen = () => {
     if (!selectedPlan) return;
 
     setShowConfirmModal(false);
+    setLocalLoading(true);
 
     try {
       const order = await purchaseMembership(selectedPlan.id, selectedPlan.price);
-      const { id: order_id, amount, currency, paymentLink } = order;
-
-      const options = {
-        description: `${selectedPlan.name} Membership`,
-        // image: 'https://your-domain.com/logo.png', // Add your logo URL if available
-        currency,
-        key: config.RAZORPAY_KEY_ID,
-        amount,
-        name: 'DashStream',
-        order_id,
-        prefill: {
-          email: profile?.email || '',
-          contact: profile?.phone || '',
-          name: profile?.name || ''
-        },
-        theme: { color: '#2563eb' }
-      };
-
-
+      const { paymentLink } = order;
 
       if (paymentLink) {
-        // Use WebBrowser if paymentLink is provided by the backend
+        // Use WebBrowser to open payment link, similar to checkout
         let browserResult;
         try {
           browserResult = await WebBrowser.openBrowserAsync(paymentLink);
+        } catch (browserError) {
+          console.error('WebBrowser failed to open:', browserError);
+          Alert.alert('Error', 'Could not open payment page. Please try again.');
+          return;
+        }
+
+        // Handle browser result
+        if (browserResult.type === 'cancel' || browserResult.type === 'dismiss') {
+          // Poll for payment status like checkout does
           Alert.alert(
-            'Payment Initiated',
-            'Please complete your payment in the browser. Once done, return to the app to see your updated membership status.',
+            'Payment Processing',
+            'Checking payment status...',
+            [{ text: 'OK' }]
+          );
+
+          // Poll membership status for 15 seconds
+          let attempts = 0;
+          const maxAttempts = 5; // 5 attempts * 3 seconds = 15 seconds
+          const pollInterval = setInterval(async () => {
+            attempts++;
+            try {
+              await fetchUserMembership();
+              const currentMembership = useMembershipStore.getState().userMembership;
+
+              if (currentMembership?.active) {
+                clearInterval(pollInterval);
+                Alert.alert(
+                  'Payment Successful!',
+                  'Your membership has been activated.',
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => fetchUserMembership()
+                    }
+                  ]
+                );
+                return;
+              }
+            } catch (error) {
+              console.error('Polling error:', error);
+            }
+
+            if (attempts >= maxAttempts) {
+              clearInterval(pollInterval);
+              Alert.alert(
+                'Payment Processing',
+                'Your payment is being processed. Please check your membership status in a few minutes.',
+                [
+                  {
+                    text: 'Check Status',
+                    onPress: () => fetchUserMembership()
+                  },
+                  {
+                    text: 'OK'
+                  }
+                ]
+              );
+            }
+          }, 3000); // Poll every 3 seconds
+        } else {
+          // Payment completed successfully
+          Alert.alert(
+            'Payment Successful!',
+            'Your membership has been activated.',
             [
               {
                 text: 'OK',
                 onPress: () => {
-                  fetchUserMembership(); // Refresh membership status
+                  fetchUserMembership();
                 }
               }
             ]
           );
-        } catch (browserError) {
-          console.error('WebBrowser failed to open:', browserError);
-          Alert.alert('Error', 'Could not open payment page in browser. Please try again.');
         }
       } else {
-        // Fallback to RazorpayCheckout if no paymentLink, but it's currently failing
-        // This block will now explicitly tell the user about the missing paymentLink
-        console.error('Backend did not provide a paymentLink. RazorpayCheckout.open is also failing.');
-        Alert.alert(
-          'Payment Error',
-          'Could not initiate payment. The backend did not provide a payment link, and the native Razorpay integration is not working. Please contact support.'
-        );
+        Alert.alert('Error', 'No payment link received. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Error purchasing membership:', error);
+      setLocalLoading(false);
+
+      // More specific error messages
+      let errorMessage = 'Could not complete purchase. Please try again.';
+
+      if (error?.message?.includes('network') || error?.code === 'NETWORK_ERROR') {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (error?.message?.includes('timeout')) {
+        errorMessage = 'Request timed out. Please try again.';
+      } else if (error?.status === 429) {
+        errorMessage = 'Too many requests. Please wait a moment and try again.';
+      } else if (error?.userFriendlyMessage) {
+        errorMessage = error.userFriendlyMessage;
       }
 
-    } catch (error) {
-      console.error('Error purchasing membership:', error);
-      Alert.alert('Error', 'Could not complete purchase. Please try again.');
+      Alert.alert('Purchase Failed', errorMessage, [
+        {
+          text: 'Retry',
+          onPress: () => handlePurchasePlan()
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        }
+      ]);
+    } finally {
+      setLocalLoading(false);
     }
 
 
@@ -275,8 +333,16 @@ const MembershipScreen = () => {
                 By proceeding, you agree to our Terms of Service and acknowledge that your membership will automatically renew at the end of the billing period unless cancelled.
               </Text>
 
-              <TouchableOpacity style={styles.rconfirmButton} onPress={handlePurchasePlan}>
-                <Text style={styles.rconfirmText}>Confirm Purchase</Text>
+              <TouchableOpacity
+                style={[styles.rconfirmButton, localLoading && styles.disabledButton]}
+                onPress={handlePurchasePlan}
+                disabled={localLoading}
+              >
+                {localLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.rconfirmText}>Confirm Purchase</Text>
+                )}
               </TouchableOpacity>
             </>
           )}
@@ -736,5 +802,8 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });
