@@ -66,9 +66,20 @@ jobs:
           name: DashStream-release-apk
           path: android/app/build/outputs/apk/release/app-release.apk
 
-      - name: Send Release APK to Telegram
-        run: |
-          curl -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" -F "document=@android/app/build/outputs/apk/release/app-release.apk" https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument
+       - name: Split Release APK
+         run: |
+           cd android/app/build/outputs/apk/release
+           split -b 40m app-release.apk apk_part_
+
+       - name: Upload Release APK parts to Telegram
+         run: |
+           for file in android/app/build/outputs/apk/release/apk_part_*; do
+             curl -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" -F "document=@$file" https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument
+           done
+
+       - name: Send combine instructions
+         run: |
+           curl -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" -d "text=Release APK split into parts. Download all and combine with: cat apk_part_* > app-release.apk"
 
       - name: Create Release
         uses: actions/create-release@v1
