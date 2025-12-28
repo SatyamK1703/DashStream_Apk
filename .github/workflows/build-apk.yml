@@ -51,14 +51,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug
+        run: ./android/gradlew assembleRelease
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Dashstem-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
-
+          name: Dashstem-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
       - name: Send APK to Telegram
         run: |
           curl -F "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" -F "document=@app/build/outputs/apk/debug/app-debug.apk" https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument
