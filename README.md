@@ -32,9 +32,7 @@ For a full list of dependencies, see `package.json`.
 If you just want to run locally for testing:
 
 ```bash
-npx expo prebuild
-cd android
-./gradlew assembleDebug
+npx expo start
 ```
 
 If you want to generate a signed APK or AAB for release:
