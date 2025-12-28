@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "288888418685",
+    "firebase_url": "https://dashsteam-9c39b-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "dashsteam-9c39b",
+    "storage_bucket": "dashsteam-9c39b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:288888418685:android:4c3d56802354860d10dc14",
+        "android_client_info": {
+          "package_name": "com.dashsteam.app.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCkm4_T-XKS-YVDm2RhsFHB_tKdZO-zrcE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:288888418685:android:77128a6eb0ff794410dc14",
+        "android_client_info": {
+          "package_name": "com.dashsteam.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCkm4_T-XKS-YVDm2RhsFHB_tKdZO-zrcE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
