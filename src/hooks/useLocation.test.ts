@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react-native';
 import * as Location from 'expo-location';
 import { useLocation } from './useLocation';
 import { Alert } from 'react-native';
@@ -10,7 +10,9 @@ describe('useLocation', () => {
   it('should handle ERR_LOCATION_UNAVAILABLE error', async () => {
     const error: any = new Error('Location is unavailable. Please enable location services.');
     error.code = 'ERR_LOCATION_UNAVAILABLE';
-    (Location.requestForegroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
+    (Location.requestForegroundPermissionsAsync as jest.Mock).mockResolvedValue({
+      status: 'granted',
+    });
     (Location.getCurrentPositionAsync as jest.Mock).mockRejectedValue(error);
 
     const { result, waitForNextUpdate } = renderHook(() => useLocation());
