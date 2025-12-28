@@ -23,7 +23,7 @@ const Header = ({ userName }: { userName: string }) => {
       <View style={{ flex: 1 }}>
         <Text style={styles.greeting}>Hi, {userName}</Text>
 
-        <TouchableOpacity
+        {/* <TouchableOpacity
           activeOpacity={0.7}
           style={styles.locationPill}
           onPress={() => navigation.navigate('LocationPicker')}>
@@ -32,7 +32,7 @@ const Header = ({ userName }: { userName: string }) => {
             {locationName || 'Select Location'}
           </Text>
           <Ionicons name="chevron-down" size={scaleFont(14)} color="#2563eb" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {/* Right side icons */}
