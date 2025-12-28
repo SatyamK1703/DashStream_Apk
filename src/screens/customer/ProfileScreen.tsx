@@ -23,7 +23,7 @@ type ProfileScreenNavigationProp = NativeStackNavigationProp<CustomerStackParamL
 
 const ProfileScreen = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
-  const { user, logout } = useAuth();
+  const { user, logout, isGuest } = useAuth();
 
   // API hooks
   const {
@@ -118,12 +118,12 @@ const ProfileScreen = () => {
   };
 
   const profileMenuItems = [
-    {
-      id: 'personal',
-      title: 'Personal Information',
-      icon: 'person-outline',
-      onPress: () => navigation.navigate('EditProfile'),
-    },
+    // {
+    //   id: 'personal',
+    //   title: 'Personal Information',
+    //   icon: 'person-outline',
+    //   onPress: () => navigation.navigate('EditProfile'),
+    // },
     {
       id: 'addresses',
       title: 'My Addresses',
@@ -234,99 +234,73 @@ const ProfileScreen = () => {
             tintColor="#2563eb"
           />
         }>
-        {/* Profile Card */}
-        <View style={styles.card}>
-          <TouchableOpacity
-            style={styles.profileRow}
-            onPress={() => navigation.navigate('EditProfile')}>
-            {profileLoading ? (
-              <View style={styles.profileImagePlaceholder}>
-                <ActivityIndicator size="small" color="#2563eb" />
-              </View>
-            ) : (
-              <Image
-                source={
-                  userProfile?.profileImage?.url
-                    ? { uri: userProfile.profileImage.url }
-                    : user?.profileImage || require('../../assets/images/user.png')
-                }
-                style={styles.profileImage}
-                resizeMode="cover"
-              />
-            )}
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{userProfile?.name || user?.name || ''}</Text>
-              <Text style={styles.profileMeta}>{userProfile?.phone || user?.phone || ''}</Text>
-              <Text style={styles.profileMeta}>{userProfile?.email || user?.email || ''}</Text>
-              {userProfile && (userProfile as any).dateOfBirth && (
-                <Text style={styles.profileMeta}>
-                  {new Date((userProfile as any).dateOfBirth as string).toLocaleDateString('en-IN')}
-                </Text>
-              )}
+        {isGuest ? (
+          <View style={styles.card}>
+            <View style={styles.guestCard}>
+              <Ionicons name="person-outline" size={48} color="#9ca3af" />
+              <Text style={styles.guestTitle}>Guest User</Text>
+              <Text style={styles.guestSubtitle}>
+                Create an account to access your profile, booking history, and personalized settings.
+              </Text>
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={() => navigation.navigate('Login' as never)}
+              >
+                <Text style={styles.loginButtonText}>Create Account / Login</Text>
+              </TouchableOpacity>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Settings */}
-        {/* <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          
-          <View style={styles.settingRow}>
-            <View style={styles.settingLabel}>
-              <View style={styles.menuIconContainer}>
-                <Ionicons name="notifications-outline" size={20} color="#2563eb" />
-              </View>
-              <Text style={styles.settingText}>Push Notifications</Text>
-            </View>
-            {(preferences === null || preferencesLoading) ? (
-              <ActivityIndicator size="small" color="#2563eb" />
-            ) : (
-              <Switch
-                trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
-                thumbColor={localNotificationState ? '#2563eb' : '#f4f4f5'}
-                onValueChange={handleNotificationToggle}
-                value={localNotificationState}
-                disabled={preferences === null || preferencesLoading}
-              />
-            )}
           </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingLabel}>
-              <View style={styles.menuIconContainer}>
-                <Ionicons name="location-outline" size={20} color="#2563eb" />
-              </View>
-              <Text style={styles.settingText}>Location Services</Text>
+        ) : (
+          <>
+            <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.profileRow}
+                onPress={() => navigation.navigate('EditProfile')}>
+                {profileLoading ? (
+                  <View style={styles.profileImagePlaceholder}>
+                    <ActivityIndicator size="small" color="#2563eb" />
+                  </View>
+                ) : (
+                  <Image
+                    source={
+                      userProfile?.profileImage?.url
+                        ? { uri: userProfile.profileImage.url }
+                        : user?.profileImage || require('../../assets/images/user.png')
+                    }
+                    style={styles.profileImage}
+                    resizeMode="cover"
+                  />
+                )}
+                <View style={styles.profileInfo}>
+                  <Text style={styles.profileName}>{userProfile?.name || user?.name || ''}</Text>
+                  <Text style={styles.profileMeta}>{userProfile?.phone || user?.phone || ''}</Text>
+                  <Text style={styles.profileMeta}>{userProfile?.email || user?.email || ''}</Text>
+                  {userProfile && (userProfile as any).dateOfBirth && (
+                    <Text style={styles.profileMeta}>
+                      {new Date((userProfile as any).dateOfBirth as string).toLocaleDateString('en-IN')}
+                    </Text>
+                  )}
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+              </TouchableOpacity>
             </View>
-            <Switch
-              trackColor={{ false: '#d1d5db', true: '#93c5fd' }}
-              thumbColor={localLocationState ? '#2563eb' : '#f4f4f5'}
-              onValueChange={handleLocationToggle}
-              value={localLocationState}
-            />
-          </View>
-        </View> */}
 
-        {/* Profile Menu */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Account</Text>
-          {profileMenuItems.map(renderMenuItem)}
-        </View>
+             <View style={styles.card}>
+               {profileMenuItems.map(renderMenuItem)}
+             </View>
 
-        {/* Support Menu */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Support</Text>
-          {supportMenuItems.map(renderMenuItem)}
-        </View>
+             <View style={styles.card}>
+               {supportMenuItems.map(renderMenuItem)}
+             </View>
 
-        {/* Logout Button */}
-        <View style={styles.logoutContainer}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={16} color="#b91c1c" style={{ marginRight: 6 }} />
-            <Text style={styles.logoutText}>Log Out</Text>
-          </TouchableOpacity>
-        </View>
+            <View style={styles.logoutContainer}>
+              <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                <Ionicons name="log-out-outline" size={16} color="#b91c1c" style={{ marginRight: 6 }} />
+                <Text style={styles.logoutText}>Log Out</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
 
         {/* App Version */}
         <View style={styles.versionRow}>
@@ -464,5 +438,35 @@ const styles = StyleSheet.create({
   versionText: {
     color: '#9ca3af',
     fontSize: 12,
+  },
+  guestCard: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  guestTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  guestSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  loginButton: {
+    backgroundColor: '#2563eb',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

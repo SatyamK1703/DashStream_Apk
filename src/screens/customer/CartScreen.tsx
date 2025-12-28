@@ -11,7 +11,7 @@ import {
   Animated,
   ActivityIndicator,
 } from 'react-native';
-import { useCart } from '../../store';
+import { useCart, useAuth } from '../../store';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -29,6 +29,7 @@ const CartScreen = () => {
     applyPromo,
     removePromo
   } = useCart();
+  const { isGuest } = useAuth();
   const [promoCode, setPromoCode] = useState('');
   const [promoLoading, setPromoLoading] = useState(false);
   const navigation = useNavigation();
@@ -97,6 +98,22 @@ const CartScreen = () => {
       Alert.alert('Empty Cart', 'Add services before checking out.');
       return;
     }
+
+    if (isGuest) {
+      Alert.alert(
+        'Login Required',
+        'Please create an account or log in to complete your booking. This helps us provide you with the best service experience.',
+        [
+          { text: 'Continue as Guest', style: 'cancel' },
+          {
+            text: 'Login',
+            onPress: () => navigation.navigate('Login' as never)
+          }
+        ]
+      );
+      return;
+    }
+
     navigation.navigate('Checkout', {
       subtotal,
       discount,
@@ -234,7 +251,9 @@ const CartScreen = () => {
 
           <View style={styles.checkoutBar}>
             <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
-              <Text style={styles.checkoutText}>Checkout • ₹{(total || 0).toFixed(2)}</Text>
+              <Text style={styles.checkoutText}>
+                {isGuest ? 'Login to Checkout' : 'Checkout'} • ₹{(total || 0).toFixed(2)}
+              </Text>
             </TouchableOpacity>
           </View>
         </>

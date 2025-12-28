@@ -18,11 +18,13 @@ import { useMyBookings } from '../../hooks/useBookings';
 import { Booking } from '../../types/api';
 import BookingCard from './BookingCard';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
+import { useAuth } from '../../store';
 
 type NavProp = NativeStackNavigationProp<CustomerStackParamList>;
 
 const BookingsScreen = () => {
   const navigation = useNavigation<NavProp>();
+  const { isGuest } = useAuth();
   const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
 
   const upcomingApi = useMyBookings({ status: 'pending,confirmed,in-progress,rescheduled' });
@@ -31,8 +33,10 @@ const BookingsScreen = () => {
   const currentApi = activeTab === 'upcoming' ? upcomingApi : completedApi;
 
   useEffect(() => {
-    currentApi.refresh();
-  }, [activeTab]);
+    if (!isGuest) {
+      currentApi.refresh();
+    }
+  }, [activeTab, isGuest]);
 
   const handleViewBooking = (id: string, status: string) => {
     const route =
@@ -92,58 +96,76 @@ const BookingsScreen = () => {
         <View style={styles.iconPlaceholder} />
       </View>
 
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        {['upcoming', 'completed'].map((tab) => {
-          const isActive = tab === activeTab;
-          return (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tab, isActive && styles.activeTab]}
-              onPress={() => setActiveTab(tab as 'upcoming' | 'completed')}>
-              <Text style={[styles.tabText, isActive && styles.activeTabText]}>
-                {tab === 'upcoming' ? 'Upcoming & Ongoing' : 'Completed & Cancelled'}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* Data Rendering */}
-      {currentApi.loading && !currentApi.data?.length ? (
-        <View style={styles.loader}>
-          <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Loading your bookings...</Text>
+      {isGuest ? (
+        <View style={styles.guestContainer}>
+          <Ionicons name="calendar-outline" size={60} color="#94a3b8" />
+          <Text style={styles.guestTitle}>Booking History</Text>
+          <Text style={styles.guestText}>
+            Create an account to view your booking history and track your service requests.
+          </Text>
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={() => navigation.navigate('Login' as never)}
+          >
+            <Text style={styles.loginButtonText}>Create Account / Login</Text>
+          </TouchableOpacity>
         </View>
-      ) : currentApi.error && !currentApi.data?.length ? (
-        renderError()
-      ) : (
-        <View style={{ flex: 1 }}>
-          <FlatList
-            data={currentApi.data || []}
-            renderItem={renderBooking}
-            keyExtractor={(item) => item._id}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={renderEmpty}
-            refreshControl={
-              <RefreshControl
-                refreshing={currentApi.loading && !!currentApi.data?.length}
-                onRefresh={handleRefresh}
-                colors={['#2563eb']}
+       ) : (
+         <View style={{ flex: 1 }}>
+           <View style={styles.tabs}>
+            {['upcoming', 'completed'].map((tab) => {
+              const isActive = tab === activeTab;
+              return (
+                <TouchableOpacity
+                  key={tab}
+                  style={[styles.tab, isActive && styles.activeTab]}
+                  onPress={() => setActiveTab(tab as 'upcoming' | 'completed')}>
+                  <Text style={[styles.tabText, isActive && styles.activeTabText]}>
+                    {tab === 'upcoming' ? 'Upcoming & Ongoing' : 'Completed & Cancelled'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Data Rendering */}
+          {currentApi.loading && !currentApi.data?.length ? (
+            <View style={styles.loader}>
+              <ActivityIndicator size="large" color="#2563eb" />
+              <Text style={styles.loadingText}>Loading your bookings...</Text>
+            </View>
+          ) : currentApi.error && !currentApi.data?.length ? (
+            renderError()
+          ) : (
+            <View style={{ flex: 1 }}>
+              <FlatList
+                data={currentApi.data || []}
+                renderItem={renderBooking}
+                keyExtractor={(item) => item._id}
+                key={activeTab}
+                contentContainerStyle={styles.list}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={renderEmpty}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={currentApi.loading && !!currentApi.data?.length}
+                    onRefresh={handleRefresh}
+                    colors={['#2563eb']}
+                  />
+                }
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.2}
+                ListFooterComponent={() =>
+                  currentApi.loading && !!currentApi.data?.length ? (
+                    <View style={styles.footerLoader}>
+                      <ActivityIndicator size="small" color="#2563eb" />
+                      <Text style={styles.footerText}>Loading more...</Text>
+                    </View>
+                  ) : null
+                }
               />
-            }
-            onEndReached={handleLoadMore}
-            onEndReachedThreshold={0.2}
-            ListFooterComponent={() =>
-              currentApi.loading && !!currentApi.data?.length ? (
-                <View style={styles.footerLoader}>
-                  <ActivityIndicator size="small" color="#2563eb" />
-                  <Text style={styles.footerText}>Loading more...</Text>
-                </View>
-              ) : null
-            }
-          />
+            </View>
+          )}
         </View>
       )}
     </SafeAreaView>
@@ -221,6 +243,38 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   footerText: { color: '#6b7280', marginLeft: 8 },
+
+  guestContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  guestTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  guestText: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  loginButton: {
+    backgroundColor: '#2563eb',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
 
 export default BookingsScreen;

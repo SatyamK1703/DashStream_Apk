@@ -49,6 +49,7 @@ const LoginScreen = () => {
       phone: '0000000000',
       role: 'customer',
       profileImage: undefined,
+      isGuest: true,
     });
   };
 
@@ -70,7 +71,7 @@ const LoginScreen = () => {
         <View style={styles.inputContainer}>
           <View style={styles.inputWrapper}>
             <MaterialIcons name="phone" size={24} color="#8A94A6" style={styles.inputIcon} />
-<Text style={styles.inputText} >+91</Text>
+            <Text style={styles.inputText} >+91</Text>
             <TextInput
               style={styles.input}
               placeholder="Phone number"
@@ -157,6 +158,7 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignContent: 'center',
     backgroundColor: '#fff',
     borderRadius: 14,
     paddingHorizontal: 16,
@@ -166,11 +168,15 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   inputIcon: {
-    marginRight: 12,
+    marginRight: 8,
   },
   input: {
     flex: 1,
     height: '100%',
+    fontSize: 16,
+    color: '#374151',
+  },
+  inputText: {
     fontSize: 16,
     color: '#374151',
   },

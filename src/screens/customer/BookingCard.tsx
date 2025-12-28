@@ -252,6 +252,18 @@ const getStatusColor = (status: string) => {
 };
 
 const BookingCard: React.FC<BookingCardProps> = ({ booking, onPress }) => {
+  // Handle potential missing data
+  if (!booking || typeof booking !== 'object') {
+    console.error('Invalid booking data:', booking);
+    return null;
+  }
+
+  // Check if booking has the required fields
+  if (!booking._id || !booking.status) {
+    console.error('Booking missing required fields:', booking);
+    return null;
+  }
+
   const statusColor = getStatusColor(booking.status);
 
   const serviceName =
@@ -270,7 +282,8 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, onPress }) => {
 
   const formattedAmount = (booking.totalAmount || 0).toLocaleString('en-IN');
 
-  return (
+  try {
+    return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.header}>
         <Text style={styles.bookingId}>#{booking.bookingId || booking._id}</Text>
@@ -331,6 +344,10 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, onPress }) => {
       </View>
     </TouchableOpacity>
   );
+  } catch (error) {
+    console.error('Error rendering BookingCard:', error, booking);
+    return null;
+  }
 };
 
 const styles = StyleSheet.create({
