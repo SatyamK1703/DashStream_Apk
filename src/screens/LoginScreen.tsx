@@ -70,6 +70,7 @@ const LoginScreen = () => {
         <View style={styles.inputContainer}>
           <View style={styles.inputWrapper}>
             <MaterialIcons name="phone" size={24} color="#8A94A6" style={styles.inputIcon} />
+<Text style={styles.inputText} >+91</Text>
             <TextInput
               style={styles.input}
               placeholder="Phone number"
