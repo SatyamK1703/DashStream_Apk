@@ -46,7 +46,7 @@ const TestimonialItem = ({ item }: { item: Testimonial }) => {
 
 const CustomerTestimonials = () => {
   const { data: testimonialsData, loading, error } = useTestimonials();
-  const testimonials = testimonialsData?.data || [];
+  const testimonials = Array.isArray(testimonialsData) ? testimonialsData : [];
 
   if (loading) {
     return (

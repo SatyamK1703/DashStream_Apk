@@ -69,23 +69,20 @@ const JobCard: React.FC<JobCardProps> = ({ job, onAcceptJob }) => {
       <View style={styles.jobAddress}>
         <Ionicons name="location" size={16} color={colors.gray500} />
         <Text style={styles.jobAddressText} numberOfLines={2}>
-          {job.address || 'Address not available'}
+          {String(job.address) || 'Address not available'}
         </Text>
       </View>
 
       <View style={styles.jobServices}>
-        {job.services?.slice(0, 2).map((service, index) => (
-          <View key={index} style={styles.serviceItem}>
+        {job.service ? (
+          <View style={styles.serviceItem}>
             <Ionicons name="checkmark-circle" size={12} color={colors.primary} />
             <Text style={styles.jobServiceText}>
-              {service.name} (₹{service.price})
+              {job.service.name} (₹{job.service.basePrice})
             </Text>
           </View>
-        ))}
-        {job.services?.length > 2 && (
-          <Text style={styles.moreServicesText}>
-            +{job.services.length - 2} more services
-          </Text>
+        ) : (
+          <Text style={styles.jobServiceText}>Service details not available</Text>
         )}
       </View>
 
@@ -94,12 +91,13 @@ const JobCard: React.FC<JobCardProps> = ({ job, onAcceptJob }) => {
           <Ionicons name="cash" size={16} color={colors.primary} />
           <Text style={styles.jobTotalText}>₹{job.totalAmount}</Text>
         </View>
-        {job.distance && (
+        {/* Distance not available in current API */}
+        {/* {job.distance && (
           <View style={styles.jobDistance}>
             <Ionicons name="car" size={14} color={colors.gray500} />
             <Text style={styles.jobDistanceText}>{job.distance}</Text>
           </View>
-        )}
+        )} */}
         {job.status === 'pending' && onAcceptJob && (
           <TouchableOpacity
             style={styles.acceptJobButton}

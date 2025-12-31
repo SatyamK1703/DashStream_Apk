@@ -9,9 +9,18 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  Dimensions
+  Dimensions,
+  KeyboardAvoidingView
 } from 'react-native';
 import { ChevronDown, Check } from 'lucide-react-native';
+
+interface SelectedVehicle {
+  brand: string;
+  model: string;
+  type: string;
+  image: string;
+  logo: string;
+}
 
 const vehicleData = [
   {
@@ -34,7 +43,7 @@ const vehicleData = [
 
 const VehicleSelector = () => {
   const [isVisible, setIsVisible] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<SelectedVehicle | null>(null);
   const [search, setSearch] = useState('');
   
 

@@ -32,7 +32,7 @@ const AdminInstagramScreen = () => {
   const { execute: createTestimonial } = useCreateTestimonial();
   const { execute: deleteTestimonial } = useDeleteTestimonial();
 
-  const testimonials = testimonialsData?.data?.data || [];
+  const testimonials = Array.isArray(testimonialsData) ? testimonialsData : [];
 
   const [newTestimonial, setNewTestimonial] = useState({
     name: '',
@@ -227,7 +227,7 @@ const AdminInstagramScreen = () => {
         </View>
 
         <View style={styles.list}>
-          <Text style={styles.sectionTitle}>Existing Testimonials</Text>
+          <Text style={styles.sectionTitle}>Existing Testimonials ({testimonials.length})</Text>
           {testimonials.length === 0 && !loading ? (
             <Text style={styles.emptyText}>No testimonials yet</Text>
           ) : (

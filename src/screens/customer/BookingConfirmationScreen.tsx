@@ -17,12 +17,12 @@ import api from '../../services/httpClient';
 const BookingConfirmationScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { bookingId } = route.params || {};
+  const { bookingId } = route.params as any || {};
 
   const { data, loading, error, execute } = useBookingDetails(bookingId || null);
   const booking = data?.booking;
 
-  const [paymentStatus, setPaymentStatus] = useState(null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [checkingPayment, setCheckingPayment] = useState(false);
 
   const paymentId = booking?.paymentId;
@@ -43,7 +43,7 @@ const BookingConfirmationScreen = () => {
     }
 
     let mounted = true;
-    let timer;
+    let timer: NodeJS.Timeout;
 
     const check = async () => {
       if (!mounted) return;
@@ -94,18 +94,20 @@ const BookingConfirmationScreen = () => {
           {error ? 'Check your connection and retry.' : 'Invalid booking ID.'}
         </Text>
 
-        {bookingId && <ButtonPrimary title="Retry" onPress={execute} style={{ marginTop: 20 }} />}
+        {bookingId && <ButtonPrimary title="Retry" onPress={execute} style={{ marginTop: 20 } as any} />}
 
-        <ButtonSecondary title="Go Back" onPress={() => navigation.goBack()} />
+        <ButtonSecondary title="Go Back" onPress={() => navigation.goBack()} style={{} as any} />
       </Centered>
     );
   }
 
   /* -------------------- Derived Data -------------------- */
-  const services = booking.services || (booking.service ? [booking.service] : []);
-  const address = booking.location?.address;
+  const services = booking.service ? [booking.service] : [];
 
-  const subtotal = services.reduce((sum, svc) => {
+  /* -------------------- Derived Data -------------------- */
+  const address = booking.address?.address;
+
+  const subtotal = services.reduce((sum: number, svc: any) => {
     const price = svc?.basePrice || svc?.price || svc?.serviceId?.price || 0;
     const qty = svc?.quantity || 1;
     return sum + price * qty;
@@ -114,11 +116,11 @@ const BookingConfirmationScreen = () => {
   /* -------------------- Navigation Handlers -------------------- */
   const handleTrackOrder = () => {
     const id = booking.bookingId || booking._id || bookingId;
-    if (id) navigation.navigate('TrackBooking', { bookingId: id });
+    if (id) (navigation as any).navigate('TrackBooking', { bookingId: id });
   };
 
   const handleViewAll = () => {
-    navigation.navigate('CustomerTabs', { screen: 'Bookings' });
+    (navigation as any).navigate('CustomerTabs', { screen: 'Bookings' });
   };
 
   return (
@@ -148,18 +150,18 @@ const BookingConfirmationScreen = () => {
         </Card>
 
         <Card title="Services Booked">
-          {services.map((s, i) => (
+          {services.map((s: any, i: number) => (
             <ServiceItem key={s._id || i} service={s} />
           ))}
         </Card>
 
         <Card title="Payment Summary">
-          <Row label="Subtotal" value={`₹${subtotal.toFixed(2)}`} />
-          <Row label="Taxes & Fees" value={`₹${(booking.totalAmount - subtotal).toFixed(2)}`} />
+          <Row label="Subtotal" value={`₹${subtotal.toFixed(2)}`} bold={false} valueColor="#000" />
+          <Row label="Taxes & Fees" value={`₹${(booking.totalAmount - subtotal).toFixed(2)}`} bold={false} valueColor="#000" />
           <Row
             label="Total Amount"
             value={`₹${booking.totalAmount.toFixed(2)}`}
-            bold
+            bold={true}
             valueColor="#2563eb"
           />
         </Card>
@@ -168,8 +170,8 @@ const BookingConfirmationScreen = () => {
       </ScrollView>
 
       <View style={styles.actions}>
-        <ButtonPrimary title="Track Booking" onPress={handleTrackOrder} />
-        <ButtonSecondary title="View All Bookings" onPress={handleViewAll} />
+        <ButtonPrimary title="Track Booking" onPress={handleTrackOrder} style={{} as any} />
+        <ButtonSecondary title="View All Bookings" onPress={handleViewAll} style={{} as any} />
       </View>
     </SafeAreaView>
   );

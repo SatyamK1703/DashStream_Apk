@@ -175,7 +175,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 4,
     marginBottom: 18,
-    transition: 'all 0.2s ease-in-out',
   },
   image: {
     width: '100%',

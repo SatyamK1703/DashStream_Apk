@@ -59,7 +59,7 @@ const AllServicesScreen = () => {
   }, [searchQuery, servicesData]);
 
   const handleServicePress = (service: any) => {
-    navigation.navigate('ServiceDetails', { serviceId: service._id || service.id, service });
+    navigation.navigate('ServiceDetails', { serviceId: service._id || service.id });
   };
 
   const handleAddToCart = (service: any) => {

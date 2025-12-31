@@ -20,7 +20,7 @@ const VehicleTypeSelector = ({ selectedType, onSelectType }: { selectedType: str
           activeOpacity={0.85}
         >
           <Ionicons
-            name={vehicle.icon}
+            name={vehicle.icon as any}
             size={20}
             color={isActive ? '#fff' : '#6b7280'}
             style={styles.icon}

@@ -268,11 +268,7 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, onPress }) => {
 
   const serviceName =
     booking.service?.name ||
-    booking.services
-      ?.map((s) => s?.serviceId?.title || s.title)
-      .filter(Boolean)
-      .join(', ') ||
-    'Service';
+    booking.service?.name || 'Service';
 
   const professionalName =
     booking.professional?.user?.name || booking.professional?.name || 'Not assigned';
@@ -308,11 +304,11 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, onPress }) => {
           </Text>
         </View>
 
-        {booking.location?.address && (
+        {booking.address?.address && (
           <View style={styles.row}>
             <Ionicons name="location-outline" size={18} color="#2563eb" />
             <Text style={styles.text} numberOfLines={1}>
-              {booking.location.address.address || 'Address not available'}
+              {booking.address.address || 'Address not available'}
             </Text>
           </View>
         )}
