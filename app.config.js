@@ -23,7 +23,7 @@ export default {
     updates: {
       url: 'https://u.expo.dev/f1a076b7-0687-4639-8076-5f62f9c5a0bd',
     },
-    runtimeVersion: '0.1.6',
+    runtimeVersion: '0.1.9',
     // 👆 END ADDITION 👆
 
     ios: {
