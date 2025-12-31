@@ -161,7 +161,7 @@ const AdminBookingsScreen = () => {
           <BookingCard
             booking={item}
             onPress={() => handleBookingPress(item.id)}
-            onUpdateStatus={(status) => handleUpdateBookingStatus(item.id, status)}
+            onUpdateStatus={(status) => handleUpdateBookingStatus(item.id, status as BookingStatus)}
           />
         )}
         keyExtractor={(item) => item.id}

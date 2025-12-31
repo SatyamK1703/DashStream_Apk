@@ -16,7 +16,10 @@ interface Testimonial {
   id: string;
   name: string;
   instagramUrl: string;
-  thumbnail: string;
+  thumbnail: {
+    public_id?: string;
+    url: string;
+  };
 }
 
 const ITEM_WIDTH = Dimensions.get('window').width * 0.4;
@@ -33,7 +36,7 @@ const TestimonialItem = ({ item }: { item: Testimonial }) => {
 
   return (
     <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.8}>
-      <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
+      <Image source={{ uri: item.thumbnail.url }} style={styles.thumbnail} />
       <View style={styles.overlay}>
         <Text style={styles.name}>{item.name}</Text>
       </View>

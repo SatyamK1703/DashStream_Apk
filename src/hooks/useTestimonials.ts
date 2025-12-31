@@ -1,28 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useApi } from './useApi';
-import { testimonialService, Testimonial } from '../services';
+import { testimonialService } from '../services';
+import { Testimonial } from '../services/testimonialService';
 
 export const useTestimonials = () => {
-  return useApi(
+  const api = useApi(
     () => testimonialService.getTestimonials(),
     {
       showErrorAlert: false,
     }
   );
+
+  return {
+    ...api,
+    refresh: api.execute,
+  };
 };
 
 export const useCreateTestimonial = () => {
   return useApi(
-    (data: Omit<Testimonial, 'id'>) => testimonialService.createTestimonial(data),
-    {
-      showErrorAlert: false,
-    }
-  );
-};
-
-export const useUpdateTestimonial = () => {
-  return useApi(
-    ({ id, data }: { id: string; data: Partial<Testimonial> }) => testimonialService.updateTestimonial(id, data),
+    (data: FormData) => testimonialService.createTestimonial(data),
     {
       showErrorAlert: false,
     }

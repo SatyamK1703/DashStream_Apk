@@ -24,7 +24,7 @@ import { adminService } from '../../services';
 import { handleApiError } from '../../utils/errorHandler';
 import httpClient, { ApiResponse } from '../../services/httpClient';
 
-type AdminCustomerDetailsRouteProp = RouteProp<AdminStackParamList, 'CustomerDetails'>;
+type AdminCustomerDetailsRouteProp = RouteProp<AdminStackParamList, 'AdminCustomerDetails'>;
 type AdminCustomerDetailsNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 
 const AdminCustomerDetailsScreen = () => {
@@ -175,7 +175,7 @@ const AdminCustomerDetailsScreen = () => {
             try {
               // Backend supports update user via admin
               await adminService.updateUser(customer.id, { status: newStatus });
-              setCustomer({ ...customer, status: newStatus });
+               setCustomer({ ...customer, status: newStatus } as any);
               Alert.alert('Success', `Customer status updated to ${newStatus}`);
             } catch (error) {
               handleApiError(error, 'UpdateCustomerStatus');
@@ -692,8 +692,8 @@ const AdminCustomerDetailsScreen = () => {
                   item.type === 'car'
                     ? 'car'
                     : item.type === 'motorcycle'
-                      ? 'bicycle-outline'
-                      : 'bicycle'
+                      ? 'car-outline'
+                      : 'walk-outline'
                 }
                 size={24}
                 color="#4B5563"

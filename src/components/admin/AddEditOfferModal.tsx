@@ -82,8 +82,8 @@ useEffect(() => {
         isActive: formData?.isActive ?? true,
         terms: formData?.terms || '',
         image: formData?.image
-          ? { localUri: formData.image, remoteUrl: formData.image, isUploading: false }
-          : { localUri: null, isUploading: false },
+          ? { localUri: formData.image, remoteUrl: formData.image, isUploading: false } as any
+          : { localUri: null, isUploading: false } as any,
       });
     } else {
       // reset to blank when adding new

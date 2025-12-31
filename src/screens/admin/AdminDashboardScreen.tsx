@@ -243,7 +243,7 @@ const AdminDashboardScreen = () => {
             </TouchableOpacity>
           </View>
           {recentBookings && recentBookings.length > 0 ? (
-            recentBookings.map((booking) => (
+            recentBookings.map((booking: any) => (
               <BookingCard
                 key={booking.id}
                 id={booking.id}
