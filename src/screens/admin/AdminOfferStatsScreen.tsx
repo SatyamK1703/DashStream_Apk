@@ -374,7 +374,7 @@ const AdminOfferStatsScreen = () => {
         {topUsers && topUsers.length > 0 && (
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Top Users</Text>
-            {topUsers.map((userStats, index) => (
+            {topUsers.map((userStats: any, index: number) => (
               <View key={userStats.user._id} style={styles.userRow}>
                 <View style={styles.userRank}>
                   <Text style={styles.rankNumber}>{index + 1}</Text>
@@ -402,7 +402,7 @@ const AdminOfferStatsScreen = () => {
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Recent Usage History</Text>
           {usageHistory && usageHistory.length > 0 ? (
-            usageHistory.map((usage) => (
+            usageHistory.map((usage: any) => (
               <View key={usage._id} style={styles.usageRow}>
                 <View style={styles.usageInfo}>
                   <Text style={styles.usageName}>

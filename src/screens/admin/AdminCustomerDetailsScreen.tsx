@@ -174,7 +174,7 @@ const AdminCustomerDetailsScreen = () => {
           onPress: async () => {
             try {
               // Backend supports update user via admin
-              await adminService.updateUser(customer.id, { status: newStatus });
+               await adminService.updateUser(customer.id, { status: newStatus } as any);
                setCustomer({ ...customer, status: newStatus } as any);
               Alert.alert('Success', `Customer status updated to ${newStatus}`);
             } catch (error) {
@@ -690,10 +690,10 @@ const AdminCustomerDetailsScreen = () => {
               <MaterialCommunityIcons
                 name={
                   item.type === 'car'
-                    ? 'car'
+                    ? ('car' as any)
                     : item.type === 'motorcycle'
-                      ? 'car-outline'
-                      : 'walk-outline'
+                      ? ('bicycle' as any)
+                      : ('car-sport' as any)
                 }
                 size={24}
                 color="#4B5563"

@@ -279,9 +279,9 @@ const AdminDashboardScreen = () => {
                 key={professional.id}
                 id={professional.id}
                 name={professional.name}
-                image={professional.image}
+                image={(professional as any).image}
                 rating={professional.rating || 0}
-                jobsCompleted={professional.bookingCount || 0}
+                jobsCompleted={(professional as any).bookingCount || 0}
                 isOnline={false}
                 onPress={() =>
                   navigation.navigate('AdminProfessionalDetails', {

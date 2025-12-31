@@ -91,7 +91,7 @@ const AdminProfessionalEditScreen = () => {
       // Initialize form state with fetched data
       setName(mockProfessional.name);
       setPhone(mockProfessional.phone);
-      setEmail(mock.email);
+      setEmail(mockProfessional.email);
       setStatus(mockProfessional.status);
       setIsVerified(mockProfessional.isVerified);
       setAddress(mockProfessional.address);

@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,7 +32,7 @@ const AdminInstagramScreen = () => {
   const { execute: createTestimonial } = useCreateTestimonial();
   const { execute: deleteTestimonial } = useDeleteTestimonial();
 
-  const testimonials = testimonialsData?.data || [];
+  const testimonials = testimonialsData?.data?.data || [];
 
   const [newTestimonial, setNewTestimonial] = useState({
     name: '',
@@ -39,6 +40,7 @@ const AdminInstagramScreen = () => {
     thumbnail: { localUri: null, remoteUrl: '', isUploading: false } as ImageField,
   });
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [refreshing, setRefreshing] = useState(false);
 
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
@@ -118,11 +120,11 @@ const AdminInstagramScreen = () => {
         instagramUrl: '',
         thumbnail: { localUri: null, remoteUrl: '', isUploading: false }
       });
-      refresh(); // Refresh the list
+      onRefresh(); // Refresh the list
       Alert.alert('Success', 'Testimonial added successfully');
     } catch (error) {
       console.error('Error adding testimonial:', error);
-      Alert.alert('Error', error?.message || 'Failed to add testimonial');
+      Alert.alert('Error', (error as any)?.message || 'Failed to add testimonial');
     }
   };
 
@@ -135,7 +137,7 @@ const AdminInstagramScreen = () => {
         onPress: async () => {
           try {
             await deleteTestimonial(id);
-            refresh();
+            onRefresh();
             Alert.alert('Success', 'Testimonial deleted successfully');
           } catch (error) {
             Alert.alert('Error', 'Failed to delete testimonial');
@@ -143,6 +145,17 @@ const AdminInstagramScreen = () => {
         },
       },
     ]);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refresh();
+    } catch (error) {
+      console.error('Error refreshing testimonials:', error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   return (
@@ -155,8 +168,18 @@ const AdminInstagramScreen = () => {
         <View />
       </View>
 
-      <ScrollView style={styles.content}>
-        {loading && (
+      <ScrollView
+        style={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#2563EB']}
+            tintColor="#2563EB"
+          />
+        }
+      >
+        {loading && !refreshing && (
           <View style={styles.loading}>
             <ActivityIndicator size="large" color="#2563EB" />
             <Text>Loading testimonials...</Text>
@@ -205,17 +228,24 @@ const AdminInstagramScreen = () => {
 
         <View style={styles.list}>
           <Text style={styles.sectionTitle}>Existing Testimonials</Text>
-          {testimonials.map((item) => (
-            <View key={item.id} style={styles.testimonialItem}>
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemUrl} numberOfLines={1}>{item.instagramUrl}</Text>
+          {testimonials.length === 0 && !loading ? (
+            <Text style={styles.emptyText}>No testimonials yet</Text>
+          ) : (
+            testimonials.map((item: any) => (
+              <View key={item._id || item.id} style={styles.testimonialItem}>
+                {item.thumbnail?.url && (
+                  <Image source={{ uri: item.thumbnail.url }} style={styles.testimonialImage} />
+                )}
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.itemUrl} numberOfLines={1}>{item.instagramUrl}</Text>
+                </View>
+                <TouchableOpacity onPress={() => handleDeleteTestimonial(item._id || item.id)}>
+                  <Ionicons name="trash" size={20} color="#E53935" />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={() => handleDeleteTestimonial(item.id)}>
-                <Ionicons name="trash" size={20} color="#E53935" />
-              </TouchableOpacity>
-            </View>
-          ))}
+            ))
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -286,10 +316,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
   },
-  itemInfo: { flex: 1 },
-  itemName: { fontSize: 16, fontWeight: '600', color: '#2D3748' },
-  itemUrl: { fontSize: 14, color: '#718096', marginTop: 4 },
-  loading: { padding: 20, alignItems: 'center' },
+   testimonialImage: { width: 50, height: 50, borderRadius: 8, marginRight: 12 },
+   itemInfo: { flex: 1 },
+   itemName: { fontSize: 16, fontWeight: '600', color: '#2D3748' },
+   itemUrl: { fontSize: 14, color: '#718096', marginTop: 4 },
+   emptyText: { textAlign: 'center', color: '#718096', padding: 20 },
+   loading: { padding: 20, alignItems: 'center' },
 });
 
 export default AdminInstagramScreen;

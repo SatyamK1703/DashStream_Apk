@@ -167,11 +167,11 @@ const AdminServicesArea = () => {
           <RefreshControl refreshing={isLoading} onRefresh={onRefresh} colors={['#007BFF']} />
         }
         ListEmptyComponent={
-          !isLoading && (
+          !isLoading ? (
             <View style={styles.listEmptyContainer}>
               <Text style={styles.listEmptyText}>No service areas have been added yet.</Text>
             </View>
-          )
+          ) : null
         }
       />
 

@@ -66,7 +66,7 @@ const ManageOffersScreen = () => {
 
   const [filteredOffers, setFilteredOffers] = useState<Offer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'title' | 'discount' | 'date'>('title');
+  const [sortBy, setSortBy] = useState<'name' | 'price' | 'category' | 'date'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showAddEditModal, setShowAddEditModal] = useState(false);
   const [formData, setFormData] = useState<OfferFormData>({
@@ -111,11 +111,14 @@ const ManageOffersScreen = () => {
     filtered.sort((a, b) => {
       let comparison = 0;
       switch (sortBy) {
-        case 'title':
+        case 'name':
           comparison = a.title.localeCompare(b.title);
           break;
-        case 'discount':
+        case 'price':
           comparison = a.discount - b.discount;
+          break;
+        case 'category':
+          comparison = a.category.localeCompare(b.category);
           break;
         case 'date':
           comparison = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
@@ -132,10 +135,10 @@ const ManageOffersScreen = () => {
   }, [filterAndSortOffers]);
 
   const handleSortByChange = () => {
-    const options = ['title', 'discount', 'date'];
+    const options: ('name' | 'price' | 'category' | 'date')[] = ['name', 'price', 'category', 'date'];
     const currentIndex = options.indexOf(sortBy);
     const nextIndex = (currentIndex + 1) % options.length;
-    setSortBy(options[nextIndex] as 'title' | 'discount' | 'date');
+    setSortBy(options[nextIndex]);
   };
 
   const toggleOfferStatus = async (offerId: string) => {

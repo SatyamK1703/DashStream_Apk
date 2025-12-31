@@ -57,9 +57,6 @@ const AdminNotificationsScreen = () => {
     // Admin navigation logic
     if (notification.actionType === 'open_booking' && notification.actionParams?.bookingId) {
       navigation.navigate('AdminBookingDetails', { bookingId: notification.actionParams.bookingId });
-    } else if (notification.actionType === 'open_support_ticket' && notification.actionParams?.questionId) {
-      // Assuming a screen for support tickets exists
-      // navigation.navigate('AdminSupportTicketDetails', { ticketId: notification.actionParams.questionId });
     }
   };
 

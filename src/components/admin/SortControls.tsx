@@ -9,7 +9,6 @@ interface SortControlsProps {
   sortOrder: 'asc' | 'desc';
   onSortByChange: () => void;
   onSortOrderToggle: () => void;
-  input:string;
 }
 
 const SortControls: React.FC<SortControlsProps> = ({

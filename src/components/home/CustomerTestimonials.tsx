@@ -45,7 +45,8 @@ const TestimonialItem = ({ item }: { item: Testimonial }) => {
 };
 
 const CustomerTestimonials = () => {
-  const { data: testimonials, loading, error } = useTestimonials();
+  const { data: testimonialsData, loading, error } = useTestimonials();
+  const testimonials = testimonialsData?.data || [];
 
   if (loading) {
     return (

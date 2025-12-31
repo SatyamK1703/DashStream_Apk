@@ -75,7 +75,7 @@ const AdminServicesScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortOption, setSortOption] = useState<string>('date_desc');
   const [services, setServices] = useState<Service[]>([]);
-  const [sortBy, setSortBy] = useState<'title' | 'price' | 'category' | 'date'>('title');
+  const [sortBy, setSortBy] = useState<'name' | 'price' | 'category' | 'date'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showAddEditModal, setShowAddEditModal] = useState(false);
   const [formData, setFormData] = useState<ServiceFormData>({
@@ -105,7 +105,7 @@ const AdminServicesScreen = () => {
     [selectedStatus, selectedCategory, sortOption]
   );
 
-  const { data, refresh: fetchServices, loading, error } = useAdminServices({ filters });
+  const { data, refresh: fetchServices, loading, error } = useAdminServices({ filters: filters as any });
 
   // const {
   //   data: services = [],
@@ -128,7 +128,7 @@ const AdminServicesScreen = () => {
 
   useEffect(() => {
     if (data) {
-      setServices(data);
+      setServices(data as any);
     }
   }, [data]);
 
@@ -159,7 +159,7 @@ const AdminServicesScreen = () => {
       let comparison = 0;
 
       switch (sortBy) {
-        case 'title':
+        case 'name':
           comparison = a.title.localeCompare(b.title);
           break;
         case 'price':
@@ -191,10 +191,10 @@ const AdminServicesScreen = () => {
   }, [services, searchQuery, selectedCategory, sortBy, sortOrder]);
 
   const handleSortByChange = () => {
-    const options = ['title', 'price', 'category', 'date'];
+    const options: ('name' | 'price' | 'category' | 'date')[] = ['name', 'price', 'category', 'date'];
     const currentIndex = options.indexOf(sortBy);
     const nextIndex = (currentIndex + 1) % options.length;
-    setSortBy(options[nextIndex] as 'title' | 'price' | 'category' | 'date');
+    setSortBy(options[nextIndex]);
   };
 
   const toggleSortOrder = () => {
@@ -339,7 +339,6 @@ const AdminServicesScreen = () => {
           sortOrder={sortOrder}
           onSortByChange={handleSortByChange}
           onSortOrderToggle={toggleSortOrder}
-          placetext="No Services Found"
         />
       </View>
       {!filteredServices || filteredServices.length === 0 ? (
@@ -352,8 +351,8 @@ const AdminServicesScreen = () => {
             <ServiceCard
               service={item}
               onToggleStatus={toggleServiceStatus}
-              onEdit={handleEditService}
-              onDelete={handleDeleteService}
+              onEdit={handleEditService as any}
+              onDelete={handleDeleteService as any}
             />
           )}
           contentContainerStyle={styles.listContainer}
@@ -372,7 +371,7 @@ const AdminServicesScreen = () => {
       <AddEditServiceModal
         visible={showAddEditModal}
         isEditing={isEditing}
-        formData={formData}
+        formData={formData as any}
         onClose={() => setShowAddEditModal(false)}
         onSuccess={handleModalSuccess}
       />
