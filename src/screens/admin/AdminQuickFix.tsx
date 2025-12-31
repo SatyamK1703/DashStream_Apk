@@ -36,7 +36,7 @@ const AdminQuickFixScreen = () => {
   const navigation = useNavigation();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'label' | 'date'>('label');
+  const [sortBy, setSortBy] = useState<'name' | 'date'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showAddEditModal, setShowAddEditModal] = useState(false);
   const [formData, setFormData] = useState<QuickFix>({
@@ -47,7 +47,7 @@ const AdminQuickFixScreen = () => {
   });
   const [isEditing, setIsEditing] = useState(false);
 
-  const { data: quickFixes, refresh: fetchQuickFixes, loading, error } = useAdminQuickFixes();
+  const { data: quickFixes, execute: fetchQuickFixes, loading, error } = useAdminQuickFixes();
   const { execute: deleteQuickFix } = useDeleteQuickFix();
   const { execute: updateQuickFix } = useUpdateQuickFix();
 
@@ -62,7 +62,7 @@ const AdminQuickFixScreen = () => {
 
     filtered.sort((a, b) => {
       let comparison = 0;
-      if (sortBy === 'label') {
+      if (sortBy === 'name') {
         comparison = a.label.localeCompare(b.label);
       } else {
         // Assuming date is available in the quick fix data
@@ -79,7 +79,7 @@ const AdminQuickFixScreen = () => {
   }, [fetchQuickFixes]);
 
   const handleSortByChange = () => {
-    setSortBy(sortBy === 'label' ? 'date' : 'label');
+    setSortBy(sortBy === 'name' ? 'date' : 'name');
   };
 
   const toggleSortOrder = () => {
@@ -167,7 +167,6 @@ const AdminQuickFixScreen = () => {
           sortOrder={sortOrder}
           onSortByChange={handleSortByChange}
           onSortOrderToggle={toggleSortOrder}
-          placetext="No Quick Fixes Found"
         />
       </View>
       {filteredAndSortedQuickFixes.length === 0 ? (

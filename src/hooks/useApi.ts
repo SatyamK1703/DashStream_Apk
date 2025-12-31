@@ -93,9 +93,11 @@ export const useApi = <T = any>(
           retries > 0 ? await retryOperation(operation, retries, retryDelay) : await operation();
 
         const isSuccess =
-          (response as any)?.success === true || (response as any)?.status === 'success';
+          (response as any)?.success === true ||
+          (response as any)?.status === 'success' ||
+          !response; // Handle empty response (204 No Content) as success
         if (isSuccess) {
-          const payload = (response as any)?.data ?? (response as any);
+          const payload = (response as any)?.data ?? (response as any) ?? null; // Handle empty responses
           cachedDataRef.current = payload;
           setState({
             data: payload,

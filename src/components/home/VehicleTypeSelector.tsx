@@ -8,7 +8,7 @@ const vehicleOptions = [
   { label: 'Bicycle', icon: 'trail-sign-outline' },
 ];
 
-const VehicleTypeSelector = ({ selectedType, onSelectType }) => (
+const VehicleTypeSelector = ({ selectedType, onSelectType }: { selectedType: string; onSelectType: (type: string) => void }) => (
   <View style={styles.container}>
     {vehicleOptions.map((vehicle) => {
       const isActive = selectedType === vehicle.label;
@@ -20,7 +20,7 @@ const VehicleTypeSelector = ({ selectedType, onSelectType }) => (
           activeOpacity={0.85}
         >
           <Ionicons
-            name={vehicle.icon}
+            name={vehicle.icon as any}
             size={20}
             color={isActive ? '#fff' : '#6b7280'}
             style={styles.icon}

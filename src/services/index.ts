@@ -13,6 +13,7 @@ import { locationService as _locationService } from './locationService';
 import { adminService as _adminService } from './adminService';
 import { professionalService as _professionalService } from './professionalService';
 import { addressService as _addressService } from './addressService';
+import { testimonialService as _testimonialService } from './testimonialService';
 
 export { default as httpClient } from './httpClient';
 export type { ApiResponse, ApiError } from './httpClient';
@@ -31,6 +32,7 @@ export const locationService = _locationService;
 export const adminService = _adminService;
 export const professionalService = _professionalService;
 export const addressService = _addressService;
+export const testimonialService = _testimonialService;
 
 // Re-export types
 export * from '../types/api';
@@ -50,6 +52,7 @@ class ServiceAPI {
   admin = _adminService;
   professional = _professionalService;
   address = _addressService;
+  testimonial = _testimonialService;
 }
 
 // Export singleton instance

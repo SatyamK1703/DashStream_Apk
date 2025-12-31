@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, View, Platform, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 // Import navigators for different user roles
@@ -27,7 +27,7 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const RootNavigator = () => {
-  const { user, isLoading, isBooting } = useAuth() as any;
+  const { user, isBooting } = useAuth() as any;
 
   // ⬇️ Show splash/loader ONLY while restoring session at launch
   if (isBooting) {

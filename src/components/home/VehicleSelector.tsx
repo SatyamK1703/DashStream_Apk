@@ -8,19 +8,42 @@ import {
   Pressable,
   TextInput,
   StyleSheet,
-  TouchableOpacity,  Dimensions,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform
+  TouchableOpacity,
+  Dimensions,
+  KeyboardAvoidingView
 } from 'react-native';
 import { ChevronDown, Check } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-const { width } = Dimensions.get('window');
 
+interface SelectedVehicle {
+  brand: string;
+  model: string;
+  type: string;
+  image: string;
+  logo: string;
+}
+
+const vehicleData = [
+  {
+    brand: 'Toyota',
+    logo: 'https://example.com/toyota-logo.png',
+    models: [
+      { name: 'Corolla', type: 'sedan', image: 'https://example.com/corolla.png' },
+      { name: 'Camry', type: 'sedan', image: 'https://example.com/camry.png' },
+    ]
+  },
+  {
+    brand: 'Honda',
+    logo: 'https://example.com/honda-logo.png',
+    models: [
+      { name: 'Civic', type: 'sedan', image: 'https://example.com/civic.png' },
+      { name: 'Accord', type: 'sedan', image: 'https://example.com/accord.png' },
+    ]
+  }
+];
 
 const VehicleSelector = () => {
   const [isVisible, setIsVisible] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<SelectedVehicle | null>(null);
   const [search, setSearch] = useState('');
   
 
@@ -34,7 +57,7 @@ const VehicleSelector = () => {
     )
   })).filter(brand => brand.models.length > 0);
 
-  const handleSelect = (brand, model) => {
+  const handleSelect = (brand: any, model: any) => {
   setSelectedVehicle({
     brand: brand.brand,
     model: model.name, 
@@ -76,14 +99,14 @@ const VehicleSelector = () => {
 
             <FlatList
               data={filteredData}
-              keyExtractor={(item, index) => item.brand + index}
-              renderItem={({ item }) => (
+              keyExtractor={(item: any, index: number) => item.brand + index}
+              renderItem={({ item }: { item: any }) => (
                   <View style={styles.brandSection}>
                   <View style={styles.brandHeader}>
                     <Image source={{ uri: item.logo }} style={styles.brandLogo} />
                     <Text style={styles.brandText}>{item.brand}</Text>
                   </View>
-                  {item.models.map((model, idx) => {
+                  {item.models.map((model: any, idx: number) => {
                       const isSelected =
                       selectedVehicle?.brand === item.brand &&
                       selectedVehicle?.model === model.name;

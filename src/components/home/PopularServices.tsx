@@ -17,7 +17,6 @@ const PopularServices = ({ services }: any) => {
   const handlePress = (service: any) => {
     navigation.navigate('ServiceDetails', {
       serviceId: service._id || service.id,
-      service,
     });
   };
 

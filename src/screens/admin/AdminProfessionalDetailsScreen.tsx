@@ -17,7 +17,7 @@ import { Ionicons, MaterialIcons, MaterialCommunityIcons, FontAwesome } from '@e
 import axios from 'axios';
 import { AdminStackParamList } from '../../../app/routes/AdminNavigator';
 import { adminService } from '../../services/adminService';
-import { API_BASE_URL } from '../../config/config';
+import { config } from '../../config/config';
 import { getToken } from '../../utils/authUtils';
 
 type AdminProfessionalDetailsRouteProp = RouteProp<AdminStackParamList, 'AdminProfessionalDetails'>;
@@ -82,15 +82,8 @@ interface Professional {
     services: string[];
     amount: string;
     status: 'completed' | 'cancelled' | 'ongoing';
-  }[];
-  performanceMetrics: {
-    acceptanceRate: number;
-    cancellationRate: number;
-    avgResponseTime: string;
-    avgServiceTime: string;
-    customerSatisfaction: number;
-  };
-}
+   }[];
+ }
 
 const AdminProfessionalDetailsScreen = () => {
   const route = useRoute<RouteProp<{ params: AdminProfessionalDetailsParams }, 'params'>>();
@@ -117,7 +110,7 @@ const AdminProfessionalDetailsScreen = () => {
 
       // First, try our debug endpoint to check if the professional exists
       try {
-        const debugUrl = `${API_BASE_URL}/admin/debug/professional/${professionalId}`;
+        const debugUrl = `${config.API_URL}/admin/debug/professional/${professionalId}`;
         console.log('Calling debug endpoint:', debugUrl);
         const debugResponse = await axios.get(debugUrl, {
           headers: {
@@ -125,7 +118,7 @@ const AdminProfessionalDetailsScreen = () => {
           },
         });
         console.log('Debug response:', debugResponse.data);
-      } catch (debugError) {
+      } catch (debugError: any) {
         console.error('Debug endpoint error:', debugError.response?.data || debugError);
       }
 
@@ -138,7 +131,7 @@ const AdminProfessionalDetailsScreen = () => {
 
       // Extract the professional data from the nested response structure
       // The API returns { data: { data: { ... } } } structure
-      const professionalApiData = response.data?.data || response.data;
+      const professionalApiData = (response as any).data?.data || (response as any).data;
 
       if (professionalApiData) {
         console.log('Professional details fetched successfully:', professionalApiData);
@@ -219,7 +212,7 @@ const AdminProfessionalDetailsScreen = () => {
             recentBookings: [],
           };
 
-          setProfessional(fallbackData);
+        setProfessional(fallbackData as any);
         }
       }
     } catch (error) {
@@ -265,7 +258,7 @@ const AdminProfessionalDetailsScreen = () => {
           recentBookings: [],
         };
 
-        setProfessional(fallbackData);
+        setProfessional(fallbackData as any);
       }
     } finally {
       setLoading(false);
@@ -322,7 +315,7 @@ const AdminProfessionalDetailsScreen = () => {
                   `Failed to update professional status: ${response.message || 'Unknown error'}`
                 );
               }
-            } catch (error) {
+            } catch (error: any) {
               console.error('Error updating professional status:', error);
               Alert.alert(
                 'Error',
@@ -692,7 +685,7 @@ const AdminProfessionalDetailsScreen = () => {
               <TouchableOpacity
                 style={styles.viewAllButton}
                 onPress={() =>
-                  navigation.navigate('AdminBookings', { professionalId: professional.id })
+                  navigation.navigate('AdminBookings')
                 }>
                 <Text style={styles.viewAllText}>View All Bookings</Text>
               </TouchableOpacity>

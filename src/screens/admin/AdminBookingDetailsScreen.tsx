@@ -72,120 +72,41 @@ const AdminBookingDetailsScreen = () => {
     }
   }, [bookingId]);
 
-  // --- Effects ---
-  useEffect(() => {
-    fetchBookingDetails();
-  }, [fetchBookingDetails]);
-  
-  // Separate effect to fetch professionals only after booking is loaded
-  useEffect(() => {
-    if (booking?._id) {
-      console.log('Booking loaded, fetching professionals for:', booking._id);
-      fetchProfessionals();
-    }
-  }, [booking, fetchProfessionals]);
-  
-  // Debug modal visibility
-  useEffect(() => {
-    console.log('Modal visibility changed:', showAssignModal, 'Professionals count:', professionals.length);
-    
-    // Fetch professionals when modal is opened if the list is empty
-    if (showAssignModal && professionals.length === 0 && booking?._id) {
-      console.log('Modal opened with empty professionals list, fetching again...');
-      fetchProfessionals();
-    }
-  }, [showAssignModal, professionals.length, booking, fetchProfessionals]);
-
-
-   const fetchProfessionals = useCallback(async () => {
-    if (!booking?._id) {
-      console.log('No booking ID available, cannot fetch professionals');
-      return;
-    }
-
-    console.log('Fetching professionals for booking:', booking._id);
-    setAssignLoading(true);
-
-    try {
-      const response = await adminService.getAvailableProfessionals(booking._id);
-      console.log('API Response:', JSON.stringify(response, null, 2));
-
-      if ((response.status || response.data?.status) === 'success') {
-        const professionalsArray =
-          response.data?.data?.professionals || response.data?.professionals || [];
-
-        console.log('Extracted professionals array:', JSON.stringify(professionalsArray, null, 2));
-
-        if (Array.isArray(professionalsArray) && professionalsArray.length > 0) {
-          console.log('Available professionals found:', professionalsArray.length);
-
-          const professionalOptions: ProfessionalOption[] =
-            professionalsArray.map((prof: any) => ({
-              id: prof._id || prof.id,
-              name: prof.name || prof.user?.name || prof.phone || 'Unknown',
-              rating: prof.rating || 0,
-              experience: Array.isArray(prof.specializations)
-                ? prof.specializations.join(', ')
-                : prof.experience || '',
-              isAvailable: true,
-              verified: prof.verified
-            }));
-
-          console.log('Mapped professional options:', JSON.stringify(professionalOptions, null, 2));
-          setProfessionals(professionalOptions);
-          console.log('Professionals state updated with', professionalOptions.length, 'options');
-        } else {
-          console.log('No professionals found in response or empty array, using fallback');
-          await fetchFallbackProfessionals();
-        }
-      } else {
-        console.log('No success in response, using fallback');
-        await fetchFallbackProfessionals();
-      }
-    } catch (err: any) {
-      console.error('Error fetching professionals:', err);
-      await fetchFallbackProfessionals();
-    } finally {
-      setAssignLoading(false);
-    }
-  }, [booking?._id, fetchFallbackProfessionals]);
-
-  
   // Separate fallback function to avoid code duplication
   const fetchFallbackProfessionals = useCallback(async () => {
     try {
       console.log('Using fallback method to get professionals');
-      const fallbackResponse = await adminService.getProfessionals({ 
-        page: 1, 
+      const fallbackResponse: any = await adminService.getProfessionals({
+        page: 1,
         limit: 50,
         status: 'active'
       });
-      
-      console.log('Fallback response:', JSON.stringify(fallbackResponse, null, 2));
-      
-      if ((fallbackResponse.status || fallbackResponse.data?.status) === 'success') {
-        // Check for different response structures
+
+      console.log('Fallback API Response:', JSON.stringify(fallbackResponse, null, 2));
+
+      if (fallbackResponse.success && fallbackResponse.data) {
+        // Handle different response structures
         let profData: any[] = [];
-        
-        if (fallbackResponse.data?.data?.professionals && Array.isArray(fallbackResponse.data.data.professionals)) {
-          profData = fallbackResponse.data.data.professionals;
-          console.log('Found professionals in data.data.professionals');
-        } else if (fallbackResponse.data?.professionals && Array.isArray(fallbackResponse.data.professionals)) {
+
+        if (Array.isArray(fallbackResponse.data)) {
+          profData = fallbackResponse.data;
+          console.log('Fallback data is direct array');
+        } else if (fallbackResponse.data.professionals && Array.isArray(fallbackResponse.data.professionals)) {
           profData = fallbackResponse.data.professionals;
           console.log('Found professionals in data.professionals');
-        } else if (Array.isArray(fallbackResponse.data)) {
-          profData = fallbackResponse.data;
-          console.log('Found professionals in data array');
-        } else if (fallbackResponse.data?.data?.pagination?.items && Array.isArray(fallbackResponse.data.data.pagination.items)) {
-          profData = fallbackResponse.data.data.pagination.items;
+        } else if (fallbackResponse.data.data && Array.isArray(fallbackResponse.data.data)) {
+          profData = fallbackResponse.data.data;
+          console.log('Found professionals in data.data');
+        } else if (fallbackResponse.data.items && Array.isArray(fallbackResponse.data.items)) {
+          profData = fallbackResponse.data.items;
           console.log('Found professionals in pagination items');
         }
-          
+
         console.log('Fallback successful, found:', profData.length, 'professionals');
         console.log('Professional data sample:', profData.length > 0 ? JSON.stringify(profData[0], null, 2) : 'No data');
-        
+
         if (profData.length > 0) {
-          const professionalOptions: ProfessionalOption[] = profData.map(prof => ({
+          const professionalOptions: ProfessionalOption[] = profData.map((prof: any) => ({
             id: prof._id || prof.id,
             name: prof.user?.name || prof.name || prof.phone || 'Unknown',
             rating: prof.rating || 0,
@@ -208,6 +129,56 @@ const AdminBookingDetailsScreen = () => {
       setProfessionals([]);
     }
   }, []);
+
+  const fetchProfessionals = useCallback(async () => {
+    if (!booking?._id) {
+      console.log('No booking ID available, cannot fetch professionals');
+      return;
+    }
+
+    console.log('Fetching professionals for booking:', booking._id);
+    setAssignLoading(true);
+
+    try {
+      const response: any = await adminService.getAvailableProfessionals(booking._id);
+      console.log('API Response:', JSON.stringify(response, null, 2));
+
+      if ((response.status || response.data?.status) === 'success') {
+        const professionalsArray =
+          response.data?.data?.professionals || response.data?.professionals || [];
+
+        console.log('Extracted professionals array:', JSON.stringify(professionalsArray, null, 2));
+
+        if (Array.isArray(professionalsArray) && professionalsArray.length > 0) {
+          console.log('Available professionals found:', professionalsArray.length);
+
+          const professionalOptions: ProfessionalOption[] =
+            professionalsArray.map((prof: any) => ({
+              id: prof._id || prof.id,
+              name: prof.name || prof.user?.name || prof.phone || 'Unknown',
+              rating: prof.rating || 0,
+              experience: Array.isArray(prof.specializations) ? prof.specializations.join(', ') : prof.experience || '',
+              verified: prof.verified
+            }));
+
+          console.log('Mapped professional options:', JSON.stringify(professionalOptions, null, 2));
+          setProfessionals(professionalOptions);
+          console.log('Professionals state updated with', professionalOptions.length, 'options');
+        } else {
+          console.log('No professionals found in response or empty array, using fallback');
+          await fetchFallbackProfessionals();
+        }
+      } else {
+        console.log('No success in response, using fallback');
+        await fetchFallbackProfessionals();
+      }
+    } catch (err: any) {
+      console.error('Error fetching professionals:', err);
+      await fetchFallbackProfessionals();
+    } finally {
+      setAssignLoading(false);
+    }
+  }, [booking?._id]);
 
   // --- Handlers ---
   const handleAssignProfessional = async () => {
@@ -690,20 +661,20 @@ const renderActionButtons = () => {
         {/* Service Details */}
         <View style={servicestyles.container}>
           <Text style={servicestyles.heading}>Service Details</Text>
-          <View style={servicestyles.serviceItem}>
-            <View>
-              <Text style={servicestyles.serviceName}>{booking.services?.[0]?.title ?? ''}</Text>
-              <Text style={servicestyles.serviceDuration}>{booking.services?.[0]?.duration ?? 0} minutes</Text>
-              <Text style={servicestyles.serviceDescription}>{booking.services?.[0]?.description ?? ''}</Text>
-            </View>
-            <Text style={servicestyles.servicePrice}>₹{booking.services?.[0]?.price ?? 0}</Text>
-          </View>
+           <View style={servicestyles.serviceItem}>
+             <View>
+               <Text style={servicestyles.serviceName}>{booking.service?.name ?? ''}</Text>
+               <Text style={servicestyles.serviceDuration}>{booking.service?.duration ?? 0} minutes</Text>
+               <Text style={servicestyles.serviceDescription}>{booking.service?.description ?? ''}</Text>
+             </View>
+             <Text style={servicestyles.servicePrice}>₹{booking.service?.basePrice ?? 0}</Text>
+           </View>
 
-          <View style={servicestyles.section}>
-            <View style={servicestyles.row}>
-              <Text style={servicestyles.label}>Base Price</Text>
-              <Text style={servicestyles.value}>₹{booking.services?.[0]?.price ?? 0}</Text>
-            </View>
+           <View style={servicestyles.section}>
+             <View style={servicestyles.row}>
+               <Text style={servicestyles.label}>Base Price</Text>
+               <Text style={servicestyles.value}>₹{booking.service?.basePrice ?? 0}</Text>
+             </View>
             <View style={servicestyles.row}>
               <Text style={servicestyles.label}>Tax (18% GST)</Text>
               <Text style={servicestyles.value}>₹{((booking.totalAmount ?? 0) * 0.18 / 1.18).toFixed(2)}</Text>
@@ -981,7 +952,7 @@ const renderActionButtons = () => {
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
-      </SafeAreaView>
+    </SafeAreaView>
   );
 };
 

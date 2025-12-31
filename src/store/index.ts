@@ -31,6 +31,9 @@ export { useAddressStore } from './addressStore';
 // Offer store
 export { useOfferStore } from './offerStore';
 
+// Testimonial store
+export { useTestimonialStore, type Testimonial } from './testimonialStore';
+
 // Checkout store
 export { useCheckoutStore } from './checkoutStore';
 
@@ -47,4 +50,5 @@ export {
   usePayments,
   useServices,
   useCheckout,
+  useTestimonials,
 } from './helpers';

@@ -1,12 +1,8 @@
 // components/home/Footer.tsx
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator'; 
+import { View, Text, StyleSheet } from 'react-native';
 
 const Footer = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
 
   return (
     <View style={styles.container}>

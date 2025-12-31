@@ -7,9 +7,10 @@ import { styles } from './BookingsScreen.styles';
 interface BookingCardProps {
   booking: Booking;
   onPress: (bookingId: string) => void;
+  onUpdateStatus?: (status: string) => void;
 }
 
-const BookingCard: React.FC<BookingCardProps> = ({ booking, onPress }) => {
+const BookingCard: React.FC<BookingCardProps> = ({ booking, onPress, onUpdateStatus }) => {
   const getStatusStyles = (status: string) => {
     switch (status) {
       case 'pending':

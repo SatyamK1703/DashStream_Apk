@@ -20,7 +20,7 @@ import { User } from '../../types/api';
 
 type AdminCustomersNavigationProp = NativeStackNavigationProp<AdminStackParamList>;
 
-interface Customer extends User {
+interface Customer extends Omit<User, 'profileImage'> {
   totalBookings: number;
   totalSpent: number;
   status: 'active' | 'inactive' | 'blocked';

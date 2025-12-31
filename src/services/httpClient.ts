@@ -80,47 +80,13 @@ class HttpClient {
                 tokenPreview: accessToken.substring(0, 20) + '...'
               });
             }
-            // Dev-only: decode JWT and log claims to help debug permission issues
-            if (__DEV__) {
-              try {
-                const parts = accessToken.split('.');
-                if (parts.length === 3) {
-                  let payload: any = null;
-                  try {
-                    // Try to use atob when available
-                    if (typeof (global as any).atob === 'function') {
-                      payload = JSON.parse((global as any).atob(parts[1]));
-                    } else if ((global as any).Buffer) {
-                      payload = JSON.parse((global as any).Buffer.from(parts[1], 'base64').toString('utf8'));
-                    } else {
-                      // Last resort: attempt decoding via decodeURIComponent
-                      const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-                      const decoded = decodeURIComponent(Array.prototype.map.call(atob(b64), (c: any) => '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
-                      payload = JSON.parse(decoded);
-                    }
-                  } catch {
-                    payload = null;
-                  }
-
-                  if (payload) {
-                    console.log('🧾 JWT claims (dev):', {
-                      sub: payload.sub,
-                      role: payload.role || payload.roles || payload.scopes,
-                      exp: payload.exp,
-                      iat: payload.iat,
-                      rawPayload: payload,
-                    });
-                  }
-                }
-              } catch {
-                console.warn('Failed to decode JWT (dev)');
-              }
-            }
           } else if (__DEV__ && config.url?.includes('/auth/me')) {
             console.warn('⚠️ No access token found for /auth/me request');
           }
+
         } catch (error) {
           if (__DEV__) console.warn('Failed to read access token:', error);
+          return Promise.reject(error);
         }
 
         // Add request timestamp

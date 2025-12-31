@@ -389,7 +389,7 @@ const TrackBookingScreen = () => {
 
       <ScrollView style={styles.flex} showsVerticalScrollIndicator={false}>
         {/* Map View */}
-        <View style={styles.mapWrap}>
+        {/* <View style={styles.mapWrap}>
           <MapView
             provider={PROVIDER_GOOGLE}
             style={styles.map}
@@ -420,7 +420,7 @@ const TrackBookingScreen = () => {
               />
             )}
           </MapView>
-        </View>
+        </View> */}
 
         {/* Status Tracker */}
         <View style={styles.pad}>

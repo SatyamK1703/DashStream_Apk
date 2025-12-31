@@ -3,7 +3,13 @@ import { quickFixService } from '../services/quickFixService';
 import { useApi, usePaginatedApi } from './useApi';
 import { adminService } from '../services/adminService';
 import { serviceService } from '../services/serviceService';
-import { Service, AdminFilters } from '../types/api';
+import { Service } from '../types/api';
+
+interface AdminFilters {
+  category?: string;
+  status?: 'active' | 'inactive';
+  search?: string;
+}
 
 interface UseAdminServicesOptions {
   filters?: AdminFilters;
@@ -22,11 +28,8 @@ export const useAdminServices = ({ filters }: UseAdminServicesOptions = {}) => {
     try {
       const response = await adminService.getServices(stableFilters);
 
-      // Handle both shapes: response.data.services OR response.services
-      const rawServices =
-        (response.data?.services && response.data.services.length > 0
-          ? response.data.services
-          : response.services) || [];
+       // Handle API response format
+       const rawServices = (response as any).data?.services || (response as any).services || [];
 
       // Map raw services -> frontend-friendly shape
       const services = rawServices.map((s: any) => ({
@@ -83,7 +86,7 @@ export const useCreateService = () => {
       price: number;
       discountPrice?: number;
       category: string;
-      duration: string; // Backend expects string not number
+      duration: number;
       features: string[];
       tags: string[];
       isActive: boolean;

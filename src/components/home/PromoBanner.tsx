@@ -3,7 +3,7 @@ import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { scaleWidth, scaleHeight, scaleFont } from '../../utils/scaling';
 
-const PromoBanner = ({ onPress }) => (
+const PromoBanner = ({ onPress }: { onPress: () => void }) => (
   <View style={styles.wrapper}>
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
       <Image source={require('../../assets/images/become-a-member.png')} style={styles.image} />

@@ -105,6 +105,19 @@ const AdminSettingsScreen = () => {
           <MaterialIcons name="chevron-right" size={28} color="#CBD5E0" />
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.settingCard}
+          onPress={() => navigation.navigate('AdminInstagram')}>
+          <View style={styles.settingItemLeft}>
+            <FontAwesome5 name="instagram" size={22} color="#38A169" />
+            <View>
+              <Text style={styles.settingItemTitle}>Instagram Testimonials</Text>
+              <Text style={styles.settingItemSubtitle}>Manage customer testimonials</Text>
+            </View>
+          </View>
+          <MaterialIcons name="chevron-right" size={28} color="#CBD5E0" />
+        </TouchableOpacity>
+
         {/* Logout */}
         <TouchableOpacity style={styles.logoutCard} onPress={() => setShowLogoutConfirmation(true)}>
           <MaterialIcons name="logout" size={24} color="#E53935" />

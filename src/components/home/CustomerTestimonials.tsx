@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,43 +10,33 @@ import {
   Linking,
 } from 'react-native';
 import { scaleWidth, scaleHeight, scaleFont } from '../../utils/scaling';
+import { useTestimonials } from '../../store';
 
-const testimonials = [
-  {
-    id: '1',
-    name: 'Aadarsh',
-    instagramUrl: 'https://www.instagram.com/reel/DPHNxayjJpQ/?igsh=djExeXhjejhmYzQy', // Replace with real links
-    thumbnail: 'https://via.placeholder.com/300x300.png?text=Video+1', // Optional: preview image
-  },
-  {
-    id: '2',
-    name: 'Dolly Parma',
-    instagramUrl: 'https://www.instagram.com/reel/DPHNxayjJpQ/?igsh=djExeXhjejhmYzQy',
-    thumbnail: 'https://via.placeholder.com/300x300.png?text=Video+2',
-  },
-  {
-    id: '3',
-    name: 'Parma',
-    instagramUrl: 'https://www.instagram.com/reel/DPHNxayjJpQ/?igsh=djExeXhjejhmYzQy',
-    thumbnail: 'https://via.placeholder.com/300x300.png?text=Video+3',
-  },
-];
+interface Testimonial {
+  _id: string;
+  name: string;
+  instagramUrl: string;
+  thumbnail: {
+    public_id?: string;
+    url: string;
+  };
+}
 
 const ITEM_WIDTH = Dimensions.get('window').width * 0.4;
 
-const TestimonialItem = ({ item }) => {
+const TestimonialItem = ({ item }: { item: Testimonial }) => {
   const handlePress = async () => {
     const supported = await Linking.canOpenURL(item.instagramUrl);
     if (supported) {
       Linking.openURL(item.instagramUrl);
     } else {
-      alert("Can't open Instagram link.");
+      console.warn("Can't open Instagram link.");
     }
   };
 
   return (
     <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.8}>
-      <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
+      <Image source={{ uri: item.thumbnail.url }} style={styles.thumbnail} />
       <View style={styles.overlay}>
         <Text style={styles.name}>{item.name}</Text>
       </View>
@@ -55,17 +45,56 @@ const TestimonialItem = ({ item }) => {
 };
 
 const CustomerTestimonials = () => {
+  const { testimonials, isLoading: loading, error, fetchTestimonials } = useTestimonials();
+
+  useEffect(() => {
+    fetchTestimonials();
+  }, [fetchTestimonials]);
+
+  if (loading) {
+    return (
+      <View style={{ marginVertical: scaleHeight(10) }}>
+        <Text style={styles.title}>Customer Testimonials</Text>
+        <View style={{ height: scaleHeight(300), justifyContent: 'center', alignItems: 'center' }}>
+          <Text>Loading...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={{ marginVertical: scaleHeight(10) }}>
+        <Text style={styles.title}>Customer Testimonials</Text>
+        <View style={{ height: scaleHeight(300), justifyContent: 'center', alignItems: 'center' }}>
+          <Text>Failed to load testimonials</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (testimonials.length === 0) {
+    return (
+      <View style={{ marginVertical: scaleHeight(10) }}>
+        <Text style={styles.title}>Customer Testimonials</Text>
+        <View style={{ height: scaleHeight(300), justifyContent: 'center', alignItems: 'center' }}>
+          <Text>No testimonials available</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={{ marginVertical: scaleHeight(10) }}>
       <Text style={styles.title}>Customer Testimonials</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: scaleWidth(16) }}>
-        {testimonials.map((item) => (
-          <TestimonialItem key={item.id} item={item} />
-        ))}
-      </ScrollView>
+       <ScrollView
+         horizontal
+         showsHorizontalScrollIndicator={false}
+         contentContainerStyle={{ paddingHorizontal: scaleWidth(16) }}>
+         {testimonials?.map((item: Testimonial) => (
+           <TestimonialItem key={item._id} item={item} />
+         ))}
+       </ScrollView>
     </View>
   );
 };

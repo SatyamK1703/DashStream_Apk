@@ -31,6 +31,12 @@ export * from './useMembership';
 // Admin hooks
 export * from './useAdmin';
 
+// Testimonial hooks
+export * from './useTestimonials';
+
+// Testimonial types
+export type { Testimonial } from '../services/testimonialService';
+
 // Re-export commonly used types
 export type {
   Service,

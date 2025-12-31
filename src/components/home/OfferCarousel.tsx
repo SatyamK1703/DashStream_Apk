@@ -98,7 +98,7 @@ const OffersCarousel = ({ offers = [], currentIndex, setCurrentIndex, loading }:
 
                 {/* indicators */}
                 <View style={styles.indicatorContainer}>
-                  {offers.slice(0, 8).map((_, dotIdx) => {
+                  {offers.slice(0, 8).map((_: any, dotIdx: number) => {
                     const active = dotIdx === currentIndex % Math.min(offers.length, 8);
                     return (
                       <Animated.View

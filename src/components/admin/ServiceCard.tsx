@@ -163,7 +163,7 @@ const cardStyles = {
       position: 'relative' as const,
     },
     image: {
-      width: '100%',
+      width: '100%' as const,
       height: 160,
     },
     categoryBadge: {
@@ -205,7 +205,7 @@ const cardStyles = {
     },
     header: {
       flexDirection: 'row' as const,
-      justifyContent: 'space-between',
+      justifyContent: 'space-between' as const,
       alignItems: 'flex-start' as const,
       marginBottom: 8,
     },
@@ -292,7 +292,7 @@ const cardStyles = {
     },
     actions: {
       flexDirection: 'row' as const,
-      justifyContent: 'space-between',
+      justifyContent: 'space-between' as const,
       alignItems: 'center' as const,
       paddingTop: 8,
       borderTopWidth: 1,

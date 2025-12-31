@@ -271,7 +271,7 @@ const AdminCreateProfessionalScreen = () => {
       } else {
         Alert.alert('Error', response?.message || 'Failed to create professional');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create professional error:', error.response?.data || error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to create professional. Please try again.';
       Alert.alert('Error', errorMessage);
