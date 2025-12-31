@@ -10,31 +10,18 @@ import {
   Linking,
 } from 'react-native';
 import { scaleWidth, scaleHeight, scaleFont } from '../../utils/scaling';
+import { useTestimonials } from '../../hooks';
 
-const testimonials = [
-  {
-    id: '1',
-    name: 'Aadarsh',
-    instagramUrl: 'https://www.instagram.com/reel/DPHNxayjJpQ/?igsh=djExeXhjejhmYzQy', // Replace with real links
-    thumbnail: 'https://via.placeholder.com/300x300.png?text=Video+1', // Optional: preview image
-  },
-  {
-    id: '2',
-    name: 'Dolly Parma',
-    instagramUrl: 'https://www.instagram.com/reel/DPHNxayjJpQ/?igsh=djExeXhjejhmYzQy',
-    thumbnail: 'https://via.placeholder.com/300x300.png?text=Video+2',
-  },
-  {
-    id: '3',
-    name: 'Parma',
-    instagramUrl: 'https://www.instagram.com/reel/DPHNxayjJpQ/?igsh=djExeXhjejhmYzQy',
-    thumbnail: 'https://via.placeholder.com/300x300.png?text=Video+3',
-  },
-];
+interface Testimonial {
+  id: string;
+  name: string;
+  instagramUrl: string;
+  thumbnail: string;
+}
 
 const ITEM_WIDTH = Dimensions.get('window').width * 0.4;
 
-const TestimonialItem = ({ item }) => {
+const TestimonialItem = ({ item }: { item: Testimonial }) => {
   const handlePress = async () => {
     const supported = await Linking.canOpenURL(item.instagramUrl);
     if (supported) {
@@ -55,6 +42,30 @@ const TestimonialItem = ({ item }) => {
 };
 
 const CustomerTestimonials = () => {
+  const { data: testimonials, loading, error } = useTestimonials();
+
+  if (loading) {
+    return (
+      <View style={{ marginVertical: scaleHeight(10) }}>
+        <Text style={styles.title}>Customer Testimonials</Text>
+        <View style={{ height: scaleHeight(300), justifyContent: 'center', alignItems: 'center' }}>
+          <Text>Loading...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={{ marginVertical: scaleHeight(10) }}>
+        <Text style={styles.title}>Customer Testimonials</Text>
+        <View style={{ height: scaleHeight(300), justifyContent: 'center', alignItems: 'center' }}>
+          <Text>Failed to load testimonials</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={{ marginVertical: scaleHeight(10) }}>
       <Text style={styles.title}>Customer Testimonials</Text>
@@ -62,7 +73,7 @@ const CustomerTestimonials = () => {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: scaleWidth(16) }}>
-        {testimonials.map((item) => (
+        {testimonials?.map((item: Testimonial) => (
           <TestimonialItem key={item.id} item={item} />
         ))}
       </ScrollView>

@@ -29,6 +29,9 @@ interface ImageField {
   isUploading: boolean;
 }
 
+// Temporary type override to avoid union complexity
+type OfferFormImage = any;
+
 interface AddEditOfferModalProps {
   visible: boolean;
   isEditing: boolean;
@@ -97,7 +100,7 @@ useEffect(() => {
         isPromo: false,
         isActive: true,
         terms: '',
-        image: { localUri: null, isUploading: false },
+  image: { localUri: null, isUploading: false } as any,
       });
     }
   }

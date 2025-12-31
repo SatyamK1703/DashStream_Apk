@@ -692,7 +692,7 @@ const AdminCustomerDetailsScreen = () => {
                   item.type === 'car'
                     ? 'car'
                     : item.type === 'motorcycle'
-                      ? 'motorcycle'
+                      ? 'bicycle-outline'
                       : 'bicycle'
                 }
                 size={24}

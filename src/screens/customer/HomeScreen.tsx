@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -16,9 +16,9 @@ import PromoBanner from '../../components/home/PromoBanner';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
-import CustomerTestimonials from '~/components/home/CustomerTestimonials';
-// import QuickFixes from '~/components/home/QuickFixes';
-import Footer from '~/components/home/FooterMain';
+import CustomerTestimonials from '../../components/home/CustomerTestimonials';
+// import QuickFixes from '../../components/home/QuickFixes';
+import Footer from '../../components/home/FooterMain';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { scaleWidth, scaleHeight } from '../../utils/scaling';
 import OfferPopup from '../../components/home/offerPopup';
@@ -52,7 +52,7 @@ const HomeScreen = () => {
   // Load initial data
   useEffect(() => {
     loadHomeData();
-  }, []);
+  }, [loadHomeData]);
 
   // Auto scroll offers
   useEffect(() => {
@@ -65,17 +65,17 @@ const HomeScreen = () => {
     }
   }, [activeOffersData]);
 
-  const loadHomeData = async () => {
+  const loadHomeData = useCallback(async () => {
     try {
       await Promise.all([fetchPopularServices(), fetchActiveOffers()]);
     } catch (error) {
       console.error('Failed to load home data:', error);
     }
-  };
+  }, [fetchPopularServices, fetchActiveOffers]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     loadHomeData();
-  };
+  }, [loadHomeData]);
 
   // Helper to extract a usable image URL from various offer shapes
   const extractOfferImage = (offer: any): string | undefined => {

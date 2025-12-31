@@ -179,12 +179,12 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
 // Alert Manager for easy usage
 class AlertManager {
   private static instance: AlertManager;
-  private alertQueue: Array<{
+  private alertQueue: {
     id: string;
     props: CustomAlertProps;
-  }> = [];
+  }[] = [];
   private currentAlert: string | null = null;
-  private listeners: Array<(alert: CustomAlertProps | null) => void> = [];
+  private listeners: ((alert: CustomAlertProps | null) => void)[] = [];
 
   static getInstance(): AlertManager {
     if (!AlertManager.instance) {

@@ -107,7 +107,16 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, Pressable, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const ServiceCard = ({ title, price, duration, onPress, description, image }) => {
+interface ServiceCardProps {
+  title: string;
+  price: number;
+  duration: number;
+  onPress: () => void;
+  description: string;
+  image: string | any;
+}
+
+const ServiceCard = ({ title, price, duration, onPress, description, image }: ServiceCardProps) => {
   const imageSource = typeof image === 'string' ? { uri: image } : image;
 
   return (
