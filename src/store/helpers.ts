@@ -10,6 +10,7 @@ import { useServiceStore } from './serviceStore';
 import { useAddressStore } from './addressStore';
 import { useOfferStore } from './offerStore';
 import { useCheckoutStore } from './checkoutStore';
+import { useTestimonialStore } from './testimonialStore';
 
 // Store initialization hook
 export const useInitializeStores = () => {
@@ -291,5 +292,21 @@ export const useCheckout = () => {
     setLoading,
     clearCheckout,
     updateCheckoutData,
+  };
+};
+
+export const useTestimonials = () => {
+  const testimonials = useTestimonialStore(state => state.testimonials);
+  const isLoading = useTestimonialStore(state => state.isLoading);
+  const error = useTestimonialStore(state => state.error);
+  const fetchTestimonials = useTestimonialStore(state => state.fetchTestimonials);
+  const clearError = useTestimonialStore(state => state.clearError);
+
+  return {
+    testimonials,
+    isLoading,
+    error,
+    fetchTestimonials,
+    clearError,
   };
 };

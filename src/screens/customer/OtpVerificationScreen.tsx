@@ -98,7 +98,7 @@ const OtpVerificationScreen = () => {
         <View style={styles.header}>
           <Text style={styles.title}>Enter Verification Code</Text>
           <Text style={styles.subtitle}>We sent a code to</Text>
-          <Text style={styles.phone}>+{phone}</Text>
+          <Text style={styles.phone}>+91 {phone}</Text>
         </View>
 
         <View style={styles.otpRow}>

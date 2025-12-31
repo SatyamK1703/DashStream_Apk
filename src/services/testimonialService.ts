@@ -1,7 +1,7 @@
 import apiClient from './httpClient';
 
 export interface Testimonial {
-  id: string;
+  _id: string;
   name: string;
   instagramUrl: string;
   thumbnail: {
@@ -12,6 +12,7 @@ export interface Testimonial {
 
 export const testimonialService = {
   getTestimonials: () => {
+    console.log('testimonialService.getTestimonials called');
     return apiClient.get('/testimonials');
   },
   createTestimonial: (data: FormData) => {

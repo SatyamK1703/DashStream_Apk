@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,10 @@ import {
   Linking,
 } from 'react-native';
 import { scaleWidth, scaleHeight, scaleFont } from '../../utils/scaling';
-import { useTestimonials } from '../../hooks';
+import { useTestimonials } from '../../store';
 
 interface Testimonial {
-  id: string;
+  _id: string;
   name: string;
   instagramUrl: string;
   thumbnail: {
@@ -30,7 +30,7 @@ const TestimonialItem = ({ item }: { item: Testimonial }) => {
     if (supported) {
       Linking.openURL(item.instagramUrl);
     } else {
-      alert("Can't open Instagram link.");
+      console.warn("Can't open Instagram link.");
     }
   };
 
@@ -45,8 +45,11 @@ const TestimonialItem = ({ item }: { item: Testimonial }) => {
 };
 
 const CustomerTestimonials = () => {
-  const { data: testimonialsData, loading, error } = useTestimonials();
-  const testimonials = Array.isArray(testimonialsData) ? testimonialsData : [];
+  const { testimonials, isLoading: loading, error, fetchTestimonials } = useTestimonials();
+
+  useEffect(() => {
+    fetchTestimonials();
+  }, [fetchTestimonials]);
 
   if (loading) {
     return (
@@ -70,17 +73,28 @@ const CustomerTestimonials = () => {
     );
   }
 
+  if (testimonials.length === 0) {
+    return (
+      <View style={{ marginVertical: scaleHeight(10) }}>
+        <Text style={styles.title}>Customer Testimonials</Text>
+        <View style={{ height: scaleHeight(300), justifyContent: 'center', alignItems: 'center' }}>
+          <Text>No testimonials available</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={{ marginVertical: scaleHeight(10) }}>
       <Text style={styles.title}>Customer Testimonials</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: scaleWidth(16) }}>
-        {testimonials?.map((item: Testimonial) => (
-          <TestimonialItem key={item.id} item={item} />
-        ))}
-      </ScrollView>
+       <ScrollView
+         horizontal
+         showsHorizontalScrollIndicator={false}
+         contentContainerStyle={{ paddingHorizontal: scaleWidth(16) }}>
+         {testimonials?.map((item: Testimonial) => (
+           <TestimonialItem key={item._id} item={item} />
+         ))}
+       </ScrollView>
     </View>
   );
 };
