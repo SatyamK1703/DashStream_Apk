@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CustomerStackParamList } from '../../../app/routes/CustomerNavigator';
@@ -16,6 +16,7 @@ type ServiceDetailsNavigationProp = NativeStackNavigationProp<CustomerStackParam
 const ServiceDetailsScreen = () => {
   const [quantity, setQuantity] = useState(1);
   const [serviceData, setServiceData] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const navigation = useNavigation<ServiceDetailsNavigationProp>();
   const route = useRoute<any>();
   const { serviceId, service } = route.params || {};
@@ -24,22 +25,31 @@ const ServiceDetailsScreen = () => {
   useEffect(() => {
     if (!id) {
       console.warn('ServiceDetails: missing service id or service object in route params');
+      setIsLoading(false);
       return;
     }
     // fetch or set service using `id` (or use `service` directly if provided)
     if (service) {
       setServiceData(service);
+      setIsLoading(false);
     } else {
       // fetchServiceById should call the service API
       const fetchServiceById = async (svcId: string) => {
         try {
-          const { data } = await (
+          setIsLoading(true);
+          const response = await (
             await import('../../services')
           ).serviceService.getServiceById(svcId);
-          setServiceData(data || null);
+          // API returns { status, data: { status, service } } or { data: service }
+          // Handle nested response structure
+          const serviceObj = response?.data?.service || response?.service || response?.data || null;
+          console.log('ServiceDetails: fetched service:', serviceObj);
+          setServiceData(serviceObj);
         } catch (err) {
           console.warn('Failed to fetch service by id', err);
           setServiceData(null);
+        } finally {
+          setIsLoading(false);
         }
       };
 
@@ -54,6 +64,18 @@ const ServiceDetailsScreen = () => {
   const { user } = useAuthStore();
   const { getAreas } = useServiceArea();
   const { execute: notifyAdmin } = useNotifyAreaRequest();
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={{ marginTop: 12, color: '#6b7280' }}>Loading service...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!svc) {
     return (

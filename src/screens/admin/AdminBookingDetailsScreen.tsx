@@ -72,6 +72,13 @@ const AdminBookingDetailsScreen = () => {
     }
   }, [bookingId]);
 
+  // Fetch booking details on mount
+  useEffect(() => {
+    if (bookingId) {
+      fetchBookingDetails();
+    }
+  }, [bookingId, fetchBookingDetails]);
+
   // Separate fallback function to avoid code duplication
   const fetchFallbackProfessionals = useCallback(async () => {
     try {

@@ -102,7 +102,36 @@ const BookingConfirmationScreen = () => {
   }
 
   /* -------------------- Derived Data -------------------- */
-  const services = booking.service ? [booking.service] : [];
+  // Handle different possible service data structures from API
+  const services = (() => {
+    // Try different possible property names/structures
+    if (booking.services && Array.isArray(booking.services)) {
+      return booking.services;
+    }
+    if (booking.service) {
+      return [booking.service];
+    }
+    // serviceId might be populated with full service object
+    if (booking.serviceId && typeof booking.serviceId === 'object') {
+      return [booking.serviceId];
+    }
+    // items array (some APIs use this)
+    if (booking.items && Array.isArray(booking.items)) {
+      return booking.items;
+    }
+    // Log for debugging
+    if (__DEV__) {
+      console.log('BookingConfirmation: Could not find services in booking:', {
+        hasService: !!booking.service,
+        hasServices: !!booking.services,
+        hasServiceId: !!booking.serviceId,
+        serviceIdType: typeof booking.serviceId,
+        hasItems: !!booking.items,
+        bookingKeys: Object.keys(booking),
+      });
+    }
+    return [];
+  })();
 
   /* -------------------- Derived Data -------------------- */
   const address = booking.address?.address;
@@ -214,7 +243,10 @@ const Row = ({ label, value, bold, valueColor }) => (
 const ServiceItem = ({ service }) => {
   const price = service?.basePrice || service?.price || service?.serviceId?.price || 0;
   const qty = service?.quantity || 1;
-  const img = service?.images?.[0]?.url;
+  // Handle different image property structures
+  const img = service?.images?.[0]?.url || service?.image || service?.serviceId?.image;
+  // Handle different name property structures
+  const name = service?.name || service?.title || service?.serviceId?.name || service?.serviceId?.title || 'Service';
 
   return (
     <View style={styles.serviceRow}>
@@ -226,7 +258,7 @@ const ServiceItem = ({ service }) => {
         </View>
       )}
       <View style={{ flex: 1 }}>
-        <Text style={styles.serviceName}>{service.name}</Text>
+        <Text style={styles.serviceName}>{name}</Text>
         <Text style={styles.servicePrice}>
           ₹{price} × {qty}
         </Text>

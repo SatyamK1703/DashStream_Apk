@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Modal,
   StyleSheet,
-  StatusBar
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -73,11 +73,7 @@ const MembershipScreen = () => {
         // Handle browser result
         if (browserResult.type === 'cancel' || browserResult.type === 'dismiss') {
           // Poll for payment status like checkout does
-          Alert.alert(
-            'Payment Processing',
-            'Checking payment status...',
-            [{ text: 'OK' }]
-          );
+          Alert.alert('Payment Processing', 'Checking payment status...', [{ text: 'OK' }]);
 
           // Poll membership status for 15 seconds
           let attempts = 0;
@@ -90,16 +86,12 @@ const MembershipScreen = () => {
 
               if (currentMembership?.active) {
                 clearInterval(pollInterval);
-                Alert.alert(
-                  'Payment Successful!',
-                  'Your membership has been activated.',
-                  [
-                    {
-                      text: 'OK',
-                      onPress: () => fetchUserMembership()
-                    }
-                  ]
-                );
+                Alert.alert('Payment Successful!', 'Your membership has been activated.', [
+                  {
+                    text: 'OK',
+                    onPress: () => fetchUserMembership(),
+                  },
+                ]);
                 return;
               }
             } catch (error) {
@@ -114,29 +106,25 @@ const MembershipScreen = () => {
                 [
                   {
                     text: 'Check Status',
-                    onPress: () => fetchUserMembership()
+                    onPress: () => fetchUserMembership(),
                   },
                   {
-                    text: 'OK'
-                  }
+                    text: 'OK',
+                  },
                 ]
               );
             }
           }, 3000); // Poll every 3 seconds
         } else {
           // Payment completed successfully
-          Alert.alert(
-            'Payment Successful!',
-            'Your membership has been activated.',
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  fetchUserMembership();
-                }
-              }
-            ]
-          );
+          Alert.alert('Payment Successful!', 'Your membership has been activated.', [
+            {
+              text: 'OK',
+              onPress: () => {
+                fetchUserMembership();
+              },
+            },
+          ]);
         }
       } else {
         Alert.alert('Error', 'No payment link received. Please try again.');
@@ -161,24 +149,19 @@ const MembershipScreen = () => {
       Alert.alert('Purchase Failed', errorMessage, [
         {
           text: 'Retry',
-          onPress: () => handlePurchasePlan()
+          onPress: () => handlePurchasePlan(),
         },
         {
           text: 'Cancel',
-          style: 'cancel'
-        }
+          style: 'cancel',
+        },
       ]);
     } finally {
       setLocalLoading(false);
     }
-
-
-
   };
 
-
-
-    const toggleAutoRenew = () => {
+  const toggleAutoRenew = () => {
     // Implement toggleAutoRenew using the store
   };
 
@@ -188,11 +171,10 @@ const MembershipScreen = () => {
 
   const renderMembershipCard = () => (
     <LinearGradient
-      colors={["#2563eb", "#3b82f6"]}
+      colors={['#2563eb', '#3b82f6']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={styles.card}
-    >
+      style={styles.card}>
       <View style={styles.topRow}>
         <View>
           <Text style={styles.planText}>{userMembership.plan} Membership</Text>
@@ -207,20 +189,21 @@ const MembershipScreen = () => {
         <View style={styles.statBlock}>
           <Text style={styles.statLabel}>Services Used</Text>
           <Text style={styles.statValue}>
-            {userMembership.usedServices}/{userMembership.totalServices === Infinity ? '∞' : userMembership.totalServices}
+            {userMembership.usedServices}/
+            {userMembership.totalServices === Infinity ? '∞' : userMembership.totalServices}
           </Text>
         </View>
         <View style={styles.statBlock}>
           <Text style={styles.statLabel}>Total Savings</Text>
           <Text style={styles.statValue}>₹{userMembership.savings}</Text>
         </View>
-        <View style={styles.statBlock}>
+        {/*<View style={styles.statBlock}>
           <Text style={styles.statLabel}>Auto-Renew</Text>
           <Text style={styles.statValue}>{userMembership.autoRenew ? 'On' : 'Off'}</Text>
-        </View>
+        </View>*/}
       </View>
 
-      <View style={styles.actionsRow}>
+      {/*<View style={styles.actionsRow}>
         <TouchableOpacity style={styles.actionButton} onPress={toggleAutoRenew}>
           <Ionicons
             name={userMembership.autoRenew ? 'toggle' : 'toggle-outline'}
@@ -237,7 +220,7 @@ const MembershipScreen = () => {
           <Ionicons name="close-circle-outline" size={18} color="white" style={styles.iconMargin} />
           <Text style={styles.actionText}>Cancel</Text>
         </TouchableOpacity>
-      </View>
+      </View>*/}
     </LinearGradient>
   );
 
@@ -246,8 +229,7 @@ const MembershipScreen = () => {
       key={plan.id}
       style={[styles.planeCard, plan.popular ? styles.popularCard : styles.defaultCard]}
       onPress={() => handleSelectPlan(plan)}
-      activeOpacity={0.85}
-    >
+      activeOpacity={0.85}>
       {plan.popular && (
         <View style={styles.popularBadge}>
           <Text style={styles.popularText}>POPULAR</Text>
@@ -271,8 +253,7 @@ const MembershipScreen = () => {
 
       <TouchableOpacity
         style={[styles.button, plan.popular ? styles.popularButton : styles.defaultButton]}
-        onPress={() => handleSelectPlan(plan)}
-      >
+        onPress={() => handleSelectPlan(plan)}>
         <Text style={styles.buttonText}>Choose Plan</Text>
       </TouchableOpacity>
     </TouchableOpacity>
@@ -283,8 +264,7 @@ const MembershipScreen = () => {
       visible={showConfirmModal}
       animationType="slide"
       transparent={true}
-      onRequestClose={() => setShowConfirmModal(false)}
-    >
+      onRequestClose={() => setShowConfirmModal(false)}>
       <View style={styles.roverlay}>
         <View style={styles.rcontainer}>
           <View style={styles.rheaderRow}>
@@ -325,19 +305,22 @@ const MembershipScreen = () => {
                 <View style={styles.rdivider} />
                 <View style={styles.rsummaryRow}>
                   <Text style={styles.rtotalLabel}>Total Amount</Text>
-                  <Text style={styles.rtotalValue}>₹{selectedPlan.price + Math.round(selectedPlan.price * 0.18)}</Text>
+                  <Text style={styles.rtotalValue}>
+                    ₹{selectedPlan.price + Math.round(selectedPlan.price * 0.18)}
+                  </Text>
                 </View>
               </View>
 
               <Text style={styles.rtermsText}>
-                By proceeding, you agree to our Terms of Service and acknowledge that your membership will automatically renew at the end of the billing period unless cancelled.
+                By proceeding, you agree to our Terms of Service and acknowledge that your
+                membership will automatically renew at the end of the billing period unless
+                cancelled.
               </Text>
 
               <TouchableOpacity
                 style={[styles.rconfirmButton, localLoading && styles.disabledButton]}
                 onPress={handlePurchasePlan}
-                disabled={localLoading}
-              >
+                disabled={localLoading}>
                 {localLoading ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
@@ -420,27 +403,29 @@ const MembershipScreen = () => {
             </View>
           </View>
 
-            {/* Available Plans */}
-            <Text style={styles.sectionTitle}>
-              {userMembership && userMembership.active ? 'Upgrade Your Plan' : 'Choose a Plan'}
-            </Text>
+          {/* Available Plans */}
+          <Text style={styles.sectionTitle}>
+            {userMembership && userMembership.active ? 'Upgrade Your Plan' : 'Choose a Plan'}
+          </Text>
 
-            {plans.map(renderPlanCard)}
+          {plans.map(renderPlanCard)}
 
           {/* FAQ Section */}
           <View style={styles.faqContainer}>
             <FAQList
               searchQuery=""
-              setSearchQuery={() => { }}
+              setSearchQuery={() => {}}
               activeCategory="all"
-              setActiveCategory={() => { }}
+              setActiveCategory={() => {}}
               expandedId={expandedId}
               setExpandedId={setExpandedId}
               navigation={navigation}
               initialCategory="membership"
             />
 
-            <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('FAQ')}>
+            <TouchableOpacity
+              style={styles.viewAllButton}
+              onPress={() => navigation.navigate('FAQ')}>
               <Text style={styles.viewAllText}>View All FAQs</Text>
               <Ionicons name="chevron-forward" size={16} color="#2563eb" />
             </TouchableOpacity>
@@ -458,7 +443,7 @@ export default MembershipScreen;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f9fafb'
+    backgroundColor: '#f9fafb',
   },
   header: {
     flexDirection: 'row',
@@ -468,31 +453,31 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb'
+    borderBottomColor: '#e5e7eb',
   },
   backButton: {
-    padding: 4
+    padding: 4,
   },
   headerTitleContainer: {
     flex: 1,
-    alignItems: 'center'
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1f2937'
+    color: '#1f2937',
   },
   headerRight: {
-    width: 40
+    width: 40,
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,
-    padding: 16
+    padding: 16,
   },
   card: {
     borderRadius: 16,
@@ -571,7 +556,7 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 16,
     borderWidth: 2,
-    position: 'relative'
+    position: 'relative',
   },
   popularCard: {
     borderColor: '#f97316',
@@ -591,12 +576,12 @@ const styles = StyleSheet.create({
   popularText: {
     color: '#fff',
     fontSize: 11,
-    fontWeight: '700'
+    fontWeight: '700',
   },
   planName: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1f2937'
+    color: '#1f2937',
   },
   priceRow: {
     flexDirection: 'row',
@@ -607,7 +592,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#2563eb'
+    color: '#2563eb',
   },
   duration: {
     color: '#6b7280',
@@ -642,7 +627,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
-    fontWeight: '700'
+    fontWeight: '700',
   },
   benefitsContainer: {
     backgroundColor: '#fff',
