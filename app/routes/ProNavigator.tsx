@@ -23,14 +23,14 @@ export type ProStackParamList = {
   ProTabs: undefined;
   JobDetails: { jobId: string };
   RouteTracking: { jobId: string; destination: { latitude: number; longitude: number } };
-  EditProfile: undefined;
-  Notifications: undefined;
-  Settings: undefined;
-  BankDetails: undefined;
-  ServiceArea: undefined;
-  Skills: undefined;
-  Verification: undefined;
+  ProEditProfile: undefined;
   ProNotifications: undefined;
+  ProSettings: undefined;
+  ProBankDetails: undefined;
+  ProServiceArea: undefined;
+  ProSkills: undefined;
+  ProVerification: undefined;
+  ProEarnings: undefined;
 };
 
 // Define the professional tab param list
@@ -98,14 +98,14 @@ const ProNavigator = () => {
       <Stack.Screen name="ProTabs" component={ProTabNavigator} />
       <Stack.Screen name="JobDetails" component={ProJobDetailsScreen} />
       <Stack.Screen name="RouteTracking" component={RouteTrackingScreen} />
-      <Stack.Screen name="EditProfile" component={ProEditProfileScreen} />
-      <Stack.Screen name="Notifications" component={ProNotificationsScreen} />
-      <Stack.Screen name="Settings" component={ProSettingsScreen} />
-      <Stack.Screen name="BankDetails" component={ProBankDetailsScreen} />
-      <Stack.Screen name="ServiceArea" component={ProServiceAreaScreen} />
-      <Stack.Screen name="Skills" component={ProSkillsScreen} />
-      <Stack.Screen name="Verification" component={ProVerificationScreen} />
-      <Stack.Screen name="ProNotifications" component={ProNotificationsScreen}  />
+      <Stack.Screen name="ProEditProfile" component={ProEditProfileScreen} />
+      <Stack.Screen name="ProNotifications" component={ProNotificationsScreen} />
+      <Stack.Screen name="ProSettings" component={ProSettingsScreen} />
+      <Stack.Screen name="ProBankDetails" component={ProBankDetailsScreen} />
+      <Stack.Screen name="ProServiceArea" component={ProServiceAreaScreen} />
+      <Stack.Screen name="ProSkills" component={ProSkillsScreen} />
+      <Stack.Screen name="ProVerification" component={ProVerificationScreen} />
+      <Stack.Screen name="ProEarnings" component={ProEarningsScreen} />
     </Stack.Navigator>
   );
 };

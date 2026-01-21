@@ -205,10 +205,10 @@ const ProProfileScreen = () => {
             onPress={() => navigation.navigate('ProEditProfile')}
           />
           <ProfileItem
-            icon={<MaterialCommunityIcons name="certificate" size={20} color={colors.success} />}
-            title="Verification Status"
-            value="Verified"
-            onPress={() => navigation.navigate('ProVerification')}
+            icon={<MaterialIcons name="trending-up" size={20} color={colors.success} />}
+            title="Earnings"
+            value="View Report"
+            onPress={() => navigation.navigate('ProEarnings')}
           />
           <ProfileItem
             icon={<MaterialCommunityIcons name="tools" size={20} color={colors.primary} />}
@@ -221,22 +221,6 @@ const ProProfileScreen = () => {
             title="Service Areas"
             value="Configure"
             onPress={() => navigation.navigate('ProServiceArea')}
-          />
-        </ProfileSection>
-
-        {/* Financial Information */}
-        <ProfileSection title="Financial">
-          <ProfileItem
-            icon={<MaterialCommunityIcons name="bank" size={20} color={colors.blue} />}
-            title="Bank Details"
-            value="Manage"
-            onPress={() => navigation.navigate('ProBankDetails')}
-          />
-          <ProfileItem
-            icon={<MaterialIcons name="trending-up" size={20} color={colors.success} />}
-            title="Earnings"
-            value="View Report"
-            onPress={() => navigation.navigate('ProEarnings')}
           />
         </ProfileSection>
 
